@@ -1,0 +1,13 @@
+{
+  "workflowMode": "MVP",
+  "currentState": "DESIGN",
+  "projectName": "Akhana Admin",
+  "techStack": "Angular (v17+ / TypeScript) + App Scripts + Google sheets",
+  "activeAgent": "stitch-designer",
+  "architecturalDecisions": {
+    "cashRegisters": "Single register initially (low concurrent write risk on Google Sheets)",
+    "connectivity": "Assumes permanent online connection",
+    "cashRegisterCycle": "Per calendar day"
+  },
+  "updatedAt": "2026-09-17T16:49:30-04:00"
+}
