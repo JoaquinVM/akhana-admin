@@ -1,6 +1,11 @@
-/* Akhana Botanical Precision POS - Design Tokens & Global Styles */
+/* Google Fonts & Material Symbols (must come before @tailwind in CSS spec) */
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Surface colors */
@@ -45,12 +50,6 @@
   --font-headline: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Geist', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html, body {
