@@ -606,7 +606,7 @@
 <span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
 <span>10:42:15 AM</span>
 <span>•</span>
-<span class="text-tertiary font-semibold">3 Artículos</span>
+<span class="text-tertiary font-semibold">4 Artículos</span>
 </div>
 </div>
 <div class="flex items-center gap-1.5">
@@ -757,12 +757,53 @@
   </div>
 </div>
 
+<!-- Line Item 4: Pan Baguette Tradicional (Unidad) -->
+<div class="py-3 flex flex-col gap-2 group">
+  <div class="flex items-start justify-between">
+    <div class="flex-1 pr-2">
+      <h5 class="text-label-md font-label-md font-bold text-on-surface">Pan Baguette Tradicional</h5>
+      <div class="text-label-sm font-label-sm text-outline mt-0.5">
+        Precio unitario: $0.90 c/u • Código: #PAN-02
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <div class="font-numeric-md text-numeric-md font-bold text-on-surface text-base">$0.90</div>
+      <button class="text-outline hover:text-error transition-colors mt-0.5 p-1 rounded hover:bg-error-container/30" title="Quitar ítem">
+        <span class="material-symbols-outlined text-base" data-icon="close">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Controls: Stepper with Editable Quantity + Clean Editable Discount (No Chips) -->
+  <div class="flex items-center justify-between gap-2 pt-0.5">
+    <!-- Quantity Stepper with Direct Editable Input -->
+    <div class="flex items-center gap-1.5">
+      <span class="text-xs font-semibold text-outline">Cant:</span>
+      <div class="flex items-center border-2 border-outline-variant/70 rounded-lg overflow-hidden bg-white shadow-2xs">
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">-</button>
+        <input type="number" min="1" max="99" value="1" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Editar cantidad numéricamente"/>
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">+</button>
+      </div>
+    </div>
+
+    <!-- Direct Editable Discount Input (Warm Amber Styling, No Chips) -->
+    <div class="flex items-center gap-1.5 bg-amber-50/90 border-2 border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs">
+      <span class="material-symbols-outlined text-amber-700 text-sm" data-icon="local_offer">local_offer</span>
+      <span class="text-xs font-bold text-amber-900">Desc:</span>
+      <div class="relative">
+        <span class="absolute left-1.5 top-0.5 text-xs font-bold text-amber-700">$</span>
+        <input type="number" min="0" max="5.00" step="0.25" value="0.00" class="w-16 py-0.5 pl-4 pr-1 text-right font-numeric-md text-xs font-bold text-amber-950 bg-white border border-amber-400 rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs" title="Descuento editable directo por ítem"/>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 <!-- Financial Summary & Breakdown -->
 <div class="bg-surface-container-low p-3.5 border-t border-outline-variant/40 shrink-0 flex flex-col gap-2">
   <div class="flex justify-between text-body-md font-body-md text-on-surface-variant">
     <span>Subtotal Bruto</span>
-    <span class="font-numeric-md text-numeric-md font-medium text-on-surface">$30.15</span>
+    <span class="font-numeric-md text-numeric-md font-medium text-on-surface">$31.05</span>
   </div>
   <div class="flex justify-between text-body-md font-body-md text-tertiary font-semibold">
     <span class="flex items-center gap-1">
@@ -799,7 +840,7 @@
       <div class="text-label-sm font-label-sm text-outline">Impuestos incluidos (16% IVA)</div>
     </div>
     <div class="text-right">
-      <span class="text-numeric-hero font-numeric-hero font-bold text-tertiary tracking-tight">$26.65</span>
+      <span class="text-numeric-hero font-numeric-hero font-bold text-tertiary tracking-tight">$27.55</span>
     </div>
   </div>
 </div>
@@ -865,7 +906,7 @@
 <span class="text-label-md font-label-md font-bold text-tertiary">Cambio a Entregar:</span>
 </div>
 <div class="bg-tertiary text-on-tertiary px-3 py-1 rounded-lg font-numeric-lg text-numeric-lg font-bold shadow-sm">
-                $8.35
+                $7.45
               </div>
 </div>
 </div>
@@ -877,7 +918,7 @@
 <span>Confirmar Venta</span>
 </div>
 <div class="flex items-center gap-2">
-<span class="font-numeric-lg text-numeric-lg font-bold">$26.65</span>
+<span class="font-numeric-lg text-numeric-lg font-bold">$27.55</span>
 <span class="bg-surface-container-lowest/20 px-2 py-0.5 rounded text-label-sm font-label-sm font-bold border border-surface-container-lowest/30">[F9]</span>
 </div>
 </button>
