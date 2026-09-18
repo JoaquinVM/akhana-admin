@@ -16,53 +16,54 @@
       theme: {
         extend: {
           "colors": {
-            "outline": "#727785",
-            "on-primary-fixed": "#001a41",
-            "on-primary": "#ffffff",
-            "on-error-container": "#93000a",
-            "surface-container-lowest": "#ffffff",
-            "on-secondary-container": "#586377",
-            "on-tertiary": "#ffffff",
-            "surface-container-highest": "#e1e3e4",
-            "tertiary-fixed": "#89fa9b",
-            "surface-tint": "#005bc0",
-            "primary": "#005bbf",
-            "tertiary": "#006d2c",
-            "error-container": "#ffdad6",
-            "background": "#f8f9fa",
-            "outline-variant": "#c1c6d6",
-            "on-secondary-fixed": "#111c2d",
-            "primary-fixed-dim": "#adc7ff",
-            "inverse-primary": "#adc7ff",
-            "surface-bright": "#f8f9fa",
-            "tertiary-fixed-dim": "#6ddd81",
-            "on-primary-fixed-variant": "#004493",
-            "surface-container": "#edeeef",
-            "surface-container-low": "#f3f4f5",
-            "primary-fixed": "#d8e2ff",
-            "secondary-container": "#d5e0f8",
-            "surface": "#f8f9fa",
-            "secondary-fixed-dim": "#bcc7de",
-            "inverse-surface": "#2e3132",
-            "inverse-on-surface": "#f0f1f2",
-            "surface-variant": "#e1e3e4",
-            "error": "#ba1a1a",
-            "on-background": "#191c1d",
-            "primary-container": "#1a73e8",
+            "outline": "#7D8774",
+            "outline-variant": "#D8D3C1",
+            "primary": "#3B6C2B",
+            "primary-container": "#4E7A3E",
             "on-primary-container": "#ffffff",
-            "on-surface": "#191c1d",
-            "on-tertiary-fixed-variant": "#005320",
+            "on-primary": "#ffffff",
+            "primary-fixed": "#DCECD2",
+            "primary-fixed-dim": "#B2D49F",
+            "on-primary-fixed": "#0F240A",
+            "on-primary-fixed-variant": "#274D1C",
+            "inverse-primary": "#A3D491",
+            "secondary": "#5A6F50",
+            "secondary-container": "#E2EBD8",
+            "on-secondary-container": "#1B2E17",
+            "secondary-fixed": "#DCE8D4",
+            "secondary-fixed-dim": "#BDCDB5",
+            "on-secondary-fixed": "#142410",
+            "on-secondary-fixed-variant": "#3E5136",
+            "tertiary": "#7EB53F",
+            "tertiary-container": "#EBF5DE",
+            "on-tertiary-container": "#1E3B0B",
+            "tertiary-fixed": "#8CBF41",
+            "tertiary-fixed-dim": "#74A836",
+            "on-tertiary-fixed": "#142707",
+            "on-tertiary-fixed-variant": "#335B13",
+            "accent-gold": "#E5A823",
+            "accent-gold-container": "#FEF6DC",
+            "accent-gold-on": "#6B4C00",
+            "background": "#F7F4E9",
+            "surface": "#FAF8F0",
+            "surface-dim": "#E9E3D0",
+            "surface-bright": "#FAF8F0",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#F4EFE1",
+            "surface-container": "#EDE7D4",
+            "surface-container-high": "#E6DFCB",
+            "surface-container-highest": "#DED6C1",
+            "surface-variant": "#E4DEC9",
+            "surface-tint": "#4E7A3E",
+            "inverse-surface": "#1B2E18",
+            "inverse-on-surface": "#F5F0D3",
+            "on-surface": "#1E2519",
+            "on-surface-variant": "#4C5544",
+            "on-background": "#1E2519",
+            "error": "#C23B2A",
+            "error-container": "#FDE8E5",
             "on-error": "#ffffff",
-            "secondary-fixed": "#d8e3fb",
-            "on-surface-variant": "#414754",
-            "surface-container-high": "#e7e8e9",
-            "surface-dim": "#d9dadb",
-            "on-secondary-fixed-variant": "#3c475a",
-            "on-secondary": "#ffffff",
-            "on-tertiary-container": "#ffffff",
-            "tertiary-container": "#008939",
-            "secondary": "#545f73",
-            "on-tertiary-fixed": "#002108"
+            "on-error-container": "#751508"
           },
           "borderRadius": {
             "DEFAULT": "0.125rem",
@@ -132,10 +133,26 @@
 <!-- TopNavBar (Shared Component) -->
 <header class="bg-inverse-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full px-4 min-h-[4rem] z-50 docked full-width top-0 h-16 shrink-0">
 <div class="flex items-center gap-4">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary-fixed text-2xl" data-icon="point_of_sale">point_of_sale</span>
-<span class="text-headline-md font-headline-md font-bold text-surface-container-lowest tracking-tight">Akhana Admin POS</span>
-<span class="bg-primary-container/30 text-inverse-primary border border-primary/40 text-label-sm font-label-sm px-1.5 py-0.5 rounded font-bold">v2.4 PRO</span>
+<div class="flex items-center gap-3">
+  <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-container-lowest/15 border border-tertiary/40 p-1.5 shadow-sm">
+    <svg viewBox="0 0 40 40" class="w-8 h-8" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Main Deep Green Leaf -->
+      <path d="M14 30C14 19 22 13 30 11C28 22 19 30 14 30Z" fill="#4E7A3E"/>
+      <!-- Fresh Lime Green Leaf -->
+      <path d="M9 25C9 16 16 11 24 9C22 18 15 25 9 25Z" fill="#7EB53F"/>
+      <!-- Warm Golden Amber Leaf (from Akhana Logo) -->
+      <path d="M23 25C23 15 28 8 35 6C34 16 28 24 23 25Z" fill="#E5A823"/>
+      <!-- Stem -->
+      <path d="M12 34C15 30 20 27 26 25" stroke="#8CBF41" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="flex flex-col">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl font-extrabold text-surface-container-lowest tracking-tight font-serif italic text-[#FAF7EC]">Akhana</span>
+      <span class="text-[11px] uppercase tracking-wider font-bold bg-accent-gold/25 text-[#F5EFCF] px-2 py-0.5 rounded-md border border-accent-gold/40">Admin POS</span>
+    </div>
+    <span class="text-[10px] text-outline-variant tracking-wider -mt-0.5 font-label-sm text-[#E2E8D8]">SISTEMA INTEGRAL DE CAJA</span>
+  </div>
 </div>
 <div class="hidden xl:flex items-center gap-2 pl-4 border-l border-outline/30">
 <div class="flex items-center gap-1.5 bg-surface-container-lowest/10 px-2.5 py-1 rounded-lg border border-outline/20">
@@ -552,140 +569,208 @@
 </div>
 <!-- Cart Items List (Scrollable Table-like density) -->
 <div class="flex-1 overflow-y-auto divide-y divide-outline-variant/30 px-3.5">
+
 <!-- Line Item 1: Jamón Serrano (Pesable) -->
-<div class="py-3 flex flex-col gap-1.5 group">
-<div class="flex items-start justify-between">
-<div class="flex-1 pr-2">
-<div class="flex items-center gap-1.5">
-<span class="bg-tertiary/10 text-tertiary text-label-sm font-label-sm px-1 rounded font-semibold">⚖️ 350g</span>
-<h5 class="text-label-md font-label-md font-bold text-on-surface">Jamón Serrano Selección</h5>
+<div class="py-3 flex flex-col gap-2 group">
+  <div class="flex items-start justify-between">
+    <div class="flex-1 pr-2">
+      <div class="flex items-center gap-1.5">
+        <span class="bg-tertiary/15 text-primary text-label-sm font-label-sm px-1.5 py-0.5 rounded font-bold border border-tertiary/30">⚖️ Pesable</span>
+        <h5 class="text-label-md font-label-md font-bold text-on-surface">Jamón Serrano Selección</h5>
+      </div>
+      <div class="text-label-sm font-label-sm text-outline mt-0.5">
+        Base: $4.50 / 100g • Subtotal bruto: <span class="line-through text-outline/80">$15.75</span>
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <div class="font-numeric-md text-numeric-md font-bold text-primary text-base">$14.25</div>
+      <button class="text-outline hover:text-error transition-colors mt-0.5 p-1 rounded hover:bg-error-container/30" title="Quitar ítem">
+        <span class="material-symbols-outlined text-base" data-icon="close">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Controls: Rapid Grams Input + Direct Discount Input -->
+  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+    <!-- Weight in Grams Input -->
+    <div class="flex items-center gap-1.5 bg-secondary-container/40 px-2 py-1 rounded-lg border border-secondary/20 shadow-2xs">
+      <span class="text-xs font-bold text-secondary">⚖️ Peso:</span>
+      <input type="number" step="25" min="10" max="5000" value="350" class="w-16 py-0.5 px-1 text-center font-numeric-md font-bold text-primary bg-white border border-outline-variant/80 rounded focus:ring-2 focus:ring-primary focus:outline-none text-xs" title="Editar gramos de venta"/>
+      <span class="text-xs font-bold text-secondary">g</span>
+      <div class="flex items-center gap-0.5 ml-1">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+50g</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+100g</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+250g</button>
+      </div>
+    </div>
+
+    <!-- Direct Line-Item Discount Input with Fast Preset Pills -->
+    <div class="flex items-center gap-1.5 bg-accent-gold-container/40 border border-accent-gold/40 px-2 py-1 rounded-lg text-label-sm shadow-2xs">
+      <span class="material-symbols-outlined text-accent-gold-on text-sm" data-icon="local_offer">local_offer</span>
+      <span class="text-xs font-bold text-accent-gold-on">Desc:</span>
+      <div class="relative">
+        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
+        <input type="number" min="0" max="5.00" step="0.50" value="1.50" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-accent-gold-on bg-white border border-accent-gold/60 rounded focus:ring-1 focus:ring-accent-gold focus:outline-none shadow-2xs" title="Descuento directo al ítem (Máx $5.00)"/>
+      </div>
+      <div class="flex items-center gap-0.5">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs">-$0.50</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs">-$1.00</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-accent-gold/30 text-accent-gold-on border border-accent-gold/60 font-bold shadow-2xs">-$1.50</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="text-label-sm font-label-sm text-outline mt-0.5">
-                  Base: $4.50 / 100g • Subtotal bruto: <span class="line-through">$15.75</span>
+
+<!-- Line Item 2: Aceite de Oliva Extra 500ml (Unidad) -->
+<div class="py-3 flex flex-col gap-2 group">
+  <div class="flex items-start justify-between">
+    <div class="flex-1 pr-2">
+      <h5 class="text-label-md font-label-md font-bold text-on-surface">Aceite de Oliva Extra 500ml</h5>
+      <div class="text-label-sm font-label-sm text-outline mt-0.5">
+        Precio unitario: $4.50 c/u • Código: #ABA-104
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <div class="font-numeric-md text-numeric-md font-bold text-on-surface text-base">$9.00</div>
+      <button class="text-outline hover:text-error transition-colors mt-0.5 p-1 rounded hover:bg-error-container/30" title="Quitar ítem">
+        <span class="material-symbols-outlined text-base" data-icon="close">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Controls: Stepper with Editable Numeric Input + Direct Item Discount -->
+  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+    <!-- Quantity Stepper with Direct Input -->
+    <div class="flex items-center gap-1.5">
+      <span class="text-xs font-semibold text-outline">Cant:</span>
+      <div class="flex items-center border border-outline-variant/80 rounded-lg overflow-hidden bg-white shadow-2xs">
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">-</button>
+        <input type="number" min="1" max="99" value="2" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Escribir cantidad numéricamente"/>
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">+</button>
+      </div>
+      <div class="flex items-center gap-0.5 ml-0.5">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+1</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+5</button>
+      </div>
+    </div>
+
+    <!-- Direct Rapid Discount Input with Fast Preset Pills -->
+    <div class="flex items-center gap-1.5 bg-surface-container-low/60 border border-outline-variant/60 px-2 py-1 rounded-lg text-label-sm">
+      <span class="text-xs font-bold text-on-surface-variant">Desc:</span>
+      <div class="relative">
+        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
+        <input type="number" min="0" max="5.00" step="0.50" value="0.00" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-on-surface bg-white border border-outline-variant/70 rounded focus:ring-1 focus:ring-primary focus:outline-none shadow-2xs" title="Descuento por ítem"/>
+      </div>
+      <div class="flex items-center gap-0.5">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$0.50</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$1.00</button>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- Line Item 3: Coca-Cola 500ml (Unidad) -->
+<div class="py-3 flex flex-col gap-2 group">
+  <div class="flex items-start justify-between">
+    <div class="flex-1 pr-2">
+      <h5 class="text-label-md font-label-md font-bold text-on-surface">Coca-Cola 500ml</h5>
+      <div class="text-label-sm font-label-sm text-outline mt-0.5">
+        Precio unitario: $1.80 c/u • Código: #BEB-01
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <div class="font-numeric-md text-numeric-md font-bold text-on-surface text-base">$5.40</div>
+      <button class="text-outline hover:text-error transition-colors mt-0.5 p-1 rounded hover:bg-error-container/30" title="Quitar ítem">
+        <span class="material-symbols-outlined text-base" data-icon="close">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Controls: Stepper with Editable Numeric Input + Direct Item Discount -->
+  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+    <!-- Quantity Stepper with Direct Input -->
+    <div class="flex items-center gap-1.5">
+      <span class="text-xs font-semibold text-outline">Cant:</span>
+      <div class="flex items-center border border-outline-variant/80 rounded-lg overflow-hidden bg-white shadow-2xs">
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">-</button>
+        <input type="number" min="1" max="99" value="3" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Escribir cantidad numéricamente"/>
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">+</button>
+      </div>
+      <div class="flex items-center gap-0.5 ml-0.5">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+1</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+5</button>
+      </div>
+    </div>
+
+    <!-- Direct Rapid Discount Input with Fast Preset Pills -->
+    <div class="flex items-center gap-1.5 bg-surface-container-low/60 border border-outline-variant/60 px-2 py-1 rounded-lg text-label-sm">
+      <span class="text-xs font-bold text-on-surface-variant">Desc:</span>
+      <div class="relative">
+        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
+        <input type="number" min="0" max="5.00" step="0.50" value="0.00" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-on-surface bg-white border border-outline-variant/70 rounded focus:ring-1 focus:ring-primary focus:outline-none shadow-2xs" title="Descuento por ítem"/>
+      </div>
+      <div class="flex items-center gap-0.5">
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$0.50</button>
+        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$1.00</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="text-right shrink-0">
-<div class="font-numeric-md text-numeric-md font-bold text-on-surface">$14.25</div>
-<button class="text-outline hover:text-error transition-colors mt-0.5" title="Quitar ítem">
-<span class="material-symbols-outlined text-base" data-icon="close">close</span>
-</button>
-</div>
-</div>
-<!-- Item Discounts & Weight Adjustment -->
-<div class="flex items-center justify-between bg-surface-container-low px-2.5 py-1.5 rounded-lg text-label-sm font-label-sm">
-<div class="flex items-center gap-1 text-tertiary font-semibold">
-<span class="material-symbols-outlined text-sm" data-icon="local_offer">local_offer</span>
-<span>Desc: -$1.50</span>
-<span class="text-outline font-normal text-xs">(Desc. Máx: $5.00)</span>
-</div>
-<div class="text-outline font-numeric-md text-label-sm">Bal. Auto-Sync</div>
-</div>
-</div>
-<!-- Line Item 2: Aceite de Oliva Extra (Unidad) -->
-<div class="py-3 flex flex-col gap-1.5 group">
-<div class="flex items-start justify-between">
-<div class="flex-1 pr-2">
-<h5 class="text-label-md font-label-md font-bold text-on-surface">Aceite de Oliva Extra 500ml</h5>
-<div class="text-label-sm font-label-sm text-outline mt-0.5">
-                  Precio unitario: $8.50 c/u
-                </div>
-</div>
-<div class="text-right shrink-0">
-<div class="font-numeric-md text-numeric-md font-bold text-on-surface">$17.00</div>
-<button class="text-outline hover:text-error transition-colors mt-0.5" title="Quitar ítem">
-<span class="material-symbols-outlined text-base" data-icon="close">close</span>
-</button>
-</div>
-</div>
-<div class="flex items-center justify-between pt-1">
-<!-- Stepper -->
-<div class="flex items-center border border-outline-variant/60 rounded-lg overflow-hidden bg-surface-container-lowest">
-<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
-</button>
-<span class="px-3 py-1 font-numeric-md text-numeric-md font-bold text-on-surface bg-surface-container-lowest">2</span>
-<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
-</button>
-</div>
-<!-- Inline discount field -->
-<div class="flex items-center gap-1">
-<span class="text-label-sm font-label-sm text-outline">Desc:</span>
-<input class="w-16 py-0.5 px-1.5 text-right font-numeric-md text-label-sm bg-surface-container-low border border-outline-variant/60 rounded focus:border-primary-container focus:outline-none" type="text" value="$0.00"/>
-</div>
-</div>
-</div>
-<!-- Line Item 3: Coca-Cola 500ml -->
-<div class="py-3 flex flex-col gap-1.5 group">
-<div class="flex items-start justify-between">
-<div class="flex-1 pr-2">
-<h5 class="text-label-md font-label-md font-bold text-on-surface">Coca-Cola 500ml</h5>
-<div class="text-label-sm font-label-sm text-outline mt-0.5">
-                  Precio unitario: $1.80 c/u
-                </div>
-</div>
-<div class="text-right shrink-0">
-<div class="font-numeric-md text-numeric-md font-bold text-on-surface">$5.40</div>
-<button class="text-outline hover:text-error transition-colors mt-0.5" title="Quitar ítem">
-<span class="material-symbols-outlined text-base" data-icon="close">close</span>
-</button>
-</div>
-</div>
-<div class="flex items-center justify-between pt-1">
-<!-- Stepper -->
-<div class="flex items-center border border-outline-variant/60 rounded-lg overflow-hidden bg-surface-container-lowest">
-<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
-</button>
-<span class="px-3 py-1 font-numeric-md text-numeric-md font-bold text-on-surface bg-surface-container-lowest">3</span>
-<button class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
-</button>
-</div>
-<div class="flex items-center gap-1">
-<span class="text-label-sm font-label-sm text-outline">Desc:</span>
-<input class="w-16 py-0.5 px-1.5 text-right font-numeric-md text-label-sm bg-surface-container-low border border-outline-variant/60 rounded focus:border-primary-container focus:outline-none" type="text" value="$0.00"/>
-</div>
-</div>
-</div>
+
 </div>
 <!-- Financial Summary & Breakdown -->
 <div class="bg-surface-container-low p-3.5 border-t border-outline-variant/40 shrink-0 flex flex-col gap-2">
-<div class="flex justify-between text-body-md font-body-md text-on-surface-variant">
-<span>Subtotal Bruto</span>
-<span class="font-numeric-md text-numeric-md font-medium text-on-surface">$38.15</span>
-</div>
-<div class="flex justify-between text-body-md font-body-md text-tertiary">
-<span class="flex items-center gap-1">
-<span class="material-symbols-outlined text-base" data-icon="loyalty">loyalty</span>
-<span>Descuentos por Producto</span>
-</span>
-<span class="font-numeric-md text-numeric-md font-semibold">-$1.50</span>
-</div>
-<!-- Global Discount Input -->
-<div class="flex items-center justify-between text-body-md font-body-md">
-<div class="flex items-center gap-1">
-<span class="text-on-surface-variant">Descuento Global</span>
-<span class="material-symbols-outlined text-xs text-outline" data-icon="help" title="Descuento sobre ticket total">help</span>
-</div>
-<div class="flex items-center gap-1">
-<input class="w-20 text-right py-0.5 px-2 font-numeric-md text-numeric-md font-bold text-tertiary bg-surface-container-lowest border border-outline-variant/60 rounded focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="-$2.00"/>
-</div>
-</div>
-<div class="text-[10px] text-outline text-right -mt-1 font-label-sm">
-            ⚠️ Límite de descuento autorizado: $20.00
-          </div>
-<div class="h-px bg-outline-variant/60 my-1"></div>
-<!-- HUGE TOTAL -->
-<div class="flex items-baseline justify-between pt-0.5">
-<div>
-<div class="text-label-md font-label-md font-bold text-on-surface">TOTAL A PAGAR</div>
-<div class="text-label-sm font-label-sm text-outline">Impuestos incluidos (16% IVA)</div>
-</div>
-<div class="text-right">
-<span class="text-numeric-hero font-numeric-hero font-bold text-tertiary tracking-tight">$34.65</span>
-</div>
-</div>
+  <div class="flex justify-between text-body-md font-body-md text-on-surface-variant">
+    <span>Subtotal Bruto</span>
+    <span class="font-numeric-md text-numeric-md font-medium text-on-surface">$30.15</span>
+  </div>
+  <div class="flex justify-between text-body-md font-body-md text-tertiary">
+    <span class="flex items-center gap-1">
+      <span class="material-symbols-outlined text-base" data-icon="loyalty">loyalty</span>
+      <span>Descuentos por Producto</span>
+    </span>
+    <span class="font-numeric-md text-numeric-md font-semibold">-$1.50</span>
+  </div>
+  <!-- Global Discount Section with Direct Input & Rapid Preset Pills -->
+  <div class="p-2.5 rounded-xl bg-accent-gold-container/40 border border-accent-gold/40 flex flex-col gap-1.5">
+    <div class="flex items-center justify-between text-body-md font-body-md">
+      <div class="flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-accent-gold-on text-base" data-icon="percent">percent</span>
+        <span class="text-accent-gold-on font-bold text-sm">Descuento Global:</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div class="relative">
+          <span class="absolute left-2 top-0.5 text-xs font-bold text-accent-gold-on">$</span>
+          <input class="w-20 text-right py-0.5 pl-4 pr-1.5 font-numeric-md text-sm font-bold text-accent-gold-on bg-white border border-accent-gold/60 rounded-lg focus:ring-2 focus:ring-accent-gold focus:outline-none shadow-2xs" type="number" step="0.50" min="0" max="20.00" value="2.00" title="Descuento global sobre el ticket"/>
+        </div>
+      </div>
+    </div>
+    <!-- Rapid Preset Discount Chips -->
+    <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-accent-gold/20">
+      <span class="text-[10px] font-bold text-accent-gold-on/80">Chips rápidos:</span>
+      <div class="flex items-center gap-1">
+        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$1.00</button>
+        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-accent-gold/30 hover:bg-accent-gold/40 text-accent-gold-on border border-accent-gold/60 font-bold shadow-2xs transition-colors">-$2.00</button>
+        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$5.00</button>
+        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$10.00</button>
+      </div>
+    </div>
+    <div class="text-[10px] text-outline text-right font-label-sm">
+      ⚠️ Límite de descuento autorizado: $20.00
+    </div>
+  </div>
+
+  <div class="h-px bg-outline-variant/60 my-0.5"></div>
+  <!-- HUGE TOTAL -->
+  <div class="flex items-baseline justify-between pt-0.5">
+    <div>
+      <div class="text-label-md font-label-md font-bold text-on-surface">TOTAL A PAGAR</div>
+      <div class="text-label-sm font-label-sm text-outline">Impuestos incluidos (16% IVA)</div>
+    </div>
+    <div class="text-right">
+      <span class="text-numeric-hero font-numeric-hero font-bold text-tertiary tracking-tight">$26.65</span>
+    </div>
+  </div>
 </div>
 <!-- Payment Selection Tabs -->
 <div class="p-3.5 bg-surface-container-lowest border-t border-outline-variant/40 shrink-0 flex flex-col gap-3">
@@ -749,7 +834,7 @@
 <span class="text-label-md font-label-md font-bold text-tertiary">Cambio a Entregar:</span>
 </div>
 <div class="bg-tertiary text-on-tertiary px-3 py-1 rounded-lg font-numeric-lg text-numeric-lg font-bold shadow-sm">
-                $0.35
+                $8.35
               </div>
 </div>
 </div>
@@ -761,7 +846,7 @@
 <span>Confirmar Venta</span>
 </div>
 <div class="flex items-center gap-2">
-<span class="font-numeric-lg text-numeric-lg font-bold">$34.65</span>
+<span class="font-numeric-lg text-numeric-lg font-bold">$26.65</span>
 <span class="bg-surface-container-lowest/20 px-2 py-0.5 rounded text-label-sm font-label-sm font-bold border border-surface-container-lowest/30">[F9]</span>
 </div>
 </button>

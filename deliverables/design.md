@@ -1,53 +1,56 @@
 ---
-name: Akhana Precision POS
+name: Akhana Botanical Precision POS
 colors:
-  surface: '#f8f9fa'
-  surface-dim: '#d9dadb'
-  surface-bright: '#f8f9fa'
-  surface-container-lowest: '#ffffff'
-  surface-container-low: '#f3f4f5'
-  surface-container: '#edeeef'
-  surface-container-high: '#e7e8e9'
-  surface-container-highest: '#e1e3e4'
-  on-surface: '#191c1d'
-  on-surface-variant: '#414754'
-  inverse-surface: '#2e3132'
-  inverse-on-surface: '#f0f1f2'
-  outline: '#727785'
-  outline-variant: '#c1c6d6'
-  surface-tint: '#005bc0'
-  primary: '#005bbf'
-  on-primary: '#ffffff'
-  primary-container: '#1a73e8'
-  on-primary-container: '#ffffff'
-  inverse-primary: '#adc7ff'
-  secondary: '#545f73'
-  on-secondary: '#ffffff'
-  secondary-container: '#d5e0f8'
-  on-secondary-container: '#586377'
-  tertiary: '#006d2c'
-  on-tertiary: '#ffffff'
-  tertiary-container: '#008939'
-  on-tertiary-container: '#ffffff'
-  error: '#ba1a1a'
-  on-error: '#ffffff'
-  error-container: '#ffdad6'
-  on-error-container: '#93000a'
-  primary-fixed: '#d8e2ff'
-  primary-fixed-dim: '#adc7ff'
-  on-primary-fixed: '#001a41'
-  on-primary-fixed-variant: '#004493'
-  secondary-fixed: '#d8e3fb'
-  secondary-fixed-dim: '#bcc7de'
-  on-secondary-fixed: '#111c2d'
-  on-secondary-fixed-variant: '#3c475a'
-  tertiary-fixed: '#89fa9b'
-  tertiary-fixed-dim: '#6ddd81'
-  on-tertiary-fixed: '#002108'
-  on-tertiary-fixed-variant: '#005320'
-  background: '#f8f9fa'
-  on-background: '#191c1d'
-  surface-variant: '#e1e3e4'
+  surface: '#FAF8F0'
+  surface-dim: '#E9E3D0'
+  surface-bright: '#FAF8F0'
+  surface-container-lowest: '#FFFFFF'
+  surface-container-low: '#F4EFE1'
+  surface-container: '#EDE7D4'
+  surface-container-high: '#E6DFCB'
+  surface-container-highest: '#DED6C1'
+  surface-variant: '#E4DEC9'
+  on-surface: '#1E2519'
+  on-surface-variant: '#4C5544'
+  inverse-surface: '#1B2E18'
+  inverse-on-surface: '#F5F0D3'
+  outline: '#7D8774'
+  outline-variant: '#D8D3C1'
+  surface-tint: '#4E7A3E'
+  primary: '#3B6C2B'
+  on-primary: '#FFFFFF'
+  primary-container: '#4E7A3E'
+  on-primary-container: '#FFFFFF'
+  primary-fixed: '#DCECD2'
+  primary-fixed-dim: '#B2D49F'
+  on-primary-fixed: '#0F240A'
+  on-primary-fixed-variant: '#274D1C'
+  inverse-primary: '#A3D491'
+  secondary: '#5A6F50'
+  on-secondary: '#FFFFFF'
+  secondary-container: '#E2EBD8'
+  on-secondary-container: '#1B2E17'
+  secondary-fixed: '#DCE8D4'
+  secondary-fixed-dim: '#BDCDB5'
+  on-secondary-fixed: '#142410'
+  on-secondary-fixed-variant: '#3E5136'
+  tertiary: '#7EB53F'
+  on-tertiary: '#FFFFFF'
+  tertiary-container: '#EBF5DE'
+  on-tertiary-container: '#1E3B0B'
+  tertiary-fixed: '#8CBF41'
+  tertiary-fixed-dim: '#74A836'
+  on-tertiary-fixed: '#142707'
+  on-tertiary-fixed-variant: '#335B13'
+  accent-gold: '#E5A823'
+  accent-gold-container: '#FEF6DC'
+  accent-gold-on: '#6B4C00'
+  background: '#F7F4E9'
+  on-background: '#1E2519'
+  error: '#C23B2A'
+  on-error: '#FFFFFF'
+  error-container: '#FDE8E5'
+  on-error-container: '#751508'
 typography:
   headline-xl:
     fontFamily: Space Grotesk
@@ -132,72 +135,61 @@ spacing:
   space-xl: 1.75rem
 ---
 
-## Brand & Style
-The design system powers high-volume, enterprise-grade point-of-sale and terminal management where operational speed, visual precision, and error elimination are paramount. Cashiers, floor managers, and retail administrators operate in environments with varied ambient lighting, requiring instant glanceability and rapid touch precision.
+## Brand & Style Identity: Akhana Botanical Organic Modern
 
-The design movement is **Corporate Modern with High-Density Precision**:
-- **Utilitarian & Grounded:** Clean structural boundaries, zero extraneous ornamentation, and functional color coding.
-- **Dark/Light Hybrid Architecture:** Operational register workspaces (item catalogs, order carts, numpads) use high-clarity light canvas backgrounds to reduce glare under retail fluorescent lighting, while global persistent rails, hardware status monitors, and administrative headers utilize deep dark slate tones to ground focus and isolate critical operational switches.
-- **Tactile Feedback:** Crisp borders and rapid 100ms micro-transitions reinforce instant user acknowledgment for barcode scans, touch taps, and price recalculations.
+The design system is extracted directly from the official **Akhana** brand identity, blending organic elegance (natural botanics, earthy greens, warm honey amber) with high-density enterprise retail checkout ergonomics.
 
-## Colors
-The palette balances active transaction clarity with enterprise authority:
-- **Primary (`#1A73E8`):** Google Blue powers primary interactive states, active key selection, total calculation triggers, and receipt confirmations.
-- **Secondary / Dark Slate (`#1E293B`):** Acts as the high-contrast structural anchor for persistent system rails, register navigation, and critical numeric summaries.
-- **Tertiary / Success Emerald (`#34A853`):** Reserved for approved payments, completed transactions, live hardware connectivity (e.g., printers, scanners), and inventory confirmations.
-- **Warning Amber (`#FBBC04`):** Flags low receipt paper, pending network sync, or void authorization requests. Paired with dark slate typography for accessible readability.
-- **Danger Coral (`#EA4335`):** Exclusively signals transaction voids, item deletions, disconnected payment terminals, and network dropouts.
-- **Neutral Light Slate (`#F8F9FA`) & Surface White (`#FFFFFF`):** High-efficiency workspace backgrounds dividing product tiles, cart items, and modifier overlays.
-- **Border & Line Neutral (`#E2E8F0`):** Precise dividing rules defining table cells, numeric keypads, and touch targets without visual noise.
+### Core Visual Pillars:
+- **Organic Earth Canvas:** Replaces sterile, cold corporate blues with a warm cream/sand canvas (`#F7F4E9`) and crisp surface cards (`#FAF8F0` / `#FFFFFF`). This reduces cashier eye fatigue during long retail shifts.
+- **Botanical Green Hierarchy:**
+  - **Deep Foliage Green (`#3B6C2B` / `#4E7A3E`):** Serves as primary interactive authority, checkout buttons, and brand accents.
+  - **Sprout / Fresh Lime (`#7EB53F` / `#8CBF41`):** Highlights positive status indicators (hardware online, live stock, scale readings, approved QR payments).
+  - **Deep Forest Header (`#1B2E18`):** Inverse dark container grounding top and side navigation bars.
+- **Amber Gold Accents (`#E5A823`):** Reflects the third leaf of the Akhana brand motif. Used exclusively for commercial incentives: item discounts, global ticket reductions, promotional badges, and cashier alerts.
 
-## Typography
-Typography is tuned for zero-error scanning and high-throughput order entry:
-- **Display & Section Headers:** `Space Grotesk` introduces structured, geometric confidence for register station names, category ribbons, and major modal dialogs.
-- **Operational UI & Information Flow:** `Geist` provides neutral, high-density legibility across product titles, cashier metadata, and dynamic cart modifiers.
-- **Numbers, Quantities & Currency:** `JetBrains Mono` handles all numerical pricing, barcodes, SKU values, tax calculations, and cash pad totals. Tabular figures (`font-variant-numeric: tabular-nums`) ensure strict column alignment across ledger columns and rapid running balances.
+---
 
-## Layout & Spacing
-The terminal layout operates on a fixed-ratio structural grid designed for touchscreens (touch POS monitors, iPads, and rugged Android displays) as well as desktop pointer inputs:
-- **Terminal Layout Partition (Desktop/Tablet Landscape):**
-  - **Left Rail (Fixed 72px):** Dark slate navigation rail for hardware monitor, register switch, returns, and shifts.
-  - **Center Workspace (Fluid 60-65%):** Product catalog browser with categorized horizontal pill filters and fluid product grid (3-4 columns).
-  - **Right Cart Ledger (Fixed 380px - 440px):** Dedicated order receipt pane, price breakdowns, and massive single-tap checkout action anchors.
-- **Mobile/Handheld Breakpoint (< 768px):** Reflows into a segmented swipe view: Catalog View toggles into sliding bottom cart ledger with a persistent subtotal sticky bar.
-- **Minimum Touch Target:** All actionable targets (buttons, numpad keys, catalog cards) adhere to a minimum bounding box of 48px x 48px to prevent miss-hits in fast-paced retail environments.
+## Colors & Semantic Tokens
 
-## Elevation & Depth
-Depth is created primarily through tonal layering and low-contrast borders rather than deep ambient shadows, ensuring crisp rendering on lower-cost POS LCD displays:
-- **Base Surface (`#F8F9FA`):** Lowest canvas level hosting the catalog grid and utility panels.
-- **Surface Container (`#FFFFFF`):** Catalog cards, numpads, receipt panes, and inputs with a 1px solid border (`#E2E8F0`).
-- **Surface Inset (`#F1F5F9`):** Input search bars, discount code recesses, and disabled item cells.
-- **Elevated Modals & Overlays:** Subtle functional shadow (`0 4px 16px -2px rgba(30, 41, 59, 0.12)`) paired with a 1px `#CBD5E1` border for cash drawer prompts, customer lookup sheets, and payment gateway waiting dialogs.
-- **Hardware Status Rail (`#1E293B`):** Dark anchor surface using flat planes with no shadows, creating absolute structural separation.
+- **Primary (`#3B6C2B` & `#4E7A3E`):** Akhana Botanical Green. Primary action buttons, active navigation states, and order confirmation triggers.
+- **Tertiary / Success Lime (`#7EB53F`):** Live stock confirmations, approved QR/digital transactions, and connected hardware status.
+- **Commercial Gold (`#E5A823`):** Rapid discount controls, promo badges, and cashier authorization limits.
+- **Inverse Forest (`#1B2E18`):** Header and sidebar structural anchor, isolating persistent operational controls.
+- **Canvas (`#F7F4E9` / `#FAF8F0`):** Warm organic cream background ensuring high readability without the harsh glare of plain white.
+- **Error (`#C23B2A`):** Low-stock warnings, item deletion, void sales, and offline indicators.
 
-## Shapes
-A controlled, compact radius (`0.25rem` base, `0.5rem` for large panels) maintains an industrial, efficient enterprise appearance. 
-- Avoid overly rounded pill shapes for primary operational cards to maximize touchable surface area and preserve screen real estate.
-- Product item tiles, numpad buttons, and text fields use crisp `0.25rem` corners.
-- Checkout checkout drawer surfaces, bottom sheets, and modal confirmation panels use `0.5rem` outer radii.
+---
 
-## Components
+## Shopping Cart & Rapid Interaction System
 
-### Buttons
-- **Primary Tender Button:** `#1A73E8` background, `#FFFFFF` text, `JetBrains Mono` bold total readout, 56px minimum height. Active press feedback uses scale(0.98) with `#1557B0` background.
-- **Secondary/Function Keys:** Border `1px solid #CBD5E1`, `#FFFFFF` background, `#1E293B` text (e.g., "Hold Cart", "Split Bill", "Add Note").
-- **Destructive/Void Buttons:** Ghost state with `#EA4335` text and light border; solid `#EA4335` fill on confirmation modals.
+To maximize cashier speed in high-traffic retail environments, the cart employs **direct input fields combined with single-click preset chips**:
 
-### Input Fields & Keypads
-- **Search & Barcode Scan Input:** Integrated leading scanner icon with constant autofocus capability, `#F1F5F9` background, focusing to `#FFFFFF` with a `2px solid #1A73E8` ring.
-- **Numeric Touch Keypad:** Grid layout with large tabular numeric keys (64px height each), `#FFFFFF` fill, `#E2E8F0` borders, providing haptic visual state switches.
+### 1. Rapid Quantity & Weight Adjustment
+- **Direct Numeric Input:** Cashiers can type numbers directly (`<input type="number" min="1" max="99">`) without clicking steppers repeatedly for bulk items.
+- **Stepper Micro-Controls:** Compact `-` and `+` buttons for single-unit increment/decrement.
+- **Preset Increment Pills:** Quick buttons (`+1`, `+5`, `+10`) for fast multi-unit additions.
+- **Pesable (Weighed) Goods:** Dedicated gram input (`<input type="number" step="25"> g`) with quick-add chips (`+50g`, `+100g`, `+250g`).
 
-### Product Item Cards
-- Compact 1:1 or 4:3 ratio touch cards featuring high-contrast title (`Geist` 14px SemiBold), SKU (`JetBrains Mono` 11px), stock counter badge, and prominent price tag in `#1E293B`.
-- Out-of-stock items dynamically render with 50% opacity and diagonal warning hash mark.
+### 2. Rapid Discount Management
+- **Line-Item Discount Input:** Direct monetary input (`Desc: $[ 1.50 ]`) right on the item row with an explicit cap alert (e.g., `Máx $5.00`).
+- **Line-Item Preset Chips:** Single-tap pills (`-$0.50`, `-$1.00`, `-$1.50`) for immediate discount application.
+- **Global Ticket Discount:** Dedicated summary card input (`Descuento Global: $[ 2.00 ]`) accompanied by quick chips (`-$1.00`, `-$2.00`, `-$5.00`, `-$10.00`) and authorization ceiling notification (`Límite: $20.00`).
 
-### Cart Line Items
-- Dense, tabular rows with quantity steppers (`-`, value, `+`), title, unit price, and item modifier sub-bullets.
-- Swipe-left or quick-tap trigger reveals coral red "Void" action.
+---
 
-### Status Indicators & Chips
-- **Hardware Connection Badges:** Emerald green dot (`#34A853`) with pulsing indicator for online barcode scanner, card terminal, and receipt printer.
-- **Order Tag Chips:** Compact 24px height, `#E2E8F0` fill, `label-sm` font for table numbers, takeout markers, or customer tier IDs.
+## Layout Partition (1080p Touch / Desktop Screen)
+
+- **Top Navigation Bar (64px / `#1B2E18`):**
+  - Akhana 3-leaf botanical logo + "Admin POS" gold tag.
+  - Cashier register monitor (`Caja #01 • Turno Diario • $200.00 base`).
+  - Shortcut action triggers (`Confirmar Venta [F9]`, `Cerrar Caja`).
+- **Catalog Workspace (65% width):**
+  - Barcode scanner input with continuous autofocus laser sweep animation.
+  - Category pill filter ribbon (Todos, Bebidas, Abarrotes, Lácteos, Embutidos, Snacks, Limpieza).
+  - High-velocity product grid with clear pesable badges, low-stock warnings, and prices.
+- **Cart & Checkout Workspace (35% width):**
+  - Active ticket header (`#ORD-8492`) with timestamp and item counter.
+  - Fast customer selector (`Consumidor Final`).
+  - Scrollable interactive cart with inline quantity and discount inputs.
+  - Financial breakdown with global discount controls.
+  - Multi-tender payment tabs (`Efectivo`, `Pago QR`, `Mixto`), instant change calculation, and thermal receipt auto-print switch.
