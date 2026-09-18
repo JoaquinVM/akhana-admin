@@ -1,0 +1,118 @@
+/* Akhana Botanical Precision POS - Design Tokens & Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+:root {
+  /* Surface colors */
+  --color-surface: #FAF8F0;
+  --color-surface-dim: #E9E3D0;
+  --color-surface-bright: #FAF8F0;
+  --color-surface-lowest: #FFFFFF;
+  --color-surface-low: #F4EFE1;
+  --color-surface-container: #EDE7D4;
+  --color-surface-high: #E6DFCB;
+  --color-surface-highest: #DED6C1;
+  --color-surface-variant: #E4DEC9;
+  --color-on-surface: #1E2519;
+  --color-on-surface-variant: #4C5544;
+  --color-inverse-surface: #1B2E18;
+  --color-inverse-on-surface: #F5F0D3;
+
+  /* Brand greens */
+  --color-primary: #3B6C2B;
+  --color-primary-container: #4E7A3E;
+  --color-on-primary: #FFFFFF;
+  --color-primary-fixed: #DCECD2;
+  --color-primary-fixed-dim: #B2D49F;
+  --color-tertiary: #7EB53F;
+  --color-tertiary-container: #EBF5DE;
+  --color-tertiary-fixed: #8CBF41;
+
+  /* Golden amber accent */
+  --color-accent-gold: #E5A823;
+  --color-accent-gold-container: #FEF6DC;
+  --color-accent-gold-on: #6B4C00;
+  --color-accent-gold-border: #F59E0B;
+
+  /* Background & borders */
+  --color-background: #F7F4E9;
+  --color-outline: #7D8774;
+  --color-outline-variant: #D8D3C1;
+  --color-error: #C23B2A;
+  --color-error-container: #FDE8E5;
+
+  /* Fonts */
+  --font-headline: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Geist', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Material Symbols configuration */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
+  display: inline-block;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Typography Utility Classes */
+.font-headline { font-family: var(--font-headline); }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Custom Scrollbars for high-velocity touch */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-container);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
+}
+
+/* Barcode scanner laser beam animation */
+@keyframes laser-sweep {
+  0% { transform: translateY(0); opacity: 0.8; }
+  50% { transform: translateY(32px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.8; }
+}
+
+.animate-laser {
+  animation: laser-sweep 2s ease-in-out infinite;
+}
+
+/* Pulse badge animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.8s infinite ease-in-out;
+}

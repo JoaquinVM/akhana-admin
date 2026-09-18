@@ -1,7 +1,7 @@
 # 🚦 Control de Aprobaciones - Antigravity Core
 
 > **Modo de Trabajo:** `MVP`  
-> **Estado Actual del Proyecto:** `DESIGN`
+> **Estado Actual del Proyecto:** `DEVELOPMENT`
 
 ## 🔓 Compuertas de Supervisión Humana (HITL)
 
