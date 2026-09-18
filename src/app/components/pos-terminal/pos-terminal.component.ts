@@ -7,11 +7,12 @@ import { CashRegisterService } from '../../services/cash-register.service';
 import { SheetsSyncService } from '../../services/sheets-sync.service';
 import { Category, Product, SaleItem, PaymentMethod, Sale } from '../../models/domain.model';
 import { ConfirmModalComponent } from '../confirm-modal/confirm-modal.component';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-pos-terminal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmModalComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ConfirmModalComponent],
   template: `
     <div class="flex-1 flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden bg-[#F7F4E9]">
       
@@ -44,11 +45,23 @@ import { ConfirmModalComponent } from '../confirm-modal/confirm-modal.component'
             <button
               (click)="clearSearch()"
               *ngIf="searchQuery"
-              class="px-3 py-2 text-xs font-semibold text-[#4C5544] hover:text-[#1E2519] bg-[#EDE7D4] rounded-lg transition-colors">
+              class="px-2.5 py-1.5 text-xs font-semibold text-[#4C5544] hover:text-[#1E2519] bg-[#EDE7D4] rounded-lg transition-colors">
               Limpiar
             </button>
-            <span class="text-xs font-semibold text-[#4C5544] bg-[#EDE7D4] px-3 py-2 rounded-lg">
-              {{ filteredProducts.length }} productos
+            <a
+              routerLink="/products"
+              class="px-2.5 py-1.5 text-xs font-bold text-[#1E3B0B] bg-[#EBF5DE] hover:bg-[#DCECD2] rounded-lg border border-[#8CBF41]/40 flex items-center gap-1 transition-colors shadow-2xs">
+              <span class="material-symbols-outlined text-base">inventory_2</span>
+              <span>Gestionar Productos</span>
+            </a>
+            <a
+              routerLink="/catalog"
+              class="px-2.5 py-1.5 text-xs font-bold text-[#6B4C00] bg-[#FEF6DC] hover:bg-[#FDE8B3] rounded-lg border border-amber-300 flex items-center gap-1 transition-colors shadow-2xs">
+              <span class="material-symbols-outlined text-base">category</span>
+              <span>Catálogo</span>
+            </a>
+            <span class="text-xs font-semibold text-[#4C5544] bg-[#EDE7D4] px-2.5 py-1.5 rounded-lg hidden xl:inline-block">
+              {{ filteredProducts.length }} prods
             </span>
           </div>
         </div>

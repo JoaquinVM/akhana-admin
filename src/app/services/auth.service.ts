@@ -11,8 +11,12 @@ export class AuthService {
 
   constructor(private storageService: StorageService) {
     const users = this.storageService.getUsers();
-    // Default to Vendedor as per POS operation (Juan Pérez)
-    const defaultUser = users.find(u => u.role === 'VENDEDOR') || users[0];
+    // Default to Administrador to ensure full access to all features (catalog, products, sales, POS)
+    const savedUserId = localStorage.getItem('akhana_active_user_id');
+    const defaultUser = (savedUserId ? users.find(u => u.id === savedUserId) : null)
+      || users.find(u => u.role === 'ADMIN')
+      || users[0];
+
     this.currentUserSubject = new BehaviorSubject<User>(defaultUser);
   }
 
@@ -37,10 +41,12 @@ export class AuthService {
     const user = users.find(u => u.role === role);
     if (user) {
       this.currentUserSubject.next(user);
+      localStorage.setItem('akhana_active_user_id', user.id);
     }
   }
 
   setUser(user: User): void {
     this.currentUserSubject.next(user);
+    localStorage.setItem('akhana_active_user_id', user.id);
   }
 }
