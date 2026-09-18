@@ -145,7 +145,7 @@ The design system is extracted directly from the official **Akhana** brand ident
   - **Deep Foliage Green (`#3B6C2B` / `#4E7A3E`):** Serves as primary interactive authority, checkout buttons, and brand accents.
   - **Sprout / Fresh Lime (`#7EB53F` / `#8CBF41`):** Highlights positive status indicators (hardware online, live stock, scale readings, approved QR payments).
   - **Deep Forest Header (`#1B2E18`):** Inverse dark container grounding top and side navigation bars.
-- **Amber Gold Accents (`#E5A823`):** Reflects the third leaf of the Akhana brand motif. Used exclusively for commercial incentives: item discounts, global ticket reductions, promotional badges, and cashier alerts.
+- **Amber Gold Prominence (`#E5A823` / `#F59E0B`):** Reflects the third leaf of the Akhana brand motif. Featured prominently across high-priority transaction anchors: the 12 grouped quick-add price tags, item discount input fields, the global ticket discount card, and the `#ORD-8492` order tag pill.
 
 ---
 
@@ -153,27 +153,33 @@ The design system is extracted directly from the official **Akhana** brand ident
 
 - **Primary (`#3B6C2B` & `#4E7A3E`):** Akhana Botanical Green. Primary action buttons, active navigation states, and order confirmation triggers.
 - **Tertiary / Success Lime (`#7EB53F`):** Live stock confirmations, approved QR/digital transactions, and connected hardware status.
-- **Commercial Gold (`#E5A823`):** Rapid discount controls, promo badges, and cashier authorization limits.
+- **Vibrant Amber Gold (`#E5A823` & `#F59E0B`):** Dominant warm commercial accent for quick-add pricing, discount modules, active order badges, and financial highlights.
 - **Inverse Forest (`#1B2E18`):** Header and sidebar structural anchor, isolating persistent operational controls.
 - **Canvas (`#F7F4E9` / `#FAF8F0`):** Warm organic cream background ensuring high readability without the harsh glare of plain white.
 - **Error (`#C23B2A`):** Low-stock warnings, item deletion, void sales, and offline indicators.
 
 ---
 
-## Shopping Cart & Rapid Interaction System
+## Grouped Quick-Add System (12 Top Sellers)
 
-To maximize cashier speed in high-traffic retail environments, the cart employs **direct input fields combined with single-click preset chips**:
+To accelerate register throughput, the terminal provides a dedicated **12-item quick-add panel** grouped into 3 distinct operational categories with vibrant golden amber pricing:
+1. **☕ Bebidas & Café (4 items):** Café Espresso ($2.00), Coca-Cola 500ml ($1.80), Agua Mineral 1L ($1.00), Jugo Naranja 500ml ($2.20).
+2. **🥖 Panadería & Desayuno (4 items):** Pan Baguette ($0.90), Medialuna Manteca ($0.75), Leche Entera 1L ($1.50), Yogur Granola 250g ($1.20).
+3. **🥪 Snacks & Al Paso (4 items):** Sándwich Jamón ($3.50), Papas Rústicas 150g ($2.40), Barra Energética ($1.10), Chocolate Amargo ($1.90).
 
-### 1. Rapid Quantity & Weight Adjustment
-- **Direct Numeric Input:** Cashiers can type numbers directly (`<input type="number" min="1" max="99">`) without clicking steppers repeatedly for bulk items.
-- **Stepper Micro-Controls:** Compact `-` and `+` buttons for single-unit increment/decrement.
-- **Preset Increment Pills:** Quick buttons (`+1`, `+5`, `+10`) for fast multi-unit additions.
-- **Pesable (Weighed) Goods:** Dedicated gram input (`<input type="number" step="25"> g`) with quick-add chips (`+50g`, `+100g`, `+250g`).
+---
 
-### 2. Rapid Discount Management
-- **Line-Item Discount Input:** Direct monetary input (`Desc: $[ 1.50 ]`) right on the item row with an explicit cap alert (e.g., `Máx $5.00`).
-- **Line-Item Preset Chips:** Single-tap pills (`-$0.50`, `-$1.00`, `-$1.50`) for immediate discount application.
-- **Global Ticket Discount:** Dedicated summary card input (`Descuento Global: $[ 2.00 ]`) accompanied by quick chips (`-$1.00`, `-$2.00`, `-$5.00`, `-$10.00`) and authorization ceiling notification (`Límite: $20.00`).
+## Shopping Cart: Direct Editable Inputs (Chip-Free Design)
+
+In strict accordance with cashier precision standards, the cart eliminates rapid discount chips to maximize screen clarity and prevent accidental taps. Instead, it provides **dedicated, direct editable input fields**:
+
+### 1. Direct Quantity & Grammage Editing
+- **Unit Items:** Stepper buttons (`-` / `+`) flanking a central numeric input (`<input type="number" min="1" max="99">`), allowing direct typing for bulk quantities.
+- **Weighed Items:** Dedicated numeric input in grams (`<input type="number" step="25"> g`).
+
+### 2. Direct Discount Inputs (Warm Golden Amber Styling)
+- **Line-Item Discount Input:** Clean input field (`Desc: $[ 1.50 ]`) with warm amber border and background highlight.
+- **Global Ticket Discount:** Dedicated summary card input (`Descuento Global del Ticket: $[ 2.00 ]`) framed in warm golden amber, with live calculation of total savings (`Total Descuentos: -$3.50`) and authorization ceiling warning (`Máx $20.00`).
 
 ---
 

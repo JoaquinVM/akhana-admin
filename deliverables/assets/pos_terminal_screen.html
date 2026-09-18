@@ -149,7 +149,7 @@
   <div class="flex flex-col">
     <div class="flex items-center gap-2">
       <span class="text-2xl font-extrabold text-surface-container-lowest tracking-tight font-serif italic text-[#FAF7EC]">Akhana</span>
-      <span class="text-[11px] uppercase tracking-wider font-bold bg-accent-gold/25 text-[#F5EFCF] px-2 py-0.5 rounded-md border border-accent-gold/40">Admin POS</span>
+      <span class="text-[11px] uppercase tracking-wider font-extrabold bg-accent-gold text-amber-950 px-2.5 py-0.5 rounded-md shadow-xs border border-amber-300">Admin POS</span>
     </div>
     <span class="text-[10px] text-outline-variant tracking-wider -mt-0.5 font-label-sm text-[#E2E8D8]">SISTEMA INTEGRAL DE CAJA</span>
   </div>
@@ -306,32 +306,96 @@
 <button class="px-3.5 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container-high text-label-md font-label-md shrink-0 border border-outline-variant/40 transition-colors">Limpieza (6)</button>
 </div>
 </div>
-<!-- Quick Bar: Productos Frecuentes -->
-<div class="bg-surface-container px-3.5 py-2 border-b border-outline-variant/40 flex items-center gap-2 overflow-x-auto shrink-0">
-<div class="flex items-center gap-1 text-primary text-label-sm font-label-sm font-bold shrink-0 mr-1">
-<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
-<span>RÁPIDOS:</span>
-</div>
-<button class="flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant/60 hover:border-primary text-label-sm font-label-sm shrink-0 active:scale-98 transition-all">
-<span class="font-bold text-on-surface">Coca-Cola 500ml</span>
-<span class="font-numeric-md text-primary font-bold">$1.80</span>
-</button>
-<button class="flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant/60 hover:border-primary text-label-sm font-label-sm shrink-0 active:scale-98 transition-all">
-<span class="font-bold text-on-surface">Pan Baguette</span>
-<span class="font-numeric-md text-primary font-bold">$0.90</span>
-</button>
-<button class="flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant/60 hover:border-primary text-label-sm font-label-sm shrink-0 active:scale-98 transition-all">
-<span class="font-bold text-on-surface">Leche Entera 1L</span>
-<span class="font-numeric-md text-primary font-bold">$1.50</span>
-</button>
-<button class="flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant/60 hover:border-primary text-label-sm font-label-sm shrink-0 active:scale-98 transition-all">
-<span class="font-bold text-on-surface">Agua Mineral 1L</span>
-<span class="font-numeric-md text-primary font-bold">$1.00</span>
-</button>
-<button class="flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant/60 hover:border-primary text-label-sm font-label-sm shrink-0 active:scale-98 transition-all">
-<span class="font-bold text-on-surface">Café Espresso</span>
-<span class="font-numeric-md text-primary font-bold">$2.00</span>
-</button>
+<!-- Grouped Quick-Add (12 Items in 3 Categories) with Prominent Amber Styling -->
+<div class="bg-surface-container px-3.5 py-2.5 border-b border-outline-variant/40 flex flex-col gap-2 shrink-0">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-4 rounded-full bg-accent-gold"></span>
+      <span class="material-symbols-outlined text-amber-600 text-lg" data-icon="bolt">bolt</span>
+      <span class="text-xs font-bold uppercase tracking-wider text-on-surface">Agregado Rápido (12 Favoritos de Venta Directa)</span>
+    </div>
+    <span class="text-[11px] font-bold text-amber-950 bg-amber-400/90 px-2.5 py-0.5 rounded-full border border-amber-500/40 shadow-2xs">⚡ 1-Clic al Carrito</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+    <!-- Group 1: Bebidas & Café (4) -->
+    <div class="bg-surface-container-lowest rounded-xl p-2 border border-amber-300/60 flex flex-col gap-1.5 shadow-2xs">
+      <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 uppercase tracking-wider border-b border-amber-200 pb-1">
+        <span class="flex items-center gap-1">☕ Bebidas &amp; Café</span>
+        <span class="text-[10px] text-outline font-normal">4 ítems</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Café Espresso</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$2.00</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Coca-Cola 500ml</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.80</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Agua Mineral 1L</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.00</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Jugo Naranja 500ml</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$2.20</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Group 2: Panadería & Lácteos (4) -->
+    <div class="bg-surface-container-lowest rounded-xl p-2 border border-amber-300/60 flex flex-col gap-1.5 shadow-2xs">
+      <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 uppercase tracking-wider border-b border-amber-200 pb-1">
+        <span class="flex items-center gap-1">🥖 Panadería &amp; Desayuno</span>
+        <span class="text-[10px] text-outline font-normal">4 ítems</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Pan Baguette</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$0.90</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Medialuna Manteca</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$0.75</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Leche Entera 1L</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.50</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Yogur Granola 250g</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.20</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Group 3: Snacks & Al Paso (4) -->
+    <div class="bg-surface-container-lowest rounded-xl p-2 border border-amber-300/60 flex flex-col gap-1.5 shadow-2xs">
+      <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 uppercase tracking-wider border-b border-amber-200 pb-1">
+        <span class="flex items-center gap-1">🥪 Snacks &amp; Al Paso</span>
+        <span class="text-[10px] text-outline font-normal">4 ítems</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Sándwich Jamón</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$3.50</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Papas Rústicas 150g</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$2.40</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Barra Energética</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.10</span>
+        </button>
+        <button class="flex items-center justify-between p-1.5 rounded-lg bg-surface-container-low hover:bg-amber-50 hover:border-amber-400 border border-outline-variant/40 text-left transition-all group active:scale-95">
+          <span class="text-xs font-bold text-on-surface truncate group-hover:text-primary">Chocolate Amargo</span>
+          <span class="text-[11px] font-bold font-numeric-md text-amber-950 bg-amber-200/90 px-1.5 py-0.5 rounded ml-1 shrink-0">$1.90</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- Product Catalog Grid -->
 <div class="flex-1 overflow-y-auto p-4">
@@ -536,7 +600,7 @@
 <div>
 <div class="flex items-center gap-2">
 <span class="text-headline-md font-headline-md font-bold text-on-surface">Venta en Curso</span>
-<span class="font-numeric-md text-numeric-md font-bold text-primary">#ORD-8492</span>
+<span class="font-numeric-md text-numeric-md font-extrabold bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-md border border-amber-500/40 shadow-2xs">#ORD-8492</span>
 </div>
 <div class="flex items-center gap-2 text-outline text-label-sm font-label-sm mt-0.5">
 <span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
@@ -590,32 +654,22 @@
     </div>
   </div>
 
-  <!-- Interactive Controls: Rapid Grams Input + Direct Discount Input -->
-  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+  <!-- Interactive Controls: Clean Editable Grams Input + Clean Editable Discount Input (No Chips) -->
+  <div class="flex items-center justify-between gap-2 pt-0.5">
     <!-- Weight in Grams Input -->
-    <div class="flex items-center gap-1.5 bg-secondary-container/40 px-2 py-1 rounded-lg border border-secondary/20 shadow-2xs">
+    <div class="flex items-center gap-1.5 bg-secondary-container/40 px-2.5 py-1 rounded-lg border border-secondary/20 shadow-2xs">
       <span class="text-xs font-bold text-secondary">⚖️ Peso:</span>
-      <input type="number" step="25" min="10" max="5000" value="350" class="w-16 py-0.5 px-1 text-center font-numeric-md font-bold text-primary bg-white border border-outline-variant/80 rounded focus:ring-2 focus:ring-primary focus:outline-none text-xs" title="Editar gramos de venta"/>
+      <input type="number" step="25" min="10" max="5000" value="350" class="w-18 py-0.5 px-1.5 text-center font-numeric-md font-bold text-primary bg-white border border-outline-variant/80 rounded-md focus:ring-2 focus:ring-primary focus:outline-none text-xs" title="Editar peso en gramos"/>
       <span class="text-xs font-bold text-secondary">g</span>
-      <div class="flex items-center gap-0.5 ml-1">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+50g</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+100g</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-surface-container border border-outline-variant/60 shadow-2xs active:scale-95 transition-all">+250g</button>
-      </div>
     </div>
 
-    <!-- Direct Line-Item Discount Input with Fast Preset Pills -->
-    <div class="flex items-center gap-1.5 bg-accent-gold-container/40 border border-accent-gold/40 px-2 py-1 rounded-lg text-label-sm shadow-2xs">
-      <span class="material-symbols-outlined text-accent-gold-on text-sm" data-icon="local_offer">local_offer</span>
-      <span class="text-xs font-bold text-accent-gold-on">Desc:</span>
+    <!-- Direct Editable Discount Input (Warm Amber Styling, No Chips) -->
+    <div class="flex items-center gap-1.5 bg-amber-50/90 border-2 border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs">
+      <span class="material-symbols-outlined text-amber-700 text-sm" data-icon="local_offer">local_offer</span>
+      <span class="text-xs font-bold text-amber-900">Desc:</span>
       <div class="relative">
-        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
-        <input type="number" min="0" max="5.00" step="0.50" value="1.50" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-accent-gold-on bg-white border border-accent-gold/60 rounded focus:ring-1 focus:ring-accent-gold focus:outline-none shadow-2xs" title="Descuento directo al ítem (Máx $5.00)"/>
-      </div>
-      <div class="flex items-center gap-0.5">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs">-$0.50</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs">-$1.00</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-accent-gold/30 text-accent-gold-on border border-accent-gold/60 font-bold shadow-2xs">-$1.50</button>
+        <span class="absolute left-1.5 top-0.5 text-xs font-bold text-amber-700">$</span>
+        <input type="number" min="0" max="5.00" step="0.25" value="1.50" class="w-16 py-0.5 pl-4 pr-1 text-right font-numeric-md text-xs font-bold text-amber-950 bg-white border border-amber-400 rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs" title="Descuento editable directo por ítem"/>
       </div>
     </div>
   </div>
@@ -638,32 +692,25 @@
     </div>
   </div>
 
-  <!-- Interactive Controls: Stepper with Editable Numeric Input + Direct Item Discount -->
-  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-    <!-- Quantity Stepper with Direct Input -->
+  <!-- Interactive Controls: Stepper with Editable Quantity + Clean Editable Discount (No Chips) -->
+  <div class="flex items-center justify-between gap-2 pt-0.5">
+    <!-- Quantity Stepper with Direct Editable Input -->
     <div class="flex items-center gap-1.5">
       <span class="text-xs font-semibold text-outline">Cant:</span>
-      <div class="flex items-center border border-outline-variant/80 rounded-lg overflow-hidden bg-white shadow-2xs">
-        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">-</button>
-        <input type="number" min="1" max="99" value="2" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Escribir cantidad numéricamente"/>
-        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">+</button>
-      </div>
-      <div class="flex items-center gap-0.5 ml-0.5">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+1</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+5</button>
+      <div class="flex items-center border-2 border-outline-variant/70 rounded-lg overflow-hidden bg-white shadow-2xs">
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">-</button>
+        <input type="number" min="1" max="99" value="2" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Editar cantidad numéricamente"/>
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">+</button>
       </div>
     </div>
 
-    <!-- Direct Rapid Discount Input with Fast Preset Pills -->
-    <div class="flex items-center gap-1.5 bg-surface-container-low/60 border border-outline-variant/60 px-2 py-1 rounded-lg text-label-sm">
-      <span class="text-xs font-bold text-on-surface-variant">Desc:</span>
+    <!-- Direct Editable Discount Input (Warm Amber Styling, No Chips) -->
+    <div class="flex items-center gap-1.5 bg-amber-50/90 border-2 border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs">
+      <span class="material-symbols-outlined text-amber-700 text-sm" data-icon="local_offer">local_offer</span>
+      <span class="text-xs font-bold text-amber-900">Desc:</span>
       <div class="relative">
-        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
-        <input type="number" min="0" max="5.00" step="0.50" value="0.00" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-on-surface bg-white border border-outline-variant/70 rounded focus:ring-1 focus:ring-primary focus:outline-none shadow-2xs" title="Descuento por ítem"/>
-      </div>
-      <div class="flex items-center gap-0.5">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$0.50</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$1.00</button>
+        <span class="absolute left-1.5 top-0.5 text-xs font-bold text-amber-700">$</span>
+        <input type="number" min="0" max="5.00" step="0.25" value="0.00" class="w-16 py-0.5 pl-4 pr-1 text-right font-numeric-md text-xs font-bold text-amber-950 bg-white border border-amber-400 rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs" title="Descuento editable directo por ítem"/>
       </div>
     </div>
   </div>
@@ -686,32 +733,25 @@
     </div>
   </div>
 
-  <!-- Interactive Controls: Stepper with Editable Numeric Input + Direct Item Discount -->
-  <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-    <!-- Quantity Stepper with Direct Input -->
+  <!-- Interactive Controls: Stepper with Editable Quantity + Clean Editable Discount (No Chips) -->
+  <div class="flex items-center justify-between gap-2 pt-0.5">
+    <!-- Quantity Stepper with Direct Editable Input -->
     <div class="flex items-center gap-1.5">
       <span class="text-xs font-semibold text-outline">Cant:</span>
-      <div class="flex items-center border border-outline-variant/80 rounded-lg overflow-hidden bg-white shadow-2xs">
-        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">-</button>
-        <input type="number" min="1" max="99" value="3" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Escribir cantidad numéricamente"/>
-        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs">+</button>
-      </div>
-      <div class="flex items-center gap-0.5 ml-0.5">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+1</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50">+5</button>
+      <div class="flex items-center border-2 border-outline-variant/70 rounded-lg overflow-hidden bg-white shadow-2xs">
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">-</button>
+        <input type="number" min="1" max="99" value="3" class="w-12 py-0.5 text-center font-numeric-md text-xs font-bold text-on-surface bg-white border-x border-outline-variant/40 focus:outline-none focus:ring-1 focus:ring-primary" title="Editar cantidad numéricamente"/>
+        <button class="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors font-bold text-xs active:scale-95">+</button>
       </div>
     </div>
 
-    <!-- Direct Rapid Discount Input with Fast Preset Pills -->
-    <div class="flex items-center gap-1.5 bg-surface-container-low/60 border border-outline-variant/60 px-2 py-1 rounded-lg text-label-sm">
-      <span class="text-xs font-bold text-on-surface-variant">Desc:</span>
+    <!-- Direct Editable Discount Input (Warm Amber Styling, No Chips) -->
+    <div class="flex items-center gap-1.5 bg-amber-50/90 border-2 border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs">
+      <span class="material-symbols-outlined text-amber-700 text-sm" data-icon="local_offer">local_offer</span>
+      <span class="text-xs font-bold text-amber-900">Desc:</span>
       <div class="relative">
-        <span class="absolute left-1.5 top-0.5 text-xs text-outline">$</span>
-        <input type="number" min="0" max="5.00" step="0.50" value="0.00" class="w-14 py-0.5 pl-3.5 pr-1 text-right font-numeric-md text-xs font-bold text-on-surface bg-white border border-outline-variant/70 rounded focus:ring-1 focus:ring-primary focus:outline-none shadow-2xs" title="Descuento por ítem"/>
-      </div>
-      <div class="flex items-center gap-0.5">
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$0.50</button>
-        <button class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-white hover:bg-amber-100 text-on-surface border border-outline-variant/60 shadow-2xs">-$1.00</button>
+        <span class="absolute left-1.5 top-0.5 text-xs font-bold text-amber-700">$</span>
+        <input type="number" min="0" max="5.00" step="0.25" value="0.00" class="w-16 py-0.5 pl-4 pr-1 text-right font-numeric-md text-xs font-bold text-amber-950 bg-white border border-amber-400 rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs" title="Descuento editable directo por ítem"/>
       </div>
     </div>
   </div>
@@ -724,39 +764,30 @@
     <span>Subtotal Bruto</span>
     <span class="font-numeric-md text-numeric-md font-medium text-on-surface">$30.15</span>
   </div>
-  <div class="flex justify-between text-body-md font-body-md text-tertiary">
+  <div class="flex justify-between text-body-md font-body-md text-tertiary font-semibold">
     <span class="flex items-center gap-1">
       <span class="material-symbols-outlined text-base" data-icon="loyalty">loyalty</span>
       <span>Descuentos por Producto</span>
     </span>
-    <span class="font-numeric-md text-numeric-md font-semibold">-$1.50</span>
+    <span class="font-numeric-md text-numeric-md font-bold">-$1.50</span>
   </div>
-  <!-- Global Discount Section with Direct Input & Rapid Preset Pills -->
-  <div class="p-2.5 rounded-xl bg-accent-gold-container/40 border border-accent-gold/40 flex flex-col gap-1.5">
+  <!-- Global Discount Section (No chips, clean direct input in warm amber) -->
+  <div class="p-3 rounded-xl bg-gradient-to-br from-amber-100/95 to-amber-50 border-2 border-amber-400 flex flex-col gap-1.5 shadow-2xs">
     <div class="flex items-center justify-between text-body-md font-body-md">
       <div class="flex items-center gap-1.5">
-        <span class="material-symbols-outlined text-accent-gold-on text-base" data-icon="percent">percent</span>
-        <span class="text-accent-gold-on font-bold text-sm">Descuento Global:</span>
+        <span class="material-symbols-outlined text-amber-700 text-base" data-icon="percent">percent</span>
+        <span class="text-amber-950 font-extrabold text-sm">Descuento Global del Ticket:</span>
       </div>
       <div class="flex items-center gap-1.5">
         <div class="relative">
-          <span class="absolute left-2 top-0.5 text-xs font-bold text-accent-gold-on">$</span>
-          <input class="w-20 text-right py-0.5 pl-4 pr-1.5 font-numeric-md text-sm font-bold text-accent-gold-on bg-white border border-accent-gold/60 rounded-lg focus:ring-2 focus:ring-accent-gold focus:outline-none shadow-2xs" type="number" step="0.50" min="0" max="20.00" value="2.00" title="Descuento global sobre el ticket"/>
+          <span class="absolute left-2.5 top-1 text-xs font-bold text-amber-700">$</span>
+          <input class="w-24 text-right py-1 pl-5 pr-2 font-numeric-md text-sm font-extrabold text-amber-950 bg-white border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs" type="number" step="0.50" min="0" max="20.00" value="2.00" title="Descuento global editable"/>
         </div>
       </div>
     </div>
-    <!-- Rapid Preset Discount Chips -->
-    <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-accent-gold/20">
-      <span class="text-[10px] font-bold text-accent-gold-on/80">Chips rápidos:</span>
-      <div class="flex items-center gap-1">
-        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$1.00</button>
-        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-accent-gold/30 hover:bg-accent-gold/40 text-accent-gold-on border border-accent-gold/60 font-bold shadow-2xs transition-colors">-$2.00</button>
-        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$5.00</button>
-        <button class="px-2 py-0.5 text-xs font-bold rounded-md bg-white hover:bg-accent-gold-container text-accent-gold-on border border-accent-gold/40 shadow-2xs transition-colors">-$10.00</button>
-      </div>
-    </div>
-    <div class="text-[10px] text-outline text-right font-label-sm">
-      ⚠️ Límite de descuento autorizado: $20.00
+    <div class="flex items-center justify-between text-[11px] font-label-sm pt-1 border-t border-amber-300 text-amber-900">
+      <span>⚠️ Límite autorizado: $20.00</span>
+      <span class="font-bold bg-amber-300/80 text-amber-950 px-2 py-0.5 rounded-md">Total Descuentos: -$3.50</span>
     </div>
   </div>
 
