@@ -163,9 +163,9 @@ The design system is extracted directly from the official **Akhana** brand ident
 ## Grouped Quick-Add System (12 Top Sellers)
 
 To accelerate register throughput, the terminal provides a dedicated **12-item quick-add panel** grouped into 3 distinct operational categories with vibrant golden amber pricing:
-1. **☕ Bebidas & Café (4 items):** Café Espresso ($2.00), Coca-Cola 500ml ($1.80), Agua Mineral 1L ($1.00), Jugo Naranja 500ml ($2.20).
-2. **🥖 Panadería & Desayuno (4 items):** Pan Baguette ($0.90), Medialuna Manteca ($0.75), Leche Entera 1L ($1.50), Yogur Granola 250g ($1.20).
-3. **🥪 Snacks & Al Paso (4 items):** Sándwich Jamón ($3.50), Papas Rústicas 150g ($2.40), Barra Energética ($1.10), Chocolate Amargo ($1.90).
+1. **☕ Bebidas & Café (4 items):** Café Espresso (Bs 2.00), Coca-Cola 500ml (Bs 1.80), Agua Mineral 1L (Bs 1.00), Jugo Naranja 500ml (Bs 2.20).
+2. **🥖 Panadería & Desayuno (4 items):** Pan Baguette (Bs 0.90), Medialuna Manteca (Bs 0.75), Leche Entera 1L (Bs 1.50), Yogur Granola 250g (Bs 1.20).
+3. **🥪 Snacks & Al Paso (4 items):** Sándwich Jamón (Bs 3.50), Papas Rústicas 150g (Bs 2.40), Barra Energética (Bs 1.10), Chocolate Amargo (Bs 1.90).
 
 ---
 
@@ -178,8 +178,9 @@ In strict accordance with cashier precision standards, the cart eliminates rapid
 - **Weighed Items:** Dedicated numeric input in grams (`<input type="number" step="25"> g`).
 
 ### 2. Direct Discount Inputs (Warm Golden Amber Styling)
-- **Line-Item Discount Input:** Clean input field (`Desc: $[ 1.50 ]`) with warm amber border and background highlight.
-- **Global Ticket Discount:** Dedicated summary card input (`Descuento Global del Ticket: $[ 2.00 ]`) framed in warm golden amber, with live calculation of total savings (`Total Descuentos: -$3.50`) and authorization ceiling warning (`Máx $20.00`).
+- **Currency:** Bolivianos (`Bs` / `BOB`) with 13% IVA Bolivia tax integration.
+- **Line-Item Discount Input:** Clean input field (`Desc: Bs[ 1.50 ]`) with warm amber border and background highlight.
+- **Global Ticket Discount:** Dedicated summary card input (`Descuento Global del Ticket: Bs[ 2.00 ]`) framed in warm golden amber, with live calculation of total savings (`Total Descuentos: -Bs 3.50`) and authorization ceiling warning (`Máx Bs 20.00`).
 
 ---
 
@@ -187,7 +188,7 @@ In strict accordance with cashier precision standards, the cart eliminates rapid
 
 - **Top Navigation Bar (64px / `#1B2E18`):**
   - Akhana 3-leaf botanical logo + "Admin POS" gold tag.
-  - Cashier register monitor (`Caja #01 • Turno Diario • $200.00 base`).
+  - Cashier register monitor (`Caja #01 • Turno Diario • Bs 200.00 base`).
   - Shortcut action triggers (`Confirmar Venta [F9]`, `Cerrar Caja`).
 - **Catalog Workspace (65% width):**
   - Barcode scanner input with continuous autofocus laser sweep animation.
