@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.AuthService;
+import com.akhana.akhana_admin.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +20,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     private static final String GENERIC_AUTH_ERROR = "Invalid username or password";
 
@@ -43,9 +45,12 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthenticationFailedException(GENERIC_AUTH_ERROR);
         }
 
+        String token = jwtService.generateToken(user);
+
         log.info("User '{}' successfully authenticated with role '{}'", user.getUsername(), user.getRole());
 
         return new LoginResponse(
+            token,
             user.getId(),
             user.getUsername(),
             user.getRole(),

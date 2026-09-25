@@ -1,0 +1,21 @@
+requirement:
+  id: REQ-0003
+  slug: jwt-authentication-login
+  title: "Incorporar Autenticación JWT al Login Existente"
+  complexity: MEDIUM
+  rationale:
+    - "Añade biblioteca de tokens JWT (io.jsonwebtoken:jjwt) en backend/build.gradle"
+    - "Implementa servicio JwtService para generación, firmado y validación criptográfica de tokens"
+    - "Implementa filtro de seguridad JwtAuthenticationFilter (OncePerRequestFilter)"
+    - "Modifica SecurityConfig para registrar el filtro y proteger todas las rutas excepto /api/auth/login"
+    - "Extiende LoginResponse para incluir el token generado sin romper campos existentes"
+    - "Configura propiedades externas de clave secreta y expiración en application.properties"
+    - "Crea suite de tests para generación, validación, login con JWT y protección de endpoints"
+    - "Sin impacto visual en UI en este requerimiento (UI impact: NONE)"
+  workflow:
+    research: false      # Implementación estándar de JJWT y filtros de Spring Security
+    ux_design: false     # Requerimiento 100% backend / API REST
+    technical_design: true
+    user_stories: true
+    test_first: true
+    review_level: FULL

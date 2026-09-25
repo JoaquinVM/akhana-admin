@@ -1,31 +1,39 @@
 package com.akhana.akhana_admin.controller;
 
+import com.akhana.akhana_admin.config.JwtAuthenticationEntryPoint;
+import com.akhana.akhana_admin.config.JwtAuthenticationFilter;
 import com.akhana.akhana_admin.config.SecurityConfig;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
 import com.akhana.akhana_admin.model.Role;
+import com.akhana.akhana_admin.model.User;
+import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.AuthService;
+import com.akhana.akhana_admin.service.JwtService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {AuthController.class, GlobalExceptionHandler.class})
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
 class AuthControllerTest {
 
     @Autowired
@@ -34,11 +42,18 @@ class AuthControllerTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserRepository userRepository;
+
     @Test
-    @DisplayName("POST /api/auth/login - Retorna 200 OK con datos de usuario cuando las credenciales son válidas")
+    @DisplayName("POST /api/auth/login - Retorna 200 OK con token y datos de usuario cuando las credenciales son válidas")
     void login_Success() throws Exception {
         UUID userId = UUID.randomUUID();
-        LoginResponse response = new LoginResponse(userId, "admin", Role.ADMIN, "Authentication successful");
+        String fakeToken = "eyJhbGciOiJIUzI1NiJ9.fake.jwt.token";
+        LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMIN, "Authentication successful");
 
         when(authService.login(any(LoginRequest.class))).thenReturn(response);
 
@@ -53,6 +68,7 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonPayload))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").value(fakeToken))
             .andExpect(jsonPath("$.id").value(userId.toString()))
             .andExpect(jsonPath("$.username").value("admin"))
             .andExpect(jsonPath("$.role").value("ADMIN"))
@@ -95,5 +111,52 @@ class AuthControllerTest {
                 .content(jsonPayload))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error").value("Bad Request"));
+    }
+
+    @Test
+    @DisplayName("GET /api/auth/me - Retorna 200 OK con los datos del usuario autenticado vía JWT")
+    void getCurrentUser_Success() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder()
+            .id(userId)
+            .username("admin")
+            .role(Role.ADMIN)
+            .active(true)
+            .build();
+
+        String token = "valid.test.token";
+        when(jwtService.extractUsername(token)).thenReturn("admin");
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
+        when(jwtService.isTokenValid(token, "admin")).thenReturn(true);
+
+        mockMvc.perform(get("/api/auth/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(userId.toString()))
+            .andExpect(jsonPath("$.username").value("admin"))
+            .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    @DisplayName("GET /api/auth/me - Retorna 401 Unauthorized cuando no se envía el header Authorization")
+    void getCurrentUser_Unauthorized_MissingToken() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error").value("Unauthorized"))
+            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+    }
+
+    @Test
+    @DisplayName("GET /api/auth/me - Retorna 401 Unauthorized cuando el token es inválido")
+    void getCurrentUser_Unauthorized_InvalidToken() throws Exception {
+        String invalidToken = "invalid.test.token";
+        when(jwtService.extractUsername(invalidToken)).thenReturn("admin");
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/auth/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error").value("Unauthorized"))
+            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
     }
 }

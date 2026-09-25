@@ -32,6 +32,9 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtService jwtService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -49,16 +52,19 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Debe autenticar exitosamente cuando las credenciales son válidas y el usuario está activo")
+    @DisplayName("Debe autenticar exitosamente cuando las credenciales son válidas y generar el JWT")
     void login_Success() {
         LoginRequest request = new LoginRequest("admin", "12345admin");
+        String expectedToken = "mocked.jwt.token";
 
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
+        when(jwtService.generateToken(activeUser)).thenReturn(expectedToken);
 
         LoginResponse response = authService.login(request);
 
         assertThat(response).isNotNull();
+        assertThat(response.token()).isEqualTo(expectedToken);
         assertThat(response.id()).isEqualTo(activeUser.getId());
         assertThat(response.username()).isEqualTo("admin");
         assertThat(response.role()).isEqualTo(Role.ADMIN);
@@ -66,10 +72,11 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).findByUsername("admin");
         verify(passwordEncoder, times(1)).matches("12345admin", activeUser.getPassword());
+        verify(jwtService, times(1)).generateToken(activeUser);
     }
 
     @Test
-    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario no existe")
+    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario no existe y no generar JWT")
     void login_UserNotFound() {
         LoginRequest request = new LoginRequest("nonexistent", "secret");
 
@@ -81,10 +88,11 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).findByUsername("nonexistent");
         verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(jwtService);
     }
 
     @Test
-    @DisplayName("Debe fallar con HTTP 401 genérico si la contraseña no coincide")
+    @DisplayName("Debe fallar con HTTP 401 genérico si la contraseña no coincide y no generar JWT")
     void login_InvalidPassword() {
         LoginRequest request = new LoginRequest("admin", "wrongPassword");
 
@@ -97,10 +105,11 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).findByUsername("admin");
         verify(passwordEncoder, times(1)).matches("wrongPassword", activeUser.getPassword());
+        verifyNoInteractions(jwtService);
     }
 
     @Test
-    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario está inactivo")
+    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario está inactivo y no generar JWT")
     void login_InactiveUser() {
         User inactiveUser = User.builder()
             .id(UUID.randomUUID())
@@ -120,5 +129,6 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).findByUsername("seller");
         verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(jwtService);
     }
 }

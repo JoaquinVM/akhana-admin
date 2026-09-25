@@ -1,0 +1,20 @@
+scope:
+  approved:
+    - "Generación de JWT firmado (HMAC-SHA256) en login exitoso"
+    - "Inclusión de claims: sub (ID), username, role, iat, exp"
+    - "Extensión de LoginResponse para incluir campo token: String"
+    - "Configuración externa de clave secreta y tiempo de expiración en application.properties"
+    - "Filtro JwtAuthenticationFilter para validar Authorization: Bearer <token>"
+    - "Establecimiento de Authentication en SecurityContext con roles asignados"
+    - "Endpoint público POST /api/auth/login"
+    - "Endpoint protegido GET /api/auth/me (para verificar que el contexto de seguridad expone al usuario autenticado)"
+    - "Respuesta HTTP 401 Unauthorized ante peticiones protegidas sin token o con token inválido/expirado"
+    - "Tests unitarios de JwtService y tests de integración con MockMvc"
+
+  excluded:
+    - "Mecanismo de Refresh Tokens (rotación de tokens)"
+    - "Blacklist o revocación/logout de tokens en servidor"
+    - "Persistencia de tokens JWT en PostgreSQL"
+    - "Implementación de permisos granulares por endpoint (autorización fina)"
+    - "Interceptor o servicio de autenticación en Angular (frontend)"
+    - "Pantalla de login o Auth Guards en Angular"
