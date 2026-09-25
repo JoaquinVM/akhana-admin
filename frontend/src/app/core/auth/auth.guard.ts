@@ -17,14 +17,14 @@ export const authGuard: CanActivateFn = () => {
 };
 
 /**
- * Prevents authenticated users from unnecessarily accessing /login. Redirects to /dashboard.
+ * Prevents authenticated users from unnecessarily accessing /login. Redirects to /pos.
  */
 export const guestGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
   if (authService.isAuthenticated()) {
-    return router.createUrlTree(['/dashboard']);
+    return router.createUrlTree(['/pos']);
   }
 
   return true;

@@ -1,0 +1,22 @@
+id: REQ-0005
+title: Implementación del menú de navegación principal
+complexity: MEDIUM
+date: "2026-09-25"
+evaluated_by: orchestrator
+justification:
+  scope: |
+    Implementación de la arquitectura de navegación principal superior del frontend en Angular 21:
+    - Barra horizontal compacta (Navbar/Header) sin sidebar lateral.
+    - Menús desplegables por grupo con hover (Ventas, Catálogo, Seguridad).
+    - Detección reactiva de grupo activo y opción activa mediante Angular Router.
+    - Configuración centralizada y extensible de navegación (data-driven).
+    - 6 rutas funcionales (/pos, /sales, /products, /categories, /tags, /users) protegidas por authGuard.
+    - Redirección por defecto de / a /pos.
+    - Vistas mínimas con título de sección.
+  technical_impact:
+    - Componente de navegación/header reusable y extensible.
+    - Modelo de datos tipado para la estructura del menú.
+    - Actualización de app.routes.ts con guards y redirección a /pos.
+    - Pruebas unitarias para navegación, rutas, hover y estados activos.
+  risk: LOW
+  estimated_effort: MEDIUM

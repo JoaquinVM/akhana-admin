@@ -49,7 +49,7 @@ export class LoginComponent {
       next: () => {
         this.isLoading.set(false);
         this.loginForm.enable();
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/pos']);
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);

@@ -1,0 +1,24 @@
+requirement_id: REQ-0005
+title: Implementación del menú de navegación principal
+module: frontend
+
+approved:
+  - Componente Navbar / Header horizontal superior compacto.
+  - Grupos con dropdown activado por hover (Ventas, Catálogo, Seguridad).
+  - Subopciones funcionales: POS (/pos), Ventas (/sales), Productos (/products), Categorías (/categories), Etiquetas (/tags), Usuarios (/users).
+  - Detección visual del grupo activo en la barra superior.
+  - Detección visual de la opción activa dentro del desplegable.
+  - Ruta por defecto / redirigiendo a /pos.
+  - Vistas mínimas con despliegue de título de la sección (/pos ➔ POS, /products ➔ Productos, etc.).
+  - Configuración centralizada y extensible del menú (data-driven config).
+  - Protección de rutas de navegación mediante authGuard existente.
+  - Integración de saludo/rol y botón de logout en la barra superior mediante AuthService.
+  - Pruebas unitarias para Navbar, rutas y navegación.
+
+excluded:
+  - Sidebar lateral (explícitamente no deseado).
+  - Funcionalidad interna o lógica del POS.
+  - Pantallas o formularios de registro/edición de Ventas, Productos, Categorías, Etiquetas y Usuarios.
+  - Tablas de datos, grillas o paginación.
+  - Conexión a endpoints de backend que no sean auth.
+  - Matriz de visibilidad de menús por rol (se pospone para requerimiento posterior si aplica).

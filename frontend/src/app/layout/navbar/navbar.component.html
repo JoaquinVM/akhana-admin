@@ -1,0 +1,75 @@
+<header class="top-navbar">
+  <div class="navbar-left">
+    <a routerLink="/pos" class="brand-link" (click)="closeAllMenus()" title="Akhana Admin POS">
+      <img src="images/akhana-logo.png" alt="Akhana Logo" class="brand-logo" />
+      <div class="brand-text">
+        <span class="brand-title">Akhana Admin</span>
+        <span class="brand-subtitle">PUNTO DE VENTA ZEN</span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="navbar-center nav-groups" (mouseleave)="closeAllMenus()" aria-label="Navegación Principal">
+    @for (group of navGroups; track group.id) {
+      <div class="nav-group-container"
+           [class.group-active]="isGroupActive(group)"
+           [class.menu-open]="openGroupId() === group.id"
+           (mouseenter)="openGroup(group.id)"
+           (mouseleave)="closeGroup(group.id)">
+        <button type="button" class="nav-group-btn" [attr.aria-label]="'Menú de ' + group.label">
+          <span class="group-active-indicator" aria-hidden="true"></span>
+          <span class="group-label">{{ group.label }}</span>
+          <span class="chevron-icon" aria-hidden="true">▾</span>
+        </button>
+
+        @if (openGroupId() === group.id) {
+          <div class="dropdown-menu" role="menu">
+            <div class="dropdown-items">
+              @for (item of group.children; track item.route) {
+                <a [routerLink]="item.route"
+                   routerLinkActive="active"
+                   (click)="closeAllMenus()"
+                   class="dropdown-item"
+                   role="menuitem">
+                  <span class="item-dot" aria-hidden="true"></span>
+                  <span class="item-label">{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="item-badge">{{ item.badge }}</span>
+                  }
+                  @if (item.caption) {
+                    <span class="item-caption">{{ item.caption }}</span>
+                  }
+                </a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </nav>
+
+  <div class="navbar-right">
+    @if (authService.currentUser(); as user) {
+      <div class="user-chip">
+        <div class="avatar-circle">
+          {{ user.username.charAt(0).toUpperCase() }}
+        </div>
+        <div class="user-info">
+          <span class="username">{{ user.username }}</span>
+          <span class="role-badge" [class.admin]="user.role === 'ADMIN'" [class.seller]="user.role === 'SELLER'">
+            {{ user.role }}
+          </span>
+        </div>
+      </div>
+    }
+
+    <button type="button" class="logout-btn" (click)="logout()" title="Cerrar Sesión">
+      <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      <span class="logout-text">Cerrar Sesión</span>
+    </button>
+  </div>
+</header>

@@ -1,0 +1,340 @@
+.top-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+  padding: 0 32px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(46, 91, 39, 0.12);
+  box-shadow: 0 4px 20px -4px rgba(27, 59, 24, 0.04);
+}
+
+/* Marca / Logo */
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1B3B18;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.brand-subtitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #7BB142;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Grupos de Navegación */
+.navbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-group-container {
+  position: relative;
+  padding: 4px 0;
+}
+
+.nav-group-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A5568;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.nav-group-container:hover .nav-group-btn,
+.nav-group-container.menu-open .nav-group-btn,
+.nav-group-btn:focus-visible {
+  background: rgba(46, 91, 39, 0.06);
+  color: #1B3B18;
+}
+
+.chevron-icon {
+  font-size: 11px;
+  color: #718096;
+  transition: transform 0.2s ease;
+}
+
+.nav-group-container.menu-open .chevron-icon {
+  transform: rotate(180deg);
+  color: #1B3B18;
+}
+
+/* Grupo Activo */
+.group-active-indicator {
+  display: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #7BB142;
+  box-shadow: 0 0 0 2px rgba(123, 177, 66, 0.3);
+}
+
+.nav-group-container.group-active .nav-group-btn {
+  background: rgba(46, 91, 39, 0.09);
+  border-color: rgba(46, 91, 39, 0.18);
+  color: #1B3B18;
+}
+
+.nav-group-container.group-active .group-active-indicator {
+  display: inline-block;
+}
+
+/* Menú Desplegable Flotante */
+.dropdown-menu {
+  display: block;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(46, 91, 39, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px -8px rgba(27, 59, 24, 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  padding: 6px;
+  z-index: 1010;
+  animation: dropdownFade 0.15s ease-out;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #2D3748;
+  transition: all 0.15s ease;
+}
+
+.item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #CBD5E1;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(46, 91, 39, 0.06);
+  color: #1B3B18;
+  transform: translateX(2px);
+}
+
+.dropdown-item:hover .item-dot {
+  background-color: #7BB142;
+}
+
+/* Opción Activa dentro del Menú */
+.dropdown-item.active {
+  background: rgba(245, 184, 0, 0.14);
+  color: #1B3B18;
+  font-weight: 600;
+}
+
+.dropdown-item.active .item-dot {
+  background-color: #F5B800;
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.35);
+  transform: scale(1.2);
+}
+
+.item-label {
+  flex: 1;
+}
+
+.item-badge {
+  padding: 2px 7px;
+  background: rgba(245, 184, 0, 0.2);
+  border: 1px solid rgba(245, 184, 0, 0.4);
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #996B00;
+  letter-spacing: 0.02em;
+}
+
+.item-caption {
+  font-size: 11px;
+  color: #718096;
+}
+
+/* Área Derecha: Usuario y Logout */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 6px;
+  background: rgba(46, 91, 39, 0.05);
+  border: 1px solid rgba(46, 91, 39, 0.12);
+  border-radius: 9999px;
+}
+
+.avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #1B3B18;
+  color: #FFFFFF;
+  border-radius: 50%;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.username {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1B3B18;
+}
+
+.role-badge {
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.role-badge.admin {
+  background: rgba(245, 184, 0, 0.18);
+  border: 1px solid rgba(245, 184, 0, 0.35);
+  color: #996B00;
+}
+
+.role-badge.seller {
+  background: rgba(123, 177, 66, 0.18);
+  border: 1px solid rgba(123, 177, 66, 0.35);
+  color: #2E5B27;
+}
+
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  background: rgba(186, 26, 26, 0.05);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: 8px;
+  color: #BA1A1A;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(186, 26, 26, 0.12);
+  border-color: rgba(186, 26, 26, 0.35);
+}
+
+.logout-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 992px) {
+  .top-navbar {
+    padding: 0 16px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .nav-group-btn {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .logout-text {
+    display: none;
+  }
+
+  .logout-btn {
+    padding: 0 10px;
+  }
+}

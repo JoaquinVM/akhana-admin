@@ -45,7 +45,7 @@ describe('LoginComponent', () => {
     expect(component.isFieldInvalid('password')).toBe(true);
   });
 
-  it('should call authService.login and navigate to /dashboard on success', () => {
+  it('should call authService.login and navigate to /pos on success', () => {
     const mockResponse: LoginResponse = {
       token: 'jwt.token',
       id: 'uuid-1',
@@ -66,7 +66,7 @@ describe('LoginComponent', () => {
       username: 'admin',
       password: 'password123'
     });
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/dashboard']);
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/pos']);
     expect(component.isLoading()).toBe(false);
   });
 

@@ -43,12 +43,12 @@ describe('Auth Guards', () => {
       expect(result).toBe(true);
     });
 
-    it('should redirect to /dashboard when user is already authenticated', () => {
+    it('should redirect to /pos when user is already authenticated', () => {
       authServiceSpy.isAuthenticated.mockReturnValue(true);
 
       const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
       expect(result instanceof UrlTree).toBe(true);
-      expect((result as UrlTree).toString()).toBe('/dashboard');
+      expect((result as UrlTree).toString()).toBe('/pos');
     });
   });
 });
