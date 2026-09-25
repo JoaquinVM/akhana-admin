@@ -1,0 +1,72 @@
+<div class="dashboard-wrapper">
+  <!-- Top Navigation Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-brand">
+        <img src="images/akhana-logo.png" alt="Akhana Logo" class="header-logo" />
+        <div>
+          <span class="header-title">Akhana Admin</span>
+          <span class="header-subtitle">Panel de Control</span>
+        </div>
+      </div>
+
+      <div class="header-user-section">
+        <div class="user-badge">
+          <span class="user-avatar">{{ (currentUser()?.username ?? 'U')[0].toUpperCase() }}</span>
+          <div class="user-details">
+            <span class="user-name">{{ currentUser()?.username }}</span>
+            <span class="user-role" [class.role-admin]="userRole() === 'ADMIN'" [class.role-seller]="userRole() === 'SELLER'">
+              {{ userRole() }}
+            </span>
+          </div>
+        </div>
+
+        <button type="button" class="logout-btn" (click)="logout()" aria-label="Cerrar sesión">
+          <svg class="logout-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    <div class="welcome-card">
+      <div class="welcome-header">
+        <div class="welcome-avatar-large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="welcome-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="welcome-title">¡Bienvenido, {{ currentUser()?.username }}!</h1>
+          <p class="welcome-subtitle">Has iniciado sesión correctamente con rol <strong>{{ userRole() }}</strong>.</p>
+        </div>
+      </div>
+
+      <div class="session-info-grid">
+        <div class="info-card">
+          <span class="info-label">ID de Usuario</span>
+          <span class="info-value font-mono">{{ currentUser()?.id }}</span>
+        </div>
+        <div class="info-card">
+          <span class="info-label">Rol Asignado</span>
+          <span class="info-value">
+            <span class="role-pill" [class.role-admin]="userRole() === 'ADMIN'" [class.role-seller]="userRole() === 'SELLER'">
+              {{ userRole() }}
+            </span>
+          </span>
+        </div>
+        <div class="info-card">
+          <span class="info-label">Estado de Autenticación</span>
+          <span class="info-value text-success">
+            <span class="status-dot"></span>
+            Sesión Activa con JWT
+          </span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

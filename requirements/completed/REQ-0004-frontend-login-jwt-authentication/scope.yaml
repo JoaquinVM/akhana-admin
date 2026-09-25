@@ -1,0 +1,19 @@
+id: REQ-0004
+approved:
+  - "Pantalla de login responsive estilizada según el logo de Akhana (dorado zen #F5B800, verde bosque #2E5B27, hojas botánicas)."
+  - "Formulario reactivo con campos usuario y contraseña con validaciones obligatorias directas en UI."
+  - "Servicio centralizado AuthService con Signals para reactividad, persistencia en localStorage y recuperación al recargar la app."
+  - "Integración HTTP real con POST http://localhost:8080/api/auth/login."
+  - "HttpInterceptor funcional para agregar Authorization: Bearer <token> a llamadas protegidas."
+  - "Manejo de expiración/401 en interceptor con limpieza de sesión y redirección a /login sin bucles."
+  - "Guards funcionales (authGuard para rutas protegidas y guestGuard para login)."
+  - "Vista básica protegida (/dashboard) para comprobar autenticación, despliegue de rol (ADMIN/SELLER) y botón de logout."
+  - "Manejo robusto de errores de login (credenciales inválidas) y de conectividad (servidor caído)."
+  - "Pruebas unitarias de componentes, servicios e interceptores con Vitest."
+excluded:
+  - "Registro de nuevos usuarios (sign-up)."
+  - "Recuperación de contraseña (forgot password)."
+  - "Autenticación OAuth2 / Social Login."
+  - "Refresh tokens o token blacklisting en frontend."
+  - "Restricción de vistas específicas por rol (role guards avanzados)."
+  - "Cambios o duplicaciones en la lógica del backend Spring Boot."

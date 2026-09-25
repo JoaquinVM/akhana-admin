@@ -1,0 +1,23 @@
+id: REQ-0004
+title: Login y autenticación JWT en el frontend
+classification: MEDIUM
+score: 6
+reasons:
+  - Nueva pantalla de inicio de sesión con alta exigencia estética basada en la identidad visual de Akhana (logo, paleta y tipografía).
+  - Implementación de arquitectura de seguridad en Angular 21 (AuthService reactivo con Signals, AuthGuard funcional, AuthInterceptor HTTP funcional con inyección de JWT y manejo de 401).
+  - Persistencia de sesión en localStorage y recuperación al recargar la página.
+  - Validación de formularios reactivos o template-driven con retroalimentación visual accesible.
+  - Creación de vista protegida mínima (Dashboard) para verificar login, despliegue de rol (ADMIN/SELLER) y funcionalidad de logout.
+impact_areas:
+  - frontend/src/app/core/auth/
+  - frontend/src/app/pages/login/
+  - frontend/src/app/pages/dashboard/
+  - frontend/src/app/app.routes.ts
+  - frontend/src/app/app.config.ts
+  - frontend/src/app/app.html
+  - frontend/public/images/akhana-logo.png
+ui_impact: HIGH
+backend_impact: NONE
+requires_research: false
+requires_ui_design: true
+estimated_tasks: 12
