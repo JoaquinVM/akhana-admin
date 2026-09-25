@@ -1,0 +1,19 @@
+scope:
+  approved:
+    - "Entidad JPA User para persistencia de usuarios en base de datos"
+    - "Configuración de Spring Security con BCryptPasswordEncoder"
+    - "Inicialización de datos idempotente mediante CommandLineRunner para usuarios admin y seller"
+    - "Hashing obligatorio con BCrypt de contraseñas de admin y seller"
+    - "Endpoint POST /api/auth/login con validación de credenciales vía PasswordEncoder.matches()"
+    - "Validación de usuario activo (is_active == true)"
+    - "Respuesta HTTP 401 Unauthorized genérica sin fuga de información ante credenciales erróneas o usuario inactivo"
+    - "Configuración de SecurityFilterChain permitiendo acceso público a /api/auth/login"
+    - "Tests unitarios y de integración para inicialización y endpoint de login"
+
+  excluded:
+    - "Generación y validación de tokens JWT (previsto para un requerimiento posterior)"
+    - "Endpoints de registro de usuarios o autoservicio"
+    - "Endpoints de cambio o recuperación de contraseñas"
+    - "Interfaz visual o pantalla de login en frontend (UI impact: NONE)"
+    - "Políticas de bloqueo por intentos fallidos de login"
+    - "Autenticación OAuth2 / Social Login"

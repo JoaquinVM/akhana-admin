@@ -1,0 +1,18 @@
+requirement:
+  id: REQ-0001
+  slug: user-login-authentication
+  title: "Login y Autenticación de Usuarios con Spring Boot y JPA"
+  complexity: MEDIUM
+  rationale:
+    - "Afecta persistencia relacional: Entidad User y repositorio JPA"
+    - "Introduce Spring Security con BCryptPasswordEncoder"
+    - "Implementa endpoint REST de login con validación de credenciales y estado activo"
+    - "Crea inicialización idempotente de usuarios (admin y seller) en CommandLineRunner"
+    - "Sin impacto directo en UI/UX en este requerimiento (UI impact: NONE)"
+  workflow:
+    research: false      # Stack Spring Boot + Security estándar, sin incertidumbre técnica externa
+    ux_design: false     # Requerimiento 100% backend / API
+    technical_design: true
+    user_stories: true
+    test_first: true
+    review_level: FULL

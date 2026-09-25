@@ -1,0 +1,19 @@
+requirement:
+  id: REQ-0002
+  slug: reorganize-fullstack-frontend-angular
+  title: "Reorganización Full Stack y Creación del Frontend Angular"
+  complexity: MEDIUM
+  rationale:
+    - "Reorganización estructural del proyecto: Traslado de akhana-admin a backend/"
+    - "Creación e inicialización de un nuevo proyecto Angular 19 en frontend/"
+    - "Verificación de compilación y ejecución de tests de Spring Boot tras el traslado"
+    - "Configuración de .gitignore integral para Spring Boot + Angular"
+    - "Inicialización de Git en la raíz del proyecto y preparación para vinculación con GitHub"
+    - "Redacción de README.md principal para el repositorio Full Stack"
+  workflow:
+    research: false      # Uso estándar de Angular CLI y reorganización de carpetas
+    ux_design: false     # Estructura base / esqueleto Angular, sin diseño de pantallas en esta tarea
+    technical_design: true
+    user_stories: true
+    test_first: false    # Tarea de estructura e inicialización de proyectos
+    review_level: FULL

@@ -1,0 +1,16 @@
+scope:
+  approved:
+    - "Traslado completo de todos los archivos y carpetas del backend Spring Boot a backend/"
+    - "Verificación de compilación y ejecución de tests en backend/ con ./gradlew test"
+    - "Creación de proyecto Angular funcional dentro de frontend/ mediante Angular CLI (ng new)"
+    - "Configuración de cliente HTTP en Angular para consumo futuro de API REST"
+    - "Creación de archivo .gitignore unificado para Spring Boot (Java/Gradle) + Angular (Node/TypeScript)"
+    - "Creación de README.md principal en la raíz con instrucciones de ejecución de backend y frontend"
+    - "Inicialización de repositorio Git local y primer commit con la estructura completa"
+    - "Vinculación con el repositorio remoto de GitHub y push inicial"
+
+  excluded:
+    - "Implementación de pantallas de login o dashboards en Angular (UI impact: NONE en esta fase)"
+    - "Modificación de la lógica de negocio o endpoints de autenticación del backend"
+    - "Configuración de pipelines CI/CD complejos (GitHub Actions)"
+    - "Subida de archivos compilados, dependencias locales (node_modules, build/) o secretos al repositorio"
