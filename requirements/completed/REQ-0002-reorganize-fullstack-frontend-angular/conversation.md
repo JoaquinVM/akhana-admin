@@ -18,3 +18,20 @@
 ### 2026-09-25T12:54:00-04:00 - Orquestador
 > Aprobación recibida. URL del repositorio remoto registrada: `https://github.com/JoaquinVM/akhana-admin.git`.
 > Versión de Angular seleccionada: Angular 21 (`@angular/cli@21`). Transición a `DEVELOPMENT`.
+> Traslado exitoso de `akhana-admin/` a `backend/` (10/10 tests pasados).
+> Generación de proyecto Angular 21 en `frontend/` con `provideHttpClient()` (build exitoso en 2 s).
+> Creación de `.gitignore` unificado y `README.md` maestro.
+> Inicialización de Git, commit y push exitoso a `https://github.com/JoaquinVM/akhana-admin.git` en rama `main`.
+
+### 2026-09-25T13:07:04-04:00 - Usuario
+> "quiero levantar el proeycto angular para verificar que este corriendo bien, tengo que correar algun comando?"
+
+### 2026-09-25T13:07:30-04:00 - Orquestador
+> Servidor de desarrollo de Angular 21 levantado en segundo plano en `http://localhost:4200`. Instrucciones provistas.
+
+### 2026-09-25T13:10:57-04:00 - Usuario
+> "ya lo verifique, cierrra el proceso en sedungo plano y cierrar el requrimiento"
+
+### 2026-09-25T13:11:15-04:00 - Orquestador
+> Proceso de servidor de desarrollo en segundo plano cancelado.
+> Requerimiento REQ-0002 aprobado y cerrado formalmente. Archivado a `requirements/completed/`.

@@ -19,3 +19,5 @@
 | 2026-09-25 13:04 | `orchestrator` | Inicialización de Git y commit inicial | `.git/` | TASK-10, TASK-11 | COMPLETED |
 | 2026-09-25 13:04 | `orchestrator` | Vinculación remota y push a GitHub | `origin/main` | TASK-12 | COMPLETED |
 | 2026-09-25 13:05 | `review-agent` | Auditoría de criterios de aceptación | `final-report.md` | Validación final | COMPLETED |
+| 2026-09-25 13:07 | `developer-agent` | Ejecución de servidor dev de Angular 21 | `frontend/` | Verificación manual | RUNNING |
+| 2026-09-25 13:11 | `documentation-agent` | Detención de servidor dev y cierre formal del requerimiento | `requirements/completed/` | Cierre por usuario | COMPLETED |

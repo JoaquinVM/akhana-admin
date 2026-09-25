@@ -3,10 +3,11 @@
 - **Identificador:** `REQ-0002`
 - **Título:** Reorganización Full Stack y Creación del Frontend Angular
 - **Complejidad:** `MEDIUM`
-- **Estado:** `REFINEMENT`
+- **Estado:** `COMPLETED`
 - **Fecha de Creación:** 2026-09-25
+- **Fecha de Cierre:** 2026-09-25
 - **Módulos Afectados:** `backend/`, `frontend/`, `.gitignore`, `README.md`, `git`
-- **Rama Asociada:** `feature/REQ-0002-reorganize-fullstack-frontend-angular`
+- **Rama Asociada:** `main` (remoto `origin/main`)
 
 ---
 
