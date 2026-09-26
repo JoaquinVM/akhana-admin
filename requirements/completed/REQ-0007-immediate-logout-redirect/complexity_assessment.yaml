@@ -1,0 +1,18 @@
+id: REQ-0007
+title: Redirección inmediata al login al cerrar sesión
+complexity: SMALL
+date: "2026-09-26"
+evaluated_by: orchestrator
+justification:
+  scope: |
+    Corrección de flujo de autenticación y navegación en el frontend:
+    - Asegurar que al ejecutar Cerrar Sesión, se invalide la sesión y se redirija de inmediato a /login.
+    - Evitar que el usuario permanezca en la pantalla protegida actual tras cerrar sesión.
+    - Centralizar la navegación en AuthService.logout().
+    - Validar que las pruebas unitarias cubran la redirección inmediata.
+  technical_impact:
+    - Inyección de Router en AuthService.
+    - Ejecución de router.navigate(['/login']) en AuthService.logout().
+    - Actualización de pruebas unitarias en auth.service.spec.ts y navbar.component.spec.ts.
+  risk: LOW
+  estimated_effort: SMALL

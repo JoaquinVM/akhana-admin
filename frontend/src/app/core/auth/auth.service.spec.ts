@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Router, provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
 import { LoginRequest, LoginResponse } from './models/auth.models';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpTesting: HttpTestingController;
+  let router: Router;
 
   beforeEach(() => {
     localStorage.clear();
@@ -14,12 +16,14 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        provideRouter([])
       ]
     });
 
     service = TestBed.inject(AuthService);
     httpTesting = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
   });
 
   afterEach(() => {
@@ -64,9 +68,11 @@ describe('AuthService', () => {
     expect(localStorage.getItem('akhana_token')).toBe('jwt.test.token');
   });
 
-  it('should clear session and update signals to null on logout', () => {
+  it('should clear session, update signals to null, and navigate immediately to /login on logout', () => {
     localStorage.setItem('akhana_token', 'sample.token');
     localStorage.setItem('akhana_user', JSON.stringify({ id: '1', username: 'seller', role: 'SELLER' }));
+
+    const navigateSpy = vi.spyOn(router, 'navigate');
 
     const restoredService = TestBed.inject(AuthService);
     restoredService.logout();
@@ -76,5 +82,7 @@ describe('AuthService', () => {
     expect(restoredService.getCurrentUser()).toBeNull();
     expect(localStorage.getItem('akhana_token')).toBeNull();
     expect(localStorage.getItem('akhana_user')).toBeNull();
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).toHaveBeenCalledWith(['/login']);
   });
 });

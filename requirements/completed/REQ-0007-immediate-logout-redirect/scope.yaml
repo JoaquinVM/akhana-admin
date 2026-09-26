@@ -1,0 +1,10 @@
+id: REQ-0007
+approved:
+  - Inyección de Router en AuthService.
+  - Ejecución explícita e inmediata de router.navigate(['/login']) dentro del método AuthService.logout().
+  - Asegurar el cierre de menús desplegables en NavbarComponent.logout().
+  - Actualización de pruebas unitarias para verificar la navegación a /login.
+excluded:
+  - Modificaciones al backend (la autenticación JWT y endpoints REST no requieren cambios).
+  - Rediseño de la pantalla de login o del navbar.
+  - Cambios en políticas de expiración o refresh token.

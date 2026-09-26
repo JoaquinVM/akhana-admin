@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { LoginRequest, LoginResponse, UserSession } from './models/auth.models';
 
@@ -8,6 +9,7 @@ import { LoginRequest, LoginResponse, UserSession } from './models/auth.models';
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
 
   private readonly TOKEN_KEY = 'akhana_token';
   private readonly USER_KEY = 'akhana_user';
@@ -37,6 +39,7 @@ export class AuthService {
 
   logout(): void {
     this.clearSession();
+    this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
