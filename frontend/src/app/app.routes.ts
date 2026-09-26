@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { SectionPageComponent } from './pages/section-page/section-page.component';
+import { SuppliersComponent } from './pages/suppliers/suppliers.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -39,6 +40,10 @@ export const routes: Routes = [
         path: 'tags',
         component: SectionPageComponent,
         data: { title: 'Etiquetas', subtitle: 'Descriptores y Atributos' }
+      },
+      {
+        path: 'suppliers',
+        component: SuppliersComponent
       },
       {
         path: 'users',

@@ -1,0 +1,50 @@
+@if (isOpen()) {
+  <div
+    class="modal-backdrop"
+    (click)="onBackdropClick($event)"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()">
+    <div
+      class="modal-card"
+      [class.size-sm]="size() === 'sm'"
+      [class.size-md]="size() === 'md'"
+      [class.size-lg]="size() === 'lg'"
+      [class.size-xl]="size() === 'xl'"
+      [class]="customClass()">
+      
+      @if (title() || showCloseButton()) {
+        <div class="modal-header">
+          <div class="modal-header-content">
+            <ng-content select="[modal-icon]" />
+            <div class="modal-header-text">
+              @if (title()) {
+                <h3 class="modal-title">{{ title() }}</h3>
+              }
+              @if (subtitle()) {
+                <p class="modal-subtitle">{{ subtitle() }}</p>
+              }
+            </div>
+          </div>
+          @if (showCloseButton()) {
+            <button
+              type="button"
+              class="btn-close"
+              (click)="onClose()"
+              aria-label="Cerrar modal">
+              ✕
+            </button>
+          }
+        </div>
+      }
+
+      <div class="modal-body">
+        <ng-content />
+      </div>
+
+      <div class="modal-footer-wrapper">
+        <ng-content select="[modal-footer]" />
+      </div>
+    </div>
+  </div>
+}

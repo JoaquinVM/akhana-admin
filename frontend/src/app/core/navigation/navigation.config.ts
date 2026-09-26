@@ -36,6 +36,16 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     ]
   },
   {
+    id: 'purchases',
+    label: 'Compras',
+    children: [
+      {
+        label: 'Proveedores',
+        route: '/suppliers'
+      }
+    ]
+  },
+  {
     id: 'security',
     label: 'Seguridad',
     children: [

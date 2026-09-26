@@ -14,4 +14,12 @@ public record ErrorResponse(
     public static ErrorResponse badRequest(String message) {
         return new ErrorResponse("Bad Request", message, Instant.now());
     }
+
+    public static ErrorResponse conflict(String message) {
+        return new ErrorResponse("Conflict", message, Instant.now());
+    }
+
+    public static ErrorResponse notFound(String message) {
+        return new ErrorResponse("Not Found", message, Instant.now());
+    }
 }

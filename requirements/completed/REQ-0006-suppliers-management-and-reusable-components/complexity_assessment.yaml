@@ -1,0 +1,28 @@
+id: REQ-0006
+title: Gestión de Proveedores y Componentes Reutilizables
+complexity: LARGE
+date: "2026-09-25"
+evaluated_by: orchestrator
+justification:
+  scope: |
+    Implementación integral Full Stack:
+    - Backend Spring Boot:
+      * Entidad JPA `Supplier` con ciclo de vida (ACTIVO, INACTIVO, ELIMINADO) y auditoría completa.
+      * Validación de unicidad de nombre y código exclusiva en backend, condicionada a registros no eliminados.
+      * Auditoría automática extrayendo usuario autenticado del SecurityContext / JWT.
+      * Eliminación lógica (soft delete).
+      * API REST `/api/suppliers` (listar, buscar, consultar, crear, editar, eliminar lógicamente).
+      * Pruebas de integración y unitarias en backend.
+    - Frontend Angular 21:
+      * Integración del grupo 'Compras' y opción 'Proveedores' (/suppliers) en la navegación superior.
+      * Creación de componentes compartidos reutilizables: Modal de Confirmación y Modal de Auditoría.
+      * Centralización de estilos compartidos para formularios y tablas.
+      * Vista de Proveedores: listado tabular ordenado por nombre, búsqueda por nombre/código, creación, edición, borrado lógico con confirmación y visualización de auditoría.
+      * Manejo reactivo de errores de duplicidad devueltos por el backend.
+      * Pruebas unitarias de componentes, servicios y modales en frontend.
+  technical_impact:
+    - Nueva tabla `suppliers` en PostgreSQL.
+    - Componentes de UI genéricos que sentarán el estándar para módulos futuros (Productos, Categorías, Usuarios, etc.).
+    - Cobertura completa de pruebas en backend (Gradle/JUnit 5) y frontend (Vitest).
+  risk: LOW
+  estimated_effort: HIGH

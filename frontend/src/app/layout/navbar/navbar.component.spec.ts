@@ -39,6 +39,7 @@ describe('NavbarComponent', () => {
           { path: 'products', component: DummyComponent },
           { path: 'categories', component: DummyComponent },
           { path: 'tags', component: DummyComponent },
+          { path: 'suppliers', component: DummyComponent },
           { path: 'users', component: DummyComponent }
         ]),
         { provide: AuthService, useValue: mockAuthService }
@@ -55,14 +56,27 @@ describe('NavbarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('debe renderizar los 3 grupos principales (Ventas, Catálogo, Seguridad)', () => {
+  it('debe renderizar los 4 grupos principales (Ventas, Catálogo, Compras, Seguridad)', () => {
     const groupLabels = fixture.debugElement
       .queryAll(By.css('.group-label'))
       .map(el => el.nativeElement.textContent.trim());
 
     expect(groupLabels).toContain('Ventas');
     expect(groupLabels).toContain('Catálogo');
+    expect(groupLabels).toContain('Compras');
     expect(groupLabels).toContain('Seguridad');
+  });
+
+  it('debe desplegar la opción Proveedores al abrir el grupo Compras', () => {
+    component.openGroup('purchases');
+    fixture.detectChanges();
+
+    expect(component.openGroupId()).toBe('purchases');
+    const menu = fixture.debugElement.query(By.css('.dropdown-menu'));
+    expect(menu).toBeTruthy();
+    const item = menu.query(By.css('.dropdown-item'));
+    expect(item.nativeElement.textContent).toContain('Proveedores');
+    expect(item.nativeElement.getAttribute('href')).toBe('/suppliers');
   });
 
   it('debe desplegar únicamente el menú del grupo activo en hover y cerrar el anterior', () => {

@@ -1,0 +1,402 @@
+<div class="suppliers-page">
+  <!-- Encabezado de Página -->
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Compras</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Proveedores</span>
+      </nav>
+      <h1 class="page-title">Gestión de Proveedores</h1>
+      <p class="page-subtitle">Administración del catálogo de proveedores y trazabilidad de compras</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Nuevo Proveedor</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mensajes de Error Global -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger">
+      <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="filters-card">
+    <!-- Filtros de Estado Reutilizables -->
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill"
+        [class.active]="selectedStatusFilter() === 'ACTIVE_INACTIVE'"
+        [attr.aria-selected]="selectedStatusFilter() === 'ACTIVE_INACTIVE'"
+        (click)="setStatusFilter('ACTIVE_INACTIVE')">
+        Activos/Inactivos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill"
+        [class.active]="selectedStatusFilter() === 'ACTIVO'"
+        [attr.aria-selected]="selectedStatusFilter() === 'ACTIVO'"
+        (click)="setStatusFilter('ACTIVO')">
+        Activos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill"
+        [class.active]="selectedStatusFilter() === 'INACTIVO'"
+        [attr.aria-selected]="selectedStatusFilter() === 'INACTIVO'"
+        (click)="setStatusFilter('INACTIVO')">
+        Inactivos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill filter-pill-deleted"
+        [class.active]="selectedStatusFilter() === 'ELIMINADO'"
+        [attr.aria-selected]="selectedStatusFilter() === 'ELIMINADO'"
+        (click)="setStatusFilter('ELIMINADO')">
+        Eliminados
+      </button>
+    </div>
+
+    <div class="filters-search-wrapper">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Buscar por código o nombre..."
+          [value]="searchTerm()"
+          (input)="onSearch($event)"
+          aria-label="Buscar proveedores"
+        />
+        @if (searchTerm()) {
+          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda">✕</button>
+        }
+      </div>
+      <div class="total-counter">
+        <span>{{ filteredSuppliers().length }} proveedores encontrados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Tabla de Datos -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 15%">Código</th>
+            <th scope="col" style="width: 35%">Nombre</th>
+            <th scope="col" style="width: 20%">Teléfono</th>
+            <th scope="col" style="width: 15%">Estado</th>
+            <th scope="col" style="width: 15%; text-align: right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr>
+              <td colspan="5">
+                <div class="table-loading">
+                  <div class="spinner-large"></div>
+                  <p>Cargando catálogo de proveedores...</p>
+                </div>
+              </td>
+            </tr>
+          } @else if (filteredSuppliers().length === 0) {
+            <tr>
+              <td colspan="5">
+                <div class="table-empty">
+                  <div class="table-empty-icon">📦</div>
+                  <h4 class="table-empty-title">No se encontraron proveedores</h4>
+                  <p class="table-empty-desc">
+                    @if (searchTerm()) {
+                      No hay coincidencias para "{{ searchTerm() }}". Intenta con otro término.
+                    } @else if (selectedStatusFilter() === 'ELIMINADO') {
+                      No hay proveedores eliminados en el historial.
+                    } @else {
+                      Aún no hay proveedores registrados con el estado seleccionado. Pulsa en "+ Nuevo Proveedor" para comenzar.
+                    }
+                  </p>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (supplier of filteredSuppliers(); track supplier.id) {
+              <tr [attr.data-id]="supplier.id">
+                <td>
+                  <span class="supplier-code">{{ supplier.code }}</span>
+                </td>
+                <td>
+                  <div class="supplier-info">
+                    <span class="supplier-name">{{ supplier.name }}</span>
+                    @if (supplier.description) {
+                      <span class="supplier-description">{{ supplier.description }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="supplier-phone">{{ supplier.phone || '—' }}</span>
+                </td>
+                <td>
+                  @if (supplier.status === 'ACTIVO') {
+                    <span class="status-badge badge-active">Activo</span>
+                  } @else if (supplier.status === 'INACTIVO') {
+                    <span class="status-badge badge-inactive">Inactivo</span>
+                  } @else {
+                    <span class="status-badge badge-deleted">Eliminado</span>
+                  }
+                </td>
+                <td style="text-align: right">
+                  <div class="table-actions" style="justify-content: flex-end">
+                    <!-- Opción Auditoría disponible para todos los estados -->
+                    <button
+                      type="button"
+                      class="btn-icon btn-audit"
+                      (click)="openAuditModal(supplier)"
+                      title="Consultar Auditoría"
+                      aria-label="Consultar auditoría">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </button>
+
+                    <!-- Opción Editar disponible únicamente para ACTIVO e INACTIVO -->
+                    @if (supplier.status !== 'ELIMINADO') {
+                      <button
+                        type="button"
+                        class="btn-icon btn-edit"
+                        (click)="openEditModal(supplier)"
+                        title="Editar Proveedor"
+                        aria-label="Editar proveedor">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+
+                      <!-- Opción Eliminar disponible únicamente para ACTIVO e INACTIVO -->
+                      <button
+                        type="button"
+                        class="btn-icon btn-delete"
+                        (click)="openDeleteModal(supplier)"
+                        title="Eliminar Proveedor"
+                        aria-label="Eliminar proveedor">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Reutilizable: Formulario de Creación / Edición (NO cierra al hacer clic fuera) -->
+  <app-modal
+    [isOpen]="isFormModalOpen()"
+    [title]="isEditing() ? 'Editar Proveedor' : 'Nuevo Proveedor'"
+    [subtitle]="isEditing() ? 'Actualiza los datos del proveedor seleccionado' : 'Ingresa los datos para registrar el proveedor en el catálogo'"
+    size="md"
+    [closeOnBackdrop]="false"
+    [closeOnEscape]="false"
+    (close)="attemptCloseForm()">
+    
+    <div modal-icon class="modal-icon-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </div>
+
+    <form [formGroup]="supplierForm" (ngSubmit)="saveSupplier()">
+      <!-- Banner de error devuelto por Backend (incluyendo unicidad 409) -->
+      @if (formError()) {
+        <div class="alert alert-danger" role="alert">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{{ formError() }}</span>
+        </div>
+      }
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="supplier-name">
+            <span>Nombre o Razón Social <span class="required-mark">*</span></span>
+            @if (isFieldModified('name')) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <input
+            id="supplier-name"
+            type="text"
+            class="form-control"
+            [class.is-modified]="isFieldModified('name')"
+            [class.is-invalid]="supplierForm.get('name')?.invalid && supplierForm.get('name')?.touched"
+            formControlName="name"
+            placeholder="Ej. Distribuidora del Norte S.A."
+          />
+          @if (supplierForm.get('name')?.invalid && supplierForm.get('name')?.touched) {
+            <span class="invalid-feedback">El nombre es obligatorio.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="supplier-code">
+            <span>Código <span class="required-mark">*</span></span>
+            @if (isFieldModified('code')) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <input
+            id="supplier-code"
+            type="text"
+            class="form-control"
+            [class.is-modified]="isFieldModified('code')"
+            [class.is-invalid]="supplierForm.get('code')?.invalid && supplierForm.get('code')?.touched"
+            formControlName="code"
+            placeholder="Ej. PROV-001"
+          />
+          @if (supplierForm.get('code')?.invalid && supplierForm.get('code')?.touched) {
+            <span class="invalid-feedback">El código es obligatorio.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="supplier-phone">
+            <span>Teléfono</span>
+            @if (isFieldModified('phone')) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <input
+            id="supplier-phone"
+            type="text"
+            class="form-control"
+            [class.is-modified]="isFieldModified('phone')"
+            formControlName="phone"
+            placeholder="Ej. +56 9 8765 4321"
+          />
+        </div>
+
+        @if (isEditing()) {
+          <div class="form-group">
+            <label class="form-label" for="supplier-status">
+              <span>Estado <span class="required-mark">*</span></span>
+              @if (isFieldModified('status')) {
+                <span class="field-modified-badge">Modificado</span>
+              }
+            </label>
+            <select
+              id="supplier-status"
+              class="form-control"
+              [class.is-modified]="isFieldModified('status')"
+              formControlName="status">
+              <option value="ACTIVO">ACTIVO</option>
+              <option value="INACTIVO">INACTIVO</option>
+            </select>
+          </div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="supplier-description">
+          <span>Descripción</span>
+          @if (isFieldModified('description')) {
+            <span class="field-modified-badge">Modificado</span>
+          }
+        </label>
+        <textarea
+          id="supplier-description"
+          class="form-control"
+          [class.is-modified]="isFieldModified('description')"
+          formControlName="description"
+          rows="3"
+          placeholder="Notas adicionales o categorías de suministros provistos...">
+        </textarea>
+      </div>
+
+      <div modal-footer class="form-actions">
+        <button type="button" class="btn btn-outline" (click)="attemptCloseForm()" [disabled]="isSubmitting()">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || (isEditing() && !hasFormChanges())">
+          @if (isSubmitting()) {
+            <span class="spinner"></span>
+          }
+          <span>{{ isEditing() ? 'Guardar Cambios' : 'Crear Proveedor' }}</span>
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Componente Reutilizable: Modal de Confirmación para Descartar Cambios -->
+  <app-confirm-modal
+    [isOpen]="isDiscardConfirmOpen()"
+    [title]="'¿Descartar cambios?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [confirmText]="'Descartar cambios'"
+    [cancelText]="'Continuar editando'"
+    [variant]="'warning'"
+    (confirm)="discardChanges()"
+    (cancel)="cancelDiscard()">
+  </app-confirm-modal>
+
+  <!-- Componente Reutilizable: Modal de Confirmación de Eliminación Lógica -->
+  <app-confirm-modal
+    [isOpen]="isConfirmModalOpen()"
+    [title]="'¿Eliminar Proveedor?'"
+    [message]="'¿Está seguro de que desea eliminar al proveedor \'' + (supplierToDelete()?.name || '') + '\'? El registro pasará a estado ELIMINADO de forma lógica y no podrá ser editado ni eliminado nuevamente.'"
+    [confirmText]="'Eliminar Proveedor'"
+    [cancelText]="'Cancelar'"
+    [variant]="'danger'"
+    [isLoading]="isDeleting()"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-modal>
+
+  <!-- Componente Reutilizable: Modal de Auditoría (Cierra al hacer clic fuera) -->
+  <app-audit-modal
+    [isOpen]="isAuditModalOpen()"
+    [title]="'Auditoría del Proveedor'"
+    [subtitle]="auditModalSubtitle()"
+    [data]="selectedAuditData()"
+    (close)="closeAuditModal()">
+  </app-audit-modal>
+</div>

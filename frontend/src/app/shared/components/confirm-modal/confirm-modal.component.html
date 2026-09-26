@@ -1,0 +1,48 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+    <div class="modal-card" [class.variant-danger]="variant() === 'danger'" [class.variant-warning]="variant() === 'warning'" [class.variant-primary]="variant() === 'primary'">
+      <div class="modal-header">
+        <div class="modal-icon-badge">
+          @if (variant() === 'danger') {
+            <svg class="icon-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          } @else if (variant() === 'warning') {
+            <svg class="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          } @else {
+            <svg class="icon-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+          }
+        </div>
+        <div class="modal-header-text">
+          <h3 class="modal-title">{{ title() }}</h3>
+        </div>
+        <button type="button" class="btn-close" (click)="onCancel()" aria-label="Cerrar modal">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-message">{{ message() }}</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isLoading()">
+          {{ cancelText() }}
+        </button>
+        <button type="button" class="btn" [class.btn-danger]="variant() === 'danger'" [class.btn-warning]="variant() === 'warning'" [class.btn-primary]="variant() === 'primary'" (click)="onConfirm()" [disabled]="isLoading()">
+          @if (isLoading()) {
+            <span class="spinner"></span>
+          }
+          {{ confirmText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

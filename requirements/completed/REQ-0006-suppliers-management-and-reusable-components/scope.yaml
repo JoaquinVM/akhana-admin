@@ -1,0 +1,24 @@
+requirement_id: REQ-0006
+title: Gestión de Proveedores y Componentes Reutilizables
+module: fullstack
+
+approved:
+  - Grupo 'Compras' con opción 'Proveedores' (/suppliers) en la navegación superior.
+  - Entidad JPA Supplier en backend con estados ACTIVO, INACTIVO, ELIMINADO y campos de auditoría.
+  - Validación exclusiva en backend de unicidad independiente de nombre y código (excluyendo registros ELIMINADO).
+  - Auditoría automática extrayendo el usuario autenticado desde el SecurityContext / JWT.
+  - Eliminación lógica en base de datos.
+  - Endpoints REST en /api/suppliers (listar con búsqueda por nombre/código, obtener por ID con auditoría, crear, editar, eliminar lógicamente).
+  - Componente modal genérico y reutilizable de Confirmación.
+  - Componente modal genérico y reutilizable de Auditoría (muestra solo campos con valor).
+  - Estilos globales/compartidos para formularios (inputs, labels, mensajes de error, botones) y tablas (encabezados, filas, badges de estado, acciones, empty state).
+  - Pantalla de Proveedores en Angular con tabla ordenada por nombre ASC, buscador, formulario reactivo de creación/edición, confirmación de eliminación lógica y visualización de auditoría.
+  - Visualización adecuada de errores de conflicto/duplicidad retornados por el backend.
+  - Pruebas unitarias e integrales en backend (Spring Boot/JUnit 5) y frontend (Vitest).
+
+excluded:
+  - Eliminación física de registros en base de datos.
+  - Validaciones previas de unicidad en el frontend mediante consultas adicionales.
+  - Modificación de proveedores con estado ELIMINADO.
+  - Otros submódulos dentro de Compras (ej. Órdenes de Compra, Facturas de Proveedores) - se posponen para requerimientos dedicados.
+  - Paginación del lado del servidor en esta fase (listado completo ordenado por nombre con búsqueda en memoria o query).

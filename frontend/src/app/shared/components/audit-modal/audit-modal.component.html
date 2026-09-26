@@ -1,0 +1,52 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        </div>
+        <div class="modal-header-text">
+          <h3 class="modal-title">{{ title() }}</h3>
+          @if (subtitle()) {
+            <p class="modal-subtitle">{{ subtitle() }}</p>
+          }
+        </div>
+        <button type="button" class="btn-close" (click)="onClose()" aria-label="Cerrar modal">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (activeAuditFields().length === 0) {
+          <div class="audit-empty">
+            <p>No hay información de auditoría disponible para este registro.</p>
+          </div>
+        } @else {
+          <div class="audit-grid">
+            @for (field of activeAuditFields(); track field.key) {
+              <div class="audit-item" [attr.data-key]="field.key">
+                <span class="audit-label">{{ field.label }}</span>
+                <span class="audit-value">
+                  @if (field.isDate) {
+                    {{ field.value | date:'dd/MM/yyyy HH:mm:ss' }}
+                  } @else {
+                    {{ field.value }}
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="onClose()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}
