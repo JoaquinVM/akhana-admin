@@ -49,3 +49,21 @@ CREATE TABLE categories (
 CREATE UNIQUE INDEX uq_categories_name_active ON categories (LOWER(name)) WHERE status != 'ELIMINADO';
 CREATE INDEX idx_categories_status ON categories(status);
 CREATE INDEX idx_categories_name ON categories(name);
+
+CREATE TABLE tags (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(150) NOT NULL,
+    color VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_at TIMESTAMP WITH TIME ZONE,
+    deleted_by VARCHAR(100),
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX uq_tags_name_active ON tags (LOWER(name)) WHERE status != 'ELIMINADO';
+CREATE INDEX idx_tags_status ON tags(status);
+CREATE INDEX idx_tags_name ON tags(name);
+

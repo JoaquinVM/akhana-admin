@@ -1,0 +1,16 @@
+requirement_id: "REQ-0009"
+name: "Gestión de Etiquetas"
+complexity: "MEDIUM"
+rationale: |
+  Implementación Full Stack completa que abarca:
+  1. Base de datos: Migración V4 en PostgreSQL con tabla tags, columnas de auditoría e índice único parcial para nombres activos.
+  2. Backend: Modelo Tag, enum TagStatus (ACTIVO, ELIMINADO), repositorio JPA con JPQL, DTOs TagRequest/Response, servicio con validación estricta de unicidad backend y soft-delete, controlador REST /api/tags, y pruebas unitarias (TagServiceTest, TagControllerTest).
+  3. Frontend: Servicio TagService, modelos, vista TagsComponent en /tags reutilizando ColorPickerComponent, ModalComponent, ConfirmModalComponent, AuditModalComponent, filtros segmentados (Activos/Eliminados), búsqueda en tiempo real, dirty-checking, validación reactiva y pruebas unitarias exhaustivas con Vitest.
+estimated_phases:
+  - "Specification & Alignment"
+  - "Database Migration (V4)"
+  - "Backend CRUD & Uniqueness (Spring Boot)"
+  - "Backend Unit Tests"
+  - "Frontend Core & View (Angular 21 Standalone)"
+  - "Frontend Unit Tests & Build"
+  - "Validation & Delivery"

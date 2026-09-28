@@ -13,6 +13,7 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `auth/`: Modelos (`auth.models.ts`), servicio centralizado con Signals (`auth.service.ts`), interceptor JWT (`auth.interceptor.ts`) y guards de navegación (`auth.guard.ts`).
     - `supplier/`: Modelos (`supplier.models.ts`) y servicio HTTP (`supplier.service.ts`).
     - `category/`: Modelos (`category.models.ts`) y servicio HTTP (`category.service.ts`).
+    - `tag/`: Modelos (`tag.models.ts`) y servicio HTTP (`tag.service.ts`).
     - `navigation/`:
       - `models/navigation.models.ts`: Interfaces `NavItem`, `NavGroup`.
       - `navigation.config.ts`: Estructura centralizada y extensible del menú principal.
@@ -28,6 +29,7 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `login/`: Pantalla de inicio de sesión con Organic Glassmorphism y validación reactiva.
     - `suppliers/`: Gestión completa de Proveedores (`SuppliersComponent`).
     - `categories/`: Gestión completa de Categorías y familias cromáticas (`CategoriesComponent`).
+    - `tags/`: Gestión completa de Etiquetas y familias cromáticas (`TagsComponent`).
     - `section-page/`: Contenedor reactivo data-driven reutilizable que renderiza el encabezado y estado de la sección activa según `route.data`.
 - `public/`:
   - `images/akhana-logo.png`: Logo oficial de Akhana (círculo zen dorado y follaje verde).

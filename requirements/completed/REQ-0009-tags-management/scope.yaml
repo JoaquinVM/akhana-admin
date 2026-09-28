@@ -1,0 +1,27 @@
+requirement_id: "REQ-0009"
+name: "Gestión de Etiquetas"
+
+approved:
+  - "Navegación /tags bajo el grupo Catálogo del menú existente."
+  - "Migración SQL V4 en PostgreSQL con tabla tags, campos de auditoría e índice único parcial para nombres activos."
+  - "Entidad JPA Tag, enum TagStatus (ACTIVO, ELIMINADO) y TagRepository con JPQL."
+  - "Servicio TagService y controlador REST /api/tags con endpoints GET, GET /{id}, POST, PUT /{id}, DELETE /{id}."
+  - "Validación backend exclusiva de unicidad de nombre (LOWER(name) WHERE status != 'ELIMINADO')."
+  - "Eliminación lógica con deleted_by y deleted_at inmutables."
+  - "Pruebas unitarias de backend con Gradle (TagServiceTest, TagControllerTest)."
+  - "Servicio frontend TagService y modelos TypeScript tag.models.ts."
+  - "Vista TagsComponent en /tags con tabla, columna visual de color (.tag-color-pill / .color-badge), orden inicial A-Z por Nombre."
+  - "Buscador reactivo en tiempo real por nombre case-insensitive."
+  - "Filtro de estados segmentado Activos / Eliminados (por defecto Activos)."
+  - "Reutilización estricta de ColorPickerComponent, ModalComponent, ConfirmModalComponent, AuditModalComponent."
+  - "Comportamiento de modal de formulario: closeOnBackdrop=false, confirmación al descartar cambios, botón guardar reactivo en edición e indicadores visuales de modificación."
+  - "Modal de auditoría con closeOnBackdrop=true e icono idéntico a Proveedores/Categorías."
+  - "Pruebas unitarias frontend con Vitest y verificación de build de producción."
+
+excluded:
+  - "Campo 'description' en etiquetas (no existe en este dominio)."
+  - "Estado INACTIVO para etiquetas (únicamente ACTIVO y ELIMINADO)."
+  - "Validación preventiva o pre-check de unicidad en frontend."
+  - "Eliminación física (HARD DELETE) de registros en base de datos."
+  - "Restauración (reactivación) de etiquetas eliminadas (fuera de alcance)."
+  - "Duplicación de componentes o estilos CSS ya existentes en shared/ o styles.css."

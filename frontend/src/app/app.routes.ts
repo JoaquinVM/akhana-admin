@@ -4,6 +4,7 @@ import { MainLayoutComponent } from './layout/main-layout/main-layout.component'
 import { SectionPageComponent } from './pages/section-page/section-page.component';
 import { SuppliersComponent } from './pages/suppliers/suppliers.component';
 import { CategoriesComponent } from './pages/categories/categories.component';
+import { TagsComponent } from './pages/tags/tags.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -38,8 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'tags',
-        component: SectionPageComponent,
-        data: { title: 'Etiquetas', subtitle: 'Descriptores y Atributos' }
+        component: TagsComponent
       },
       {
         path: 'suppliers',
