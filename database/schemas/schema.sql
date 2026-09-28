@@ -31,3 +31,21 @@ CREATE TABLE suppliers (
 
 CREATE UNIQUE INDEX uq_suppliers_name_active ON suppliers (LOWER(name)) WHERE status != 'ELIMINADO';
 CREATE UNIQUE INDEX uq_suppliers_code_active ON suppliers (LOWER(code)) WHERE status != 'ELIMINADO';
+
+CREATE TABLE categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(150) NOT NULL,
+    description VARCHAR(500),
+    color VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_at TIMESTAMP WITH TIME ZONE,
+    deleted_by VARCHAR(100),
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX uq_categories_name_active ON categories (LOWER(name)) WHERE status != 'ELIMINADO';
+CREATE INDEX idx_categories_status ON categories(status);
+CREATE INDEX idx_categories_name ON categories(name);

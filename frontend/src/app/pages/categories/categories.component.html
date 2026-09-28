@@ -1,0 +1,351 @@
+<div class="categories-page">
+  <!-- Encabezado de Página -->
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Catálogo</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Categorías</span>
+      </nav>
+      <h1 class="page-title">Gestión de Categorías</h1>
+      <p class="page-subtitle">Administración del catálogo de familias y clasificación cromática de productos</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Nueva Categoría</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mensajes de Error Global -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger">
+      <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="filters-card">
+    <!-- Filtros de Estado Reutilizables: Activos y Eliminados -->
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill"
+        [class.active]="selectedStatusFilter() === 'ACTIVO'"
+        [attr.aria-selected]="selectedStatusFilter() === 'ACTIVO'"
+        (click)="setStatusFilter('ACTIVO')">
+        Activos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="filter-pill filter-pill-deleted"
+        [class.active]="selectedStatusFilter() === 'ELIMINADO'"
+        [attr.aria-selected]="selectedStatusFilter() === 'ELIMINADO'"
+        (click)="setStatusFilter('ELIMINADO')">
+        Eliminados
+      </button>
+    </div>
+
+    <div class="filters-search-wrapper">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Buscar por nombre..."
+          [value]="searchTerm()"
+          (input)="onSearch($event)"
+          aria-label="Buscar categorías"
+        />
+        @if (searchTerm()) {
+          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda">✕</button>
+        }
+      </div>
+      <div class="total-counter">
+        <span>{{ filteredCategories().length }} categorías encontradas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal: Tabla / Estado de Carga / Estado Vacío -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 18%">Color</th>
+            <th scope="col" style="width: 27%">Nombre</th>
+            <th scope="col" style="width: 28%">Descripción</th>
+            <th scope="col" style="width: 12%">Estado</th>
+            <th scope="col" style="width: 15%; text-align: right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr>
+              <td colspan="5">
+                <div class="table-loading">
+                  <div class="spinner-large"></div>
+                  <p>Cargando catálogo de categorías...</p>
+                </div>
+              </td>
+            </tr>
+          } @else if (filteredCategories().length === 0) {
+            <tr>
+              <td colspan="5">
+                <div class="table-empty">
+                  <div class="table-empty-icon">🏷️</div>
+                  <h4 class="table-empty-title">No se encontraron categorías</h4>
+                  <p class="table-empty-desc">
+                    @if (searchTerm()) {
+                      No hay coincidencias para "{{ searchTerm() }}". Intenta con otro término.
+                    } @else if (selectedStatusFilter() === 'ELIMINADO') {
+                      No hay categorías eliminadas en el historial.
+                    } @else {
+                      Aún no hay categorías registradas. Pulsa en "+ Nueva Categoría" para comenzar.
+                    }
+                  </p>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (category of filteredCategories(); track category.id) {
+              <tr [attr.data-id]="category.id">
+                <!-- Columna Color: Muestra visual con círculo de color y código -->
+                <td>
+                  <div class="category-color-pill" [title]="category.color">
+                    <span class="color-dot" [style.backgroundColor]="category.color"></span>
+                    <span class="color-hex">{{ category.color.toUpperCase() }}</span>
+                  </div>
+                </td>
+
+                <!-- Columna Nombre -->
+                <td>
+                  <span class="category-name">{{ category.name }}</span>
+                </td>
+
+                <!-- Columna Descripción -->
+                <td>
+                  <span class="category-description" [title]="category.description || ''">
+                    {{ category.description || '—' }}
+                  </span>
+                </td>
+
+                <!-- Columna Estado -->
+                <td>
+                  <span class="status-badge" [ngClass]="category.status === 'ACTIVO' ? 'badge-active' : 'badge-deleted'">
+                    {{ category.status === 'ACTIVO' ? 'Activo' : 'Eliminado' }}
+                  </span>
+                </td>
+
+                <!-- Columna Acciones -->
+                <td>
+                  <div class="table-actions" style="justify-content: flex-end">
+                    <!-- Auditoría: Disponible para todos los estados -->
+                    <button
+                      type="button"
+                      class="btn-icon btn-audit"
+                      title="Consultar Auditoría"
+                      (click)="openAuditModal(category)"
+                      aria-label="Consultar auditoría">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </button>
+
+                    <!-- Editar y Eliminar: Solo para categorías ACTIVAS -->
+                    @if (category.status === 'ACTIVO') {
+                      <button
+                        type="button"
+                        class="btn-icon btn-edit"
+                        title="Editar categoría"
+                        (click)="openEditModal(category)"
+                        aria-label="Editar categoría">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn-icon btn-delete"
+                        title="Eliminar categoría"
+                        (click)="openDeleteModal(category)"
+                        aria-label="Eliminar categoría">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Reutilizable de Formulario (Creación y Edición) -->
+  <!-- closeOnBackdrop=false mandatorio según requerimiento -->
+  <app-modal
+    [isOpen]="isFormModalOpen()"
+    [title]="isEditing() ? 'Editar Categoría' : 'Nueva Categoría'"
+    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la categoría' : 'Complete la información para registrar una nueva categoría en el catálogo'"
+    size="md"
+    [closeOnBackdrop]="false"
+    (close)="attemptCloseForm()">
+
+    <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+      <!-- Alerta de Error de Negocio (Backend) -->
+      @if (formError()) {
+        <div class="alert alert-danger" style="margin-bottom: 1.25rem;">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{{ formError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="category-name" class="form-label">
+          Nombre de la Categoría <span class="required-mark">*</span>
+          @if (isFieldModified('name')) {
+            <span class="field-modified-badge">Modificado</span>
+          }
+        </label>
+        <input
+          id="category-name"
+          type="text"
+          class="form-control"
+          [class.is-modified]="isFieldModified('name')"
+          [class.is-invalid]="categoryForm.get('name')?.touched && categoryForm.get('name')?.invalid"
+          formControlName="name"
+          placeholder="Ej: Fertilizantes Orgánicos"
+          maxlength="150"
+        />
+        @if (categoryForm.get('name')?.touched && categoryForm.get('name')?.invalid) {
+          <div class="invalid-feedback">
+            @if (categoryForm.get('name')?.errors?.['required']) {
+              El nombre de la categoría es obligatorio.
+            } @else if (categoryForm.get('name')?.errors?.['maxlength']) {
+              El nombre no puede superar los 150 caracteres.
+            }
+          </div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="category-desc" class="form-label">
+          Descripción
+          @if (isFieldModified('description')) {
+            <span class="field-modified-badge">Modificado</span>
+          }
+        </label>
+        <textarea
+          id="category-desc"
+          class="form-control"
+          [class.is-modified]="isFieldModified('description')"
+          [class.is-invalid]="categoryForm.get('description')?.touched && categoryForm.get('description')?.invalid"
+          formControlName="description"
+          placeholder="Descripción opcional de la familia de productos..."
+          maxlength="500"
+          rows="3"
+        ></textarea>
+        <div class="form-hint" style="text-align: right;">
+          {{ (categoryForm.get('description')?.value || '').length }} / 500 caracteres
+        </div>
+      </div>
+
+      <!-- Selector de Color Reutilizable -->
+      <div class="form-group">
+        <app-color-picker
+          formControlName="color"
+          label="Color Identificador"
+          [required]="true"
+          [isModified]="isFieldModified('color')"
+          [errorMessage]="categoryForm.get('color')?.touched && categoryForm.get('color')?.invalid ? 'Debe seleccionar un color identificador.' : null">
+        </app-color-picker>
+      </div>
+
+      <!-- Pie del Formulario / Acciones -->
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="isSubmitting()"
+          (click)="attemptCloseForm()">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || (isEditing() && !hasFormChanges())">
+          @if (isSubmitting()) {
+            Guardando...
+          } @else if (isEditing()) {
+            Guardar Cambios
+          } @else {
+            Crear Categoría
+          }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal de Confirmación al Descartar Cambios sin Guardar -->
+  <app-confirm-modal
+    [isOpen]="isDiscardConfirmOpen()"
+    title="¿Descartar cambios?"
+    message="Tiene cambios sin guardar en el formulario. Si continúa, perderá toda la información modificada."
+    confirmText="Descartar cambios"
+    cancelText="Continuar editando"
+    variant="warning"
+    (confirm)="discardChanges()"
+    (cancel)="cancelDiscard()">
+  </app-confirm-modal>
+
+  <!-- Modal Reutilizable de Confirmación de Eliminación Lógica -->
+  <app-confirm-modal
+    [isOpen]="isConfirmModalOpen()"
+    title="¿Eliminar Categoría?"
+    [message]="'¿Está seguro de eliminar la categoría &quot;' + (categoryToDelete()?.name || '') + '&quot;? Esta acción cambiará su estado a ELIMINADO de forma lógica y no podrá ser editada.'"
+    confirmText="Eliminar"
+    cancelText="Cancelar"
+    variant="danger"
+    [isLoading]="isDeleting()"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-modal>
+
+  <!-- Modal Reutilizable de Auditoría (closeOnBackdrop=true) -->
+  <app-audit-modal
+    [isOpen]="isAuditModalOpen()"
+    title="Auditoría de Categoría"
+    [subtitle]="auditModalSubtitle()"
+    [data]="selectedAuditData()"
+    (close)="closeAuditModal()">
+  </app-audit-modal>
+</div>

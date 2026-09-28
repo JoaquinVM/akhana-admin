@@ -11,14 +11,23 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
   - `app.routes.ts`: Enrutamiento principal. Configura layout protegido `MainLayoutComponent` para rutas internas (`/pos`, `/sales`, `/products`, `/categories`, `/tags`, `/users`), redirección por defecto de `/` a `/pos`, y `/login` para invitados.
   - `core/`:
     - `auth/`: Modelos (`auth.models.ts`), servicio centralizado con Signals (`auth.service.ts`), interceptor JWT (`auth.interceptor.ts`) y guards de navegación (`auth.guard.ts`).
+    - `supplier/`: Modelos (`supplier.models.ts`) y servicio HTTP (`supplier.service.ts`).
+    - `category/`: Modelos (`category.models.ts`) y servicio HTTP (`category.service.ts`).
     - `navigation/`:
       - `models/navigation.models.ts`: Interfaces `NavItem`, `NavGroup`.
-      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal (grupos Ventas, Catálogo, Seguridad).
+      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal.
+  - `shared/components/`:
+    - `modal/`: Componente modal accesible con control de backdrop (`ModalComponent`).
+    - `confirm-modal/`: Diálogo de confirmación para descarte o eliminación (`ConfirmModalComponent`).
+    - `audit-modal/`: Consulta estética de trazabilidad (`AuditModalComponent`).
+    - `color-picker/`: Selector de color con paleta calibrada de 18 tonos orgánicos y `ControlValueAccessor` (`ColorPickerComponent`).
   - `layout/`:
     - `navbar/`: Barra de navegación horizontal superior compacta (logo corporativo, menús desplegables en hover, detección reactiva de grupo/opción activa, chip de usuario autenticado y botón de logout).
     - `main-layout/`: Contenedor maestro autenticado que aloja el `NavbarComponent` y el `<router-outlet />` de vistas.
   - `pages/`:
     - `login/`: Pantalla de inicio de sesión con Organic Glassmorphism y validación reactiva.
+    - `suppliers/`: Gestión completa de Proveedores (`SuppliersComponent`).
+    - `categories/`: Gestión completa de Categorías y familias cromáticas (`CategoriesComponent`).
     - `section-page/`: Contenedor reactivo data-driven reutilizable que renderiza el encabezado y estado de la sección activa según `route.data`.
 - `public/`:
   - `images/akhana-logo.png`: Logo oficial de Akhana (círculo zen dorado y follaje verde).

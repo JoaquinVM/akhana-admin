@@ -1,0 +1,18 @@
+id: REQ-0008
+title: Gestión de Categorías y Selector de Color Reutilizable
+complexity: MEDIUM
+date: "2026-09-26"
+evaluated_by: orchestrator
+justification:
+  scope: |
+    Implementación completa de gestión de Categorías en backend y frontend:
+    - Base de datos: migración V3 con tabla categories e índice único parcial en nombre (WHERE status != 'ELIMINADO').
+    - Backend: Modelo Category, enum CategoryStatus (ACTIVO, ELIMINADO), repositorio, servicio con validación exclusiva de unicidad insensible a mayúsculas, controlador REST (/api/categories), auditoría automática y soft delete.
+    - Frontend: Selector visual de color reutilizable (ColorPickerComponent), servicio CategoryService, página CategoriesComponent (/categories) con tabla ordenada A-Z, buscador en tiempo real, filtro por estado (Activos/Eliminados), modales reutilizables (app-modal, app-confirm-modal, app-audit-modal), dirty-checking en formulario e indicadores visuales de modificación.
+  technical_impact:
+    - Nuevo módulo CRUD full stack siguiendo arquitectura hexagonal/limpia y patrones de REQ-0006.
+    - Nuevo componente reutilizable ColorPickerComponent en app/shared/components/color-picker/.
+    - Actualización de app.routes.ts para conectar /categories con el componente real.
+    - Pruebas unitarias completas en backend (JUnit/Mockito) y frontend (Vitest).
+  risk: LOW
+  estimated_effort: MEDIUM

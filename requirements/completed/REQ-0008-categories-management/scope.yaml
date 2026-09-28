@@ -1,0 +1,18 @@
+id: REQ-0008
+approved:
+  - Migración SQL V3 para tabla categories con índices y restricción de unicidad condicional WHERE status != 'ELIMINADO'.
+  - Entidad JPA Category, enum CategoryStatus (ACTIVO, ELIMINADO), repositorio, servicio y controlador REST /api/categories.
+  - Validación exclusiva en backend de unicidad insensible a mayúsculas para nombre.
+  - Manejo de excepciones (409 Conflict, 404 Not Found, 400 Bad Request) y auditoría inmutable.
+  - Componente Angular reutilizable ColorPickerComponent en app/shared/components/color-picker/.
+  - Servicio CategoryService en frontend con soporte de búsqueda y filtro por estado.
+  - Componente de página CategoriesComponent conectado a la ruta /categories.
+  - Reutilización de ModalComponent, ConfirmModalComponent, AuditModalComponent, estilos de tabla y formularios de styles.css.
+  - Dirty-checking reactivo, confirmación al descartar cambios, validación de botón guardar e indicadores visuales de modificación.
+  - Segmented control para filtrado por estado (Activos / Eliminados).
+  - Pruebas unitarias backend (JUnit 5 / Mockito) y frontend (Vitest) con cobertura del 100%.
+excluded:
+  - Estado INACTIVO para categorías (explícitamente prohibido en el requerimiento).
+  - Selector de color con ingreso manual de texto hexadecimal.
+  - Pre-validación de unicidad en el cliente (responsabilidad exclusiva del backend).
+  - Eliminación física de registros en la base de datos (siempre soft delete).

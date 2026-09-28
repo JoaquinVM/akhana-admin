@@ -1,0 +1,53 @@
+<div class="color-picker-group" [class.is-modified]="isModified()">
+  <div class="color-picker-header">
+    <label class="color-picker-label">
+      {{ label() }}
+      @if (required()) {
+        <span class="required-indicator">*</span>
+      }
+    </label>
+    @if (isModified()) {
+      <span class="field-modified-badge" title="Campo modificado">Modificado</span>
+    }
+  </div>
+
+  <div class="swatches-container" role="radiogroup" [attr.aria-label]="label()">
+    @for (color of colors; track color.hex) {
+      <button
+        type="button"
+        role="radio"
+        class="swatch-btn"
+        [style.backgroundColor]="color.hex"
+        [class.selected]="selectedColor().toLowerCase() === color.hex.toLowerCase()"
+        [attr.aria-checked]="selectedColor().toLowerCase() === color.hex.toLowerCase()"
+        [attr.aria-label]="color.name + ' (' + color.hex + ')'"
+        [disabled]="disabled()"
+        (click)="selectColor(color)">
+        @if (selectedColor().toLowerCase() === color.hex.toLowerCase()) {
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="color-preview-bar">
+    @if (selectedColor()) {
+      <div class="color-preview-badge">
+        <span class="preview-dot" [style.backgroundColor]="selectedColor()"></span>
+        <span class="preview-hex">{{ selectedColor().toUpperCase() }}</span>
+        <span class="preview-separator">•</span>
+        <span class="preview-name">{{ getSelectedColorName() }}</span>
+      </div>
+    } @else {
+      <span class="color-placeholder-hint">Seleccione un color de la paleta para identificar la categoría</span>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <div class="invalid-feedback d-block">
+      {{ errorMessage() }}
+    </div>
+  }
+</div>
