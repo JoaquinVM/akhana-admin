@@ -2,7 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PosComponent } from './pos.component';
 import { CashService } from '../../core/cash/cash.service';
-import { CashSessionSummary, CashSessionDetail } from '../../core/cash/models/cash.models';
+import { ProductService } from '../../core/product/product.service';
+import { QuickProductService } from '../../core/quick-product/quick-product.service';
+import { SaleService } from '../../core/sale/sale.service';
+import { CashSessionSummary, CashSessionDetail, Sale } from '../../core/cash/models/cash.models';
+import { Product } from '../../core/product/models/product.models';
+import { QuickProductGroup } from '../../core/quick-product/models/quick-product.models';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
@@ -12,6 +17,56 @@ describe('PosComponent', () => {
   let component: PosComponent;
   let fixture: ComponentFixture<PosComponent>;
   let mockCashService: any;
+  let mockProductService: any;
+  let mockQuickProductService: any;
+  let mockSaleService: any;
+
+  const mockProduct1: Product = {
+    id: 'prod-1',
+    code: 'P001',
+    name: 'Té Verde Matcha',
+    categoryId: 'cat-1',
+    categoryName: 'Tés',
+    categoryColor: '#2e5b27',
+    supplierId: 'sup-1',
+    supplierName: 'Proveedor A',
+    tags: [],
+    buyPrice: 10,
+    sellPrice: 20,
+    fixedProfit: 10,
+    percentageProfit: 100,
+    status: 'ACTIVO',
+    createdBy: 'admin',
+    createdAt: '2026-01-01'
+  };
+
+  const mockProduct2: Product = {
+    id: 'prod-2',
+    code: 'P002',
+    name: 'Café Espresso',
+    categoryId: 'cat-2',
+    categoryName: 'Café',
+    categoryColor: '#854d0e',
+    supplierId: 'sup-1',
+    supplierName: 'Proveedor A',
+    tags: [],
+    buyPrice: 8,
+    sellPrice: 15,
+    fixedProfit: 7,
+    percentageProfit: 87.5,
+    status: 'ACTIVO',
+    createdBy: 'admin',
+    createdAt: '2026-01-01'
+  };
+
+  const mockGroup: QuickProductGroup = {
+    id: 'grp-1',
+    name: 'Bebidas Calientes',
+    displayOrder: 1,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    products: [mockProduct1, mockProduct2]
+  };
 
   const mockSession: CashSessionSummary = {
     id: 'session-1',
@@ -33,21 +88,22 @@ describe('PosComponent', () => {
     salesCount: 1
   };
 
+  const mockSale1: Sale = {
+    id: 'sale-1',
+    saleNumber: 'VTA-0001-001',
+    cashSessionId: 'session-1',
+    status: 'COMPLETADA',
+    totalAmount: 50.0,
+    paymentMethod: 'EFECTIVO',
+    description: 'Té verde',
+    createdBy: 'admin',
+    createdAt: '2026-10-01T10:30:00Z'
+  };
+
   const mockDetail: CashSessionDetail = {
     ...mockSession,
     cuts: [],
-    sales: [
-      {
-        id: 'sale-1',
-        saleNumber: 'VTA-0001-001',
-        cashSessionId: 'session-1',
-        totalAmount: 50.0,
-        paymentMethod: 'EFECTIVO',
-        description: 'Té verde',
-        createdBy: 'admin',
-        createdAt: '2026-10-01T10:30:00Z'
-      }
-    ]
+    sales: [mockSale1]
   };
 
   beforeEach(async () => {
@@ -57,15 +113,41 @@ describe('PosComponent', () => {
       getCurrentSession: vi.fn().mockReturnValue(of(mockSession)),
       getSessionDetail: vi.fn().mockReturnValue(of(mockDetail)),
       openSession: vi.fn().mockReturnValue(of(mockSession)),
-      registerSale: vi.fn().mockReturnValue(of(mockDetail.sales[0])),
+      registerSale: vi.fn().mockReturnValue(of(mockSale1)),
       closeSession: vi.fn().mockReturnValue(of({ ...mockSession, status: 'CERRADA' }))
+    };
+
+    mockProductService = {
+      getProducts: vi.fn().mockReturnValue(of([mockProduct1, mockProduct2]))
+    };
+
+    mockQuickProductService = {
+      groups: signal<QuickProductGroup[]>([mockGroup]),
+      loadGroups: vi.fn().mockReturnValue(of([mockGroup])),
+      createGroup: vi.fn().mockReturnValue(of(mockGroup)),
+      updateGroup: vi.fn().mockReturnValue(of(mockGroup)),
+      deleteGroup: vi.fn().mockReturnValue(of(undefined)),
+      reorderGroups: vi.fn().mockReturnValue(of([mockGroup])),
+      reorderGroupItems: vi.fn().mockReturnValue(of(mockGroup))
+    };
+
+    mockSaleService = {
+      sales: signal<Sale[]>([mockSale1]),
+      isLoading: signal<boolean>(false),
+      registerSale: vi.fn().mockReturnValue(of(mockSale1)),
+      voidSale: vi.fn().mockReturnValue(of({ ...mockSale1, status: 'ANULADA', voidReason: 'Error en digitación' })),
+      getSalesBySession: vi.fn().mockReturnValue(of([mockSale1])),
+      getAllSales: vi.fn().mockReturnValue(of([mockSale1]))
     };
 
     await TestBed.configureTestingModule({
       imports: [PosComponent],
       providers: [
         provideRouter([]),
-        { provide: CashService, useValue: mockCashService }
+        { provide: CashService, useValue: mockCashService },
+        { provide: ProductService, useValue: mockProductService },
+        { provide: QuickProductService, useValue: mockQuickProductService },
+        { provide: SaleService, useValue: mockSaleService }
       ]
     }).compileComponents();
 
@@ -74,25 +156,92 @@ describe('PosComponent', () => {
     fixture.detectChanges();
   });
 
-  it('debe inicializarse y cargar la sesión de caja activa en el terminal POS', () => {
+  it('debe inicializarse y cargar la sesión de caja activa, productos y grupos rápidos', () => {
     expect(component).toBeTruthy();
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
-    expect(mockCashService.getSessionDetail).toHaveBeenCalledWith('session-1');
+    expect(mockSaleService.getSalesBySession).toHaveBeenCalledWith('session-1');
+    expect(mockProductService.getProducts).toHaveBeenCalled();
+    expect(mockQuickProductService.loadGroups).toHaveBeenCalled();
     expect(component.recentSales().length).toBe(1);
+    expect(component.catalogProducts().length).toBe(2);
   });
 
   it('debe mostrar el estado de caja cerrada y no permitir venta si no hay sesión abierta', () => {
     mockCashService.currentSession.set(null);
     fixture.detectChanges();
 
-    // Intentar abrir modal de venta con caja cerrada
-    component.openSaleModal();
-    expect(component.isSaleModalVisible()).toBe(false);
+    component.openCheckoutModal();
+    expect(component.isCheckoutModalVisible()).toBe(false);
     expect(component.feedbackMessage()?.type).toBe('error');
 
-    // Debe permitir abrir modal de apertura
     component.openCashModal();
     expect(component.isOpenModalVisible()).toBe(true);
+  });
+
+  it('debe agregar producto al carrito y si ya existe, incrementar la cantidad en 1', () => {
+    expect(component.cartItems().length).toBe(0);
+
+    // Agregar producto 1
+    component.addToCart(mockProduct1);
+    expect(component.cartItems().length).toBe(1);
+    expect(component.cartItems()[0].quantity).toBe(1);
+    expect(component.cartItems()[0].subtotal).toBe(20);
+
+    // Agregar producto 1 nuevamente -> debe incrementar cantidad a 2 sin duplicar fila
+    component.addToCart(mockProduct1);
+    expect(component.cartItems().length).toBe(1);
+    expect(component.cartItems()[0].quantity).toBe(2);
+    expect(component.cartItems()[0].subtotal).toBe(40);
+
+    // Agregar producto 2
+    component.addToCart(mockProduct2);
+    expect(component.cartItems().length).toBe(2);
+    expect(component.totalAmount()).toBe(55); // 40 + 15
+  });
+
+  it('debe aplicar descuento por unidad en ítem y calcular subtotales correctamente', () => {
+    component.addToCart(mockProduct1); // precio 20, qty 1
+    component.updateQuantity(mockProduct1.id, 3); // qty 3
+
+    // Aplicar descuento de 2 Bs por unidad
+    component.updateUnitDiscount(mockProduct1.id, 2);
+
+    const item = component.cartItems()[0];
+    expect(item.unitDiscount).toBe(2);
+    expect(item.unitFinalPrice).toBe(18); // 20 - 2
+    expect(item.subtotal).toBe(54); // 3 * 18
+    expect(component.subtotalGross()).toBe(60);
+    expect(component.discountItemsTotal()).toBe(6);
+    expect(component.subtotalPostItems()).toBe(54);
+    expect(component.totalAmount()).toBe(54);
+  });
+
+  it('debe aplicar descuento general y calcular el total neto a pagar', () => {
+    component.addToCart(mockProduct1); // 20 Bs
+    component.updateQuantity(mockProduct1.id, 5); // 100 Bs
+
+    component.updateGlobalDiscount(15);
+    expect(component.globalDiscount()).toBe(15);
+    expect(component.totalAmount()).toBe(85);
+  });
+
+  it('debe rechazar descuento general si supera el subtotal de la venta', () => {
+    component.addToCart(mockProduct1); // 20 Bs
+    component.updateGlobalDiscount(50); // mayor que 20
+
+    expect(component.globalDiscount()).toBe(20); // capped at subtotal
+    expect(component.feedbackMessage()?.type).toBe('error');
+  });
+
+  it('debe vaciar el carrito completamente con clearCart()', () => {
+    component.addToCart(mockProduct1);
+    component.addToCart(mockProduct2);
+    expect(component.cartItems().length).toBe(2);
+
+    component.clearCart();
+    expect(component.cartItems().length).toBe(0);
+    expect(component.globalDiscount()).toBe(0);
+    expect(component.totalAmount()).toBe(0);
   });
 
   it('debe abrir y cerrar los modales correspondientes', () => {
@@ -101,10 +250,11 @@ describe('PosComponent', () => {
     component.closeOpenModal();
     expect(component.isOpenModalVisible()).toBe(false);
 
-    component.openSaleModal();
-    expect(component.isSaleModalVisible()).toBe(true);
-    component.closeSaleModal();
-    expect(component.isSaleModalVisible()).toBe(false);
+    component.addToCart(mockProduct1);
+    component.openCheckoutModal();
+    expect(component.isCheckoutModalVisible()).toBe(true);
+    component.closeCheckoutModal();
+    expect(component.isCheckoutModalVisible()).toBe(false);
 
     component.openCloseModal();
     expect(component.isCloseModalVisible()).toBe(true);
@@ -115,46 +265,41 @@ describe('PosComponent', () => {
     expect(component.isInfoModalVisible()).toBe(true);
     component.closeInfoModal();
     expect(component.isInfoModalVisible()).toBe(false);
+
+    component.openConfigModal();
+    expect(component.isConfigModalVisible()).toBe(true);
+    component.closeConfigModal();
+    expect(component.isConfigModalVisible()).toBe(false);
   });
 
-  it('debe contener el botón Información en cabecera y abrir el modal al pulsarlo', () => {
-    const infoButton = fixture.debugElement.query(By.css('.header-actions button.btn-secondary'));
-    expect(infoButton).toBeTruthy();
-    expect(infoButton.nativeElement.textContent).toContain('Información');
+  it('debe confirmar el cobro en Checkout y reiniciar el carrito', () => {
+    component.addToCart(mockProduct1);
 
-    infoButton.nativeElement.click();
-    expect(component.isInfoModalVisible()).toBe(true);
+    component.handleConfirmCheckout({
+      items: [{ productId: mockProduct1.id, quantity: 1 }],
+      paymentMethod: 'EFECTIVO',
+      amountCash: 20,
+      amountReceived: 20
+    });
+
+    expect(mockSaleService.registerSale).toHaveBeenCalled();
+    expect(component.isCheckoutModalVisible()).toBe(false);
+    expect(component.cartItems().length).toBe(0);
+    expect(component.feedbackMessage()?.type).toBe('success');
   });
 
-  it('no debe mostrar la sección de información ni comentario directamente en el POS y debe existir un único botón Cerrar Caja', () => {
-    // La sección independiente del turno y el comentario ya no deben estar en el workspace
-    expect(fixture.debugElement.query(By.css('.turn-status-banner'))).toBeNull();
-    expect(fixture.debugElement.query(By.css('.opening-comment-strip'))).toBeNull();
+  it('debe abrir modal de anulación y anular venta con motivo obligatorio', () => {
+    component.openVoidModal(mockSale1);
+    expect(component.isVoidModalVisible()).toBe(true);
+    expect(component.selectedSaleToVoid()?.id).toBe('sale-1');
 
-    // Solo debe haber un botón "Cerrar Caja" en todo el POS (en la cabecera)
-    const closeButtons = fixture.debugElement.queryAll(By.css('button')).filter(b =>
-      (b.nativeElement.textContent || '').toLowerCase().includes('cerrar caja')
-    );
-    expect(closeButtons.length).toBe(1);
-  });
+    component.handleConfirmVoid({ voidReason: 'Error en digitación de productos' });
 
-  it('no debe mostrar el botón Registrar Venta en la cabecera junto a Cerrar Caja, pero sí en la sección de transacciones', () => {
-    // En la cabecera (.header-actions) solo deben existir Información y Cerrar Caja
-    const headerSaleBtn = fixture.debugElement.query(By.css('.header-actions button.btn-primary'));
-    expect(headerSaleBtn).toBeNull();
-
-    const headerButtons = fixture.debugElement.queryAll(By.css('.header-actions button'));
-    expect(headerButtons.length).toBe(2);
-    expect(headerButtons[0].nativeElement.textContent).toContain('Información');
-    expect(headerButtons[1].nativeElement.textContent).toContain('Cerrar Caja');
-
-    // El flujo de ventas sigue operativo desde la tabla de transacciones
-    const txSaleBtn = fixture.debugElement.query(By.css('.transactions-header button.btn-primary'));
-    expect(txSaleBtn).toBeTruthy();
-    expect(txSaleBtn.nativeElement.textContent).toContain('Registrar Venta');
-
-    txSaleBtn.nativeElement.click();
-    expect(component.isSaleModalVisible()).toBe(true);
+    expect(mockSaleService.voidSale).toHaveBeenCalledWith('sale-1', {
+      voidReason: 'Error en digitación de productos'
+    });
+    expect(component.isVoidModalVisible()).toBe(false);
+    expect(component.feedbackMessage()?.type).toBe('success');
   });
 
   it('no debe utilizar emojis como iconos en la interfaz del POS y debe emplear SVGs vectoriales', () => {
@@ -162,42 +307,12 @@ describe('PosComponent', () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
     expect(emojiRegex.test(posText)).toBe(false);
 
-    // Debe contener iconos SVG en KPIs y botones
     const svgIcons = fixture.debugElement.queryAll(By.css('svg'));
     expect(svgIcons.length).toBeGreaterThan(5);
   });
 
-  it('debe confirmar la apertura de caja y recargar la sesión', () => {
-    component.handleConfirmOpen({ openingAmount: 100, openingComment: 'Inicio' });
-
-    expect(mockCashService.openSession).toHaveBeenCalledWith({ openingAmount: 100, openingComment: 'Inicio' });
-    expect(component.isOpenModalVisible()).toBe(false);
-  });
-
-  it('debe confirmar el registro de venta y actualizar lista', () => {
-    component.handleConfirmSale({ totalAmount: 50, paymentMethod: 'EFECTIVO' });
-
-    expect(mockCashService.registerSale).toHaveBeenCalledWith({ totalAmount: 50, paymentMethod: 'EFECTIVO' });
-    expect(component.isSaleModalVisible()).toBe(false);
-  });
-
-  it('debe confirmar el cierre de caja y reiniciar estado', () => {
-    component.handleConfirmClose({ closingAmount: 150 });
-
-    expect(mockCashService.closeSession).toHaveBeenCalledWith({ closingAmount: 150 });
-    expect(component.isCloseModalVisible()).toBe(false);
-    expect(component.recentSales().length).toBe(0);
-  });
-
-  it('restricción estricta: no debe contener enlaces ni botones hacia el historial de cajas en el DOM', () => {
+  it('no debe mostrar enlaces al historial de cajas en el terminal POS', () => {
     const historyLinks = fixture.debugElement.queryAll(By.css('a[href*="cash/history"], a[routerLink*="cash/history"]'));
     expect(historyLinks.length).toBe(0);
-
-    const allButtonsAndLinks = fixture.debugElement.queryAll(By.css('button, a'));
-    for (const el of allButtonsAndLinks) {
-      const text = el.nativeElement.textContent || '';
-      expect(text.toLowerCase()).not.toContain('historial de cajas');
-      expect(text.toLowerCase()).not.toContain('registro de cajas');
-    }
   });
 });

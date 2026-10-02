@@ -16,6 +16,8 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `tag/`: Modelos (`tag.models.ts`) y servicio HTTP (`tag.service.ts`).
     - `product/`: Modelos (`product.models.ts`) y servicio HTTP (`product.service.ts`).
     - `cash/`: Modelos de sesión, cortes de denominaciones y ventas (`cash.models.ts`) y servicio reactivo con Signals (`cash.service.ts`).
+    - `sale/`: Modelos detallados de ventas, líneas de venta y anulación (`sale.models.ts`) y servicio reactivo con Signals (`sale.service.ts`).
+    - `quick-product/`: Modelos de grupos y productos rápidos (`quick-product.models.ts`) y servicio reactivo con Signals (`quick-product.service.ts`).
     - `navigation/`:
       - `models/navigation.models.ts`: Interfaces `NavItem`, `NavGroup`.
       - `navigation.config.ts`: Estructura centralizada y extensible del menú principal (4 grupos corporativos: Ventas, Catálogo, Compras, Seguridad; POS con badge dinámico y Historial de cajas dentro de Ventas).
@@ -29,14 +31,23 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `main-layout/`: Contenedor maestro autenticado que aloja el `NavbarComponent` y el `<router-outlet />` de vistas.
   - `pages/`:
     - `login/`: Pantalla de inicio de sesión con Organic Glassmorphism y validación reactiva.
-    - `pos/`: Pantalla unificada de punto de venta y gestión de caja compartida (`PosComponent`). Integra estado cerrado con formulario de apertura (monto inicial obligatorio), y estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado), registro de ventas, listado de transacciones de la sesión activa, modal de información de sesión y arqueo/cierre de caja. Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
+    - `pos/`: Terminal de punto de venta unificado y control de caja compartida (`PosComponent`). Integra:
+      - Estado cerrado con formulario de apertura (monto inicial en efectivo).
+      - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado).
+      - Catálogo y buscador predictivo de productos con adición en un clic e incremento automático de cantidades.
+      - Accesos directos a "Productos Rápidos" organizados por grupos configurables con Drag & Drop (`QuickProductsConfigModalComponent` vía `@angular/cdk/drag-drop`).
+      - Carrito interactivo con edición de cantidad, descuentos unitarios (monto fijo), precio final unitario, desglose de subtotal y descuento general de la venta.
+      - Modal de cobro multi-método (`CheckoutModalComponent`): Efectivo con cálculo de cambio, QR directo y Mixto (efectivo recibido con cálculo de saldo QR y cambio).
+      - Historial de transacciones del turno con badges de estado (`COMPLETADA` / `ANULADA`), método de pago y anulación auditada justificada con motivo obligatorio (`VoidSaleModalComponent`).
+      - Modal de información de la sesión activa (`CashSessionInfoModalComponent`) y cierre de caja con arqueo (`CloseCashModalComponent`).
+      - Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
     - `suppliers/`: Gestión completa de Proveedores (`SuppliersComponent`).
     - `categories/`: Gestión completa de Categorías y familias cromáticas (`CategoriesComponent`).
     - `tags/`: Gestión completa de Etiquetas y familias cromáticas (`TagsComponent`).
     - `products/`: Gestión completa de Productos (`ProductsComponent`).
     - `cash/`:
       - `cash-history/`: Consulta histórica y auditoría de sesiones (`CashHistoryComponent`), accesible exclusivamente desde el menú Ventas.
-      - `components/`: Componentes y modales reutilizables: `OpenCashModalComponent`, `CloseCashModalComponent` (arqueo ergonómico en dos columnas sin scroll innecesario), `RegisterSaleModalComponent`, `CashDetailModalComponent` y `CashSessionInfoModalComponent`.
+      - `components/`: Componentes y modales reutilizables de caja: `OpenCashModalComponent`, `CloseCashModalComponent`, `CashDetailModalComponent` y `CashSessionInfoModalComponent`.
     - `section-page/`: Contenedor reactivo data-driven reutilizable que renderiza el encabezado y estado de la sección activa según `route.data`.
 - `public/`:
   - `images/akhana-logo.png`: Logo oficial de Akhana (círculo zen dorado y follaje verde).

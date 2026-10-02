@@ -1,0 +1,67 @@
+<app-modal
+  [isOpen]="isOpen"
+  title="Anular Venta"
+  size="sm"
+  (close)="handleClose()">
+  <div class="void-modal-body">
+    @if (sale) {
+      <div class="sale-summary-card">
+        <div class="summary-row">
+          <span class="lbl">Venta:</span>
+          <strong class="val">{{ sale.saleNumber }}</strong>
+        </div>
+        <div class="summary-row">
+          <span class="lbl">Total:</span>
+          <strong class="val highlight">Bs {{ sale.totalAmount | number:'1.2-2' }}</strong>
+        </div>
+        <div class="summary-row">
+          <span class="lbl">Registrada por:</span>
+          <span class="val">{{ sale.createdBy }} ({{ sale.createdAt | date:'HH:mm' }})</span>
+        </div>
+      </div>
+    }
+
+    <div class="warning-callout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="callout-icon">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <p>
+        Al anular la venta se revertirán los montos de la caja abierta y no se podrá recuperar el estado activo.
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="voidReason">Motivo obligatorio de anulación:</label>
+      <textarea
+        id="voidReason"
+        rows="3"
+        class="form-control"
+        placeholder="Explica detalladamente por qué se anula esta venta (mínimo 5 caracteres)..."
+        [ngModel]="voidReason()"
+        (ngModelChange)="voidReason.set($event)"></textarea>
+      @if (voidReason().trim().length > 0 && voidReason().trim().length < 5) {
+        <span class="field-hint text-danger">El motivo debe tener al menos 5 caracteres.</span>
+      }
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer-actions">
+    <button type="button" class="btn btn-secondary" [disabled]="isLoading" (click)="handleClose()">
+      Cancelar
+    </button>
+    <button
+      type="button"
+      class="btn btn-danger"
+      [disabled]="!isValid || isLoading"
+      (click)="handleConfirm()">
+      @if (isLoading) {
+        <span class="spinner-small"></span>
+        <span>Anulando...</span>
+      } @else {
+        <span>Confirmar Anulación</span>
+      }
+    </button>
+  </div>
+</app-modal>

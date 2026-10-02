@@ -1,0 +1,190 @@
+<app-modal
+  [isOpen]="isOpen"
+  title="Configurar Productos Rápidos del POS"
+  size="xl"
+  (close)="handleClose()">
+  <div class="config-modal-body">
+    <!-- Columna Izquierda: Grupos con Drag & Drop -->
+    <div class="groups-pane">
+      <div class="pane-header">
+        <h4 class="pane-title">Grupos de Productos</h4>
+        <span class="pane-subtitle">Arrastra para cambiar el orden</span>
+      </div>
+
+      <!-- Formulario para crear nuevo grupo -->
+      <div class="new-group-box">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Nombre del nuevo grupo..."
+          [ngModel]="newGroupName()"
+          (ngModelChange)="newGroupName.set($event)"
+          (keyup.enter)="handleCreateGroup()" />
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          [disabled]="!newGroupName().trim()"
+          (click)="handleCreateGroup()">
+          Crear
+        </button>
+      </div>
+
+      <!-- Lista de grupos reordenable con Drag & Drop -->
+      <div
+        cdkDropList
+        class="groups-drag-list"
+        (cdkDropListDropped)="onDropGroup($event)">
+        @for (grp of quickProductService.groups(); track grp.id) {
+          <div
+            cdkDrag
+            class="group-drag-item"
+            [class.active]="selectedGroup?.id === grp.id"
+            (click)="selectGroup(grp.id)">
+            <div class="drag-handle" cdkDragHandle title="Arrastrar para ordenar grupo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="handle-svg">
+                <circle cx="9" cy="5" r="1" />
+                <circle cx="9" cy="12" r="1" />
+                <circle cx="9" cy="19" r="1" />
+                <circle cx="15" cy="5" r="1" />
+                <circle cx="15" cy="12" r="1" />
+                <circle cx="15" cy="19" r="1" />
+              </svg>
+            </div>
+
+            <div class="group-info">
+              <span class="group-name">{{ grp.name }}</span>
+              <span class="group-count">{{ grp.products.length }} productos</span>
+            </div>
+
+            <button
+              type="button"
+              class="btn-delete-group"
+              title="Eliminar grupo"
+              (click)="handleDeleteGroup(grp.id, $event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <p>No hay grupos creados aún. Ingresa un nombre arriba para crear el primero.</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Detalle y Asignación de Productos del Grupo Seleccionado -->
+    <div class="products-pane">
+      @if (selectedGroup; as group) {
+        <div class="pane-header">
+          <div>
+            <h4 class="pane-title">Productos en: {{ group.name }}</h4>
+            <span class="pane-subtitle">Reordena mediante arrastrar y soltar o añade desde el catálogo</span>
+          </div>
+        </div>
+
+        <!-- Lista reordenable de productos asignados al grupo -->
+        <div class="group-products-section">
+          <label class="section-label">Orden en el POS (Drag & Drop):</label>
+          <div
+            cdkDropList
+            class="products-drag-list"
+            (cdkDropListDropped)="onDropItem($event)">
+            @for (p of group.products; track p.id) {
+              <div cdkDrag class="product-drag-item">
+                <div class="drag-handle" cdkDragHandle title="Arrastrar para ordenar producto">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="handle-svg">
+                    <circle cx="9" cy="5" r="1" />
+                    <circle cx="9" cy="12" r="1" />
+                    <circle cx="9" cy="19" r="1" />
+                    <circle cx="15" cy="5" r="1" />
+                    <circle cx="15" cy="12" r="1" />
+                    <circle cx="15" cy="19" r="1" />
+                  </svg>
+                </div>
+
+                <div class="product-item-details">
+                  <span class="product-code">{{ p.code }}</span>
+                  <span class="product-name">{{ p.name }}</span>
+                </div>
+
+                <div class="product-price">
+                  <span>Bs {{ p.sellPrice | number:'1.2-2' }}</span>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn-remove-prod"
+                  title="Quitar del grupo"
+                  (click)="handleRemoveProductFromGroup(p.id)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            } @empty {
+              <div class="empty-state">
+                <p>Este grupo no tiene productos asignados. Busca y añade productos abajo.</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Buscador para añadir productos desde el catálogo general -->
+        <div class="catalog-add-section">
+          <label class="section-label">Añadir Productos del Catálogo General:</label>
+          <div class="search-input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Buscar producto por nombre o código para añadir..."
+              [ngModel]="productSearchTerm()"
+              (ngModelChange)="productSearchTerm.set($event)" />
+          </div>
+
+          <div class="catalog-results-grid">
+            @for (cp of filteredCatalogProducts; track cp.id) {
+              <div
+                class="catalog-item-card"
+                [class.already-in-group]="isProductInCurrentGroup(cp.id)">
+                <div class="card-text">
+                  <span class="cp-code">{{ cp.code }}</span>
+                  <span class="cp-name">{{ cp.name }}</span>
+                  <span class="cp-price">Bs {{ cp.sellPrice | number:'1.2-2' }}</span>
+                </div>
+
+                @if (isProductInCurrentGroup(cp.id)) {
+                  <span class="badge-added">En el grupo</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    (click)="handleAddProductToGroup(cp)">
+                    + Añadir
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="no-selection-box">
+          <p>Selecciona o crea un grupo a la izquierda para configurar sus productos.</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div modal-footer class="modal-footer-actions">
+    <button type="button" class="btn btn-primary" (click)="handleClose()">
+      Listo
+    </button>
+  </div>
+</app-modal>

@@ -71,11 +71,23 @@ public class CashSessionServiceImpl implements CashSessionService {
         Long sessionNum = session.getSessionNumber() != null ? session.getSessionNumber() : 1L;
         String saleNumber = String.format("VTA-%04d-%03d", sessionNum, currentSalesCount + 1);
 
+        BigDecimal amountCash = request.paymentMethod() == PaymentMethod.EFECTIVO ? amount : BigDecimal.ZERO;
+        BigDecimal amountQr = request.paymentMethod() == PaymentMethod.QR ? amount : BigDecimal.ZERO;
+
         Sale sale = Sale.builder()
             .saleNumber(saleNumber)
             .cashSession(session)
+            .status(SaleStatus.COMPLETADA)
+            .subtotalAmount(amount)
+            .discountItemsTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+            .globalDiscountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+            .discountTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .totalAmount(amount)
             .paymentMethod(request.paymentMethod())
+            .amountCash(amountCash)
+            .amountQr(amountQr)
+            .amountReceived(amountCash)
+            .changeGiven(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .description(request.description() != null ? request.description().trim() : null)
             .createdBy(username)
             .createdAt(Instant.now())
@@ -94,16 +106,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
         cashSessionRepository.save(session);
 
-        return new SaleResponse(
-            savedSale.getId(),
-            savedSale.getSaleNumber(),
-            session.getId(),
-            savedSale.getTotalAmount(),
-            savedSale.getPaymentMethod(),
-            savedSale.getDescription(),
-            savedSale.getCreatedBy(),
-            savedSale.getCreatedAt()
-        );
+        return SaleResponse.fromEntity(savedSale);
     }
 
     @Override
@@ -168,16 +171,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         List<Sale> sales = saleRepository.findByCashSessionIdOrderByCreatedAtDesc(id);
 
         List<SaleResponse> saleResponses = sales.stream()
-            .map(s -> new SaleResponse(
-                s.getId(),
-                s.getSaleNumber(),
-                session.getId(),
-                s.getTotalAmount(),
-                s.getPaymentMethod(),
-                s.getDescription(),
-                s.getCreatedBy(),
-                s.getCreatedAt()
-            ))
+            .map(SaleResponse::fromEntity)
             .collect(Collectors.toList());
 
         List<CashCutDto> cutDtos = session.getCuts() != null

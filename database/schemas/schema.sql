@@ -145,15 +145,67 @@ CREATE TABLE sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sale_number VARCHAR(50) NOT NULL,
     cash_session_id UUID NOT NULL REFERENCES cash_sessions(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'COMPLETADA',
+    subtotal_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    discount_items_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    global_discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    discount_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     total_amount NUMERIC(12, 2) NOT NULL,
-    payment_method VARCHAR(20) NOT NULL,
+    payment_method VARCHAR(20) NOT NULL, -- 'EFECTIVO', 'QR', 'MIXTO'
+    amount_cash NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    amount_qr NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    amount_received NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    change_given NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     description VARCHAR(255),
     created_by VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    voided_at TIMESTAMP WITH TIME ZONE,
+    voided_by VARCHAR(100),
+    void_reason VARCHAR(500)
 );
 
 CREATE INDEX idx_sales_cash_session ON sales(cash_session_id);
+CREATE INDEX idx_sales_status ON sales(status);
 CREATE INDEX idx_sales_created_at ON sales(created_at DESC);
 CREATE INDEX idx_sales_payment_method ON sales(payment_method);
+
+CREATE TABLE sale_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id),
+    product_name VARCHAR(150) NOT NULL,
+    product_code VARCHAR(50),
+    unit_price NUMERIC(12, 2) NOT NULL,
+    discount_per_unit NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    final_unit_price NUMERIC(12, 2) NOT NULL,
+    quantity INT NOT NULL,
+    subtotal NUMERIC(12, 2) NOT NULL
+);
+
+CREATE INDEX idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX idx_sale_items_product ON sale_items(product_id);
+
+CREATE TABLE quick_product_groups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_quick_product_groups_order ON quick_product_groups(display_order ASC);
+
+CREATE TABLE quick_product_group_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id UUID NOT NULL REFERENCES quick_product_groups(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_quick_group_product UNIQUE (group_id, product_id)
+);
+
+CREATE INDEX idx_quick_group_items_group ON quick_product_group_items(group_id, display_order ASC);
+CREATE INDEX idx_quick_group_items_product ON quick_product_group_items(product_id);
+
 
 

@@ -1,5 +1,6 @@
 export type CashSessionStatus = 'ABIERTA' | 'CERRADA';
-export type PaymentMethod = 'EFECTIVO' | 'QR';
+export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO';
+export type SaleStatus = 'COMPLETADA' | 'ANULADA';
 
 export interface CashCutItem {
   denomination: number;
@@ -25,15 +26,40 @@ export interface SaleRequest {
   description?: string | null;
 }
 
+export interface SaleItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  productCode?: string;
+  unitPrice: number;
+  discountPerUnit: number;
+  finalUnitPrice: number;
+  quantity: number;
+  subtotal: number;
+}
+
 export interface Sale {
   id: string;
   saleNumber: string;
   cashSessionId: string;
+  status?: SaleStatus;
+  subtotalAmount?: number;
+  discountItemsTotal?: number;
+  globalDiscountAmount?: number;
+  discountTotal?: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
+  amountCash?: number;
+  amountQr?: number;
+  amountReceived?: number;
+  changeGiven?: number;
   description?: string | null;
   createdBy: string;
   createdAt: string;
+  voidedAt?: string | null;
+  voidedBy?: string | null;
+  voidReason?: string | null;
+  items?: SaleItem[];
 }
 
 export interface CashSessionSummary {
