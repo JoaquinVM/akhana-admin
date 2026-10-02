@@ -1,0 +1,68 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Abrir Sesión de Caja"
+  subtitle="Ingresa el fondo inicial en efectivo para iniciar las operaciones del turno compartido"
+  size="md"
+  [closeOnBackdrop]="false"
+  (close)="onCancel()">
+  
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
+    <div class="form-group">
+      <label for="openingAmount" class="form-label required">
+        Monto Inicial en Efectivo (Bs)
+      </label>
+      <div class="input-with-prefix">
+        <span class="currency-prefix">Bs</span>
+        <input
+          id="openingAmount"
+          type="number"
+          step="0.01"
+          min="0"
+          formControlName="openingAmount"
+          class="form-control"
+          placeholder="0.00"
+          [class.is-invalid]="form.get('openingAmount')?.invalid && form.get('openingAmount')?.touched" />
+      </div>
+      @if (form.get('openingAmount')?.invalid && form.get('openingAmount')?.touched) {
+        <span class="error-feedback">El monto inicial es obligatorio y debe ser mayor o igual a 0.</span>
+      }
+      <span class="form-hint">Efectivo físico disponible en gaveta al momento de la apertura.</span>
+    </div>
+
+    <div class="form-group">
+      <label for="openingComment" class="form-label">
+        Comentario de Apertura (Opcional)
+      </label>
+      <textarea
+        id="openingComment"
+        formControlName="openingComment"
+        rows="3"
+        class="form-control"
+        placeholder="Ej: Inicio de turno con billetes de corte bajo para sencillo..."></textarea>
+      <span class="form-hint">Máximo 500 caracteres.</span>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="onCancel()"
+        [disabled]="isLoading()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="form.invalid || isLoading()">
+        @if (isLoading()) {
+          <span class="btn-spinner"></span> Abriendo caja...
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Confirmar Apertura</span>
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

@@ -2,9 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavbarComponent } from './navbar.component';
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { CashService } from '../../core/cash/cash.service';
 import { Component, signal } from '@angular/core';
 import { UserSession } from '../../core/auth/models/auth.models';
 import { By } from '@angular/platform-browser';
+import { of } from 'rxjs';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -30,19 +32,26 @@ describe('NavbarComponent', () => {
       logout: vi.fn()
     };
 
+    const mockCashService = {
+      currentSession: signal<any>(null),
+      getCurrentSession: vi.fn().mockReturnValue(of(null))
+    };
+
     await TestBed.configureTestingModule({
       imports: [NavbarComponent],
       providers: [
         provideRouter([
           { path: 'pos', component: DummyComponent },
           { path: 'sales', component: DummyComponent },
+          { path: 'cash/history', component: DummyComponent },
           { path: 'products', component: DummyComponent },
           { path: 'categories', component: DummyComponent },
           { path: 'tags', component: DummyComponent },
           { path: 'suppliers', component: DummyComponent },
           { path: 'users', component: DummyComponent }
         ]),
-        { provide: AuthService, useValue: mockAuthService }
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: CashService, useValue: mockCashService }
       ]
     }).compileComponents();
 
@@ -65,6 +74,7 @@ describe('NavbarComponent', () => {
     expect(groupLabels).toContain('Catálogo');
     expect(groupLabels).toContain('Compras');
     expect(groupLabels).toContain('Seguridad');
+    expect(groupLabels).not.toContain('Caja');
   });
 
   it('debe desplegar la opción Proveedores al abrir el grupo Compras', () => {
@@ -77,6 +87,31 @@ describe('NavbarComponent', () => {
     const item = menu.query(By.css('.dropdown-item'));
     expect(item.nativeElement.textContent).toContain('Proveedores');
     expect(item.nativeElement.getAttribute('href')).toBe('/suppliers');
+  });
+
+  it('debe desplegar POS, Ventas e Historial de cajas al abrir el grupo Ventas', () => {
+    component.openGroup('sales');
+    fixture.detectChanges();
+
+    expect(component.openGroupId()).toBe('sales');
+    const menu = fixture.debugElement.query(By.css('.dropdown-menu'));
+    expect(menu).toBeTruthy();
+    const items = menu.queryAll(By.css('.dropdown-item'));
+    expect(items.length).toBe(3);
+    expect(items[0].nativeElement.textContent).toContain('POS');
+    expect(items[1].nativeElement.textContent).toContain('Ventas');
+    expect(items[2].nativeElement.textContent).toContain('Historial de cajas');
+    expect(items[2].nativeElement.getAttribute('href')).toBe('/cash/history');
+  });
+
+  it('debe mostrar la etiqueta de estado dinámica para POS según sesión de caja', () => {
+    // Inicialmente con caja cerrada -> Cerrada
+    expect(component.getItemBadge({ label: 'POS', route: '/pos' })).toBe('Cerrada');
+
+    // Simular caja abierta
+    (component.cashService.currentSession as any).set({ status: 'ABIERTA' });
+    fixture.detectChanges();
+    expect(component.getItemBadge({ label: 'POS', route: '/pos' })).toBe('Abierta');
   });
 
   it('debe desplegar únicamente el menú del grupo activo en hover y cerrar el anterior', () => {
@@ -92,7 +127,7 @@ describe('NavbarComponent', () => {
     const salesMenu = fixture.debugElement.query(By.css('.dropdown-menu'));
     expect(salesMenu).toBeTruthy();
     const salesItems = salesMenu.queryAll(By.css('.dropdown-item'));
-    expect(salesItems.length).toBe(2);
+    expect(salesItems.length).toBe(3);
 
     // Abrir grupo Catálogo: debe cerrar Ventas y abrir únicamente Catálogo
     component.openGroup('catalog');

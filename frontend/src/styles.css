@@ -47,6 +47,19 @@
 }
 
 /* =============================================================================
+   RESET Y BASE GLOBAL
+   ============================================================================= */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background-color: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =============================================================================
    1. BOTONES REUTILIZABLES (.btn)
    ============================================================================= */
 .btn {
@@ -403,6 +416,14 @@ textarea.form-control {
 }
 .badge-deleted::before {
   background-color: var(--color-danger);
+}
+
+.badge-closed {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+.badge-closed::before {
+  background-color: #94a3b8;
 }
 
 /* =============================================================================

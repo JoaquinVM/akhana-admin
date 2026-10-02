@@ -1,0 +1,306 @@
+<div class="pos-page">
+  <!-- Encabezado de Sección -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="breadcrumb-item">Ventas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">POS</span>
+      </nav>
+      <div class="title-with-badge">
+        <h1 class="page-title">Punto de Venta (POS)</h1>
+        @if (cashService.currentSession()) {
+          <span class="status-badge badge-active">Caja Abierta</span>
+        } @else {
+          <span class="status-badge badge-closed">Caja Cerrada</span>
+        }
+      </div>
+      <p class="page-subtitle">Terminal unificado para registro de ventas, arqueo de gaveta y control de turno en tiempo real</p>
+    </div>
+
+    <!-- Acciones Principales en Cabecera (Solo activas con caja abierta) -->
+    <div class="header-actions">
+      @if (cashService.currentSession()) {
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="openInfoModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <span>Información</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="openCloseModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span>Cerrar Caja</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Banner de Feedback Operativo -->
+  @if (feedbackMessage(); as msg) {
+    <div
+      class="feedback-banner"
+      [class.success]="msg.type === 'success'"
+      [class.error]="msg.type === 'error'">
+      <span class="feedback-icon">
+        @if (msg.type === 'success') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="feedback-icon-svg">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feedback-icon-svg">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        }
+      </span>
+      <span class="feedback-text">{{ msg.text }}</span>
+      <button type="button" class="btn-close-feedback" (click)="dismissFeedback()" aria-label="Cerrar notificación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-close-svg">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  }
+
+  <!-- Estado 1: Cargando Información de Caja -->
+  @if (cashService.isLoadingCurrent()) {
+    <div class="loading-state-card">
+      <div class="spinner-large"></div>
+      <p>Cargando información operativa del terminal POS...</p>
+    </div>
+  }
+
+  <!-- Estado 2: Caja Cerrada / Ventas Inhabilitadas -->
+  @else if (!cashService.currentSession()) {
+    <div class="pos-closed-card">
+      <div class="closed-hero-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="hero-lock-svg">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+      <h2 class="closed-hero-title">Caja Compartida Cerrada</h2>
+      <p class="closed-hero-desc">
+        Para comenzar a registrar ventas y operar en el terminal POS, es necesario iniciar la apertura del turno ingresando el fondo inicial en efectivo.
+      </p>
+
+      <div class="closed-hero-actions">
+        <button
+          type="button"
+          class="btn btn-primary btn-lg"
+          (click)="openCashModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M6 12h.01M18 12h.01" />
+          </svg>
+          <span>Abrir Caja del Turno</span>
+        </button>
+      </div>
+
+      <div class="closed-hero-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hint-icon-svg">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <span>El registro de transacciones permanecerá inhabilitado hasta que se aperture la sesión compartida.</span>
+      </div>
+    </div>
+  }
+
+  <!-- Estado 3: Caja Abierta / Operación en Vivo -->
+  @else if (cashService.currentSession(); as cs) {
+    <div class="pos-active-workspace">
+      <!-- Grid de Resumen Financiero en Tiempo Real (KPIs) -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Monto Inicial</span>
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kpi-svg">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+            </span>
+          </div>
+          <div class="kpi-value">Bs {{ cs.openingAmount | number:'1.2-2' }}</div>
+          <span class="kpi-caption">Fondo físico de apertura</span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Ventas en Efectivo</span>
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kpi-svg">
+                <rect x="2" y="6" width="20" height="12" rx="2" />
+                <circle cx="12" cy="12" r="2" />
+                <path d="M6 12h.01M18 12h.01" />
+              </svg>
+            </span>
+          </div>
+          <div class="kpi-value text-green">Bs {{ cs.totalSalesCash | number:'1.2-2' }}</div>
+          <span class="kpi-caption">Cobros físicos ingresados</span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Ventas por QR</span>
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kpi-svg">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+            </span>
+          </div>
+          <div class="kpi-value text-blue">Bs {{ cs.totalSalesQr | number:'1.2-2' }}</div>
+          <span class="kpi-caption">Cobros digitales directos</span>
+        </div>
+
+        <div class="kpi-card kpi-card-highlight">
+          <div class="kpi-header">
+            <span class="kpi-title">Efectivo Esperado en Gaveta</span>
+            <span class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kpi-svg">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="12" cy="12" r="3" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </span>
+          </div>
+          <div class="kpi-value highlight-value">Bs {{ cs.expectedCash | number:'1.2-2' }}</div>
+          <span class="kpi-caption highlight-caption">Monto Inicial + Ventas Efectivo</span>
+        </div>
+      </div>
+
+      <!-- Sección de Transacciones de la Sesión -->
+      <div class="transactions-card">
+        <div class="transactions-header">
+          <div class="transactions-title-group">
+            <h3 class="transactions-title">Transacciones de la Sesión</h3>
+            <span class="transactions-counter">{{ recentSales().length }} ventas registradas</span>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            (click)="openSaleModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Registrar Venta</span>
+          </button>
+        </div>
+
+        @if (recentSales().length === 0) {
+          <div class="transactions-empty">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </div>
+            <h4>No hay ventas registradas aún en este turno</h4>
+            <p>Pulsa en "+ Registrar Venta" para emitir la primera transacción vinculada a la sesión activa.</p>
+          </div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 140px"># Venta</th>
+                  <th style="width: 150px">Fecha / Hora</th>
+                  <th style="width: 130px">Vendedor</th>
+                  <th style="width: 130px">Método</th>
+                  <th>Concepto / Detalle</th>
+                  <th style="width: 140px; text-align: right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of recentSales(); track s.id) {
+                  <tr>
+                    <td><span class="sale-number-pill">{{ s.saleNumber }}</span></td>
+                    <td>{{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ s.createdBy }}</td>
+                    <td>
+                      <span
+                        class="method-badge"
+                        [class.cash]="s.paymentMethod === 'EFECTIVO'"
+                        [class.qr]="s.paymentMethod === 'QR'">
+                        @if (s.paymentMethod === 'EFECTIVO') {
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="method-svg">
+                            <rect x="2" y="6" width="20" height="12" rx="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <path d="M6 12h.01M18 12h.01" />
+                          </svg>
+                          <span>Efectivo</span>
+                        } @else {
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="method-svg">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                          </svg>
+                          <span>QR</span>
+                        }
+                      </span>
+                    </td>
+                    <td>{{ s.description || '—' }}</td>
+                    <td style="text-align: right">
+                      <strong class="sale-amount-val">Bs {{ s.totalAmount | number:'1.2-2' }}</strong>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modales Operativos -->
+  <app-open-cash-modal
+    [isOpen]="isOpenModalVisible()"
+    [isLoading]="isActionLoading()"
+    (close)="closeOpenModal()"
+    (confirmed)="handleConfirmOpen($event)" />
+
+  <app-register-sale-modal
+    [isOpen]="isSaleModalVisible()"
+    [isLoading]="isActionLoading()"
+    (close)="closeSaleModal()"
+    (confirmed)="handleConfirmSale($event)" />
+
+  <app-close-cash-modal
+    [isOpen]="isCloseModalVisible()"
+    [isLoading]="isActionLoading()"
+    [expectedCash]="cashService.currentSession()?.expectedCash || 0"
+    (close)="closeCloseModal()"
+    (confirmed)="handleConfirmClose($event)" />
+
+  <app-cash-session-info-modal
+    [isOpen]="isInfoModalVisible()"
+    [session]="cashService.currentSession()"
+    (close)="closeInfoModal()" />
+</div>

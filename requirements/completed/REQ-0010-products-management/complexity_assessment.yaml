@@ -1,0 +1,16 @@
+requirement_id: "REQ-0010"
+name: "Gestión de Productos"
+complexity: "LARGE"
+rationale: |
+  Implementación Full Stack de alta complejidad que incluye:
+  1. Base de datos: Migración V5 en PostgreSQL con tabla products, tabla de unión many-to-many product_tags, foreign keys a categories y suppliers, índices únicos parciales condicionados a status != 'ELIMINADO', índices de búsqueda y columnas de auditoría inmutable.
+  2. Backend: Entidad Product, relaciones @ManyToOne y @ManyToMany, enum ProductStatus (ACTIVO, INACTIVO, ELIMINADO), repositorio JPA con JPQL para búsqueda por código/nombre y filtros de estado, DTOs ProductRequest/Response, servicio con cálculos automáticos de utilidad (fija y porcentual), validaciones estrictas de unicidad de código y nombre en backend (excluyendo eliminados y auto-exclusión en edición), soft-delete, y conmutación de estado ACTIVO <-> INACTIVO con pruebas unitarias exhaustivas en JUnit 5.
+  3. Frontend: Servicio ProductService, modelos TypeScript, vista ProductsComponent en /products reutilizando ModalComponent, ConfirmModalComponent, AuditModalComponent, selector estético de Categoría con muestra cromática de color, selector múltiple de Etiquetas con badges cromáticos removibles, cálculo reactivo en tiempo real de utilidades de solo lectura, dirty-checking, validación reactiva, indicadores visuales de campos modificados, tabla con orden inicial A-Z, filtros segmentados (Activos/Inactivos, Activos, Inactivos, Eliminados), búsqueda insensible a mayúsculas y modales de confirmación para descarte, cambio de estado y eliminación.
+estimated_phases:
+  - "Specification & Alignment (HITL 1 & 2)"
+  - "Database Migration (V5)"
+  - "Backend CRUD, Relations & Profit Calculations (Spring Boot)"
+  - "Backend Unit Tests"
+  - "Frontend Core & View (Angular 21 Standalone)"
+  - "Frontend Unit Tests & Build"
+  - "Validation & Delivery (HITL 3)"

@@ -219,6 +219,18 @@
   letter-spacing: 0.02em;
 }
 
+.item-badge.badge-cash-open {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.item-badge.badge-cash-closed {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
 .item-caption {
   font-size: 11px;
   color: #718096;

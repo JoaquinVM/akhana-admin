@@ -1,0 +1,237 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Detalle y Auditoría de Caja"
+  [subtitle]="'Sesión #' + (session()?.sessionNumber || '—') + ' • Estado: ' + (session()?.status || '—')"
+  size="xl"
+  (close)="onClose()">
+
+  @if (session(); as cs) {
+    <div class="session-detail-content">
+      <!-- Tarjetas de Resumen Financiero -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Monto Inicial</span>
+          <span class="metric-value">Bs {{ cs.openingAmount | number:'1.2-2' }}</span>
+          <span class="metric-sub">Fondo en apertura</span>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Ventas Efectivo</span>
+          <span class="metric-value text-green">Bs {{ cs.totalSalesCash | number:'1.2-2' }}</span>
+          <span class="metric-sub">Entradas en efectivo</span>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Ventas QR</span>
+          <span class="metric-value text-blue">Bs {{ cs.totalSalesQr | number:'1.2-2' }}</span>
+          <span class="metric-sub">Entradas por QR</span>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Efectivo Esperado</span>
+          <span class="metric-value text-forest">Bs {{ cs.expectedCash | number:'1.2-2' }}</span>
+          <span class="metric-sub">Inicial + Ef. Ventas</span>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Monto de Cierre</span>
+          <span class="metric-value">
+            {{ cs.closingAmount != null ? ('Bs ' + (cs.closingAmount | number:'1.2-2')) : '— (Abierta)' }}
+          </span>
+          <span class="metric-sub">Declarado en cierre</span>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Diferencia</span>
+          @if (cs.difference != null) {
+            <span
+              class="metric-value"
+              [class.text-green]="cs.difference === 0"
+              [class.text-blue]="cs.difference > 0"
+              [class.text-red]="cs.difference < 0">
+              {{ cs.difference >= 0 ? '+' : '' }}Bs {{ cs.difference | number:'1.2-2' }}
+            </span>
+            <span class="metric-sub">
+              {{ cs.difference === 0 ? 'Cuadre exacto' : (cs.difference > 0 ? 'Sobrante' : 'Faltante') }}
+            </span>
+          } @else {
+            <span class="metric-value text-muted">—</span>
+            <span class="metric-sub">Sin cierre aún</span>
+          }
+        </div>
+      </div>
+
+      <!-- Trazabilidad de Apertura y Cierre -->
+      <div class="audit-columns">
+        <div class="audit-box">
+          <div class="audit-box-header">
+            <span class="box-icon">🔓</span>
+            <h5 class="box-title">Datos de Apertura</h5>
+          </div>
+          <div class="audit-box-body">
+            <div class="audit-row">
+              <span class="audit-k">Responsable:</span>
+              <strong class="audit-v">{{ cs.openedBy }}</strong>
+            </div>
+            <div class="audit-row">
+              <span class="audit-k">Fecha y hora:</span>
+              <span class="audit-v">{{ cs.openedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+            </div>
+            @if (cs.openingComment) {
+              <div class="audit-comment-block">
+                <span class="comment-label">Comentario:</span>
+                <p class="comment-text">"{{ cs.openingComment }}"</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="audit-box">
+          <div class="audit-box-header">
+            <span class="box-icon">🔒</span>
+            <h5 class="box-title">Datos de Cierre</h5>
+          </div>
+          <div class="audit-box-body">
+            @if (cs.status === 'CERRADA') {
+              <div class="audit-row">
+                <span class="audit-k">Responsable:</span>
+                <strong class="audit-v">{{ cs.closedBy || '—' }}</strong>
+              </div>
+              <div class="audit-row">
+                <span class="audit-k">Fecha y hora:</span>
+                <span class="audit-v">{{ cs.closedAt ? (cs.closedAt | date:'dd/MM/yyyy HH:mm:ss') : '—' }}</span>
+              </div>
+              @if (cs.closingComment) {
+                <div class="audit-comment-block">
+                  <span class="comment-label">Comentario:</span>
+                  <p class="comment-text">"{{ cs.closingComment }}"</p>
+                </div>
+              }
+            } @else {
+              <div class="still-open-notice">
+                <span class="pulsing-dot"></span>
+                <span>Esta sesión continúa abierta en operación.</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Pestañas de detalle: Ventas y Cortes -->
+      <div class="tabs-nav">
+        <button
+          type="button"
+          class="tab-btn"
+          [class.active]="activeTab === 'ventas'"
+          (click)="setTab('ventas')">
+          🛍️ Ventas Asociadas ({{ cs.sales.length }})
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          [class.active]="activeTab === 'cortes'"
+          (click)="setTab('cortes')">
+          🪙 Arqueo por Cortes ({{ cs.cuts.length }})
+        </button>
+      </div>
+
+      <!-- Tab Contenido: Ventas -->
+      @if (activeTab === 'ventas') {
+        <div class="tab-pane">
+          @if (cs.sales.length === 0) {
+            <div class="empty-tab-state">
+              <span class="empty-icon">🍃</span>
+              <p>No se registraron ventas en esta sesión de caja.</p>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 130px"># Venta</th>
+                    <th style="width: 140px">Fecha / Hora</th>
+                    <th style="width: 120px">Vendedor</th>
+                    <th style="width: 110px">Método</th>
+                    <th>Concepto</th>
+                    <th style="width: 120px; text-align: right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of cs.sales; track s.id) {
+                    <tr>
+                      <td><span class="sale-tag">{{ s.saleNumber }}</span></td>
+                      <td>{{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td>{{ s.createdBy }}</td>
+                      <td>
+                        <span
+                          class="method-pill"
+                          [class.cash]="s.paymentMethod === 'EFECTIVO'"
+                          [class.qr]="s.paymentMethod === 'QR'">
+                          {{ s.paymentMethod === 'EFECTIVO' ? '💵 Efectivo' : '📱 QR' }}
+                        </span>
+                      </td>
+                      <td>{{ s.description || '—' }}</td>
+                      <td style="text-align: right">
+                        <strong class="price-val">Bs {{ s.totalAmount | number:'1.2-2' }}</strong>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab Contenido: Cortes -->
+      @if (activeTab === 'cortes') {
+        <div class="tab-pane">
+          @if (cs.cuts.length === 0) {
+            <div class="empty-tab-state">
+              <span class="empty-icon">ℹ️</span>
+              <p>El cierre de esta caja se realizó por monto directo sin utilizar la matriz de cortes de billetes y monedas.</p>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 160px">Denominación</th>
+                    <th style="width: 140px; text-align: center">Cantidad en Caja</th>
+                    <th style="width: 140px; text-align: center">Cantidad en Reserva</th>
+                    <th style="text-align: right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cut of cs.cuts; track cut.denomination) {
+                    <tr>
+                      <td>
+                        <strong>Bs {{ cut.denomination | number:'1.2-2' }}</strong>
+                        <span class="text-muted">({{ cut.denomination >= 10 ? 'Billete' : 'Moneda' }})</span>
+                      </td>
+                      <td style="text-align: center">
+                        <span class="qty-badge">{{ cut.cashQuantity }}</span>
+                      </td>
+                      <td style="text-align: center">
+                        <span class="qty-badge">{{ cut.reserveQuantity }}</span>
+                      </td>
+                      <td style="text-align: right">
+                        <strong class="price-val">Bs {{ cut.subtotal | number:'1.2-2' }}</strong>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="modal-actions">
+    <button type="button" class="btn btn-secondary" (click)="onClose()">
+      Cerrar
+    </button>
+  </div>
+</app-modal>

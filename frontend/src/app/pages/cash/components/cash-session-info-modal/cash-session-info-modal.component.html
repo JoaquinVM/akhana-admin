@@ -1,0 +1,44 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Información de caja"
+  size="md"
+  (close)="onClose()">
+
+  @if (session(); as cs) {
+    <div class="session-info-layout">
+      <div class="info-group">
+        <span class="info-label">Sesión</span>
+        <span class="info-value session-badge">#{{ cs.sessionNumber }}</span>
+      </div>
+
+      <div class="info-divider"></div>
+
+      <div class="info-group">
+        <span class="info-label">Abierta por</span>
+        <span class="info-value">{{ cs.openedBy }}</span>
+      </div>
+
+      <div class="info-divider"></div>
+
+      <div class="info-group">
+        <span class="info-label">Hora de apertura</span>
+        <span class="info-value">{{ cs.openedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+
+      @if (cs.openingComment && cs.openingComment.trim().length > 0) {
+        <div class="info-divider"></div>
+
+        <div class="info-group">
+          <span class="info-label">Comentario de apertura</span>
+          <p class="info-comment">"{{ cs.openingComment }}"</p>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="modal-footer-actions">
+    <button type="button" class="btn btn-secondary" (click)="onClose()">
+      Cerrar
+    </button>
+  </div>
+</app-modal>

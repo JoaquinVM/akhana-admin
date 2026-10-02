@@ -33,8 +33,13 @@
                    role="menuitem">
                   <span class="item-dot" aria-hidden="true"></span>
                   <span class="item-label">{{ item.label }}</span>
-                  @if (item.badge) {
-                    <span class="item-badge">{{ item.badge }}</span>
+                  @if (getItemBadge(item); as badgeText) {
+                    <span
+                      class="item-badge"
+                      [class.badge-cash-open]="item.route === '/pos' && isCashOpen()"
+                      [class.badge-cash-closed]="item.route === '/pos' && !isCashOpen()">
+                      {{ badgeText }}
+                    </span>
                   }
                   @if (item.caption) {
                     <span class="item-caption">{{ item.caption }}</span>

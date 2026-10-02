@@ -1,0 +1,109 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Registrar Venta en Caja"
+  subtitle="Asocia una transacción de venta al turno actual de la caja compartida"
+  size="md"
+  [closeOnBackdrop]="false"
+  (close)="onCancel()">
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
+    <div class="form-group">
+      <label class="form-label required">Método de Pago</label>
+      <div class="payment-method-selector">
+        <button
+          type="button"
+          class="btn-method"
+          [class.active]="form.get('paymentMethod')?.value === 'EFECTIVO'"
+          (click)="setPaymentMethod('EFECTIVO')">
+          <span class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-method-svg">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <circle cx="12" cy="12" r="2" />
+              <path d="M6 12h.01M18 12h.01" />
+            </svg>
+          </span>
+          <div class="method-text">
+            <strong>Efectivo</strong>
+            <span>Impacta efectivo en caja</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="btn-method"
+          [class.active]="form.get('paymentMethod')?.value === 'QR'"
+          (click)="setPaymentMethod('QR')">
+          <span class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-method-svg">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+          </span>
+          <div class="method-text">
+            <strong>Pago QR</strong>
+            <span>Transferencia / Pago móvil</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="totalAmount" class="form-label required">
+        Monto Total de la Venta (Bs)
+      </label>
+      <div class="input-with-prefix">
+        <span class="currency-prefix">Bs</span>
+        <input
+          id="totalAmount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          formControlName="totalAmount"
+          class="form-control"
+          placeholder="0.00"
+          [class.is-invalid]="form.get('totalAmount')?.invalid && form.get('totalAmount')?.touched" />
+      </div>
+      @if (form.get('totalAmount')?.invalid && form.get('totalAmount')?.touched) {
+        <span class="error-feedback">El monto es obligatorio y debe ser mayor a 0.</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="saleDescription" class="form-label">
+        Descripción / Concepto (Opcional)
+      </label>
+      <input
+        id="saleDescription"
+        type="text"
+        formControlName="description"
+        class="form-control"
+        placeholder="Ej: Té matcha + infusión lavanda" />
+      <span class="form-hint">Máximo 255 caracteres.</span>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="onCancel()"
+        [disabled]="isLoading()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="form.invalid || isLoading()">
+        @if (isLoading()) {
+          <span class="btn-spinner"></span> Registrando venta...
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Confirmar Venta</span>
+        }
+      </button>
+    </div>
+  </form>
+</app-modal>

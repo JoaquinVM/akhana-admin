@@ -8,12 +8,17 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
       {
         label: 'POS',
         route: '/pos',
-        badge: 'Activo'
+        badge: 'Cerrada'
       },
       {
         label: 'Ventas',
         route: '/sales',
         caption: 'Historial'
+      },
+      {
+        label: 'Historial de cajas',
+        route: '/cash/history',
+        caption: 'Cajas'
       }
     ]
   },

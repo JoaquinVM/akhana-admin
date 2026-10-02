@@ -5,6 +5,9 @@ import { SectionPageComponent } from './pages/section-page/section-page.componen
 import { SuppliersComponent } from './pages/suppliers/suppliers.component';
 import { CategoriesComponent } from './pages/categories/categories.component';
 import { TagsComponent } from './pages/tags/tags.component';
+import { ProductsComponent } from './pages/products/products.component';
+import { PosComponent } from './pages/pos/pos.component';
+import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -20,8 +23,11 @@ export const routes: Routes = [
     children: [
       {
         path: 'pos',
-        component: SectionPageComponent,
-        data: { title: 'POS', subtitle: 'Punto de Venta y Terminal Principal' }
+        component: PosComponent
+      },
+      {
+        path: 'cash/history',
+        component: CashHistoryComponent
       },
       {
         path: 'sales',
@@ -30,8 +36,7 @@ export const routes: Routes = [
       },
       {
         path: 'products',
-        component: SectionPageComponent,
-        data: { title: 'Productos', subtitle: 'Catálogo Maestro de Artículos' }
+        component: ProductsComponent
       },
       {
         path: 'categories',
