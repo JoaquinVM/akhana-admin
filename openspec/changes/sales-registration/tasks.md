@@ -65,3 +65,12 @@
 - [x] 10.2 Ejecutar suite completa de pruebas frontend con `npm test -- --watch=false` (0 fallos).
 - [x] 10.3 Ejecutar compilación de producción en frontend con `npm run build` verificando cero errores.
 - [x] 10.4 Actualizar documentación de contexto en `backend/.../_context.md` y `frontend/_context.md`.
+
+## 11. Reestructuración: Separación en Nueva Pantalla Dedicada y Cobro Inline
+
+- [x] 11.1 Crear componente `RegisterSaleComponent` en `frontend/src/app/pages/pos/register-sale/` con buscador predictivo, grupos de productos rápidos con drag & drop, carrito interactivo y pasarela de cobro inline sin modal.
+- [x] 11.2 Configurar la ruta `/pos/sale` en `app.routes.ts` bajo `MainLayoutComponent`.
+- [x] 11.3 Limpiar `PosComponent`: remover catálogo, buscador, carrito y modal de cobro; actualizar botón «Registrar venta» en transacciones para navegar a `/pos/sale`; conservar KPIs, apertura/cierre y tabla de transacciones con anulación.
+- [x] 11.4 Eliminar componente `CheckoutModalComponent` y código obsoleto.
+- [x] 11.5 Desarrollar pruebas unitarias para `RegisterSaleComponent` y actualizar las de `PosComponent`.
+- [x] 11.6 Verificar suite completa de pruebas (`npm test`, `./gradlew test`) y compilación (`npm run build`).

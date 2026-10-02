@@ -189,315 +189,6 @@
         </div>
       </div>
 
-      <!-- Espacio Operativo de Registro de Ventas (2 Columnas) -->
-      <div class="pos-sales-layout">
-        <!-- Columna Izquierda: Buscador de Catálogo y Productos Rápidos -->
-        <div class="catalog-section-pane">
-          <!-- Buscador Predictivo -->
-          <div class="product-search-box">
-            <div class="search-input-field">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-svg">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                class="form-control form-control-search"
-                placeholder="Buscar producto por nombre o código para añadir al carrito..."
-                [ngModel]="productSearchTerm()"
-                (ngModelChange)="productSearchTerm.set($event)" />
-              @if (productSearchTerm()) {
-                <button
-                  type="button"
-                  class="btn-clear-search"
-                  (click)="productSearchTerm.set('')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="clear-svg">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              }
-            </div>
-
-            <!-- Menú Desplegable de Resultados de Búsqueda -->
-            @if (filteredSearchResults().length > 0) {
-              <div class="search-dropdown-results">
-                @for (prod of filteredSearchResults(); track prod.id) {
-                  <div class="search-result-item" (click)="addToCart(prod)">
-                    <div class="res-info">
-                      <span class="res-code">{{ prod.code }}</span>
-                      <strong class="res-name">{{ prod.name }}</strong>
-                    </div>
-                    <div class="res-price">
-                      <span>Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
-                      <button type="button" class="btn-add-result">+ Añadir</button>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Sección de Productos Rápidos -->
-          <div class="quick-products-card">
-            <div class="quick-header">
-              <div class="quick-title-group">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="quick-svg">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
-                <h3 class="quick-title">Productos Rápidos</h3>
-              </div>
-
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                (click)="openConfigModal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-                <span>Configurar</span>
-              </button>
-            </div>
-
-            <!-- Pestañas de Grupos -->
-            @if (quickProductService.groups().length > 0) {
-              <div class="group-tabs">
-                @for (grp of quickProductService.groups(); track grp.id) {
-                  <button
-                    type="button"
-                    class="group-tab-btn"
-                    [class.active]="activeGroup()?.id === grp.id"
-                    (click)="selectGroup(grp.id)">
-                    <span>{{ grp.name }}</span>
-                    <span class="group-tab-badge">{{ grp.products.length }}</span>
-                  </button>
-                }
-              </div>
-
-              <!-- Cuadrícula de Tarjetas de Productos Rápidos -->
-              @if (activeGroup(); as currentGrp) {
-                <div class="quick-grid">
-                  @for (prod of currentGrp.products; track prod.id) {
-                    <div class="quick-item-card" (click)="addToCart(prod)">
-                      <div class="card-meta">
-                        <span class="card-code">{{ prod.code }}</span>
-                      </div>
-                      <h4 class="card-title">{{ prod.name }}</h4>
-                      <div class="card-footer">
-                        <span class="card-price">Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
-                        <span class="card-add-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                          </svg>
-                        </span>
-                      </div>
-                    </div>
-                  } @empty {
-                    <div class="quick-empty-hint">
-                      <p>No hay productos en el grupo "{{ currentGrp.name }}". Usa "Configurar" para añadir accesos directos.</p>
-                    </div>
-                  }
-                </div>
-              }
-            } @else {
-              <div class="quick-empty-groups">
-                <p>No existen grupos de productos rápidos configurados.</p>
-                <button type="button" class="btn btn-outline btn-sm" (click)="openConfigModal()">
-                  Crear Primer Grupo
-                </button>
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- Columna Derecha: Detalle de Venta y Carrito -->
-        <div class="pos-cart-pane">
-          <div class="cart-header">
-            <div class="cart-title-wrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cart-svg">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-              </svg>
-              <h3 class="cart-title">Venta en Curso</h3>
-              <span class="cart-badge">{{ cartCount() }} ítems</span>
-            </div>
-
-            @if (cartItems().length > 0) {
-              <button
-                type="button"
-                class="btn-clear-cart"
-                title="Vaciar carrito"
-                (click)="clearCart()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                <span>Vaciar</span>
-              </button>
-            }
-          </div>
-
-          <!-- Listado de ítems del Carrito -->
-          <div class="cart-items-container">
-            @for (item of cartItems(); track item.product.id) {
-              <div class="cart-item-row">
-                <div class="item-header-row">
-                  <div class="item-identity">
-                    <span class="item-code">{{ item.product.code }}</span>
-                    <strong class="item-name">{{ item.product.name }}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    class="btn-remove-item"
-                    title="Quitar producto"
-                    (click)="removeFromCart(item.product.id)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div class="item-controls-row">
-                  <!-- Stepper de Cantidad -->
-                  <div class="qty-stepper">
-                    <button
-                      type="button"
-                      class="qty-btn"
-                      title="Restar cantidad"
-                      (click)="decrementQuantity(item.product.id)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      class="qty-input"
-                      [ngModel]="item.quantity"
-                      (ngModelChange)="updateQuantity(item.product.id, $event)" />
-                    <button
-                      type="button"
-                      class="qty-btn"
-                      title="Sumar cantidad"
-                      (click)="incrementQuantity(item.product.id)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <!-- Descuento por unidad -->
-                  <div class="item-discount-group">
-                    <label class="discount-lbl">Desc/u:</label>
-                    <div class="discount-input-wrap">
-                      <span class="currency-prefix">Bs</span>
-                      <input
-                        type="number"
-                        step="0.50"
-                        min="0"
-                        [max]="item.unitPrice"
-                        class="form-control form-control-sm text-right"
-                        [ngModel]="item.unitDiscount"
-                        (ngModelChange)="updateUnitDiscount(item.product.id, $event)" />
-                    </div>
-                  </div>
-
-                  <!-- Precios y Subtotal -->
-                  <div class="item-price-summary">
-                    <div class="unit-price-line">
-                      @if (item.unitDiscount > 0) {
-                        <span class="old-price">Bs {{ item.unitPrice | number:'1.2-2' }}</span>
-                      }
-                      <span class="final-unit-price">Bs {{ item.unitFinalPrice | number:'1.2-2' }} c/u</span>
-                    </div>
-                    <strong class="item-subtotal">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
-                  </div>
-                </div>
-              </div>
-            } @empty {
-              <div class="cart-empty-state">
-                <div class="empty-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-cart-svg">
-                    <circle cx="9" cy="21" r="1" />
-                    <circle cx="20" cy="21" r="1" />
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                  </svg>
-                </div>
-                <h4>Carrito Vacío</h4>
-                <p>Busca productos en el catálogo o haz clic en los accesos rápidos para iniciar la venta.</p>
-              </div>
-            }
-          </div>
-
-          <!-- Resumen Financiero y Descuento General -->
-          <div class="cart-summary-card">
-            <div class="summary-line">
-              <span class="sum-label">Subtotal Bruto:</span>
-              <span class="sum-value">Bs {{ subtotalGross() | number:'1.2-2' }}</span>
-            </div>
-
-            @if (discountItemsTotal() > 0) {
-              <div class="summary-line text-discount">
-                <span class="sum-label">Descuentos por Ítem:</span>
-                <span class="sum-value">- Bs {{ discountItemsTotal() | number:'1.2-2' }}</span>
-              </div>
-            }
-
-            <div class="summary-line">
-              <span class="sum-label">Subtotal tras Descuentos:</span>
-              <span class="sum-value">Bs {{ subtotalPostItems() | number:'1.2-2' }}</span>
-            </div>
-
-            <!-- Input Descuento General -->
-            <div class="summary-line discount-global-row">
-              <label class="sum-label" for="globalDiscount">Descuento General:</label>
-              <div class="global-discount-input-wrap">
-                <span class="currency-prefix">Bs</span>
-                <input
-                  id="globalDiscount"
-                  type="number"
-                  step="0.50"
-                  min="0"
-                  [max]="subtotalPostItems()"
-                  class="form-control form-control-sm text-right"
-                  [ngModel]="globalDiscount()"
-                  (ngModelChange)="updateGlobalDiscount($event)" />
-              </div>
-            </div>
-
-            @if (discountTotal() > 0) {
-              <div class="summary-line text-discount font-bold">
-                <span class="sum-label">Total Descuentos Acumulados:</span>
-                <span class="sum-value">- Bs {{ discountTotal() | number:'1.2-2' }}</span>
-              </div>
-            }
-
-            <div class="total-charge-line">
-              <div class="total-title">Total a Cobrar</div>
-              <div class="total-amount-display">Bs {{ totalAmount() | number:'1.2-2' }}</div>
-            </div>
-
-            <button
-              type="button"
-              class="btn btn-primary btn-checkout"
-              [disabled]="cartItems().length === 0 || totalAmount() <= 0"
-              (click)="openCheckoutModal()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
-                <rect x="2" y="4" width="20" height="16" rx="2" />
-                <circle cx="12" cy="12" r="3" />
-                <path d="M6 12h.01M18 12h.01" />
-              </svg>
-              <span>Cobrar (Bs {{ totalAmount() | number:'1.2-2' }})</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Sección de Transacciones de la Sesión -->
       <div class="transactions-card">
         <div class="transactions-header">
@@ -506,17 +197,15 @@
             <span class="transactions-counter">{{ recentSales().length }} ventas registradas</span>
           </div>
 
-          <!-- Botón Registrar Venta para compatibilidad con accesos directos -->
           <button
             type="button"
             class="btn btn-primary btn-sm"
-            [disabled]="cartItems().length === 0"
-            (click)="openCheckoutModal()">
+            (click)="navigateToRegisterSale()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>Cobrar Carrito</span>
+            <span>Registrar venta</span>
           </button>
         </div>
 
@@ -532,14 +221,26 @@
               </svg>
             </div>
             <h4>No hay ventas registradas aún en este turno</h4>
-            <p>Agrega productos en el terminal de venta superior y cobra la transacción para registrarla aquí.</p>
+            <p>Pulsa en «Registrar venta» para abrir la pantalla de venta y emitir la primera transacción vinculada a la sesión activa.</p>
+            <div class="empty-actions">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                (click)="navigateToRegisterSale()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Registrar venta</span>
+              </button>
+            </div>
           </div>
         } @else {
           <div class="table-responsive">
             <table class="table">
               <thead>
                 <tr>
-                  <th style="width: 130px"># Venta</th>
+                  <th style="width: 140px"># Venta</th>
                   <th style="width: 140px">Fecha / Hora</th>
                   <th style="width: 120px">Vendedor</th>
                   <th style="width: 110px">Estado</th>
@@ -655,19 +356,6 @@
     [isOpen]="isInfoModalVisible()"
     [session]="cashService.currentSession()"
     (close)="closeInfoModal()" />
-
-  <app-quick-products-config-modal
-    [isOpen]="isConfigModalVisible()"
-    (close)="closeConfigModal()" />
-
-  <app-checkout-modal
-    [isOpen]="isCheckoutModalVisible()"
-    [isLoading]="isActionLoading()"
-    [totalAmount]="totalAmount()"
-    [items]="checkoutItems()"
-    [globalDiscountAmount]="globalDiscount()"
-    (close)="closeCheckoutModal()"
-    (confirmed)="handleConfirmCheckout($event)" />
 
   <app-void-sale-modal
     [isOpen]="isVoidModalVisible()"

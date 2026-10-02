@@ -7,6 +7,7 @@ import { CategoriesComponent } from './pages/categories/categories.component';
 import { TagsComponent } from './pages/tags/tags.component';
 import { ProductsComponent } from './pages/products/products.component';
 import { PosComponent } from './pages/pos/pos.component';
+import { RegisterSaleComponent } from './pages/pos/register-sale/register-sale.component';
 import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
@@ -24,6 +25,10 @@ export const routes: Routes = [
       {
         path: 'pos',
         component: PosComponent
+      },
+      {
+        path: 'pos/sale',
+        component: RegisterSaleComponent
       },
       {
         path: 'cash/history',

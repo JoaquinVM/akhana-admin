@@ -62,8 +62,21 @@ El sistema SHALL permitir la aplicación de un descuento general en monto fijo s
 
 ---
 
-### Requirement: Modalidades de pago con cálculo automático
-El sistema SHALL procesar el cobro de la venta bajo las modalidades de `EFECTIVO`, `QR` o `MIXTO` (efectivo + QR), validando los montos ingresados y calculando el cambio según corresponda.
+### Requirement: Navegación desacoplada entre POS y registro de ventas
+El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
+
+#### Scenario: Acceso a pantalla de registro de venta
+- **WHEN** el usuario pulsa «Registrar venta» en el POS teniendo una caja abierta
+- **THEN** la aplicación navega hacia la pantalla `/pos/sale` habilitando la selección de productos y cobro inline
+
+#### Scenario: Bloqueo de acceso si la caja está cerrada
+- **WHEN** un usuario intenta ingresar a `/pos/sale` sin una sesión de caja abierta
+- **THEN** el sistema redirige automáticamente a `/pos` notificando que se requiere abrir caja para registrar ventas
+
+---
+
+### Requirement: Modalidades de pago con cálculo automático inline en pantalla
+El sistema SHALL procesar el cobro de la venta directamente en la pantalla de registro de venta (sin abrir modales auxiliares) bajo las modalidades de `EFECTIVO`, `QR` o `MIXTO` (efectivo + QR), validando los montos ingresados y calculando el cambio según corresponda.
 
 #### Scenario: Pago exclusivo en efectivo con cálculo de cambio
 - **WHEN** la venta totaliza 85.00 Bs, el método seleccionado es `EFECTIVO` y el usuario ingresa 100.00 Bs recibidos

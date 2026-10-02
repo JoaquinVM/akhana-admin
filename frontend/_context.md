@@ -31,16 +31,21 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `main-layout/`: Contenedor maestro autenticado que aloja el `NavbarComponent` y el `<router-outlet />` de vistas.
   - `pages/`:
     - `login/`: Pantalla de inicio de sesión con Organic Glassmorphism y validación reactiva.
-    - `pos/`: Terminal de punto de venta unificado y control de caja compartida (`PosComponent`). Integra:
-      - Estado cerrado con formulario de apertura (monto inicial en efectivo).
-      - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado).
-      - Catálogo y buscador predictivo de productos con adición en un clic e incremento automático de cantidades.
-      - Accesos directos a "Productos Rápidos" organizados por grupos configurables con Drag & Drop (`QuickProductsConfigModalComponent` vía `@angular/cdk/drag-drop`).
-      - Carrito interactivo con edición de cantidad, descuentos unitarios (monto fijo), precio final unitario, desglose de subtotal y descuento general de la venta.
-      - Modal de cobro multi-método (`CheckoutModalComponent`): Efectivo con cálculo de cambio, QR directo y Mixto (efectivo recibido con cálculo de saldo QR y cambio).
-      - Historial de transacciones del turno con badges de estado (`COMPLETADA` / `ANULADA`), método de pago y anulación auditada justificada con motivo obligatorio (`VoidSaleModalComponent`).
-      - Modal de información de la sesión activa (`CashSessionInfoModalComponent`) y cierre de caja con arqueo (`CloseCashModalComponent`).
-      - Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
+    - `pos/`:
+      - `PosComponent` (`/pos`): Terminal principal de supervisión y control de caja compartida. Integra:
+        - Estado cerrado con formulario de apertura (monto inicial en efectivo).
+        - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado).
+        - Botón «Registrar venta» en la cabecera de transacciones para navegar a `/pos/sale`.
+        - Historial de transacciones de la sesión activa con badges de estado (`COMPLETADA` / `ANULADA`), desglose de método de pago y anulación justificada con motivo obligatorio (`VoidSaleModalComponent`).
+        - Modal de información de la sesión activa (`CashSessionInfoModalComponent`) y cierre de caja con arqueo ergonómico (`CloseCashModalComponent`).
+        - Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
+      - `register-sale/` (`RegisterSaleComponent` en `/pos/sale`): Pantalla dedicada de registro y cobro de ventas. Integra:
+        - Catálogo y buscador predictivo de productos con adición en un clic e incremento automático de cantidades.
+        - Accesos directos a "Productos Rápidos" organizados por grupos configurables con Drag & Drop (`QuickProductsConfigModalComponent` vía `@angular/cdk/drag-drop`).
+        - Carrito interactivo con edición de cantidad, descuentos unitarios (monto fijo), precio final unitario, desglose de subtotal y descuento general de la venta.
+        - Pasarela de cobro inline directamente en pantalla (sin modal): Efectivo con cálculo reactivo de cambio y botones de importe rápido, QR directo, y Mixto (porción en efectivo con remanente QR calculado y cambio).
+        - Botón para volver al POS o cancelar la venta.
+      - `components/`: Componentes modales auxiliares: `QuickProductsConfigModalComponent` y `VoidSaleModalComponent`.
     - `suppliers/`: Gestión completa de Proveedores (`SuppliersComponent`).
     - `categories/`: Gestión completa de Categorías y familias cromáticas (`CategoriesComponent`).
     - `tags/`: Gestión completa de Etiquetas y familias cromáticas (`TagsComponent`).

@@ -49,13 +49,16 @@ El POS cuenta actualmente con un formulario provisional de registro rápido de v
   - Se deducen `amount_cash` de `total_sales_cash` y `expected_cash`, y `amount_qr` de `total_sales_qr`, recalculando `total_sales`.
   - Se registra la transacción correspondiente para auditoría.
 
-### 3. Drag and Drop y UX del POS (Angular 21)
-- Se utiliza `@angular/cdk/drag-drop` para garantizar un drag-and-drop fluido y accesible en el modal de configuración de productos rápidos.
-- El POS se estructura en dos zonas ergonómicas:
-  - **Zona izquierda (Catálogo y Productos Rápidos)**: Buscador predictivo en cabecera con autocompletado; tabs horizontales para grupos de productos rápidos; grid de tarjetas clickeables con información de precio y color de categoría; botón de configuración de accesos rápidos.
-  - **Zona derecha (Ticket de Venta / Carrito)**: Listado compacto de ítems con badges de cantidad editable, controles de incremento rápido, inputs para descuento por unidad, subtotales por ítem, desglose de totales, descuento general y botón de cobro.
-- **Modal de Checkout**: Diseñado con tabs grandes (`Efectivo`, `QR`, `Mixto`), teclado numérico / inputs rápidos para monto recibido y cálculo reactivo en tiempo real del cambio o saldo QR.
-- **Modal de Anulación**: Diálogo enfocado que muestra el resumen de la venta y exige el motivo (mínimo 5 caracteres) antes de confirmar.
+### 3. Separación de Pantallas y Cobro Inline (ADR: Navegación Dedicada)
+- Se traslada toda la funcionalidad operativa de registro de venta a una pantalla dedicada `RegisterSaleComponent` en la ruta `/pos/sale`.
+- El POS principal (`PosComponent` en `/pos`) conserva su propósito de supervisión de caja (KPIs en tiempo real, apertura/cierre, y tabla de transacciones de la sesión activa). El botón «Registrar venta» en la cabecera de transacciones navega hacia `/pos/sale`.
+- El cobro se integra **directamente en pantalla (inline)** dentro de `RegisterSaleComponent`, suprimiendo la necesidad de modales auxiliares para el pago (`CheckoutModalComponent`) y permitiendo completar todo el flujo en una única vista interactiva.
+- La pantalla de ventas incluye:
+  - Buscador predictivo de productos activos y rejilla de productos rápidos organizados por grupos con botón de configuración drag-and-drop (`QuickProductsConfigModalComponent`).
+  - Carrito interactivo con edición de cantidad, descuentos por unidad, subtotal por ítem y descuento general.
+  - Sección inferior de cobro inline con tabs (`Efectivo`, `QR`, `Mixto`), inputs de monto recibido, cálculo reactivo de cambio o remanente QR y botón de confirmación de venta con retorno al POS.
+  - Botón «← Volver al POS» / «Cancelar venta».
+- Se mantiene el modal de anulación (`VoidSaleModalComponent`) en el POS principal para revertir transacciones de cajas abiertas con motivo obligatorio.
 
 ## Risks / Trade-offs
 
