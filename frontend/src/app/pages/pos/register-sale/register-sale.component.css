@@ -504,7 +504,7 @@
 
 .cart-item-row {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) 84px 108px minmax(80px, auto) 28px;
+  grid-template-columns: minmax(110px, 1fr) 84px 92px minmax(80px, auto) 28px;
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
@@ -605,20 +605,20 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: 68px;
+  width: 56px;
 }
 
 .currency-prefix {
   position: absolute;
-  left: 0.35rem;
+  left: 0.3rem;
   font-size: 0.6875rem;
   color: #94a3b8;
   pointer-events: none;
 }
 
 .discount-input-wrap .form-control {
-  padding-left: 1.25rem;
-  padding-right: 0.25rem;
+  padding-left: 1.15rem;
+  padding-right: 0.2rem;
   font-size: 0.75rem;
   height: 26px;
   -moz-appearance: textfield;
@@ -754,15 +754,24 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: 95px;
+  width: 72px;
 }
 
-.global-discount-input-wrap .currency-prefix { left: 0.45rem; }
+.global-discount-input-wrap .currency-prefix { left: 0.4rem; }
 .global-discount-input-wrap .form-control {
-  padding-left: 1.45rem;
+  padding-left: 1.35rem;
   padding-right: 0.25rem;
   font-size: 0.8125rem;
   height: 28px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Eliminar flechas/spinners por defecto del navegador en descuento total */
+.global-discount-input-wrap input::-webkit-outer-spin-button,
+.global-discount-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .total-charge-line {
@@ -987,6 +996,22 @@
   border: 1.5px solid #cbd5e1;
   border-radius: var(--radius-sm);
   transition: all 0.15s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Eliminar flechas/spinners por defecto del navegador en inputs del modal de cobro */
+.money-input-field::-webkit-outer-spin-button,
+.money-input-field::-webkit-inner-spin-button,
+.checkout-modal input[type="number"]::-webkit-outer-spin-button,
+.checkout-modal input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.checkout-modal input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .money-input-field:focus {
