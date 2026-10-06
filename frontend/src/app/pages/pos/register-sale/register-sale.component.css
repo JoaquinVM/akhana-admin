@@ -493,61 +493,51 @@
 .btn-clear-cart:hover { color: #ef4444; }
 
 .cart-items-container {
-  padding: 0.65rem 1.15rem;
+  padding: 0.5rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  min-height: 200px;
+  gap: 0.35rem;
+  min-height: 140px;
   max-height: 420px;
   overflow-y: auto;
 }
 
 .cart-item-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.6rem;
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) 84px 108px minmax(80px, auto) 28px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid #f1f5f9;
   border-radius: var(--radius-md);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.item-header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.cart-item-row:hover {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .item-identity {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .item-code {
   font-family: var(--font-mono, monospace);
   font-size: 0.6875rem;
   color: #94a3b8;
+  line-height: 1.1;
 }
 
 .item-name {
   font-size: 0.8125rem;
   color: #1e293b;
-}
-
-.btn-remove-item {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 0.15rem;
-}
-
-.btn-remove-item:hover { color: #ef4444; }
-
-.item-controls-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .qty-stepper {
@@ -556,6 +546,8 @@
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
   overflow: hidden;
+  flex-shrink: 0;
+  width: 84px;
 }
 
 .qty-btn {
@@ -568,6 +560,11 @@
   justify-content: center;
   cursor: pointer;
   color: #475569;
+  transition: background-color 0.15s ease;
+}
+
+.qty-btn:hover {
+  background-color: #f1f5f9;
 }
 
 .qty-input {
@@ -580,24 +577,35 @@
   font-family: var(--font-mono, monospace);
   font-size: 0.8125rem;
   font-weight: 600;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Eliminar flechas/spinners por defecto del navegador en el control de cantidad */
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .item-discount-group {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .discount-lbl {
   font-size: 0.6875rem;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .discount-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
-  width: 75px;
+  width: 68px;
 }
 
 .currency-prefix {
@@ -613,18 +621,30 @@
   padding-right: 0.25rem;
   font-size: 0.75rem;
   height: 26px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.discount-input-wrap input::-webkit-outer-spin-button,
+.discount-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .item-price-summary {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  text-align: right;
+  min-width: 80px;
+  flex-shrink: 0;
 }
 
 .unit-price-line {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  line-height: 1.1;
 }
 
 .old-price {
@@ -636,19 +656,46 @@
 .final-unit-price {
   font-size: 0.6875rem;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .item-subtotal {
   font-family: var(--font-mono, monospace);
   font-size: 0.875rem;
   color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.btn-remove-item {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-item:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.btn-remove-item .icon-svg {
+  width: 15px;
+  height: 15px;
 }
 
 .cart-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2.25rem 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   color: #64748b;
 }
@@ -659,8 +706,8 @@
 }
 
 .empty-cart-svg {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
 }
 
 .cart-empty-state h4 {
@@ -675,12 +722,12 @@
 }
 
 .cart-summary-section {
-  padding: 1rem 1.15rem;
+  padding: 0.75rem 1.15rem;
   background-color: #f8fafc;
   border-top: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .summary-line {
