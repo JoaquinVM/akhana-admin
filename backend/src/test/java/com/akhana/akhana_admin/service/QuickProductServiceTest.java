@@ -92,6 +92,31 @@ class QuickProductServiceTest {
     }
 
     @Test
+    @DisplayName("Debe actualizar grupo agregando nuevos productos sin duplicar existentes ni recrear entidades")
+    void shouldUpdateGroupAddingProducts() {
+        QuickProductGroupItem item1 = QuickProductGroupItem.builder()
+            .id(UUID.randomUUID())
+            .group(group1)
+            .product(product1)
+            .displayOrder(0)
+            .build();
+        group1.setItems(new ArrayList<>(List.of(item1)));
+
+        when(groupRepository.findById(group1.getId())).thenReturn(Optional.of(group1));
+        when(productRepository.findById(product2.getId())).thenReturn(Optional.of(product2));
+        when(groupRepository.save(any(QuickProductGroup.class))).thenReturn(group1);
+
+        QuickProductGroupRequest req = new QuickProductGroupRequest("Cafetería Actualizada", List.of(product1.getId(), product2.getId()));
+        QuickProductGroupResponse res = quickProductService.updateGroup(group1.getId(), req);
+
+        assertThat(res).isNotNull();
+        assertThat(group1.getItems()).hasSize(2);
+        assertThat(group1.getItems().get(0).getProduct().getId()).isEqualTo(product1.getId());
+        assertThat(group1.getItems().get(0).getId()).isEqualTo(item1.getId()); // Mismo ID persistido, no recreado
+        assertThat(group1.getItems().get(1).getProduct().getId()).isEqualTo(product2.getId());
+    }
+
+    @Test
     @DisplayName("Debe reordenar grupos de productos rápidos según lista de IDs")
     void shouldReorderGroups() {
         QuickProductGroup group2 = QuickProductGroup.builder()

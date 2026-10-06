@@ -57,9 +57,10 @@ public class QuickProductServiceImpl implements QuickProductService {
             .build();
 
         if (request.productIds() != null && !request.productIds().isEmpty()) {
+            Set<UUID> uniqueProductIds = new LinkedHashSet<>(request.productIds());
             List<QuickProductGroupItem> items = new ArrayList<>();
             int itemOrder = 0;
-            for (UUID prodId : request.productIds()) {
+            for (UUID prodId : uniqueProductIds) {
                 Product product = productRepository.findById(prodId)
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
                 if (product.getStatus() != ProductStatus.ELIMINADO) {
@@ -87,18 +88,34 @@ public class QuickProductServiceImpl implements QuickProductService {
         group.setUpdatedAt(Instant.now());
 
         if (request.productIds() != null) {
-            group.getItems().clear();
+            Set<UUID> targetProductIds = new LinkedHashSet<>(request.productIds());
+
+            // 1. Remover items que ya no están en la lista solicitada
+            group.getItems().removeIf(item -> !targetProductIds.contains(item.getProduct().getId()));
+
+            // 2. Mapear items existentes por ID de producto para preservar sus IDs y timestamps
+            Map<UUID, QuickProductGroupItem> existingByProdId = new HashMap<>();
+            for (QuickProductGroupItem item : group.getItems()) {
+                existingByProdId.put(item.getProduct().getId(), item);
+            }
+
+            // 3. Actualizar el orden de los existentes y agregar únicamente los nuevos productos
             int itemOrder = 0;
-            for (UUID prodId : request.productIds()) {
-                Product product = productRepository.findById(prodId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
-                if (product.getStatus() != ProductStatus.ELIMINADO) {
-                    group.getItems().add(QuickProductGroupItem.builder()
-                        .group(group)
-                        .product(product)
-                        .displayOrder(itemOrder++)
-                        .createdAt(Instant.now())
-                        .build());
+            for (UUID prodId : targetProductIds) {
+                QuickProductGroupItem existing = existingByProdId.get(prodId);
+                if (existing != null) {
+                    existing.setDisplayOrder(itemOrder++);
+                } else {
+                    Product product = productRepository.findById(prodId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
+                    if (product.getStatus() != ProductStatus.ELIMINADO) {
+                        group.getItems().add(QuickProductGroupItem.builder()
+                            .group(group)
+                            .product(product)
+                            .displayOrder(itemOrder++)
+                            .createdAt(Instant.now())
+                            .build());
+                    }
                 }
             }
         }

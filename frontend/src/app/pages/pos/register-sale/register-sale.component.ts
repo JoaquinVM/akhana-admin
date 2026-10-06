@@ -133,12 +133,13 @@ export class RegisterSaleComponent implements OnInit {
   });
 
   changeGiven = computed<number>(() => {
+    const received = this.amountReceived() || 0;
     if (this.paymentMethod() === 'EFECTIVO') {
-      const diff = this.amountReceived() - this.totalAmount();
+      const diff = received - this.totalAmount();
       return diff > 0 ? Math.round(diff * 100) / 100 : 0;
     }
     if (this.paymentMethod() === 'MIXTO') {
-      const diff = this.amountReceived() - this.amountCash();
+      const diff = received - this.amountCash();
       return diff > 0 ? Math.round(diff * 100) / 100 : 0;
     }
     return 0;
@@ -148,8 +149,9 @@ export class RegisterSaleComponent implements OnInit {
     if (this.cartItems().length === 0 || this.totalAmount() <= 0) {
       return false;
     }
+    const received = this.amountReceived() || 0;
     if (this.paymentMethod() === 'EFECTIVO') {
-      return this.amountReceived() >= this.totalAmount();
+      return received >= this.totalAmount();
     }
     if (this.paymentMethod() === 'QR') {
       return true;
@@ -159,23 +161,20 @@ export class RegisterSaleComponent implements OnInit {
       return (
         cashPortion >= 0 &&
         cashPortion <= this.totalAmount() &&
-        this.amountReceived() >= cashPortion
+        received >= cashPortion
       );
     }
     return false;
   });
 
   constructor() {
-    // Sincronizar automáticamente montos al variar el total
+    // Sincronizar automáticamente porción de efectivo si cambia el total
     effect(() => {
       const total = this.totalAmount();
       const method = this.paymentMethod();
 
       if (method === 'EFECTIVO') {
         this.amountCash.set(total);
-        if (this.amountReceived() === 0 || this.amountReceived() < total) {
-          this.amountReceived.set(total);
-        }
       } else if (method === 'MIXTO') {
         if (this.amountCash() > total) {
           this.amountCash.set(total);
@@ -374,7 +373,12 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   addReceived(amount: number): void {
-    this.amountReceived.update((current) => Math.round((current + amount) * 100) / 100);
+    this.amountReceived.update((current) => Math.round(((current || 0) + amount) * 100) / 100);
+  }
+
+  onAmountReceivedChange(val: number | null): void {
+    const parsed = val !== null && !isNaN(val) ? Number(val) : 0;
+    this.amountReceived.set(parsed);
   }
 
   setExactAmount(): void {

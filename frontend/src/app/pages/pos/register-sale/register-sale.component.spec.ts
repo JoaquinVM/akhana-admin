@@ -304,4 +304,30 @@ describe('RegisterSaleComponent', () => {
     component.cancelAndReturn();
     expect(router.navigate).toHaveBeenCalledWith(['/pos']);
   });
+
+  it('debe actualizar el monto recibido con onAmountReceivedChange y validar cuando es menor al total en EFECTIVO', () => {
+    component.addToCart(mockProduct1); // total = 20
+    component.openCheckoutModal();
+    component.setPaymentMethod('EFECTIVO');
+
+    // Por defecto es igual al total
+    expect(component.amountReceived()).toBe(20);
+    expect(component.isPaymentValid()).toBe(true);
+
+    // Usuario introduce un monto menor
+    component.onAmountReceivedChange(15);
+    expect(component.amountReceived()).toBe(15);
+    expect(component.isPaymentValid()).toBe(false);
+
+    // Usuario borra el campo (null)
+    component.onAmountReceivedChange(null);
+    expect(component.amountReceived()).toBe(0);
+    expect(component.isPaymentValid()).toBe(false);
+
+    // Usuario introduce monto suficiente
+    component.onAmountReceivedChange(25);
+    expect(component.amountReceived()).toBe(25);
+    expect(component.changeGiven()).toBe(5);
+    expect(component.isPaymentValid()).toBe(true);
+  });
 });

@@ -444,7 +444,7 @@
                   min="0"
                   class="form-control money-input-field"
                   [ngModel]="amountReceived()"
-                  (ngModelChange)="amountReceived.set($event)" />
+                  (ngModelChange)="onAmountReceivedChange($event)" />
               </div>
 
               <div class="quick-amounts-bar">
@@ -457,14 +457,14 @@
             </div>
           </div>
 
-          @if (amountReceived() < totalAmount()) {
+          @if ((amountReceived() || 0) < totalAmount()) {
             <div class="checkout-alert-error">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <span>Faltan Bs {{ (totalAmount() - amountReceived()) | number:'1.2-2' }} para cubrir el total de la venta.</span>
+              <span>El monto recibido en efectivo es menor al total de la venta (faltan Bs {{ (totalAmount() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
             </div>
           }
 
@@ -540,7 +540,7 @@
                   min="0"
                   class="form-control money-input-field"
                   [ngModel]="amountReceived()"
-                  (ngModelChange)="amountReceived.set($event)" />
+                  (ngModelChange)="onAmountReceivedChange($event)" />
               </div>
 
               <div class="quick-amounts-bar">
@@ -553,14 +553,14 @@
             </div>
           </div>
 
-          @if (amountReceived() < amountCash()) {
+          @if ((amountReceived() || 0) < amountCash()) {
             <div class="checkout-alert-error">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <span>El efectivo recibido es menor a la porción pactada en efectivo (faltan Bs {{ (amountCash() - amountReceived()) | number:'1.2-2' }}).</span>
+              <span>El efectivo recibido es menor a la porción pactada en efectivo (faltan Bs {{ (amountCash() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
             </div>
           }
 
