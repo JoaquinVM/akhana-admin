@@ -382,6 +382,16 @@ export class RegisterSaleComponent implements OnInit {
     }
   }
 
+  onCashPortionChange(val: number): void {
+    const previousCash = this.amountCash();
+    const wasExact = this.amountReceived() === previousCash;
+    const newCash = Math.max(0, Math.min(this.totalAmount(), val || 0));
+    this.amountCash.set(newCash);
+    if (wasExact || this.amountReceived() < newCash) {
+      this.amountReceived.set(newCash);
+    }
+  }
+
   // Navegación y Envío de Venta
   cancelAndReturn(): void {
     this.router.navigate(['/pos']);

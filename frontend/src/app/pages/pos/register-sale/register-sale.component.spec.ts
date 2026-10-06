@@ -240,6 +240,30 @@ describe('RegisterSaleComponent', () => {
     expect(component.isPaymentValid()).toBe(true);
   });
 
+  it('debe sincronizar monto recibido al cambiar la porción en efectivo con onCashPortionChange', () => {
+    component.addToCart(mockProduct1); // 20 Bs
+    component.setPaymentMethod('MIXTO'); // por defecto 10 efe, 10 qr, 10 recibido
+
+    expect(component.amountCash()).toBe(10);
+    expect(component.amountReceived()).toBe(10);
+
+    // Cambiar porción en efectivo a 15
+    component.onCashPortionChange(15);
+    expect(component.amountCash()).toBe(15);
+    expect(component.amountQr()).toBe(5);
+    expect(component.amountReceived()).toBe(15); // se sincronizó automáticamente
+
+    // Si cliente entrega 20 (cambio de 5)
+    component.addReceived(5);
+    expect(component.amountReceived()).toBe(20);
+    expect(component.changeGiven()).toBe(5);
+
+    // Botón Exacto restablece monto recibido a la porción de efectivo
+    component.setExactAmount();
+    expect(component.amountReceived()).toBe(15);
+    expect(component.changeGiven()).toBe(0);
+  });
+
   it('debe completar la venta exitosamente y redirigir a /pos con estado de confirmación', () => {
     component.addToCart(mockProduct1);
     component.setPaymentMethod('EFECTIVO');

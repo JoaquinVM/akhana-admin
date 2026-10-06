@@ -402,25 +402,28 @@
         <!-- Panel EFECTIVO -->
         @if (paymentMethod() === 'EFECTIVO') {
           <div class="payment-panel">
-            <div class="form-group">
-              <label class="form-label" for="amountReceived">Monto Recibido en Efectivo (Bs):</label>
-              <input
-                id="amountReceived"
-                type="number"
-                step="0.50"
-                min="0"
-                class="form-control form-control-lg text-center"
-                [ngModel]="amountReceived()"
-                (ngModelChange)="amountReceived.set($event)" />
-            </div>
+            <div class="inline-control-row">
+              <label class="inline-label" for="amountReceived">Monto recibido:</label>
+              <div class="money-input-wrap">
+                <span class="currency-prefix">Bs</span>
+                <input
+                  id="amountReceived"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  class="form-control form-control-compact text-right"
+                  [ngModel]="amountReceived()"
+                  (ngModelChange)="amountReceived.set($event)" />
+              </div>
 
-            <!-- Botones Rápidos de Dinero -->
-            <div class="quick-amounts">
-              <button type="button" class="btn btn-outline btn-sm" (click)="setExactAmount()">Exacto</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(10)">+10 Bs</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(20)">+20 Bs</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(50)">+50 Bs</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(100)">+100 Bs</button>
+              <!-- Botones Rápidos de Dinero -->
+              <div class="quick-amounts-inline">
+                <button type="button" class="btn btn-outline btn-xs" (click)="setExactAmount()" title="Monto exacto">Exacto</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(10)">+10</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(20)">+20</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(50)">+50</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(100)">+100</button>
+              </div>
             </div>
 
             @if (cartItems().length > 0 && amountReceived() < totalAmount()) {
@@ -434,7 +437,7 @@
               </div>
             }
 
-            <div class="change-box" [class.highlight]="changeGiven() > 0">
+            <div class="change-box-compact" [class.highlight]="changeGiven() > 0">
               <span class="change-label">Cambio a entregar:</span>
               <span class="change-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
             </div>
@@ -465,45 +468,53 @@
         <!-- Panel MIXTO -->
         @else if (paymentMethod() === 'MIXTO') {
           <div class="payment-panel">
-            <div class="mixed-split-grid">
-              <div class="form-group">
-                <label class="form-label" for="cashPortion">Monto en Efectivo (Bs):</label>
-                <input
-                  id="cashPortion"
-                  type="number"
-                  step="0.50"
-                  min="0"
-                  [max]="totalAmount()"
-                  class="form-control"
-                  [ngModel]="amountCash()"
-                  (ngModelChange)="amountCash.set($event)" />
+            <div class="inline-control-row mixed-portions-row">
+              <div class="inline-field-group">
+                <label class="inline-label" for="cashPortion">Efectivo:</label>
+                <div class="money-input-wrap">
+                  <span class="currency-prefix">Bs</span>
+                  <input
+                    id="cashPortion"
+                    type="number"
+                    step="0.50"
+                    min="0"
+                    [max]="totalAmount()"
+                    class="form-control form-control-compact text-right"
+                    [ngModel]="amountCash()"
+                    (ngModelChange)="onCashPortionChange($event)" />
+                </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Monto en QR (Restante):</label>
-                <div class="calculated-qr-box">
-                  <span>Bs {{ amountQr() | number:'1.2-2' }}</span>
+              <div class="inline-field-group">
+                <label class="inline-label" for="qrPortion">QR:</label>
+                <div class="calculated-qr-pill" id="qrPortion" title="Monto restante a cobrar por QR (automático)">
+                  <span class="qr-pill-prefix">Bs</span>
+                  <span class="qr-pill-val">{{ amountQr() | number:'1.2-2' }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="form-group mt-2">
-              <label class="form-label" for="cashReceived">Efectivo Entregado por el Cliente (Bs):</label>
-              <input
-                id="cashReceived"
-                type="number"
-                step="0.50"
-                min="0"
-                class="form-control"
-                [ngModel]="amountReceived()"
-                (ngModelChange)="amountReceived.set($event)" />
-            </div>
+            <div class="inline-control-row">
+              <label class="inline-label" for="cashReceived">Monto recibido:</label>
+              <div class="money-input-wrap">
+                <span class="currency-prefix">Bs</span>
+                <input
+                  id="cashReceived"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  class="form-control form-control-compact text-right"
+                  [ngModel]="amountReceived()"
+                  (ngModelChange)="amountReceived.set($event)" />
+              </div>
 
-            <div class="quick-amounts">
-              <button type="button" class="btn btn-outline btn-sm" (click)="setExactAmount()">Efectivo Exacto</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(10)">+10 Bs</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(20)">+20 Bs</button>
-              <button type="button" class="btn btn-outline btn-sm" (click)="addReceived(50)">+50 Bs</button>
+              <div class="quick-amounts-inline">
+                <button type="button" class="btn btn-outline btn-xs" (click)="setExactAmount()" title="Cobro exacto del efectivo">Exacto</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(10)">+10</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(20)">+20</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(50)">+50</button>
+                <button type="button" class="btn btn-outline btn-xs" (click)="addReceived(100)">+100</button>
+              </div>
             </div>
 
             @if (cartItems().length > 0 && amountReceived() < amountCash()) {
@@ -517,7 +528,7 @@
               </div>
             }
 
-            <div class="change-box" [class.highlight]="changeGiven() > 0">
+            <div class="change-box-compact" [class.highlight]="changeGiven() > 0">
               <span class="change-label">Cambio del efectivo:</span>
               <span class="change-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
             </div>
