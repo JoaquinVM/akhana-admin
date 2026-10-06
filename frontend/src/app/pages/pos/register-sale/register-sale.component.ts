@@ -14,6 +14,7 @@ import {
   SaleItemRequest
 } from '../../../core/sale/models/sale.models';
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 export interface CartItem {
   product: Product;
@@ -30,7 +31,8 @@ export interface CartItem {
   imports: [
     CommonModule,
     FormsModule,
-    QuickProductsConfigModalComponent
+    QuickProductsConfigModalComponent,
+    ModalComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -55,7 +57,8 @@ export class RegisterSaleComponent implements OnInit {
   cartItems = signal<CartItem[]>([]);
   globalDiscount = signal<number>(0);
 
-  // Pasarela de Cobro Inline
+  // Pasarela y Modal de Cobro
+  isCheckoutModalOpen = signal<boolean>(false);
   paymentMethod = signal<PaymentMethod>('EFECTIVO');
   amountCash = signal<number>(0);
   amountReceived = signal<number>(0);
@@ -392,6 +395,20 @@ export class RegisterSaleComponent implements OnInit {
     }
   }
 
+  // Control del Modal de Cobro
+  openCheckoutModal(): void {
+    if (this.cartItems().length === 0 || this.totalAmount() <= 0) {
+      return;
+    }
+    this.setPaymentMethod(this.paymentMethod());
+    this.errorMessage.set(null);
+    this.isCheckoutModalOpen.set(true);
+  }
+
+  closeCheckoutModal(): void {
+    this.isCheckoutModalOpen.set(false);
+  }
+
   // Navegación y Envío de Venta
   cancelAndReturn(): void {
     this.router.navigate(['/pos']);
@@ -432,6 +449,7 @@ export class RegisterSaleComponent implements OnInit {
     this.saleService.registerSale(payload).subscribe({
       next: (sale) => {
         this.isSubmitting.set(false);
+        this.isCheckoutModalOpen.set(false);
         this.cashService.getCurrentSession().subscribe();
         this.router.navigate(['/pos'], {
           state: {

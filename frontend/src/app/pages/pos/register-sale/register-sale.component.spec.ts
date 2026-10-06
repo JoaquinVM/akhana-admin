@@ -264,14 +264,35 @@ describe('RegisterSaleComponent', () => {
     expect(component.changeGiven()).toBe(0);
   });
 
-  it('debe completar la venta exitosamente y redirigir a /pos con estado de confirmación', () => {
+  it('debe manejar la apertura y cierre del modal de cobro preservando el carrito', () => {
+    // Si el carrito está vacío, no debe abrir el modal
+    component.openCheckoutModal();
+    expect(component.isCheckoutModalOpen()).toBe(false);
+
+    // Con productos en el carrito, debe abrir el modal
     component.addToCart(mockProduct1);
+    component.openCheckoutModal();
+    expect(component.isCheckoutModalOpen()).toBe(true);
+
+    // Al cerrar el modal, el carrito debe permanecer intacto
+    component.closeCheckoutModal();
+    expect(component.isCheckoutModalOpen()).toBe(false);
+    expect(component.cartItems().length).toBe(1);
+    expect(component.totalAmount()).toBe(20);
+  });
+
+  it('debe completar la venta exitosamente, cerrar el modal de cobro y redirigir a /pos', () => {
+    component.addToCart(mockProduct1);
+    component.openCheckoutModal();
+    expect(component.isCheckoutModalOpen()).toBe(true);
+
     component.setPaymentMethod('EFECTIVO');
     component.amountReceived.set(20);
 
     component.submitSale();
 
     expect(mockSaleService.registerSale).toHaveBeenCalled();
+    expect(component.isCheckoutModalOpen()).toBe(false);
     expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
       state: expect.objectContaining({
         saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.'
