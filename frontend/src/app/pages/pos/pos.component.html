@@ -247,7 +247,7 @@
                   <th style="width: 130px">Método</th>
                   <th>Concepto / Detalle</th>
                   <th style="width: 130px; text-align: right">Total</th>
-                  <th style="width: 100px; text-align: center">Acciones</th>
+                  <th style="width: 110px; text-align: right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -258,7 +258,7 @@
                     <td>{{ s.createdBy }}</td>
                     <td>
                       @if (s.status === 'ANULADA') {
-                        <span class="status-badge-sale badge-voided" [title]="'Motivo: ' + (s.voidReason || 'Sin motivo')">
+                        <span class="status-badge-sale badge-voided">
                           Anulada
                         </span>
                       } @else {
@@ -300,9 +300,6 @@
                     <td>
                       <div class="sale-detail-cell">
                         <span>{{ s.description || 'Venta POS' }}</span>
-                        @if (s.status === 'ANULADA' && s.voidReason) {
-                          <span class="void-reason-note">Motivo: {{ s.voidReason }}</span>
-                        }
                       </div>
                     </td>
                     <td style="text-align: right">
@@ -310,23 +307,36 @@
                         Bs {{ s.totalAmount | number:'1.2-2' }}
                       </strong>
                     </td>
-                    <td style="text-align: center">
-                      @if (s.status !== 'ANULADA' && cashService.currentSession()?.status === 'ABIERTA') {
+                    <td style="text-align: right">
+                      <div class="table-actions" style="justify-content: flex-end">
+                        <!-- 1. Ver detalle -->
                         <button
                           type="button"
-                          class="btn-void-action"
-                          title="Anular venta"
-                          (click)="openVoidModal(s)">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="void-icon-svg">
+                          class="btn-icon btn-audit"
+                          (click)="openDetailModal(s)"
+                          title="Ver detalle"
+                          aria-label="Ver detalle">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+
+                        <!-- 2. Anular -->
+                        <button
+                          type="button"
+                          class="btn-icon btn-delete"
+                          [disabled]="s.status === 'ANULADA' || cashService.currentSession()?.status !== 'ABIERTA'"
+                          [title]="s.status === 'ANULADA' ? 'Esta venta ya se encuentra anulada' : (cashService.currentSession()?.status !== 'ABIERTA' ? 'No se pueden anular ventas con caja cerrada' : 'Anular venta')"
+                          aria-label="Anular venta"
+                          (click)="s.status !== 'ANULADA' && cashService.currentSession()?.status === 'ABIERTA' && openVoidModal(s)">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10" />
                             <line x1="15" y1="9" x2="9" y2="15" />
                             <line x1="9" y1="9" x2="15" y2="15" />
                           </svg>
-                          <span>Anular</span>
                         </button>
-                      } @else if (s.status === 'ANULADA') {
-                        <span class="voided-label">—</span>
-                      }
+                      </div>
                     </td>
                   </tr>
                 }
@@ -363,4 +373,10 @@
     [sale]="selectedSaleToVoid()"
     (close)="closeVoidModal()"
     (confirmed)="handleConfirmVoid($event)" />
+
+  <app-sale-detail-modal
+    [isOpen]="isDetailModalVisible()"
+    [saleId]="selectedSaleForDetailId()"
+    [initialSale]="selectedSaleForDetail()"
+    (close)="closeDetailModal()" />
 </div>

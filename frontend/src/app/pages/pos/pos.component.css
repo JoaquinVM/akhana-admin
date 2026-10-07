@@ -465,24 +465,27 @@
   color: #94a3b8;
 }
 
-.btn-void-action {
-  display: inline-flex;
+/* Botones de acción en tabla */
+.table-actions {
+  display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  background-color: #ffffff;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
-  border-radius: var(--radius-sm);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.btn-void-action:hover {
-  background-color: #fee2e2;
-  border-color: #ef4444;
+.btn-audit:hover:not(:disabled) {
+  color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.btn-delete:hover:not(:disabled) {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .void-icon-svg {

@@ -15,6 +15,7 @@ public record SaleResponse(
     UUID id,
     String saleNumber,
     UUID cashSessionId,
+    Long sessionNumber,
     SaleStatus status,
     BigDecimal subtotalAmount,
     BigDecimal discountItemsTotal,
@@ -48,6 +49,7 @@ public record SaleResponse(
             id,
             saleNumber,
             cashSessionId,
+            null,
             SaleStatus.COMPLETADA,
             totalAmount,
             BigDecimal.ZERO,
@@ -86,10 +88,13 @@ public record SaleResponse(
                 .collect(Collectors.toList())
             : Collections.emptyList();
 
+        Long sessionNumber = sale.getCashSession() != null ? sale.getCashSession().getSessionNumber() : null;
+
         return new SaleResponse(
             sale.getId(),
             sale.getSaleNumber(),
             sale.getCashSession() != null ? sale.getCashSession().getId() : null,
+            sessionNumber,
             sale.getStatus(),
             sale.getSubtotalAmount(),
             sale.getDiscountItemsTotal(),

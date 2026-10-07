@@ -99,4 +99,15 @@ describe('SaleService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([mockSale]);
   });
+
+  it('debe obtener una venta por ID', () => {
+    service.getSaleById('sale-1').subscribe((sale) => {
+      expect(sale.id).toBe('sale-1');
+      expect(sale.saleNumber).toBe('VTA-0001-001');
+    });
+
+    const req = httpTesting.expectOne('/api/sales/sale-1');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSale);
+  });
 });

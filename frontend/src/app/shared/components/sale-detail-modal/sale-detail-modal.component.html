@@ -1,0 +1,232 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Detalle de Venta"
+  [subtitle]="currentSale() ? ('Venta #' + currentSale()!.saleNumber) : ''"
+  size="xl"
+  (close)="onClose()">
+
+  @if (isLoading()) {
+    <div class="modal-loading-state">
+      <div class="spinner-large"></div>
+      <p class="loading-text">Cargando información de la venta...</p>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="alert alert-error">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  } @else if (currentSale(); as sale) {
+    <div class="sale-detail-container">
+      
+      <!-- 1. Información General -->
+      <div class="general-info-card">
+        <div class="info-field">
+          <span class="field-label">N.º de venta</span>
+          <span class="field-value font-semibold">Venta #{{ sale.saleNumber }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Fecha y hora</span>
+          <span class="field-value">{{ sale.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Usuario</span>
+          <span class="field-value">{{ sale.createdBy }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Sesión de caja</span>
+          <span class="field-value session-badge">Sesión #{{ sale.sessionNumber != null ? sale.sessionNumber : '—' }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Estado</span>
+          <span class="field-value">
+            @if (sale.status === 'COMPLETADA') {
+              <span class="status-badge badge-active">Completada</span>
+            } @else {
+              <span class="status-badge badge-deleted">Anulada</span>
+            }
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. Información de Anulación (Condicional si la venta está ANULADA) -->
+      @if (sale.status === 'ANULADA') {
+        <div class="void-info-box">
+          <div class="void-info-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="void-icon">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <h4 class="void-title">Información de anulación</h4>
+          </div>
+          <div class="void-info-grid">
+            <div class="void-field">
+              <span class="void-label">Fecha y hora:</span>
+              <span class="void-value">{{ (sale.voidedAt | date:'dd/MM/yyyy HH:mm:ss') || '—' }}</span>
+            </div>
+            <div class="void-field">
+              <span class="void-label">Usuario:</span>
+              <span class="void-value">{{ sale.voidedBy || '—' }}</span>
+            </div>
+            <div class="void-field full-width">
+              <span class="void-label">Motivo:</span>
+              <span class="void-value void-reason">"{{ sale.voidReason || 'Sin motivo especificado' }}"</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- 3. Tabla de Productos -->
+      <div class="products-section">
+        <div class="section-header">
+          <h4 class="section-title">Productos</h4>
+          <span class="items-count-badge">{{ sale.items?.length || 0 }} ítems</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table detail-table">
+            <thead>
+              <tr>
+                <th scope="col" style="min-width: 140px">Producto</th>
+                <th scope="col" style="width: 80px; text-align: right">Cantidad</th>
+                <th scope="col" style="width: 110px; text-align: right">Precio unitario</th>
+                <th scope="col" style="width: 135px; text-align: right">Descuento</th>
+                <th scope="col" style="width: 110px; text-align: right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of sale.items || []; track item.id || item.productId) {
+                <tr>
+                  <td>
+                    <div class="product-identity">
+                      <span class="product-name">{{ item.productName }}</span>
+                      @if (item.productCode) {
+                        <span class="product-code">{{ item.productCode }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td style="text-align: right">
+                    <span class="quantity-value">{{ item.quantity }}</span>
+                  </td>
+                  <td style="text-align: right">
+                    <span class="unit-price-value">Bs {{ item.unitPrice | number:'1.2-2' }}</span>
+                  </td>
+                  <td style="text-align: right">
+                    @if (item.discountPerUnit && item.discountPerUnit > 0) {
+                      <div class="discount-breakdown">
+                        <span class="discount-amount">Bs {{ getItemDiscountTotal(item) | number:'1.2-2' }}</span>
+                        <span class="discount-percentage">({{ getItemDiscountPercentage(item) | number:'1.0-1' }}%)</span>
+                      </div>
+                    } @else {
+                      <span class="text-muted">Bs 0,00</span>
+                    }
+                  </td>
+                  <td style="text-align: right">
+                    <strong class="subtotal-value">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. Resumen de Descuentos, Totales y Métodos de Pago -->
+      <div class="financials-grid">
+        
+        <!-- Métodos de pago -->
+        <div class="payment-methods-block">
+          <h4 class="section-title">Métodos de pago</h4>
+          <div class="payment-card">
+            <div class="payment-list">
+              @for (pm of getPaymentMethodsList(sale); track pm.label) {
+                <div class="payment-row">
+                  <div class="payment-type">
+                    <span class="payment-badge">{{ pm.label }}</span>
+                  </div>
+                  <span class="payment-val">Bs {{ pm.amount | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+
+            @if (sale.paymentMethod === 'EFECTIVO' || sale.paymentMethod === 'MIXTO') {
+              @if ((sale.amountReceived != null && sale.amountReceived > 0) || (sale.changeGiven != null && sale.changeGiven > 0)) {
+                <div class="payment-divider"></div>
+                <div class="payment-cash-meta">
+                  @if (sale.amountReceived != null && sale.amountReceived > 0) {
+                    <div class="meta-row">
+                      <span class="meta-label">Monto recibido:</span>
+                      <span class="meta-val">Bs {{ sale.amountReceived | number:'1.2-2' }}</span>
+                    </div>
+                  }
+                  @if (sale.changeGiven != null && sale.changeGiven > 0) {
+                    <div class="meta-row">
+                      <span class="meta-label">Cambio:</span>
+                      <span class="meta-val text-green font-semibold">Bs {{ sale.changeGiven | number:'1.2-2' }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Resumen de totales y descuentos -->
+        <div class="totals-block">
+          <h4 class="section-title">Resumen de venta</h4>
+          <div class="totals-card">
+            <div class="totals-row">
+              <span class="totals-label">Monto sin descuento</span>
+              <span class="totals-val">Bs {{ (sale.subtotalAmount != null ? sale.subtotalAmount : sale.totalAmount) | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="totals-row">
+              <span class="totals-label">Descuentos por productos</span>
+              <span class="totals-val">
+                {{ (sale.discountItemsTotal && sale.discountItemsTotal > 0) ? '-Bs ' + (sale.discountItemsTotal | number:'1.2-2') : 'Bs 0,00' }}
+              </span>
+            </div>
+
+            <div class="totals-row">
+              <span class="totals-label">Descuento por venta</span>
+              <span class="totals-val">
+                {{ (sale.globalDiscountAmount && sale.globalDiscountAmount > 0) ? '-Bs ' + (sale.globalDiscountAmount | number:'1.2-2') : 'Bs 0,00' }}
+              </span>
+            </div>
+
+            <div class="totals-row row-accumulated">
+              <span class="totals-label font-semibold">Total descuentos acumulados</span>
+              <span class="totals-val font-semibold">
+                {{ getAccumulatedDiscounts(sale) > 0 ? '-Bs ' + (getAccumulatedDiscounts(sale) | number:'1.2-2') : 'Bs 0,00' }}
+              </span>
+            </div>
+
+            <div class="totals-divider"></div>
+
+            <div class="totals-row row-final">
+              <span class="final-label">Total</span>
+              <span class="final-val">Bs {{ sale.totalAmount | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  }
+
+  <div modal-footer class="modal-footer-actions">
+    <button type="button" class="btn btn-secondary" (click)="onClose()">
+      Cerrar
+    </button>
+  </div>
+
+</app-modal>

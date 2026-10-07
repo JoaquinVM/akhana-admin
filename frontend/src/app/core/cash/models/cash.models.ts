@@ -42,6 +42,7 @@ export interface Sale {
   id: string;
   saleNumber: string;
   cashSessionId: string;
+  sessionNumber?: number | null;
   status?: SaleStatus;
   subtotalAmount?: number;
   discountItemsTotal?: number;

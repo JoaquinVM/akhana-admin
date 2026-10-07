@@ -26,6 +26,7 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `confirm-modal/`: Diálogo de confirmación para descarte o eliminación (`ConfirmModalComponent`).
     - `audit-modal/`: Consulta estética de trazabilidad (`AuditModalComponent`).
     - `color-picker/`: Selector de color con paleta calibrada de 18 tonos orgánicos y `ControlValueAccessor` (`ColorPickerComponent`).
+    - `sale-detail-modal/`: Componente desacoplado y reutilizable de visualización completa de ventas (`SaleDetailModalComponent`), con carga bajo demanda desde backend, desglose de ítems, descuentos acumulados, métodos de pago y auditoría de anulación (reutilizable en POS e Historial de ventas).
   - `layout/`:
     - `navbar/`: Barra de navegación horizontal superior compacta (logo corporativo, menús desplegables en hover, badge dinámico reactivo Abierta/Cerrada para POS, detección reactiva de grupo/opción activa, chip de usuario autenticado y botón de logout).
     - `main-layout/`: Contenedor maestro autenticado que aloja el `NavbarComponent` y el `<router-outlet />` de vistas.
@@ -36,7 +37,7 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
         - Estado cerrado con formulario de apertura (monto inicial en efectivo).
         - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado).
         - Botón «Registrar venta» en la cabecera de transacciones para navegar a `/pos/sale`.
-        - Historial de transacciones de la sesión activa con badges de estado (`COMPLETADA` / `ANULADA`), desglose de método de pago y anulación justificada con motivo obligatorio (`VoidSaleModalComponent`).
+        - Historial de transacciones de la sesión activa con acciones estandarizadas (`.table-actions`): 1. «Ver detalle» (abre `SaleDetailModalComponent`) y 2. «Anular» (con `VoidSaleModalComponent`, deshabilitada si ya está anulada o la caja está cerrada).
         - Modal de información de la sesión activa (`CashSessionInfoModalComponent`) y cierre de caja con arqueo ergonómico (`CloseCashModalComponent`).
         - Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
       - `register-sale/` (`RegisterSaleComponent` en `/pos/sale`): Pantalla dedicada de registro y cobro de ventas. Integra:

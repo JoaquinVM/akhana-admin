@@ -13,6 +13,7 @@ import { OpenCashModalComponent } from '../cash/components/open-cash-modal/open-
 import { CloseCashModalComponent } from '../cash/components/close-cash-modal/close-cash-modal.component';
 import { CashSessionInfoModalComponent } from '../cash/components/cash-session-info-modal/cash-session-info-modal.component';
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
+import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
 
 @Component({
   selector: 'app-pos',
@@ -22,7 +23,8 @@ import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-m
     OpenCashModalComponent,
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
-    VoidSaleModalComponent
+    VoidSaleModalComponent,
+    SaleDetailModalComponent
   ],
   templateUrl: './pos.component.html',
   styleUrls: ['./pos.component.css']
@@ -37,9 +39,12 @@ export class PosComponent implements OnInit {
   isCloseModalVisible = signal<boolean>(false);
   isInfoModalVisible = signal<boolean>(false);
   isVoidModalVisible = signal<boolean>(false);
+  isDetailModalVisible = signal<boolean>(false);
   isActionLoading = signal<boolean>(false);
 
   selectedSaleToVoid = signal<Sale | null>(null);
+  selectedSaleForDetailId = signal<string | null>(null);
+  selectedSaleForDetail = signal<Sale | null>(null);
   feedbackMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
   recentSales = signal<Sale[]>([]);
 
@@ -97,6 +102,19 @@ export class PosComponent implements OnInit {
   // Compatibilidad con pruebas previas
   openSaleModal(): void {
     this.navigateToRegisterSale();
+  }
+
+  // Consulta de Detalle de Venta
+  openDetailModal(sale: Sale): void {
+    this.selectedSaleForDetailId.set(sale.id);
+    this.selectedSaleForDetail.set(sale);
+    this.isDetailModalVisible.set(true);
+  }
+
+  closeDetailModal(): void {
+    this.selectedSaleForDetailId.set(null);
+    this.selectedSaleForDetail.set(null);
+    this.isDetailModalVisible.set(false);
   }
 
   // Anulación de Ventas

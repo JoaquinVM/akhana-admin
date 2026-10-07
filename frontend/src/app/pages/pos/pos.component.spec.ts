@@ -68,7 +68,8 @@ describe('PosComponent', () => {
       sales: signal<Sale[]>([mockSale1]),
       isLoading: signal<boolean>(false),
       voidSale: vi.fn().mockReturnValue(of({ ...mockSale1, status: 'ANULADA', voidReason: 'Error en digitación' })),
-      getSalesBySession: vi.fn().mockReturnValue(of([mockSale1]))
+      getSalesBySession: vi.fn().mockReturnValue(of([mockSale1])),
+      getSaleById: vi.fn().mockReturnValue(of(mockSale1))
     };
 
     await TestBed.configureTestingModule({
@@ -185,5 +186,57 @@ describe('PosComponent', () => {
     expect(fixture.debugElement.query(By.css('.pos-sales-layout'))).toBeNull();
     expect(fixture.debugElement.query(By.css('.pos-cart-pane'))).toBeNull();
     expect(fixture.debugElement.query(By.css('.catalog-section-pane'))).toBeNull();
+  });
+
+  it('debe mostrar las acciones de fila ordenadas (1. Ver detalle, 2. Anular) con el patrón estándar table-actions', () => {
+    const tableActions = fixture.debugElement.query(By.css('.table-actions'));
+    expect(tableActions).toBeTruthy();
+
+    const buttons = tableActions.queryAll(By.css('button.btn-icon'));
+    expect(buttons.length).toBe(2);
+
+    // Primer botón: Ver detalle (.btn-audit)
+    expect(buttons[0].nativeElement.classList.contains('btn-audit')).toBe(true);
+    expect(buttons[0].nativeElement.getAttribute('title')).toBe('Ver detalle');
+
+    // Segundo botón: Anular (.btn-delete)
+    expect(buttons[1].nativeElement.classList.contains('btn-delete')).toBe(true);
+    expect(buttons[1].nativeElement.getAttribute('title')).toBe('Anular venta');
+  });
+
+  it('debe abrir y cerrar el modal de detalle de venta al pulsar el botón Ver detalle', () => {
+    expect(component.isDetailModalVisible()).toBe(false);
+
+    const viewBtn = fixture.debugElement.query(By.css('.table-actions button.btn-audit'));
+    expect(viewBtn).toBeTruthy();
+    viewBtn.nativeElement.click();
+
+    expect(component.isDetailModalVisible()).toBe(true);
+    expect(component.selectedSaleForDetailId()).toBe('sale-1');
+    expect(component.selectedSaleForDetail()?.id).toBe('sale-1');
+
+    component.closeDetailModal();
+    expect(component.isDetailModalVisible()).toBe(false);
+    expect(component.selectedSaleForDetailId()).toBeNull();
+    expect(component.selectedSaleForDetail()).toBeNull();
+  });
+
+  it('debe deshabilitar el botón Anular si la venta está anulada o la sesión de caja no está abierta', () => {
+    const voidedSale: Sale = { ...mockSale1, id: 'sale-voided', status: 'ANULADA' };
+    component.recentSales.set([voidedSale]);
+    fixture.detectChanges();
+
+    const deleteBtn = fixture.debugElement.query(By.css('.table-actions button.btn-delete'));
+    expect(deleteBtn).toBeTruthy();
+    expect(deleteBtn.nativeElement.disabled).toBe(true);
+
+    // Con sesión en estado CERRADA
+    mockCashService.currentSession.set({ ...mockSession, status: 'CERRADA' });
+    component.recentSales.set([mockSale1]);
+    fixture.detectChanges();
+
+    const deleteBtnClosed = fixture.debugElement.query(By.css('.table-actions button.btn-delete'));
+    expect(deleteBtnClosed).toBeTruthy();
+    expect(deleteBtnClosed.nativeElement.disabled).toBe(true);
   });
 });

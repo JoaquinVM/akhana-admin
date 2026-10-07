@@ -76,4 +76,8 @@ export class SaleService {
       })
     );
   }
+
+  getSaleById(saleId: string): Observable<Sale> {
+    return this.http.get<Sale>(`${this.apiUrl}/${saleId}`);
+  }
 }
