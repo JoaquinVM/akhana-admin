@@ -42,8 +42,8 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
       - `register-sale/` (`RegisterSaleComponent` en `/pos/sale`): Pantalla dedicada de registro y cobro de ventas. Integra:
         - Catálogo y buscador predictivo de productos con adición en un clic e incremento automático de cantidades.
         - Accesos directos a "Productos Rápidos" organizados por grupos configurables con Drag & Drop (`QuickProductsConfigModalComponent` vía `@angular/cdk/drag-drop`).
-        - Carrito interactivo con edición de cantidad, descuentos unitarios (monto fijo), precio final unitario, desglose de subtotal y descuento general de la venta.
-        - Pasarela de cobro inline directamente en pantalla (sin modal): Efectivo con cálculo reactivo de cambio y botones de importe rápido, QR directo, y Mixto (porción en efectivo con remanente QR calculado y cambio).
+        - Carrito interactivo optimizado verticalmente en una sola fila con alineación en columnas: edición de cantidad (con spinners nativos ocultos), descuentos unitarios alineados a la derecha, precios y subtotal, y descuento general de la venta.
+        - Pasarela de cobro en modal ergonómico (`openCheckoutModal()`): Efectivo con cálculo reactivo de cambio y validación de monto suficiente, QR directo, y Mixto (porción en efectivo con remanente QR calculado y cambio).
         - Botón para volver al POS o cancelar la venta.
       - `components/`: Componentes modales auxiliares: `QuickProductsConfigModalComponent` y `VoidSaleModalComponent`.
     - `suppliers/`: Gestión completa de Proveedores (`SuppliersComponent`).
