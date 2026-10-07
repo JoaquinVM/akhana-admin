@@ -618,9 +618,10 @@
 
 .discount-input-wrap .form-control {
   padding-left: 1.15rem;
-  padding-right: 0.2rem;
+  padding-right: 0.35rem;
   font-size: 0.75rem;
   height: 26px;
+  text-align: right;
   -moz-appearance: textfield;
   appearance: textfield;
 }
@@ -760,9 +761,10 @@
 .global-discount-input-wrap .currency-prefix { left: 0.4rem; }
 .global-discount-input-wrap .form-control {
   padding-left: 1.35rem;
-  padding-right: 0.25rem;
+  padding-right: 0.35rem;
   font-size: 0.8125rem;
   height: 28px;
+  text-align: right;
   -moz-appearance: textfield;
   appearance: textfield;
 }

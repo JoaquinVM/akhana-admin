@@ -527,3 +527,16 @@ textarea.form-control {
 .filter-pill.filter-pill-deleted.active {
   color: var(--color-danger);
 }
+
+/* Utilidades de alineación */
+.text-right {
+  text-align: right !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+.text-center {
+  text-align: center !important;
+}
