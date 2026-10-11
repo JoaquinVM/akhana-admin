@@ -1,0 +1,275 @@
+<div class="accounts-page">
+  <!-- Encabezado de página -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span class="breadcrumb-item">Finanzas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Cuentas</span>
+      </nav>
+      <h1 class="page-title">Cuentas Financieras</h1>
+      <p class="page-subtitle">Administra las cuentas de efectivo, bancos y billeteras electrónicas del negocio</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Nueva Cuenta</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner de Resumen / Saldo Consolidado -->
+  <section class="summary-banner">
+    <div class="banner-stat">
+      <span class="stat-label">Saldo Total Consolidado</span>
+      <span class="stat-value">Bs. {{ totalBalance() | number:'1.2-2' }}</span>
+    </div>
+    <div class="banner-divider"></div>
+    <div class="banner-stat">
+      <span class="stat-label">Cuentas Registradas</span>
+      <span class="stat-count">{{ accounts().length }}</span>
+    </div>
+  </section>
+
+  <!-- Mensajes de Error y Loading -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner-large"></div>
+      <p>Cargando cuentas financieras...</p>
+    </div>
+  } @else {
+    <!-- Grid de Cuentas -->
+    <div class="accounts-grid">
+      @for (account of accounts(); track account.id) {
+        <article class="account-card" [style.--account-color]="account.color">
+          <div class="card-header">
+            <div class="account-title-wrapper">
+              <span class="color-indicator" [style.background-color]="account.color"></span>
+              <h2 class="account-name">{{ account.name }}</h2>
+            </div>
+            <div class="badges-group">
+              @if (account.isCashAccount) {
+                <span class="badge badge-cash" title="Cuenta asignada a las operaciones físicas de caja">Caja</span>
+              }
+              @if (account.isQrAccount) {
+                <span class="badge badge-qr" title="Cuenta predeterminada para cobros QR">Cuenta QR</span>
+              }
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="balance-display">
+              <span class="balance-label">Saldo Actual</span>
+              <span class="balance-amount" [class.negative]="account.currentBalance < 0">
+                Bs. {{ account.currentBalance | number:'1.2-2' }}
+              </span>
+            </div>
+
+            <div class="balance-meta">
+              <span class="meta-label">Saldo Inicial:</span>
+              <span class="meta-value">Bs. {{ account.initialBalance | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <button
+              type="button"
+              class="btn-card-action btn-movements"
+              (click)="openMovementsModal(account)"
+              title="Consultar historial de movimientos">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              <span>Movimientos</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-card-action btn-edit"
+              (click)="openEditModal(account)"
+              title="Editar cuenta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>Editar</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-card-action btn-delete"
+              [disabled]="!canDelete(account)"
+              [title]="getDeleteTooltip(account)"
+              (click)="openDeleteModal(account)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  <!-- Modal Crear/Editar Cuenta -->
+  <app-modal
+    [isOpen]="isFormModalOpen()"
+    [title]="isEditing() ? 'Editar Cuenta Financiera' : 'Nueva Cuenta Financiera'"
+    [subtitle]="isEditing() ? 'Modifica los datos de la cuenta seleccionada' : 'Registra una nueva cuenta para gestionar sus saldos'"
+    [size]="'md'"
+    (close)="closeFormModal()">
+
+    <form [formGroup]="accountForm" (ngSubmit)="saveAccount()" class="account-form">
+      @if (formError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ formError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="acc-name" class="form-label required">Nombre de la Cuenta</label>
+        <input
+          id="acc-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          placeholder="Ej: Banco Mercantil, Billetera Tigo Money"
+          maxlength="100" />
+        @if (accountForm.get('name')?.touched && accountForm.get('name')?.invalid) {
+          <span class="field-error">El nombre de la cuenta es obligatorio (máx. 100 caracteres).</span>
+        }
+      </div>
+
+      <!-- Color Picker Component -->
+      <div class="form-group">
+        <app-color-picker
+          formControlName="color"
+          label="Color Identificador"
+          [required]="true">
+        </app-color-picker>
+      </div>
+
+      @if (!isEditing()) {
+        <div class="form-group">
+          <label for="acc-initial-balance" class="form-label">Saldo Inicial (Bs.)</label>
+          <input
+            id="acc-initial-balance"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            formControlName="initialBalance"
+            placeholder="0.00" />
+          <span class="form-hint">Monto inicial con el que comienza a registrarse la cuenta.</span>
+        </div>
+      }
+
+      <div class="form-check-group">
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="isQrAccount" />
+          <span class="toggle-slider"></span>
+        </label>
+        <div class="toggle-labels">
+          <span class="toggle-title">Configurar como cuenta QR activa</span>
+          <span class="toggle-desc">Los cobros registrados por código QR en ventas se asignarán a esta cuenta.</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="spinner-small"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>{{ isEditing() ? 'Actualizar Cuenta' : 'Crear Cuenta' }}</span>
+          }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Movimientos de Cuenta -->
+  <app-modal
+    [isOpen]="isMovementsModalOpen()"
+    [title]="'Movimientos: ' + (selectedAccountForMovements()?.name || '')"
+    [subtitle]="'Historial de ingresos, gastos y transferencias de esta cuenta'"
+    [size]="'lg'"
+    (close)="closeMovementsModal()">
+
+    <div class="movements-container">
+      @if (isLoadingMovements()) {
+        <div class="loading-state">
+          <div class="spinner-large"></div>
+          <p>Cargando transacciones...</p>
+        </div>
+      } @else if (accountTransactions().length === 0) {
+        <div class="empty-state">
+          <p>No se encontraron movimientos registrados para esta cuenta.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="zen-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Monto</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tx of accountTransactions(); track tx.id) {
+                <tr [class.row-voided]="tx.status === 'ANULADO'">
+                  <td class="cell-date">{{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <span class="tx-badge" [class]="'tx-type-' + tx.type.toLowerCase()">
+                      {{ tx.type }}
+                    </span>
+                  </td>
+                  <td class="cell-desc">{{ tx.description }}</td>
+                  <td class="cell-amount" [class.negative]="tx.type === 'GASTO_MANUAL'">
+                    Bs. {{ tx.amount | number:'1.2-2' }}
+                  </td>
+                  <td>
+                    <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
+                      {{ tx.status }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </app-modal>
+
+  <!-- Modal Confirmación de Eliminación -->
+  <app-confirm-modal
+    [isOpen]="isDeleteModalOpen()"
+    title="¿Eliminar cuenta financiera?"
+    [message]="'¿Estás seguro de que deseas eliminar la cuenta &quot;' + (accountToDelete()?.name || '') + '&quot;? Esta acción no se puede deshacer.'"
+    confirmText="Eliminar Cuenta"
+    cancelText="Cancelar"
+    variant="danger"
+    [isLoading]="isDeleting()"
+    (confirm)="confirmDelete()"
+    (cancel)="closeDeleteModal()">
+  </app-confirm-modal>
+</div>

@@ -23,6 +23,28 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     ]
   },
   {
+    id: 'finances',
+    label: 'Finanzas',
+    children: [
+      {
+        label: 'Resumen',
+        route: '/finances/summary'
+      },
+      {
+        label: 'Transacciones',
+        route: '/finances/transactions'
+      },
+      {
+        label: 'Cuentas',
+        route: '/finances/accounts'
+      },
+      {
+        label: 'Categorías',
+        route: '/finances/categories'
+      }
+    ]
+  },
+  {
     id: 'catalog',
     label: 'Catálogo',
     children: [

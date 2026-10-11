@@ -52,7 +52,7 @@ El sistema SHALL consolidar el terminal de punto de venta (POS) y la gestión op
 
 #### Scenario: Visualización de POS con caja abierta
 - **WHEN** el usuario accede a la pantalla "POS" y la caja compartida está abierta
-- **THEN** el sistema muestra conjuntamente la interfaz de registro de ventas, el resumen financiero de la caja actual (monto inicial, ventas efectivo, ventas QR, efectivo esperado), las transacciones del turno, los datos de apertura y la opción de cerrar la caja
+- **THEN** el sistema muestra el resumen financiero de la caja actual con sus indicadores (monto inicial, ventas efectivo, ventas QR, gastos de caja y efectivo esperado en gaveta: monto inicial + ventas en efectivo − gastos activos de Caja), selector de vistas para alternar entre ventas y compras/gastos de la sesión, los datos de apertura y la opción de cerrar la caja
 
 #### Scenario: Registro de ventas dentro del POS
 - **WHEN** un usuario registra una venta desde la pantalla POS abierta con método `EFECTIVO` o `QR`

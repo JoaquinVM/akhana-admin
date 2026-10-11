@@ -1,0 +1,119 @@
+package com.akhana.akhana_admin.controller;
+
+import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
+import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
+import com.akhana.akhana_admin.model.FinancialTransactionStatus;
+import com.akhana.akhana_admin.model.FinancialTransactionType;
+import com.akhana.akhana_admin.model.User;
+import com.akhana.akhana_admin.service.FinancialTransactionService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/finances/transactions")
+@RequiredArgsConstructor
+public class FinancialTransactionController {
+
+    private final FinancialTransactionService financialTransactionService;
+    private final com.akhana.akhana_admin.repository.FinancialAccountRepository financialAccountRepository;
+
+    @GetMapping
+    public ResponseEntity<List<FinancialTransactionResponse>> getTransactions(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
+            @RequestParam(required = false) FinancialTransactionType type,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) FinancialTransactionStatus status,
+            @RequestParam(required = false) String search
+    ) {
+        List<FinancialTransactionResponse> transactions = financialTransactionService.getTransactions(
+                startDate, endDate, type, accountId, categoryId, status, search
+        );
+        return ResponseEntity.ok(transactions);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<FinancialTransactionResponse> getTransactionById(@PathVariable UUID id) {
+        return ResponseEntity.ok(financialTransactionService.getTransactionById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialTransactionResponse> createTransaction(
+            @Valid @RequestBody FinancialTransactionRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        FinancialTransactionResponse created = financialTransactionService.createTransaction(request, username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PostMapping("/cash-expense")
+    public ResponseEntity<FinancialTransactionResponse> createCashExpense(
+            @Valid @RequestBody com.akhana.akhana_admin.dto.CashExpenseRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        com.akhana.akhana_admin.model.FinancialAccount cashAccount = financialAccountRepository.findByIsCashAccountTrue()
+                .orElseThrow(() -> new com.akhana.akhana_admin.exception.ResourceNotFoundException("No se encontró la cuenta Caja en el sistema."));
+
+        FinancialTransactionRequest txRequest = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cashAccount.getId())
+                .categoryId(request.getCategoryId())
+                .amount(request.getAmount())
+                .transactionDate(request.getTransactionDate())
+                .description(request.getDescription())
+                .notes(request.getNotes())
+                .cashSessionId(request.getCashSessionId())
+                .build();
+
+        FinancialTransactionResponse created = financialTransactionService.createTransaction(txRequest, username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/session/{cashSessionId}")
+    public ResponseEntity<List<FinancialTransactionResponse>> getExpensesByCashSession(@PathVariable UUID cashSessionId) {
+        return ResponseEntity.ok(financialTransactionService.getExpensesByCashSession(cashSessionId));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<FinancialTransactionResponse> updateTransaction(
+            @PathVariable UUID id,
+            @Valid @RequestBody FinancialTransactionRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(financialTransactionService.updateTransaction(id, request, username));
+    }
+
+    @PostMapping("/{id}/void")
+    public ResponseEntity<FinancialTransactionResponse> voidTransaction(
+            @PathVariable UUID id,
+            @RequestBody(required = false) VoidFinancialTransactionRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(financialTransactionService.voidTransaction(id, request, username));
+    }
+
+    private String extractUsername(Authentication authentication) {
+        if (authentication == null) {
+            return "admin";
+        }
+        if (authentication.getPrincipal() instanceof User user) {
+            return user.getUsername();
+        }
+        return authentication.getName();
+    }
+}

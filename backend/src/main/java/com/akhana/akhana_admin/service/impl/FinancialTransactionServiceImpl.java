@@ -1,0 +1,397 @@
+package com.akhana.akhana_admin.service.impl;
+
+import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
+import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
+import com.akhana.akhana_admin.exception.ResourceNotFoundException;
+import com.akhana.akhana_admin.model.*;
+import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
+import com.akhana.akhana_admin.service.FinancialTransactionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class FinancialTransactionServiceImpl implements FinancialTransactionService {
+
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final FinancialAccountRepository financialAccountRepository;
+    private final FinancialCategoryRepository financialCategoryRepository;
+    private final CashSessionRepository cashSessionRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FinancialTransactionResponse> getTransactions(
+            Instant startDate,
+            Instant endDate,
+            FinancialTransactionType type,
+            UUID accountId,
+            UUID categoryId,
+            FinancialTransactionStatus status,
+            String search
+    ) {
+        Instant effectiveStart = startDate != null ? startDate : getDefaultStartDate();
+        Instant effectiveEnd = endDate != null ? endDate : getDefaultEndDate();
+        String effectiveSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+
+        return financialTransactionRepository.filterTransactions(
+                effectiveStart,
+                effectiveEnd,
+                type,
+                accountId,
+                categoryId,
+                status,
+                effectiveSearch
+        ).stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FinancialTransactionResponse> getAccountTransactions(UUID accountId, Instant startDate, Instant endDate) {
+        financialAccountRepository.findByIdAndDeletedAtIsNull(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + accountId));
+
+        Instant effectiveStart = startDate != null ? startDate : getDefaultStartDate();
+        Instant effectiveEnd = endDate != null ? endDate : getDefaultEndDate();
+
+        return financialTransactionRepository.findByAccountAndDateRange(accountId, effectiveStart, effectiveEnd)
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FinancialTransactionResponse> getExpensesByCashSession(UUID cashSessionId) {
+        return financialTransactionRepository.findByCashSessionIdOrderByTransactionDateDesc(cashSessionId)
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FinancialTransactionResponse getTransactionById(UUID id) {
+        FinancialTransaction transaction = financialTransactionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
+        return mapToResponse(transaction);
+    }
+
+    @Override
+    @Transactional
+    public FinancialTransactionResponse createTransaction(FinancialTransactionRequest request, String currentUsername) {
+        FinancialAccount sourceAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getSourceAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
+
+        BigDecimal amount = request.getAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
+        }
+
+        UUID sessionToLink = request.getCashSessionId();
+        if (sessionToLink == null && Boolean.TRUE.equals(sourceAccount.getIsCashAccount())) {
+            sessionToLink = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
+                    .map(CashSession::getId)
+                    .orElse(null);
+        }
+
+        Instant txDate = request.getTransactionDate() != null ? request.getTransactionDate() : Instant.now();
+        FinancialTransaction.FinancialTransactionBuilder builder = FinancialTransaction.builder()
+                .type(request.getType())
+                .sourceAccount(sourceAccount)
+                .cashSessionId(sessionToLink)
+                .amount(amount)
+                .transactionDate(txDate)
+                .description(request.getDescription().trim())
+                .notes(request.getNotes() != null ? request.getNotes().trim() : null)
+                .status(FinancialTransactionStatus.ACTIVO)
+                .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
+                .createdAt(Instant.now());
+
+        if (request.getType() == FinancialTransactionType.INGRESO_MANUAL) {
+            if (Boolean.TRUE.equals(sourceAccount.getIsCashAccount())) {
+                throw new IllegalStateException("Los ingresos manuales no pueden registrarse en la cuenta Caja. Los ingresos de Caja provienen exclusivamente de ventas o transferencias.");
+            }
+            if (request.getCategoryId() == null) {
+                throw new IllegalArgumentException("La categoría es obligatoria para un ingreso manual.");
+            }
+            FinancialCategory category = financialCategoryRepository.findByIdAndDeletedAtIsNull(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + request.getCategoryId()));
+            if (category.getType() != FinancialCategoryType.INGRESO) {
+                throw new IllegalArgumentException("La categoría para un ingreso debe ser de tipo INGRESO.");
+            }
+            builder.category(category);
+
+            // Afectar saldo
+            sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().add(amount));
+            financialAccountRepository.save(sourceAccount);
+
+        } else if (request.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            if (request.getCategoryId() == null) {
+                throw new IllegalArgumentException("La categoría es obligatoria para un gasto manual.");
+            }
+            FinancialCategory category = financialCategoryRepository.findByIdAndDeletedAtIsNull(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + request.getCategoryId()));
+            if (category.getType() != FinancialCategoryType.GASTO) {
+                throw new IllegalArgumentException("La categoría para un gasto debe ser de tipo GASTO.");
+            }
+            builder.category(category);
+
+            // Afectar saldo
+            sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().subtract(amount));
+            financialAccountRepository.save(sourceAccount);
+
+        } else if (request.getType() == FinancialTransactionType.TRANSFERENCIA) {
+            if (request.getDestinationAccountId() == null) {
+                throw new IllegalArgumentException("La cuenta destino es obligatoria para una transferencia.");
+            }
+            if (request.getSourceAccountId().equals(request.getDestinationAccountId())) {
+                throw new IllegalArgumentException("La cuenta origen y la cuenta destino deben ser diferentes.");
+            }
+            FinancialAccount destinationAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getDestinationAccountId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cuenta destino no encontrada con ID: " + request.getDestinationAccountId()));
+
+            // Validar saldo suficiente
+            if (sourceAccount.getCurrentBalance().compareTo(amount) < 0) {
+                throw new IllegalStateException(String.format(
+                        "Saldo insuficiente en la cuenta origen (%s). Saldo disponible: %.2f Bs, monto a transferir: %.2f Bs.",
+                        sourceAccount.getName(), sourceAccount.getCurrentBalance(), amount
+                ));
+            }
+
+            builder.destinationAccount(destinationAccount);
+
+            // Afectar ambos saldos
+            sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().subtract(amount));
+            destinationAccount.setCurrentBalance(destinationAccount.getCurrentBalance().add(amount));
+            financialAccountRepository.save(sourceAccount);
+            financialAccountRepository.save(destinationAccount);
+
+        } else {
+            throw new IllegalArgumentException("Tipo de transacción no admitido para registro manual.");
+        }
+
+        FinancialTransaction savedTx = financialTransactionRepository.save(builder.build());
+
+        if (savedTx.getCashSessionId() != null && savedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            cashSessionRepository.findById(savedTx.getCashSessionId()).ifPresent(session -> {
+                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
+                cashSessionRepository.save(session);
+            });
+        }
+
+        return mapToResponse(savedTx);
+    }
+
+    @Override
+    @Transactional
+    public FinancialTransactionResponse updateTransaction(UUID id, FinancialTransactionRequest request, String currentUsername) {
+        FinancialTransaction tx = financialTransactionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
+
+        if (tx.getSaleId() != null) {
+            throw new IllegalStateException("Los movimientos financieros originados por ventas no pueden editarse desde este módulo; se gestionan exclusivamente desde Ventas.");
+        }
+
+        if (tx.getStatus() == FinancialTransactionStatus.ANULADO) {
+            throw new IllegalStateException("No se puede editar una transacción que ya ha sido anulada.");
+        }
+
+        if (tx.getType() == FinancialTransactionType.TRANSFERENCIA) {
+            throw new IllegalStateException("Las transferencias entre cuentas no pueden editarse; en caso de error deben anularse y registrarse nuevamente.");
+        }
+
+        if (tx.getType() != request.getType()) {
+            throw new IllegalArgumentException("No se puede cambiar el tipo de una transacción ya registrada.");
+        }
+
+        BigDecimal newAmount = request.getAmount();
+        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
+        }
+
+        FinancialAccount currentSource = tx.getSourceAccount();
+        FinancialAccount targetSource = currentSource;
+
+        if (!currentSource.getId().equals(request.getSourceAccountId())) {
+            targetSource = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getSourceAccountId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Nueva cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
+        }
+
+        // Revertir impacto del monto anterior
+        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL) {
+            currentSource.setCurrentBalance(currentSource.getCurrentBalance().subtract(tx.getAmount()));
+        } else if (tx.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            currentSource.setCurrentBalance(currentSource.getCurrentBalance().add(tx.getAmount()));
+        }
+
+        // Aplicar nuevo impacto
+        if (request.getType() == FinancialTransactionType.INGRESO_MANUAL) {
+            if (Boolean.TRUE.equals(targetSource.getIsCashAccount())) {
+                throw new IllegalStateException("Los ingresos manuales no pueden registrarse en la cuenta Caja.");
+            }
+            targetSource.setCurrentBalance(targetSource.getCurrentBalance().add(newAmount));
+        } else if (request.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            targetSource.setCurrentBalance(targetSource.getCurrentBalance().subtract(newAmount));
+        }
+
+        if (!currentSource.getId().equals(targetSource.getId())) {
+            financialAccountRepository.save(currentSource);
+        }
+        financialAccountRepository.save(targetSource);
+
+        if (request.getCategoryId() != null) {
+            FinancialCategory category = financialCategoryRepository.findByIdAndDeletedAtIsNull(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + request.getCategoryId()));
+            if (request.getType() == FinancialTransactionType.INGRESO_MANUAL && category.getType() != FinancialCategoryType.INGRESO) {
+                throw new IllegalArgumentException("La categoría para un ingreso debe ser de tipo INGRESO.");
+            }
+            if (request.getType() == FinancialTransactionType.GASTO_MANUAL && category.getType() != FinancialCategoryType.GASTO) {
+                throw new IllegalArgumentException("La categoría para un gasto debe ser de tipo GASTO.");
+            }
+            tx.setCategory(category);
+        }
+
+        tx.setSourceAccount(targetSource);
+        tx.setAmount(newAmount);
+        if (request.getTransactionDate() != null) {
+            tx.setTransactionDate(request.getTransactionDate());
+        }
+        tx.setDescription(request.getDescription().trim());
+        tx.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
+        tx.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
+        tx.setUpdatedAt(Instant.now());
+
+        FinancialTransaction updatedTx = financialTransactionRepository.save(tx);
+
+        if (updatedTx.getCashSessionId() != null && updatedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            cashSessionRepository.findById(updatedTx.getCashSessionId()).ifPresent(session -> {
+                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
+                cashSessionRepository.save(session);
+            });
+        }
+
+        return mapToResponse(updatedTx);
+    }
+
+    @Override
+    @Transactional
+    public FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
+        FinancialTransaction tx = financialTransactionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
+
+        if (tx.getStatus() == FinancialTransactionStatus.ANULADO) {
+            throw new IllegalStateException("La transacción ya se encuentra anulada.");
+        }
+
+        if (tx.getSaleId() != null) {
+            throw new IllegalStateException("Las transacciones generadas por ventas no pueden anularse desde Finanzas. Deben anularse desde el módulo de Ventas.");
+        }
+
+        // Revertir impacto en los saldos
+        BigDecimal amount = tx.getAmount();
+        FinancialAccount source = tx.getSourceAccount();
+
+        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL || tx.getType() == FinancialTransactionType.VENTA_INGRESO || tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
+            source.setCurrentBalance(source.getCurrentBalance().subtract(amount));
+            financialAccountRepository.save(source);
+        } else if (tx.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            source.setCurrentBalance(source.getCurrentBalance().add(amount));
+            financialAccountRepository.save(source);
+        } else if (tx.getType() == FinancialTransactionType.TRANSFERENCIA) {
+            FinancialAccount destination = tx.getDestinationAccount();
+            source.setCurrentBalance(source.getCurrentBalance().add(amount));
+            destination.setCurrentBalance(destination.getCurrentBalance().subtract(amount));
+            financialAccountRepository.save(source);
+            financialAccountRepository.save(destination);
+        }
+
+        tx.setStatus(FinancialTransactionStatus.ANULADO);
+        tx.setVoidedAt(Instant.now());
+        tx.setVoidedBy(currentUsername != null ? currentUsername : "SYSTEM");
+        tx.setVoidReason(request != null && request.getVoidReason() != null ? request.getVoidReason().trim() : null);
+
+        FinancialTransaction voidedTx = financialTransactionRepository.save(tx);
+
+        if (voidedTx.getCashSessionId() != null && voidedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
+            cashSessionRepository.findById(voidedTx.getCashSessionId()).ifPresent(session -> {
+                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
+                cashSessionRepository.save(session);
+            });
+        }
+
+        return mapToResponse(voidedTx);
+    }
+
+    private Instant getDefaultStartDate() {
+        return YearMonth.now().atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+    }
+
+    private Instant getDefaultEndDate() {
+        return LocalDate.now().atTime(23, 59, 59, 999_999_999).atZone(ZoneId.systemDefault()).toInstant();
+    }
+
+    private FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {
+        FinancialTransactionResponse.AccountSummary sourceSummary = null;
+        if (tx.getSourceAccount() != null) {
+            sourceSummary = FinancialTransactionResponse.AccountSummary.builder()
+                    .id(tx.getSourceAccount().getId())
+                    .name(tx.getSourceAccount().getName())
+                    .color(tx.getSourceAccount().getColor())
+                    .build();
+        }
+
+        FinancialTransactionResponse.AccountSummary destSummary = null;
+        if (tx.getDestinationAccount() != null) {
+            destSummary = FinancialTransactionResponse.AccountSummary.builder()
+                    .id(tx.getDestinationAccount().getId())
+                    .name(tx.getDestinationAccount().getName())
+                    .color(tx.getDestinationAccount().getColor())
+                    .build();
+        }
+
+        FinancialTransactionResponse.CategorySummary catSummary = null;
+        if (tx.getCategory() != null) {
+            catSummary = FinancialTransactionResponse.CategorySummary.builder()
+                    .id(tx.getCategory().getId())
+                    .name(tx.getCategory().getName())
+                    .type(tx.getCategory().getType())
+                    .color(tx.getCategory().getColor())
+                    .build();
+        }
+
+        return FinancialTransactionResponse.builder()
+                .id(tx.getId())
+                .type(tx.getType())
+                .amount(tx.getAmount())
+                .transactionDate(tx.getTransactionDate())
+                .description(tx.getDescription())
+                .notes(tx.getNotes())
+                .status(tx.getStatus())
+                .saleId(tx.getSaleId())
+                .cashSessionId(tx.getCashSessionId())
+                .sourceAccount(sourceSummary)
+                .destinationAccount(destSummary)
+                .category(catSummary)
+                .createdBy(tx.getCreatedBy())
+                .createdAt(tx.getCreatedAt())
+                .updatedBy(tx.getUpdatedBy())
+                .updatedAt(tx.getUpdatedAt())
+                .voidedBy(tx.getVoidedBy())
+                .voidedAt(tx.getVoidedAt())
+                .voidReason(tx.getVoidReason())
+                .build();
+    }
+}

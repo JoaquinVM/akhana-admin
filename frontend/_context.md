@@ -18,9 +18,10 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `cash/`: Modelos de sesión, cortes de denominaciones y ventas (`cash.models.ts`) y servicio reactivo con Signals (`cash.service.ts`).
     - `sale/`: Modelos detallados de ventas, líneas de venta y anulación (`sale.models.ts`) y servicio reactivo con Signals (`sale.service.ts`).
     - `quick-product/`: Modelos de grupos y productos rápidos (`quick-product.models.ts`) y servicio reactivo con Signals (`quick-product.service.ts`).
+    - `finance/`: Modelos del módulo financiero (`models/finance.models.ts`) y servicios HTTP reactivos con Signals (`financial-account.service.ts`, `financial-category.service.ts`, `financial-transaction.service.ts`, `finance-summary.service.ts`).
     - `navigation/`:
       - `models/navigation.models.ts`: Interfaces `NavItem`, `NavGroup`.
-      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal (4 grupos corporativos: Ventas, Catálogo, Compras, Seguridad; POS con badge dinámico y Historial de cajas dentro de Ventas).
+      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal (5 grupos corporativos: Ventas, Finanzas, Catálogo, Compras, Seguridad; grupo Finanzas con Resumen, Transacciones, Cuentas, Categorías).
   - `shared/components/`:
     - `modal/`: Componente modal accesible con control de backdrop (`ModalComponent`).
     - `confirm-modal/`: Diálogo de confirmación para descarte o eliminación (`ConfirmModalComponent`).
@@ -35,9 +36,10 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `pos/`:
       - `PosComponent` (`/pos`): Terminal principal de supervisión y control de caja compartida. Integra:
         - Estado cerrado con formulario de apertura (monto inicial en efectivo).
-        - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, efectivo esperado).
-        - Botón «Registrar venta» en la cabecera de transacciones para navegar a `/pos/sale`.
-        - Historial de transacciones de la sesión activa con acciones estandarizadas (`.table-actions`): 1. «Ver detalle» (abre `SaleDetailModalComponent`) y 2. «Anular» (con `VoidSaleModalComponent`, deshabilitada si ya está anulada o la caja está cerrada).
+        - Estado abierto con KPIs financieros en tiempo real (monto inicial, ventas efectivo, ventas QR, gastos de caja y efectivo esperado en gaveta: apertura + ventas efectivo − gastos activos).
+        - Selector visual de contenido (`.view-pill-group`) para alternar fluidamente entre **Ventas** (por defecto) y **Compras** (gastos de la sesión de caja).
+        - Vista de **Ventas**: listado de ventas de la sesión con botón «Registrar venta» para navegar a `/pos/sale`, acciones estandarizadas (`.table-actions`): 1. «Ver detalle» (abre `SaleDetailModalComponent`) y 2. «Anular» (`VoidSaleModalComponent`).
+        - Vista de **Compras**: listado de compras y gastos de la sesión de caja activa con categorías con indicador cromático, contador que excluye gastos anulados, botón «Registrar Gasto» y modal de anulación auditada de gasto (sin columna redundante de Cuenta ni botón Ver Detalle).
         - Modal de información de la sesión activa (`CashSessionInfoModalComponent`) y cierre de caja con arqueo ergonómico (`CloseCashModalComponent`).
         - Restricción estricta de navegación: sin botones ni enlaces hacia historial de cajas.
       - `register-sale/` (`RegisterSaleComponent` en `/pos/sale`): Pantalla dedicada de registro y cobro de ventas. Integra:
@@ -51,6 +53,11 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `categories/`: Gestión completa de Categorías y familias cromáticas (`CategoriesComponent`).
     - `tags/`: Gestión completa de Etiquetas y familias cromáticas (`TagsComponent`).
     - `products/`: Gestión completa de Productos (`ProductsComponent`).
+    - `finances/`: Módulo de Gestión Financiera y Contable:
+      - `summary/` (`FinanceSummaryComponent` en `/finances/summary`): KPIs consolidados (Saldo total, Caja, BISA, Joaco, cuenta QR activa), desglose de cuentas y tabla de últimos movimientos.
+      - `transactions/` (`TransactionsComponent` en `/finances/transactions`): Tabla transaccional con indicador cromático de categorías (píldora con `color-dot` similar a productos), filtros avanzados (rango fechas, tipo, cuenta, categoría, estado), modales para ingreso manual (con exclusión de Caja), gasto manual, transferencias entre cuentas distintas, anulación auditada y consulta directa de venta (`SaleDetailModalComponent`).
+      - `accounts/` (`AccountsComponent` en `/finances/accounts`): Administración de cuentas con selector de color (`ColorPickerComponent`), toggle de cuenta QR única, saldo consolidado, modal de movimientos por cuenta y eliminación condicionada (saldo 0, no Caja, no QR).
+      - `categories/` (`FinancialCategoriesComponent` en `/finances/categories`): Clasificación por tipo Ingreso/Gasto, selector y muestra visual de color identificador (`ColorPickerComponent`), toggle de categoría de ventas única para ingresos, auditoría y protección de eliminación para categoría de ventas.
     - `cash/`:
       - `cash-history/`: Consulta histórica y auditoría de sesiones (`CashHistoryComponent`), accesible exclusivamente desde el menú Ventas.
       - `components/`: Componentes y modales reutilizables de caja: `OpenCashModalComponent`, `CloseCashModalComponent`, `CashDetailModalComponent` y `CashSessionInfoModalComponent`.

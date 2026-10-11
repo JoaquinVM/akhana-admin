@@ -65,12 +65,13 @@ describe('NavbarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('debe renderizar los 4 grupos principales (Ventas, Catálogo, Compras, Seguridad)', () => {
+  it('debe renderizar los 5 grupos principales (Ventas, Finanzas, Catálogo, Compras, Seguridad)', () => {
     const groupLabels = fixture.debugElement
       .queryAll(By.css('.group-label'))
       .map(el => el.nativeElement.textContent.trim());
 
     expect(groupLabels).toContain('Ventas');
+    expect(groupLabels).toContain('Finanzas');
     expect(groupLabels).toContain('Catálogo');
     expect(groupLabels).toContain('Compras');
     expect(groupLabels).toContain('Seguridad');

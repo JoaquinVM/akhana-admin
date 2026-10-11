@@ -1,0 +1,278 @@
+<div class="categories-page">
+  <!-- Encabezado de página -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span class="breadcrumb-item">Finanzas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Categorías</span>
+      </nav>
+      <h1 class="page-title">Categorías Financieras</h1>
+      <p class="page-subtitle">Clasifica y organiza los ingresos y gastos operativos del negocio</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Nueva Categoría</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Filtros y Buscador -->
+  <section class="filters-card">
+    <div class="filter-pill-group">
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="selectedTypeFilter() === 'TODOS'"
+        (click)="setTypeFilter('TODOS')">
+        Todos
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="selectedTypeFilter() === 'INGRESO'"
+        (click)="setTypeFilter('INGRESO')">
+        Ingresos
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="selectedTypeFilter() === 'GASTO'"
+        (click)="setTypeFilter('GASTO')">
+        Gastos
+      </button>
+    </div>
+
+    <div class="filters-search-wrapper">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Buscar por nombre..."
+          [value]="searchTerm()"
+          (input)="onSearch($event)" />
+      </div>
+      <span class="total-counter">{{ filteredCategories().length }} categorías</span>
+    </div>
+  </section>
+
+  <!-- Mensajes de Error y Loading -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner-large"></div>
+      <p>Cargando categorías financieras...</p>
+    </div>
+  } @else {
+    <!-- Tabla de Categorías -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="zen-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Color</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Propósito</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (category of filteredCategories(); track category.id) {
+              <tr>
+                <td>
+                  <div class="category-color-pill" [title]="category.color">
+                    <span class="color-dot" [style.backgroundColor]="category.color"></span>
+                    <span class="color-hex">{{ (category.color || '#2E5B27').toUpperCase() }}</span>
+                  </div>
+                </td>
+                <td class="cell-name">
+                  <span class="category-name-text">{{ category.name }}</span>
+                </td>
+                <td>
+                  <span class="type-pill" [class.type-ingreso]="category.type === 'INGRESO'" [class.type-gasto]="category.type === 'GASTO'">
+                    {{ category.type }}
+                  </span>
+                </td>
+                <td>
+                  @if (category.isSalesDefault) {
+                    <span class="badge-sales-default" title="Categoría predeterminada para registrar ingresos por ventas del POS">
+                      ★ Ventas (Predeterminada)
+                    </span>
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
+                <td class="text-right cell-actions">
+                  <button
+                    type="button"
+                    class="btn-action btn-audit"
+                    (click)="openAuditModal(category)"
+                    title="Ver auditoría">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn-action btn-edit"
+                    (click)="openEditModal(category)"
+                    title="Editar categoría">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn-action btn-delete"
+                    [disabled]="!canDelete(category)"
+                    [title]="getDeleteTooltip(category)"
+                    (click)="openDeleteModal(category)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-cell">
+                  <p>No se encontraron categorías financieras que coincidan con la búsqueda.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Crear/Editar Categoría -->
+  <app-modal
+    [isOpen]="isFormModalOpen()"
+    [title]="isEditing() ? 'Editar Categoría Financiera' : 'Nueva Categoría Financiera'"
+    [subtitle]="isEditing() ? 'Modifica los datos de la categoría seleccionada' : 'Registra una categoría para ingresos o gastos'"
+    [size]="'md'"
+    (close)="closeFormModal()">
+
+    <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="category-form">
+      @if (formError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ formError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="cat-name" class="form-label required">Nombre de la Categoría</label>
+        <input
+          id="cat-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          placeholder="Ej: Insumos de empaque, Servicios básicos, Ventas"
+          maxlength="100" />
+        @if (categoryForm.get('name')?.touched && categoryForm.get('name')?.invalid) {
+          <span class="field-error">El nombre de la categoría es obligatorio (máx. 100 caracteres).</span>
+        }
+      </div>
+
+      <!-- Selector de Color Reutilizable -->
+      <div class="form-group">
+        <app-color-picker
+          formControlName="color"
+          label="Color Identificador"
+          [required]="true">
+        </app-color-picker>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label required">Tipo de Flujo</label>
+        <div class="type-radio-group">
+          <label class="radio-card" [class.selected]="categoryForm.get('type')?.value === 'INGRESO'">
+            <input type="radio" formControlName="type" value="INGRESO" />
+            <div class="radio-content">
+              <span class="radio-title">Ingreso</span>
+              <span class="radio-desc">Entradas de dinero al negocio</span>
+            </div>
+          </label>
+          <label class="radio-card" [class.selected]="categoryForm.get('type')?.value === 'GASTO'">
+            <input type="radio" formControlName="type" value="GASTO" />
+            <div class="radio-content">
+              <span class="radio-title">Gasto</span>
+              <span class="radio-desc">Salidas de dinero, compras y costos</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      @if (categoryForm.get('type')?.value === 'INGRESO') {
+        <div class="form-check-group">
+          <label class="toggle-switch">
+            <input type="checkbox" formControlName="isSalesDefault" />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="toggle-labels">
+            <span class="toggle-title">Categoría predeterminada para ventas</span>
+            <span class="toggle-desc">Se asociará automáticamente a los ingresos generados por ventas en el POS.</span>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="spinner-small"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>{{ isEditing() ? 'Actualizar Categoría' : 'Crear Categoría' }}</span>
+          }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Auditoría -->
+  <app-audit-modal
+    [isOpen]="isAuditModalOpen()"
+    title="Auditoría de Categoría"
+    [subtitle]="auditModalSubtitle()"
+    [data]="selectedAuditData()"
+    (close)="closeAuditModal()">
+  </app-audit-modal>
+
+  <!-- Modal Confirmación de Eliminación -->
+  <app-confirm-modal
+    [isOpen]="isDeleteModalOpen()"
+    title="¿Eliminar categoría financiera?"
+    [message]="'¿Estás seguro de que deseas eliminar la categoría &quot;' + (categoryToDelete()?.name || '') + '&quot;? Esta acción no se puede deshacer.'"
+    confirmText="Eliminar Categoría"
+    cancelText="Cancelar"
+    variant="danger"
+    [isLoading]="isDeleting()"
+    (confirm)="confirmDelete()"
+    (cancel)="closeDeleteModal()">
+  </app-confirm-modal>
+</div>

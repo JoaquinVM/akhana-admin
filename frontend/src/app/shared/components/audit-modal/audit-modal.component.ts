@@ -20,7 +20,10 @@ const DEFAULT_LABELS: Record<string, string> = {
   deletedBy: 'Usuario de eliminación',
   deletedAt: 'Fecha y hora de eliminación',
   deleted_by: 'Usuario de eliminación',
-  deleted_at: 'Fecha y hora de eliminación'
+  deleted_at: 'Fecha y hora de eliminación',
+  voidedBy: 'Usuario de anulación',
+  voidedAt: 'Fecha y hora de anulación',
+  voidReason: 'Motivo de anulación'
 };
 
 @Component({

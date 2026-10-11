@@ -1,0 +1,808 @@
+<div class="transactions-page">
+  <!-- Encabezado de página -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span class="breadcrumb-item">Finanzas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Transacciones</span>
+      </nav>
+      <h1 class="page-title">Transacciones Financieras</h1>
+      <p class="page-subtitle">Registro, auditoría y control de todos los movimientos económicos del negocio</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-income" (click)="openIncomeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Registrar Ingreso</span>
+      </button>
+
+      <button type="button" class="btn btn-expense" (click)="openExpenseModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Registrar Gasto</span>
+      </button>
+
+      <button type="button" class="btn btn-transfer" (click)="openTransferModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="17 1 21 5 17 9"></polyline>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+          <polyline points="7 23 3 19 7 15"></polyline>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+        </svg>
+        <span>Transferencia</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Barra de Saldos de Cuentas -->
+  <section class="accounts-summary-bar">
+    <span class="bar-title">Saldos Actuales:</span>
+    <div class="accounts-chips">
+      @for (acc of accounts(); track acc.id) {
+        <div class="account-chip">
+          <span class="chip-color" [style.background-color]="acc.color"></span>
+          <span class="chip-name">{{ acc.name }}</span>
+          <span class="chip-balance" [class.negative]="acc.currentBalance < 0">
+            Bs. {{ acc.currentBalance | number:'1.2-2' }}
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Panel de Filtros -->
+  <section class="filters-card">
+    <div class="filters-grid">
+      <div class="filter-field">
+        <label for="filter-start" class="filter-label">Desde</label>
+        <input
+          id="filter-start"
+          type="date"
+          class="filter-input"
+          [value]="startDate()"
+          (input)="startDate.set($any($event.target).value); onFilterChange()" />
+      </div>
+
+      <div class="filter-field">
+        <label for="filter-end" class="filter-label">Hasta</label>
+        <input
+          id="filter-end"
+          type="date"
+          class="filter-input"
+          [value]="endDate()"
+          (input)="endDate.set($any($event.target).value); onFilterChange()" />
+      </div>
+
+      <div class="filter-field">
+        <label for="filter-type" class="filter-label">Tipo</label>
+        <select
+          id="filter-type"
+          class="filter-select"
+          [value]="selectedType()"
+          (change)="selectedType.set($any($event.target).value); onFilterChange()">
+          <option value="">Todos los tipos</option>
+          <option value="INGRESO_MANUAL">Ingreso Manual</option>
+          <option value="GASTO_MANUAL">Gasto Manual</option>
+          <option value="TRANSFERENCIA">Transferencia</option>
+          <option value="VENTA_INGRESO">Ventas POS</option>
+          <option value="SALDO_INICIAL">Saldo Inicial</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="filter-account" class="filter-label">Cuenta</label>
+        <select
+          id="filter-account"
+          class="filter-select"
+          [value]="selectedAccountId()"
+          (change)="selectedAccountId.set($any($event.target).value); onFilterChange()">
+          <option value="">Todas las cuentas</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="filter-category" class="filter-label">Categoría</label>
+        <select
+          id="filter-category"
+          class="filter-select"
+          [value]="selectedCategoryId()"
+          (change)="selectedCategoryId.set($any($event.target).value); onFilterChange()">
+          <option value="">Todas las categorías</option>
+          @for (cat of categories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }} ({{ cat.type }})</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="filter-status" class="filter-label">Estado</label>
+        <select
+          id="filter-status"
+          class="filter-select"
+          [value]="selectedStatus()"
+          (change)="selectedStatus.set($any($event.target).value); onFilterChange()">
+          <option value="">Todos los estados</option>
+          <option value="ACTIVO">Activos</option>
+          <option value="ANULADO">Anulados</option>
+        </select>
+      </div>
+
+      <div class="filter-field search-field">
+        <label for="filter-search" class="filter-label">Buscar</label>
+        <input
+          id="filter-search"
+          type="text"
+          class="filter-input"
+          placeholder="Descripción o notas..."
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value); onFilterChange()" />
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn btn-secondary btn-reset" (click)="resetFilters()" title="Restablecer filtros">
+          Limpiar
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mensajes de Error y Loading -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner-large"></div>
+      <p>Cargando transacciones...</p>
+    </div>
+  } @else {
+    <!-- Tabla de Transacciones -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="zen-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Cuenta Origen</th>
+              <th>Destino</th>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th class="text-right">Monto</th>
+              <th>Estado</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tx of transactions(); track tx.id) {
+              <tr [class.row-voided]="tx.status === 'ANULADO'">
+                <td class="cell-date">
+                  {{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td>
+                  <span class="tx-badge" [class]="'badge-type-' + tx.type.toLowerCase()">
+                    {{ tx.type }}
+                  </span>
+                </td>
+                <td>
+                  <span class="account-tag">
+                    <span class="dot" [style.background-color]="tx.sourceAccount.color"></span>
+                    <span>{{ tx.sourceAccount.name }}</span>
+                  </span>
+                </td>
+                <td>
+                  @if (tx.destinationAccount) {
+                    <span class="account-tag">
+                      <span class="dot" [style.background-color]="tx.destinationAccount.color"></span>
+                      <span>{{ tx.destinationAccount.name }}</span>
+                    </span>
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
+                <td>
+                  @if (tx.category) {
+                    <span class="category-color-pill" [title]="tx.category.name">
+                      <span class="color-dot" [style.backgroundColor]="tx.category.color || '#2E5B27'"></span>
+                      <span class="pill-text">{{ tx.category.name }}</span>
+                    </span>
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
+                <td class="cell-desc">
+                  <div class="desc-content">
+                    <span class="desc-main">{{ tx.description }}</span>
+                    @if (tx.notes) {
+                      <span class="desc-notes">{{ tx.notes }}</span>
+                    }
+                  </div>
+                </td>
+                <td class="text-right cell-amount"
+                    [class.positive]="tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO' || tx.type === 'SALDO_INICIAL'"
+                    [class.negative]="tx.type === 'GASTO_MANUAL'">
+                  @if (tx.type === 'GASTO_MANUAL') { - }
+                  @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
+                  Bs. {{ tx.amount | number:'1.2-2' }}
+                </td>
+                <td>
+                  <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
+                    {{ tx.status }}
+                  </span>
+                </td>
+                <td class="text-right cell-actions">
+                  @if (tx.saleId) {
+                    <!-- Venta POS: Ver detalle modal -->
+                    <button
+                      type="button"
+                      class="btn-action btn-sale-detail"
+                      (click)="openSaleDetail(tx.saleId)"
+                      title="Ver Detalle de Venta POS">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      <span class="btn-text">Venta</span>
+                    </button>
+                  } @else if (tx.status === 'ACTIVO') {
+                    <!-- Transacción manual activa: Editar y Anular -->
+                    <button
+                      type="button"
+                      class="btn-action btn-edit"
+                      (click)="openEditModal(tx)"
+                      title="Editar descripción o notas">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-action btn-void"
+                      (click)="openVoidModal(tx)"
+                      title="Anular transacción">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                      </svg>
+                    </button>
+                  }
+
+                  <!-- Auditoría disponible para todos -->
+                  <button
+                    type="button"
+                    class="btn-action btn-audit"
+                    (click)="openAuditModal(tx)"
+                    title="Ver auditoría completa">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-cell">
+                  <p>No se encontraron transacciones financieras con los filtros seleccionados.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Registrar Ingreso Manual -->
+  <app-modal
+    [isOpen]="activeModalType() === 'INGRESO'"
+    title="Registrar Ingreso Manual"
+    subtitle="Registra un ingreso directo en una cuenta bancaria o billetera (Caja protegida)"
+    [size]="'md'"
+    (close)="closeActionModal()">
+
+    <form [formGroup]="incomeForm" (ngSubmit)="submitIncome()" class="action-form">
+      @if (modalFormError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ modalFormError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="inc-acc" class="form-label">
+          <span>Cuenta de Destino <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="inc-acc"
+          class="form-control"
+          formControlName="accountId"
+          [class.is-invalid]="incomeForm.get('accountId')?.touched && incomeForm.get('accountId')?.invalid">
+          <option value="" disabled>Selecciona una cuenta</option>
+          @for (acc of incomeEligibleAccounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo actual: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (incomeForm.get('accountId')?.touched && incomeForm.get('accountId')?.invalid) {
+          <span class="invalid-feedback">La cuenta de destino es obligatoria.</span>
+        }
+        <span class="form-hint">Nota: La cuenta Caja no admite ingresos manuales directos.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="inc-cat" class="form-label">
+          <span>Categoría de Ingreso <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="inc-cat"
+          class="form-control"
+          formControlName="categoryId"
+          [class.is-invalid]="incomeForm.get('categoryId')?.touched && incomeForm.get('categoryId')?.invalid">
+          <option value="" disabled>Selecciona una categoría</option>
+          @for (cat of incomeCategories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+        @if (incomeForm.get('categoryId')?.touched && incomeForm.get('categoryId')?.invalid) {
+          <span class="invalid-feedback">La categoría de ingreso es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inc-amount" class="form-label">
+            <span>Monto (Bs.) <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="inc-amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            class="form-control"
+            formControlName="amount"
+            placeholder="0.00"
+            [class.is-invalid]="incomeForm.get('amount')?.touched && incomeForm.get('amount')?.invalid" />
+          @if (incomeForm.get('amount')?.touched && incomeForm.get('amount')?.invalid) {
+            <span class="invalid-feedback">
+              @if (incomeForm.get('amount')?.errors?.['required']) {
+                El monto es obligatorio.
+              } @else if (incomeForm.get('amount')?.errors?.['min']) {
+                El monto debe ser mayor a 0.
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="inc-date" class="form-label">
+            <span>Fecha y Hora <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="inc-date"
+            type="datetime-local"
+            class="form-control"
+            formControlName="transactionDate"
+            [class.is-invalid]="incomeForm.get('transactionDate')?.touched && incomeForm.get('transactionDate')?.invalid" />
+          @if (incomeForm.get('transactionDate')?.touched && incomeForm.get('transactionDate')?.invalid) {
+            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inc-desc" class="form-label">
+          <span>Descripción <span class="required-mark">*</span></span>
+        </label>
+        <input
+          id="inc-desc"
+          type="text"
+          class="form-control"
+          formControlName="description"
+          placeholder="Motivo o concepto del ingreso"
+          maxlength="255"
+          [class.is-invalid]="incomeForm.get('description')?.touched && incomeForm.get('description')?.invalid" />
+        @if (incomeForm.get('description')?.touched && incomeForm.get('description')?.invalid) {
+          <span class="invalid-feedback">
+            @if (incomeForm.get('description')?.errors?.['required']) {
+              La descripción es obligatoria.
+            } @else if (incomeForm.get('description')?.errors?.['maxlength']) {
+              La descripción no puede exceder 255 caracteres.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="inc-notes" class="form-label">Notas Adicionales (Opcional)</label>
+        <textarea id="inc-notes" class="form-control" formControlName="notes" rows="2" placeholder="Detalles de referencia..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeActionModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { <span>Guardando...</span> } @else { <span>Registrar Ingreso</span> }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Registrar Gasto Manual -->
+  <app-modal
+    [isOpen]="activeModalType() === 'GASTO'"
+    title="Registrar Gasto Manual"
+    subtitle="Registra una salida de dinero de cualquier cuenta incluyendo Caja"
+    [size]="'md'"
+    (close)="closeActionModal()">
+
+    <form [formGroup]="expenseForm" (ngSubmit)="submitExpense()" class="action-form">
+      @if (modalFormError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ modalFormError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="exp-acc" class="form-label">
+          <span>Cuenta de Origen <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="exp-acc"
+          class="form-control"
+          formControlName="accountId"
+          [class.is-invalid]="expenseForm.get('accountId')?.touched && expenseForm.get('accountId')?.invalid">
+          <option value="" disabled>Selecciona una cuenta</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (expenseForm.get('accountId')?.touched && expenseForm.get('accountId')?.invalid) {
+          <span class="invalid-feedback">La cuenta de origen es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="exp-cat" class="form-label">
+          <span>Categoría de Gasto <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="exp-cat"
+          class="form-control"
+          formControlName="categoryId"
+          [class.is-invalid]="expenseForm.get('categoryId')?.touched && expenseForm.get('categoryId')?.invalid">
+          <option value="" disabled>Selecciona una categoría</option>
+          @for (cat of expenseCategories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+        @if (expenseForm.get('categoryId')?.touched && expenseForm.get('categoryId')?.invalid) {
+          <span class="invalid-feedback">La categoría de gasto es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="exp-amount" class="form-label">
+            <span>Monto (Bs.) <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="exp-amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            class="form-control"
+            formControlName="amount"
+            placeholder="0.00"
+            [class.is-invalid]="expenseForm.get('amount')?.touched && expenseForm.get('amount')?.invalid" />
+          @if (expenseForm.get('amount')?.touched && expenseForm.get('amount')?.invalid) {
+            <span class="invalid-feedback">
+              @if (expenseForm.get('amount')?.errors?.['required']) {
+                El monto es obligatorio.
+              } @else if (expenseForm.get('amount')?.errors?.['min']) {
+                El monto debe ser mayor a 0.
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="exp-date" class="form-label">
+            <span>Fecha y Hora <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="exp-date"
+            type="datetime-local"
+            class="form-control"
+            formControlName="transactionDate"
+            [class.is-invalid]="expenseForm.get('transactionDate')?.touched && expenseForm.get('transactionDate')?.invalid" />
+          @if (expenseForm.get('transactionDate')?.touched && expenseForm.get('transactionDate')?.invalid) {
+            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="exp-desc" class="form-label">
+          <span>Descripción <span class="required-mark">*</span></span>
+        </label>
+        <input
+          id="exp-desc"
+          type="text"
+          class="form-control"
+          formControlName="description"
+          placeholder="Motivo del gasto o compra"
+          maxlength="255"
+          [class.is-invalid]="expenseForm.get('description')?.touched && expenseForm.get('description')?.invalid" />
+        @if (expenseForm.get('description')?.touched && expenseForm.get('description')?.invalid) {
+          <span class="invalid-feedback">
+            @if (expenseForm.get('description')?.errors?.['required']) {
+              La descripción es obligatoria.
+            } @else if (expenseForm.get('description')?.errors?.['maxlength']) {
+              La descripción no puede exceder 255 caracteres.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="exp-notes" class="form-label">Notas Adicionales (Opcional)</label>
+        <textarea id="exp-notes" class="form-control" formControlName="notes" rows="2" placeholder="Detalles de referencia..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeActionModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { <span>Guardando...</span> } @else { <span>Registrar Gasto</span> }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Transferencia -->
+  <app-modal
+    [isOpen]="activeModalType() === 'TRANSFERENCIA'"
+    title="Registrar Transferencia"
+    subtitle="Traspaso de dinero entre dos cuentas financieras diferentes"
+    [size]="'md'"
+    (close)="closeActionModal()">
+
+    <form [formGroup]="transferForm" (ngSubmit)="submitTransfer()" class="action-form">
+      @if (modalFormError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ modalFormError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="trf-src" class="form-label">
+          <span>Cuenta de Origen <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="trf-src"
+          class="form-control"
+          formControlName="sourceAccountId"
+          [class.is-invalid]="transferForm.get('sourceAccountId')?.touched && transferForm.get('sourceAccountId')?.invalid">
+          <option value="" disabled>Selecciona cuenta de origen</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (transferForm.get('sourceAccountId')?.touched && transferForm.get('sourceAccountId')?.invalid) {
+          <span class="invalid-feedback">La cuenta de origen es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="trf-dst" class="form-label">
+          <span>Cuenta de Destino <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="trf-dst"
+          class="form-control"
+          formControlName="destinationAccountId"
+          [class.is-invalid]="transferForm.get('destinationAccountId')?.touched && transferForm.get('destinationAccountId')?.invalid">
+          <option value="" disabled>Selecciona cuenta de destino</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (transferForm.get('destinationAccountId')?.touched && transferForm.get('destinationAccountId')?.invalid) {
+          <span class="invalid-feedback">La cuenta de destino es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="trf-amount" class="form-label">
+            <span>Monto (Bs.) <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="trf-amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            class="form-control"
+            formControlName="amount"
+            placeholder="0.00"
+            [class.is-invalid]="transferForm.get('amount')?.touched && transferForm.get('amount')?.invalid" />
+          @if (transferForm.get('amount')?.touched && transferForm.get('amount')?.invalid) {
+            <span class="invalid-feedback">
+              @if (transferForm.get('amount')?.errors?.['required']) {
+                El monto es obligatorio.
+              } @else if (transferForm.get('amount')?.errors?.['min']) {
+                El monto debe ser mayor a 0.
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="trf-date" class="form-label">
+            <span>Fecha y Hora <span class="required-mark">*</span></span>
+          </label>
+          <input
+            id="trf-date"
+            type="datetime-local"
+            class="form-control"
+            formControlName="transactionDate"
+            [class.is-invalid]="transferForm.get('transactionDate')?.touched && transferForm.get('transactionDate')?.invalid" />
+          @if (transferForm.get('transactionDate')?.touched && transferForm.get('transactionDate')?.invalid) {
+            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="trf-desc" class="form-label">
+          <span>Descripción <span class="required-mark">*</span></span>
+        </label>
+        <input
+          id="trf-desc"
+          type="text"
+          class="form-control"
+          formControlName="description"
+          maxlength="255"
+          [class.is-invalid]="transferForm.get('description')?.touched && transferForm.get('description')?.invalid" />
+        @if (transferForm.get('description')?.touched && transferForm.get('description')?.invalid) {
+          <span class="invalid-feedback">
+            @if (transferForm.get('description')?.errors?.['required']) {
+              La descripción es obligatoria.
+            } @else if (transferForm.get('description')?.errors?.['maxlength']) {
+              La descripción no puede exceder 255 caracteres.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="trf-notes" class="form-label">Notas Adicionales (Opcional)</label>
+        <textarea id="trf-notes" class="form-control" formControlName="notes" rows="2"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeActionModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { <span>Guardando...</span> } @else { <span>Realizar Transferencia</span> }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Editar Transacción -->
+  <app-modal
+    [isOpen]="activeModalType() === 'EDIT'"
+    title="Editar Transacción"
+    subtitle="Modifica la descripción, categoría o notas de la transacción"
+    [size]="'md'"
+    (close)="closeActionModal()">
+
+    <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="action-form">
+      @if (modalFormError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ modalFormError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="edit-desc" class="form-label required">Descripción</label>
+        <input id="edit-desc" type="text" class="form-control" formControlName="description" maxlength="255" />
+      </div>
+
+      @if (selectedTransactionForEdit()?.category) {
+        <div class="form-group">
+          <label for="edit-cat" class="form-label">Categoría</label>
+          <select id="edit-cat" class="form-control" formControlName="categoryId">
+            <option value="">Sin categoría</option>
+            @for (cat of categories(); track cat.id) {
+              @if (cat.type === selectedTransactionForEdit()?.category?.type) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            }
+          </select>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="edit-notes" class="form-label">Notas Adicionales</label>
+        <textarea id="edit-notes" class="form-control" formControlName="notes" rows="2"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeActionModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { <span>Guardando...</span> } @else { <span>Guardar Cambios</span> }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Anulación de Transacción -->
+  <app-modal
+    [isOpen]="isVoidModalOpen()"
+    title="Anular Transacción Financiera"
+    subtitle="La anulación revertirá automáticamente los saldos de las cuentas afectadas"
+    [size]="'md'"
+    (close)="closeVoidModal()">
+
+    <div class="void-content">
+      @if (voidError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ voidError() }}</span>
+        </div>
+      }
+
+      <p class="void-warning">
+        ¿Estás seguro de que deseas anular esta transacción?
+        <strong>
+          {{ transactionToVoid()?.type }}: Bs. {{ transactionToVoid()?.amount | number:'1.2-2' }}
+        </strong>
+      </p>
+
+      <div class="form-group">
+        <label for="void-reason" class="form-label">Motivo de Anulación</label>
+        <textarea
+          id="void-reason"
+          class="form-control"
+          rows="3"
+          placeholder="Ingresa la justificación de la anulación..."
+          [value]="voidReason()"
+          (input)="voidReason.set($any($event.target).value)"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeVoidModal()">Cancelar</button>
+        <button type="button" class="btn btn-danger" [disabled]="isVoiding()" (click)="confirmVoid()">
+          @if (isVoiding()) { <span>Anulando...</span> } @else { <span>Confirmar Anulación</span> }
+        </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <!-- Modal Detalle de Venta POS Reutilizable -->
+  <app-sale-detail-modal
+    [isOpen]="isSaleDetailOpen()"
+    [saleId]="selectedSaleId()"
+    (close)="closeSaleDetail()">
+  </app-sale-detail-modal>
+
+  <!-- Modal Auditoría Reutilizable -->
+  <app-audit-modal
+    [isOpen]="isAuditModalOpen()"
+    title="Auditoría de Transacción"
+    [subtitle]="auditModalSubtitle()"
+    [data]="selectedAuditData()"
+    (close)="closeAuditModal()">
+  </app-audit-modal>
+</div>

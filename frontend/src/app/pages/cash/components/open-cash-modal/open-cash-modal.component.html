@@ -8,8 +8,8 @@
   
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
     <div class="form-group">
-      <label for="openingAmount" class="form-label required">
-        Monto Inicial en Efectivo (Bs)
+      <label for="openingAmount" class="form-label">
+        <span>Monto Inicial en Efectivo (Bs) <span class="required-mark">*</span></span>
       </label>
       <div class="input-with-prefix">
         <span class="currency-prefix">Bs</span>

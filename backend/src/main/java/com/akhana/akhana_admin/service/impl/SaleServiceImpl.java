@@ -7,6 +7,9 @@ import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.SaleService;
@@ -31,6 +34,9 @@ public class SaleServiceImpl implements SaleService {
     private final SaleRepository saleRepository;
     private final CashSessionRepository cashSessionRepository;
     private final ProductRepository productRepository;
+    private final FinancialAccountRepository financialAccountRepository;
+    private final FinancialCategoryRepository financialCategoryRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
 
     @Override
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
@@ -161,9 +167,60 @@ public class SaleServiceImpl implements SaleService {
         session.setTotalSalesCash(session.getTotalSalesCash().add(amountCash));
         session.setTotalSalesQr(session.getTotalSalesQr().add(amountQr));
         session.setTotalSales(session.getTotalSales().add(totalAmount));
-        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()));
+        BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
 
         cashSessionRepository.save(session);
+
+        // Generar movimientos financieros automáticos por venta
+        FinancialCategory salesCategory = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
+            .orElse(null);
+
+        if (amountCash.compareTo(BigDecimal.ZERO) > 0) {
+            var cashOpt = financialAccountRepository.findByIsCashAccountTrue();
+            if (cashOpt.isPresent()) {
+                FinancialAccount cashAccount = cashOpt.get();
+                cashAccount.setCurrentBalance(cashAccount.getCurrentBalance().add(amountCash));
+                financialAccountRepository.save(cashAccount);
+
+                FinancialTransaction cashTx = FinancialTransaction.builder()
+                    .type(FinancialTransactionType.VENTA_INGRESO)
+                    .sourceAccount(cashAccount)
+                    .category(salesCategory)
+                    .amount(amountCash)
+                    .transactionDate(savedSale.getCreatedAt())
+                    .description("Venta #" + savedSale.getSaleNumber() + " (Efectivo)")
+                    .status(FinancialTransactionStatus.ACTIVO)
+                    .saleId(savedSale.getId())
+                    .createdBy(username)
+                    .createdAt(Instant.now())
+                    .build();
+                financialTransactionRepository.save(cashTx);
+            }
+        }
+
+        if (amountQr.compareTo(BigDecimal.ZERO) > 0) {
+            var qrOpt = financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull();
+            if (qrOpt.isPresent()) {
+                FinancialAccount qrAccount = qrOpt.get();
+                qrAccount.setCurrentBalance(qrAccount.getCurrentBalance().add(amountQr));
+                financialAccountRepository.save(qrAccount);
+
+                FinancialTransaction qrTx = FinancialTransaction.builder()
+                    .type(FinancialTransactionType.VENTA_INGRESO)
+                    .sourceAccount(qrAccount)
+                    .category(salesCategory)
+                    .amount(amountQr)
+                    .transactionDate(savedSale.getCreatedAt())
+                    .description("Venta #" + savedSale.getSaleNumber() + " (QR)")
+                    .status(FinancialTransactionStatus.ACTIVO)
+                    .saleId(savedSale.getId())
+                    .createdBy(username)
+                    .createdAt(Instant.now())
+                    .build();
+                financialTransactionRepository.save(qrTx);
+            }
+        }
 
         return SaleResponse.fromEntity(savedSale);
     }
@@ -191,10 +248,29 @@ public class SaleServiceImpl implements SaleService {
         session.setTotalSalesCash(session.getTotalSalesCash().subtract(sale.getAmountCash()));
         session.setTotalSalesQr(session.getTotalSalesQr().subtract(sale.getAmountQr()));
         session.setTotalSales(session.getTotalSales().subtract(sale.getTotalAmount()));
-        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()));
+        BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
 
         cashSessionRepository.save(session);
         Sale updatedSale = saleRepository.save(sale);
+
+        // Anular transacciones financieras generadas por la venta
+        List<FinancialTransaction> relatedTxs = financialTransactionRepository.findBySaleId(saleId);
+        for (FinancialTransaction tx : relatedTxs) {
+            if (tx.getStatus() == FinancialTransactionStatus.ACTIVO) {
+                tx.setStatus(FinancialTransactionStatus.ANULADO);
+                tx.setVoidedAt(Instant.now());
+                tx.setVoidedBy(username);
+                tx.setVoidReason(request.voidReason().trim());
+
+                FinancialAccount acc = tx.getSourceAccount();
+                if (acc != null) {
+                    acc.setCurrentBalance(acc.getCurrentBalance().subtract(tx.getAmount()));
+                    financialAccountRepository.save(acc);
+                }
+                financialTransactionRepository.save(tx);
+            }
+        }
 
         return SaleResponse.fromEntity(updatedSale);
     }

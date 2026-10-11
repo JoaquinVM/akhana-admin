@@ -6,6 +6,9 @@ import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.SaleServiceImpl;
@@ -37,6 +40,15 @@ class SaleServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private FinancialAccountRepository financialAccountRepository;
+
+    @Mock
+    private FinancialCategoryRepository financialCategoryRepository;
+
+    @Mock
+    private FinancialTransactionRepository financialTransactionRepository;
 
     @InjectMocks
     private SaleServiceImpl saleService;
@@ -226,5 +238,104 @@ class SaleServiceTest {
         assertThatThrownBy(() -> saleService.voidSale(sale.getId(), voidReq, "supervisor"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Solo se pueden anular ventas pertenecientes a una caja abierta.");
+    }
+
+    @Test
+    @DisplayName("Debe generar transacciones financieras al registrar venta mixta")
+    void shouldGenerateFinancialIncomeTransactionsOnSale() {
+        FinancialAccount cashAcc = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("Caja")
+            .currentBalance(new BigDecimal("100.00"))
+            .isCashAccount(true)
+            .build();
+
+        FinancialAccount qrAcc = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("BISA")
+            .currentBalance(new BigDecimal("200.00"))
+            .isQrAccount(true)
+            .build();
+
+        FinancialCategory salesCat = FinancialCategory.builder()
+            .id(UUID.randomUUID())
+            .name("Ventas")
+            .type(FinancialCategoryType.INGRESO)
+            .isSalesDefault(true)
+            .build();
+
+        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.countByCashSessionId(activeSession.getId())).thenReturn(0L);
+        when(saleRepository.save(any(Sale.class))).thenAnswer(i -> {
+            Sale s = i.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+
+        when(financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()).thenReturn(Optional.of(salesCat));
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cashAcc));
+        when(financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()).thenReturn(Optional.of(qrAcc));
+
+        SaleDetailRequest req = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO)),
+            BigDecimal.ZERO,
+            PaymentMethod.MIXTO,
+            new BigDecimal("20.00"),
+            new BigDecimal("20.00"),
+            new BigDecimal("20.00"),
+            null
+        );
+
+        SaleResponse res = saleService.registerSale(req, "cajero");
+
+        assertThat(res).isNotNull();
+        assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("120.00");
+        assertThat(qrAcc.getCurrentBalance()).isEqualByComparingTo("220.00");
+        verify(financialTransactionRepository, times(2)).save(any(FinancialTransaction.class));
+    }
+
+    @Test
+    @DisplayName("Debe anular transacciones financieras asociadas al anular venta")
+    void shouldVoidFinancialIncomeTransactionsOnSaleVoid() {
+        FinancialAccount cashAcc = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("Caja")
+            .currentBalance(new BigDecimal("150.00"))
+            .build();
+
+        Sale sale = Sale.builder()
+            .id(UUID.randomUUID())
+            .saleNumber("VTA-0001-002")
+            .cashSession(activeSession)
+            .status(SaleStatus.COMPLETADA)
+            .totalAmount(new BigDecimal("50.00"))
+            .paymentMethod(PaymentMethod.EFECTIVO)
+            .amountCash(new BigDecimal("50.00"))
+            .amountQr(BigDecimal.ZERO)
+            .items(new ArrayList<>())
+            .build();
+
+        FinancialTransaction relatedTx = FinancialTransaction.builder()
+            .id(UUID.randomUUID())
+            .type(FinancialTransactionType.VENTA_INGRESO)
+            .sourceAccount(cashAcc)
+            .amount(new BigDecimal("50.00"))
+            .status(FinancialTransactionStatus.ACTIVO)
+            .saleId(sale.getId())
+            .build();
+
+        when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
+        when(saleRepository.save(any(Sale.class))).thenReturn(sale);
+        when(financialTransactionRepository.findBySaleId(sale.getId())).thenReturn(List.of(relatedTx));
+
+        VoidSaleRequest voidReq = new VoidSaleRequest("Anulación por error");
+        saleService.voidSale(sale.getId(), voidReq, "supervisor");
+
+        assertThat(relatedTx.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+        assertThat(relatedTx.getVoidReason()).isEqualTo("Anulación por error");
+        assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("100.00");
+        verify(financialTransactionRepository).save(relatedTx);
+        verify(financialAccountRepository).save(cashAcc);
     }
 }

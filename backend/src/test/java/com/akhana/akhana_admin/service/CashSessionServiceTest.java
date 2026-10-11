@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.CashSessionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,9 @@ class CashSessionServiceTest {
 
     @Mock
     private SaleRepository saleRepository;
+
+    @Mock
+    private FinancialTransactionRepository financialTransactionRepository;
 
     @InjectMocks
     private CashSessionServiceImpl cashSessionService;
@@ -221,5 +225,46 @@ class CashSessionServiceTest {
         assertThat(detail.id()).isEqualTo(sessionId);
         assertThat(detail.sales()).hasSize(1);
         assertThat(detail.sales().get(0).saleNumber()).isEqualTo("VTA-0001-001");
+    }
+
+    @Test
+    @DisplayName("Debe calcular expectedCash descontando los gastos activos de Caja (monto inicial + efectivo - gastos)")
+    void getCurrentSession_withActiveExpenses_discountsFromExpectedCash() {
+        activeSession.setOpeningAmount(new BigDecimal("200.00"));
+        activeSession.setTotalSalesCash(new BigDecimal("850.00"));
+        activeSession.setTotalSalesQr(new BigDecimal("300.00"));
+        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
+        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId))
+                .thenReturn(new BigDecimal("120.00"));
+
+        CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
+
+        // 200 inicial + 850 efectivo - 120 gastos = 930 (las ventas QR no afectan)
+        assertThat(response.expectedCash()).isEqualByComparingTo("930.00");
+    }
+
+    @Test
+    @DisplayName("Debe cerrar caja y calcular la diferencia considerando los gastos activos descontados")
+    void closeSession_withActiveExpenses_calculatesDifferenceAccurately() {
+        activeSession.setOpeningAmount(new BigDecimal("200.00"));
+        activeSession.setTotalSalesCash(new BigDecimal("850.00"));
+        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
+        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId))
+                .thenReturn(new BigDecimal("120.00"));
+
+        // expectedCash es 930.00. Si se cuentan 950.00, hay sobrante de +20.00
+        CloseCashRequest request = new CloseCashRequest(
+            new BigDecimal("950.00"),
+            "Cierre con gastos",
+            Collections.emptyList()
+        );
+
+        CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(request, "admin");
+
+        assertThat(response.expectedCash()).isEqualByComparingTo("930.00");
+        assertThat(response.difference()).isEqualByComparingTo("20.00");
     }
 }

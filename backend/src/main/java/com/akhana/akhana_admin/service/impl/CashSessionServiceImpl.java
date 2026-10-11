@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     private final CashSessionRepository cashSessionRepository;
     private final SaleRepository saleRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
 
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
@@ -57,6 +59,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta actualmente."));
 
+        session.setExpectedCash(calculateExpectedCash(session));
         long salesCount = saleRepository.countByCashSessionId(session.getId());
         return mapToSummary(session, salesCount);
     }
@@ -98,11 +101,11 @@ public class CashSessionServiceImpl implements CashSessionService {
         // Actualizar métricas acumuladas de la caja activa
         if (request.paymentMethod() == PaymentMethod.EFECTIVO) {
             session.setTotalSalesCash(session.getTotalSalesCash().add(amount));
-            session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()));
         } else if (request.paymentMethod() == PaymentMethod.QR) {
             session.setTotalSalesQr(session.getTotalSalesQr().add(amount));
         }
         session.setTotalSales(session.getTotalSales().add(amount));
+        session.setExpectedCash(calculateExpectedCash(session));
 
         cashSessionRepository.save(session);
 
@@ -115,7 +118,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));
 
         BigDecimal closingAmount = request.closingAmount().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal expectedCash = session.getExpectedCash().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal expectedCash = calculateExpectedCash(session);
         BigDecimal difference = closingAmount.subtract(expectedCash).setScale(2, RoundingMode.HALF_UP);
 
         session.setClosingAmount(closingAmount);
@@ -123,6 +126,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         session.setClosedBy(username);
         session.setClosedAt(Instant.now());
         session.setStatus(CashSessionStatus.CERRADA);
+        session.setExpectedCash(expectedCash);
         session.setDifference(difference);
 
         // Persistir cortes opcionales si fueron provistos
@@ -185,6 +189,10 @@ public class CashSessionServiceImpl implements CashSessionService {
                 .collect(Collectors.toList())
             : Collections.emptyList();
 
+        BigDecimal expectedCash = session.getStatus() == CashSessionStatus.ABIERTA
+            ? calculateExpectedCash(session)
+            : session.getExpectedCash();
+
         return new CashSessionDetailResponse(
             session.getId(),
             session.getSessionNumber(),
@@ -200,7 +208,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getTotalSalesCash(),
             session.getTotalSalesQr(),
             session.getTotalSales(),
-            session.getExpectedCash(),
+            expectedCash,
             session.getDifference(),
             sales.size(),
             cutDtos,
@@ -228,5 +236,15 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getDifference(),
             salesCount
         );
+    }
+
+    private BigDecimal calculateExpectedCash(CashSession session) {
+        BigDecimal opening = session.getOpeningAmount() != null ? session.getOpeningAmount() : BigDecimal.ZERO;
+        BigDecimal salesCash = session.getTotalSalesCash() != null ? session.getTotalSalesCash() : BigDecimal.ZERO;
+        BigDecimal expenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
+        if (expenses == null) {
+            expenses = BigDecimal.ZERO;
+        }
+        return opening.add(salesCash).subtract(expenses).setScale(2, RoundingMode.HALF_UP);
     }
 }

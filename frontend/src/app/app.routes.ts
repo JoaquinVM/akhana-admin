@@ -9,6 +9,10 @@ import { ProductsComponent } from './pages/products/products.component';
 import { PosComponent } from './pages/pos/pos.component';
 import { RegisterSaleComponent } from './pages/pos/register-sale/register-sale.component';
 import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
+import { FinanceSummaryComponent } from './pages/finances/summary/finance-summary.component';
+import { TransactionsComponent } from './pages/finances/transactions/transactions.component';
+import { AccountsComponent } from './pages/finances/accounts/accounts.component';
+import { FinancialCategoriesComponent } from './pages/finances/categories/categories.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -38,6 +42,27 @@ export const routes: Routes = [
         path: 'sales',
         component: SectionPageComponent,
         data: { title: 'Ventas', subtitle: 'Historial y Reporte de Transacciones' }
+      },
+      {
+        path: 'finances',
+        redirectTo: 'finances/summary',
+        pathMatch: 'full'
+      },
+      {
+        path: 'finances/summary',
+        component: FinanceSummaryComponent
+      },
+      {
+        path: 'finances/transactions',
+        component: TransactionsComponent
+      },
+      {
+        path: 'finances/accounts',
+        component: AccountsComponent
+      },
+      {
+        path: 'finances/categories',
+        component: FinancialCategoriesComponent
       },
       {
         path: 'products',

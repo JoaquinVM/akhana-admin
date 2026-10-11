@@ -4,6 +4,8 @@ import { PosComponent } from './pos.component';
 import { CashService } from '../../core/cash/cash.service';
 import { SaleService } from '../../core/sale/sale.service';
 import { CashSessionSummary, CashSessionDetail, Sale } from '../../core/cash/models/cash.models';
+import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
+import { FinancialCategoryService } from '../../core/finance/financial-category.service';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
@@ -54,6 +56,9 @@ describe('PosComponent', () => {
     sales: [mockSale1]
   };
 
+  let mockTransactionService: any;
+  let mockCategoryService: any;
+
   beforeEach(async () => {
     mockCashService = {
       currentSession: signal<CashSessionSummary | null>(mockSession),
@@ -72,12 +77,24 @@ describe('PosComponent', () => {
       getSaleById: vi.fn().mockReturnValue(of(mockSale1))
     };
 
+    mockTransactionService = {
+      createCashExpense: vi.fn().mockReturnValue(of({ id: 'tx-exp-1', amount: 35.5 })),
+      getExpensesByCashSession: vi.fn().mockReturnValue(of([])),
+      voidTransaction: vi.fn().mockReturnValue(of({ id: 'tx-exp-1', amount: 35.5, status: 'ANULADO' }))
+    };
+
+    mockCategoryService = {
+      getCategories: vi.fn().mockReturnValue(of([{ id: 'cat-1', name: 'Insumos', type: 'GASTO' }]))
+    };
+
     await TestBed.configureTestingModule({
       imports: [PosComponent],
       providers: [
         provideRouter([]),
         { provide: CashService, useValue: mockCashService },
-        { provide: SaleService, useValue: mockSaleService }
+        { provide: SaleService, useValue: mockSaleService },
+        { provide: FinancialTransactionService, useValue: mockTransactionService },
+        { provide: FinancialCategoryService, useValue: mockCategoryService }
       ]
     }).compileComponents();
 
@@ -238,5 +255,254 @@ describe('PosComponent', () => {
     const deleteBtnClosed = fixture.debugElement.query(By.css('.table-actions button.btn-delete'));
     expect(deleteBtnClosed).toBeTruthy();
     expect(deleteBtnClosed.nativeElement.disabled).toBe(true);
+  });
+
+  it('debe abrir modal de gasto de caja y cargar categorías de gasto', () => {
+    component.openCashExpenseModal();
+
+    expect(mockCategoryService.getCategories).toHaveBeenCalledWith('GASTO');
+    expect(component.isCashExpenseModalVisible()).toBe(true);
+    expect(component.expenseCategories().length).toBe(1);
+    expect(component.cashExpenseForm.get('categoryId')?.value).toBe('cat-1');
+
+    component.closeCashExpenseModal();
+    expect(component.isCashExpenseModalVisible()).toBe(false);
+  });
+
+  it('debe registrar gasto de caja exitosamente y recargar la sesión', () => {
+    component.openCashExpenseModal();
+
+    component.cashExpenseForm.patchValue({
+      categoryId: 'cat-1',
+      amount: 35.5,
+      description: 'Compra de hielo',
+      notes: 'Factura #123'
+    });
+
+    component.handleConfirmCashExpense();
+
+    expect(mockTransactionService.createCashExpense).toHaveBeenCalledWith({
+      categoryId: 'cat-1',
+      amount: 35.5,
+      description: 'Compra de hielo',
+      notes: 'Factura #123'
+    });
+    expect(component.isCashExpenseModalVisible()).toBe(false);
+    expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs. 35.50 registrado exitosamente');
+  });
+
+  it('debe tener seleccionada la opción Ventas por defecto y mostrar el selector visual de contenido', () => {
+    expect(component.activeTab()).toBe('VENTAS');
+
+    const viewPillGroup = fixture.debugElement.query(By.css('.view-pill-group'));
+    expect(viewPillGroup).toBeTruthy();
+
+    const pills = viewPillGroup.queryAll(By.css('.view-pill'));
+    expect(pills.length).toBe(2);
+    expect(pills[0].nativeElement.textContent).toContain('Ventas');
+    expect(pills[0].nativeElement.classList.contains('active')).toBe(true);
+    expect(pills[1].nativeElement.textContent).toContain('Compras');
+    expect(pills[1].nativeElement.classList.contains('active')).toBe(false);
+
+    // Listado de ventas visible
+    const salesTable = fixture.debugElement.query(By.css('.table'));
+    expect(salesTable).toBeTruthy();
+    expect(salesTable.nativeElement.textContent).toContain('# Venta');
+  });
+
+  it('debe permitir cambiar a la vista Compras y mostrar compras y gastos de la sesión actual', () => {
+    const mockExpense: any = {
+      id: 'tx-exp-1',
+      type: 'GASTO_MANUAL',
+      amount: 45.0,
+      transactionDate: '2026-10-01T11:00:00Z',
+      description: 'Compra de bolsas kraft',
+      notes: '500 unidades',
+      status: 'ACTIVO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' },
+      category: { id: 'cat-1', name: 'Insumos', type: 'GASTO', color: '#2E5B27' },
+      createdBy: 'admin',
+      createdAt: '2026-10-01T11:00:00Z'
+    };
+
+    component.recentExpenses.set([mockExpense]);
+    component.setActiveTab('COMPRAS');
+    fixture.detectChanges();
+
+    expect(component.activeTab()).toBe('COMPRAS');
+
+    const pills = fixture.debugElement.queryAll(By.css('.view-pill'));
+    expect(pills[0].nativeElement.classList.contains('active')).toBe(false);
+    expect(pills[1].nativeElement.classList.contains('active')).toBe(true);
+
+    // La tabla de compras debe mostrar los datos del gasto sin la columna Cuenta
+    const expensesTable = fixture.debugElement.query(By.css('.table'));
+    expect(expensesTable).toBeTruthy();
+    expect(expensesTable.nativeElement.textContent).toContain('Compra de bolsas kraft');
+    expect(expensesTable.nativeElement.textContent).toContain('Insumos');
+    expect(expensesTable.nativeElement.textContent).toContain('- Bs 45.00');
+    expect(expensesTable.nativeElement.textContent).not.toContain('Cuenta');
+
+    // Debe mostrar botón Registrar Gasto en cabecera
+    const headerBtn = fixture.debugElement.query(By.css('.transactions-header-action button'));
+    expect(headerBtn.nativeElement.textContent).toContain('Registrar Gasto');
+  });
+
+  it('no debe contabilizar gastos anulados como gastos activos en el contador', () => {
+    const activeExpense: any = {
+      id: 'tx-exp-1',
+      type: 'GASTO_MANUAL',
+      amount: 50.0,
+      status: 'ACTIVO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' }
+    };
+    const voidedExpense: any = {
+      id: 'tx-exp-2',
+      type: 'GASTO_MANUAL',
+      amount: 30.0,
+      status: 'ANULADO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' }
+    };
+
+    component.recentExpenses.set([activeExpense, voidedExpense]);
+
+    expect(component.activeExpensesCount()).toBe(1);
+    expect(component.totalExpensesAmount()).toBe(50.0);
+    expect(component.recentExpenses().length).toBe(2);
+  });
+
+  it('debe marcar campos y evitar envío si el formulario de gasto de caja es inválido', () => {
+    component.openCashExpenseModal();
+    component.cashExpenseForm.patchValue({
+      categoryId: '',
+      amount: null,
+      description: ''
+    });
+
+    component.handleConfirmCashExpense();
+
+    expect(component.cashExpenseForm.invalid).toBe(true);
+    expect(component.cashExpenseForm.get('categoryId')?.touched).toBe(true);
+    expect(component.cashExpenseForm.get('amount')?.touched).toBe(true);
+    expect(component.cashExpenseForm.get('description')?.touched).toBe(true);
+    expect(mockTransactionService.createCashExpense).not.toHaveBeenCalled();
+  });
+
+  it('debe abrir modal de anulación de gasto de caja y confirmar anulación', () => {
+    const expense: any = {
+      id: 'tx-exp-1',
+      type: 'GASTO_MANUAL',
+      amount: 45.0,
+      transactionDate: '2026-10-01T11:00:00Z',
+      description: 'Compra de bolsas kraft',
+      status: 'ACTIVO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' },
+      category: { id: 'cat-1', name: 'Insumos', type: 'GASTO', color: '#2E5B27' },
+      createdBy: 'admin'
+    };
+
+    // Anulación
+    component.openVoidExpenseModal(expense);
+    expect(component.isVoidExpenseModalVisible()).toBe(true);
+    expect(component.selectedExpenseToVoid()?.id).toBe('tx-exp-1');
+
+    component.voidExpenseReason.set('Error en comprobante');
+    component.handleConfirmVoidExpense();
+
+    expect(mockTransactionService.voidTransaction).toHaveBeenCalledWith('tx-exp-1', {
+      voidReason: 'Error en comprobante'
+    });
+    expect(component.isVoidExpenseModalVisible()).toBe(false);
+  });
+
+  it('debe alternar de regreso a Ventas mostrando el listado actual sin cambios', () => {
+    component.setActiveTab('COMPRAS');
+    fixture.detectChanges();
+    expect(component.activeTab()).toBe('COMPRAS');
+
+    component.setActiveTab('VENTAS');
+    fixture.detectChanges();
+    expect(component.activeTab()).toBe('VENTAS');
+
+    const salesTable = fixture.debugElement.query(By.css('.table'));
+    expect(salesTable).toBeTruthy();
+    expect(salesTable.nativeElement.textContent).toContain('VTA-0001-001');
+    expect(component.recentSales().length).toBe(1);
+  });
+
+  it('no debe mostrar el botón Gasto de caja en la cabecera junto a Cerrar caja', () => {
+    const headerActions = fixture.debugElement.query(By.css('.header-actions'));
+    expect(headerActions).toBeTruthy();
+    const headerButtons = headerActions.queryAll(By.css('button'));
+    const expenseBtnInHeader = headerButtons.find(b => b.nativeElement.textContent.includes('Gasto de Caja'));
+    expect(expenseBtnInHeader).toBeUndefined();
+    // Solo deben estar Información y Cerrar Caja
+    expect(headerButtons.length).toBe(2);
+    expect(headerButtons[0].nativeElement.textContent).toContain('Información');
+    expect(headerButtons[1].nativeElement.textContent).toContain('Cerrar Caja');
+  });
+
+  it('debe mostrar el indicador Gastos de Caja y calcular monto esperado en gaveta con fórmula monto inicial + ventas efectivo - gastos activos', () => {
+    // Configurar sesión: Inicial 200, Ventas Efectivo 850, Ventas QR 300
+    mockCashService.currentSession.set({
+      ...mockSession,
+      openingAmount: 200.0,
+      totalSalesCash: 850.0,
+      totalSalesQr: 300.0,
+      expectedCash: 930.0
+    });
+
+    const expense1: any = {
+      id: 'tx-1',
+      type: 'GASTO_MANUAL',
+      amount: 80.0,
+      status: 'ACTIVO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' }
+    };
+    const expense2: any = {
+      id: 'tx-2',
+      type: 'GASTO_MANUAL',
+      amount: 40.0,
+      status: 'ACTIVO',
+      cashSessionId: 'session-1',
+      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' }
+    };
+
+    component.recentExpenses.set([expense1, expense2]);
+    fixture.detectChanges();
+
+    // Gastos activos = 80 + 40 = 120
+    expect(component.totalExpensesAmount()).toBe(120.0);
+    // Expected in drawer = 200 + 850 - 120 = 930 (las ventas QR 300 no se suman)
+    expect(component.expectedCashInDrawer()).toBe(930.0);
+
+    // Verificar en el DOM los 5 KPIs
+    const kpiCards = fixture.debugElement.queryAll(By.css('.kpi-card'));
+    expect(kpiCards.length).toBe(5);
+
+    const expensesKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Gastos de Caja'));
+    expect(expensesKpi).toBeTruthy();
+    expect(expensesKpi!.nativeElement.textContent).toContain('Bs 120.00');
+
+    const expectedKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Efectivo Esperado en Gaveta'));
+    expect(expectedKpi).toBeTruthy();
+    expect(expectedKpi!.nativeElement.textContent).toContain('Bs 930.00');
+
+    // Al anular el gasto de 40:
+    expense2.status = 'ANULADO';
+    component.recentExpenses.set([expense1, { ...expense2 }]);
+    fixture.detectChanges();
+
+    // Gastos activos pasan a 80
+    expect(component.totalExpensesAmount()).toBe(80.0);
+    // Expected in drawer se actualiza a 200 + 850 - 80 = 970
+    expect(component.expectedCashInDrawer()).toBe(970.0);
+    expect(expensesKpi!.nativeElement.textContent).toContain('Bs 80.00');
+    expect(expectedKpi!.nativeElement.textContent).toContain('Bs 970.00');
   });
 });
