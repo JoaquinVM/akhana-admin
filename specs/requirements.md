@@ -73,6 +73,7 @@ Dos usuarios iniciales. El administrador puede hacer todo; el operador, lo del d
 | Otros gastos de caja (comida, transporte…) | Sí | Sí |
 | Anular ventas y gastos de caja (en el POS) | Sí | Sí |
 | Anular pedidos o pagos (en Compras) | Sí | Sí |
+| Devoluciones a personas y cobros a la tienda amiga, y sus anulaciones (en Deudas) | Sí | Sí |
 | Finanzas, reportes, usuarios | No | Sí |
 
 ### 2.3 Criterio para dejar las planillas
@@ -113,7 +114,7 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 - **COM-02** Pedido con número correlativo, proveedor, fecha, líneas (producto, cantidad, costo unitario), costo de envío, total y comentario. El envío se paga como gasto de Transporte vinculado al pedido, para reportar el costo de cada pedido con y sin envío (P-24). Hecha el 25-10-2026 (migración `V8__purchases.sql`): número `PED-000001` por secuencia (`purchase_number_seq`, índice único); líneas con cantidad `NUMERIC(12,3)` y las reglas de CAT-08 (un producto por unidad solo acepta enteros), copia de nombre, código y costo registrado del producto; `items_total` (lo que se debe al proveedor), `shipping_cost` y `total_amount`. La fecha la elige el usuario (por defecto hoy, hora de Bolivia; no futura). El envío exige la cuenta que lo pagó y genera un `GASTO_MANUAL` con la categoría de sistema Transporte y `financial_transactions.purchase_id`; desde Caja exige caja abierta y baja el efectivo esperado. Proveedor inactivo o producto eliminado se rechazan.
 - **COM-03** Desde una línea del pedido se puede crear un producto nuevo. Si el costo de la línea difiere del costo registrado del producto, el sistema muestra una alerta con ambos valores. Si el usuario confirma, el costo del producto se actualiza al de la línea, con auditoría. El cambio no altera la utilidad de las ventas anteriores, que usan el costo guardado en cada línea de venta (POS-05). Al cambiar el costo, el sistema propone un nuevo precio de venta que mantiene la utilidad porcentual actual: precio sugerido = nuevo costo × (1 + utilidad % actual), redondeado hacia arriba al boliviano entero. Quien registra la compra (operador o administrador) puede aceptar el precio sugerido, editarlo o mantener el precio actual, sin aprobación adicional; el cambio queda auditado. Hecha el 25-10-2026: el servidor calcula la sugerencia como `ceil(nuevo costo × precio actual ÷ costo actual)` (`GET /api/purchases/price-suggestion`; sin sugerencia si el costo actual es 0). La actualización viaja en la línea (`updateProductCost`, `newSellPrice`; nulo mantiene el precio) y se aplica en la misma transacción del pedido, con una fila en `product_price_changes` (costo y precio anterior y nuevo, origen `PURCHASE`, pedido, usuario, fecha). El producto nuevo se crea desde el formulario del pedido con la API de productos, que acepta el permiso de Compras.
 - **COM-04** Estado de pago calculado a partir de los pagos: Por pagar, A cuenta (pago parcial) o Pagado. Consignación es un estado aparte: queda por pagar hasta que se registre el pago (P-21). Hecha el 25-10-2026: se calcula con lo pagado frente al total de las líneas (el envío no cuenta: se paga al transportista); un pedido en consignación sin pagos se muestra como Consignación. El listado filtra por proveedor, estado de pago y texto.
-- **COM-05** Un pedido admite varios pagos. Cada pago tiene fecha, monto y origen: Caja (sesión abierta), Bisa u otra cuenta, o una persona que pagó por el negocio. Hecha el 25-10-2026 para Caja y cuentas (`purchase_payments`): fecha del servidor (T-18), monto mayor a 0 y no mayor al saldo; cada pago genera un `GASTO_MANUAL` con la categoría de sistema Pedido vinculado al pedido. El pedido se bloquea antes que la caja y la cuenta (T-14). Las cuentas se leen con `GET /api/purchases/payment-accounts`. El origen «persona» queda para DEU-02, que crea el registro de personas.
+- **COM-05** Un pedido admite varios pagos. Cada pago tiene fecha, monto y origen: Caja (sesión abierta), Bisa u otra cuenta, o una persona que pagó por el negocio. Hecha el 25-10-2026 para Caja y cuentas (`purchase_payments`): fecha del servidor (T-18), monto mayor a 0 y no mayor al saldo; cada pago genera un `GASTO_MANUAL` con la categoría de sistema Pedido vinculado al pedido. El pedido se bloquea antes que la caja y la cuenta (T-14). Las cuentas se leen con `GET /api/purchases/payment-accounts`. El origen «persona» queda para DEU-02, que crea el registro de personas (spec en `specs/debts.md`).
 - **COM-06** Un pago desde la caja genera un gasto en Caja con categoría Pedido, vinculado al pedido, y descuenta del efectivo esperado de la sesión. Hecha el 25-10-2026: se vincula a la caja abierta y `ExpectedCashCalculator` lo resta como cualquier gasto de Caja; aparece entre los gastos del POS. Los movimientos de un pedido (pago o envío) no se editan ni anulan desde Finanzas ni desde el POS («Los movimientos de un pedido se gestionan desde Compras.»); su anulación llega con COM-09. Pedido y Transporte son categorías de sistema (`financial_categories.system_key`) que Finanzas no elimina.
 - **COM-07** Entrega con tipo (en puerta, terminal, en tienda), estado (pendiente, entregado) y fecha. Hecha el 25-10-2026 (migración `V9__purchase_delivery.sql`): `purchases.delivery_type` (por defecto En tienda), `delivery_status` (por defecto Pendiente) y `delivery_date`. Pendiente: la fecha es la estimada, opcional y puede ser futura. Entregado: la fecha es la de entrega, obligatoria en la base (sin fecha el servidor pone hoy, hora de Bolivia), no futura. En ambos casos no puede ser anterior a la fecha del pedido. Se elige al registrar y se cambia con `PUT /api/purchases/{id}/delivery` (auditoría de modificación, no mueve dinero; un pedido anulado no cambia). El listado filtra por estado de entrega.
 - **COM-08** Vista de pedidos por pagar, con saldo pendiente por pedido y por proveedor. Hecha el 25-10-2026: `GET /api/purchases/payables` devuelve los pedidos registrados con saldo (Por pagar, Consignación, A cuenta) agrupados por proveedor (por nombre, pedidos del más antiguo al más reciente), con el saldo de cada proveedor y el total general; filtra por proveedor. Pestaña «Por pagar» en Compras, desde donde se abre el pedido para pagarlo.
@@ -121,12 +122,14 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 
-- **DEU-01** Registro de personas a las que el negocio puede deber dinero (ej. Mami).
-- **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado y aumenta la deuda con esa persona.
-- **DEU-03** La devolución a la persona se registra desde Caja o desde una cuenta, y baja la deuda.
-- **DEU-04** Saldo adeudado por persona e historial de lo que pagó y de lo que se le devolvió.
-- **DEU-05** Una venta al costo a la tienda amiga puede quedar total o parcialmente a crédito; el saldo pendiente queda como cuenta por cobrar a ese cliente.
-- **DEU-06** Los cobros posteriores se registran en Caja o en la cuenta QR y bajan el saldo por cobrar.
+Detalle en `specs/debts.md` (escenarios del 25-10-2026). Pantalla Deudas, permiso `DEBTS` para Operador y Administrador. Los saldos no se guardan: se calculan desde los registros activos y nunca quedan negativos.
+
+- **DEU-01** Registro de personas a las que el negocio puede deber dinero (ej. Mami): `creditors`, con nombre único sin distinguir mayúsculas, teléfono, descripción y baja lógica; no se da de baja con deuda mayor a 0.
+- **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con esa persona. Es el origen «persona» de COM-05: `purchase_payments.creditor_id`, con exactamente un origen (cuenta o persona). No crea movimiento financiero. Su anulación (COM-09) baja la deuda y se rechaza si ya se devolvió ese dinero.
+- **DEU-03** La devolución a la persona se registra desde Caja (con caja abierta) o desde una cuenta, y baja la deuda; no puede superarla. Genera un gasto vinculado (`financial_transactions.creditor_repayment_id`) que solo se anula desde Deudas, con motivo y no si su caja está cerrada.
+- **DEU-04** Saldo adeudado por persona e historial de lo que pagó y de lo que se le devolvió, con el saldo después de cada registro.
+- **DEU-05** Una venta al costo a la tienda amiga puede quedar total o parcialmente a crédito; el saldo pendiente queda como cuenta por cobrar a ese cliente. Clientes en `customers`; la venta guarda `customer_id` y `credit_amount` (método `CREDITO` si no se paga nada). Solo la venta al costo admite crédito (P-12). Se construye con CON-02.
+- **DEU-06** Los cobros posteriores se registran en Caja o en la cuenta QR y bajan el saldo por cobrar; no pueden superarlo. El cobro a Caja es un ingreso de caja que suma al efectivo esperado (CAJ-03, amplía FIN-02).
 - **DEU-07** Vista de saldos por cobrar por cliente, con historial de ventas a crédito y cobros.
 
 ### 3.5 Consumos y ventas al costo · V1
@@ -165,7 +168,7 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 ### 3.8 Dinero (finanzas) · V1
 
 - **FIN-01** Cuentas iniciales Caja, Bisa y Efectivo, cada una con color y saldo inicial registrado como movimiento.
-- **FIN-02** La cuenta Caja es única, no se elimina y solo recibe ingresos por ventas, ajustes de cierre o transferencias.
+- **FIN-02** La cuenta Caja es única, no se elimina y solo recibe ingresos por ventas, ajustes de cierre, transferencias o cobros a la tienda amiga (DEU-06).
 - **FIN-03** Exactamente una cuenta marcada para cobros QR en todo momento.
 - **FIN-04** Una cuenta solo se elimina con saldo 0 y si no es Caja ni la cuenta QR.
 - **FIN-05** Categorías de ingreso y gasto, iniciando con las de la planilla: Venta, Otro ingreso, Pedido, Consumo, Comida, Transporte, Otro gasto, Retiro caja, Depósito, Utilidad (retiro del dueño) y Ajuste.
@@ -231,7 +234,7 @@ Requerimientos no funcionales, todos para la V1:
 
 ## 5. Preguntas
 
-No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
+No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3, salvo P-34, que tiene un supuesto y se confirma antes de los reportes de la V1. Cada respuesta se convierte en requerimientos de la sección 3.
 
 ### 5.1 Pendientes
 
@@ -242,6 +245,7 @@ No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó deci
 | P-09 | ¿Devoluciones de clientes después de cerrar la caja? | No. | V2 |
 | P-13 | ¿Otros métodos de pago (tarjeta, transferencia)? | Solo efectivo y QR. | V2 |
 | P-33 | ¿Qué variantes hay (sabor, tamaño) y comparten costo y precio? | Hasta la V2, cada variante sigue siendo un producto aparte. | V2 |
+| P-34 | ¿Con qué categoría se reportan la devolución a una persona y el cobro a la tienda amiga? | Devolución como Pedido y cobro como Venta, para que los reportes por categoría coincidan con la planilla (`specs/debts.md`). | Reportes V1 (FIN-10) |
 | P-01 | ¿Habrá más tiendas, depósitos o cajas? | Una tienda, una caja. | V3 |
 | P-10 | ¿Hay que emitir factura (SIN) o solo nota de venta? | Solo nota de venta. | V3 |
 | P-12 | ¿Se vende a crédito a clientes registrados (además de la tienda amiga)? | No. | V3 |
@@ -305,4 +309,6 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 - [ ] Contratar el VPS y preparar HTTPS y el respaldo diario.
 - [x] Spec de Compras (`specs/purchases.md`) y COM-01 a COM-06 construidos (25-10-2026).
 - [x] Compras: entrega (COM-07), vista de pedidos por pagar (COM-08) y anulación de pedidos y pagos (COM-09) (25-10-2026).
-- [ ] Escribir las specs de Deudas y cuentas por cobrar (incluye el pago de pedidos por una persona, DEU-02) y de Consumos y ventas al costo.
+- [x] Spec de Deudas y cuentas por cobrar (`specs/debts.md`), incluido el pago de pedidos por una persona (DEU-02) (25-10-2026).
+- [ ] Construir Deudas con personas (DEU-01 a DEU-04).
+- [ ] Escribir la spec de Consumos y ventas al costo; las cuentas por cobrar (DEU-05 a DEU-07) se construyen con la venta al costo (CON-02).
