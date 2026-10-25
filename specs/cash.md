@@ -13,6 +13,10 @@ El sistema SHALL permitir únicamente una sesión de caja con estado `ABIERTA` d
 - **WHEN** un usuario intenta abrir una nueva caja y ya existe una sesión en estado `ABIERTA`
 - **THEN** el sistema rechaza la solicitud con un mensaje de error indicando que ya existe una caja activa compartida
 
+#### Scenario: Aperturas simultáneas (T-06, T-14)
+- **WHEN** dos usuarios abren caja al mismo tiempo y no había ninguna abierta
+- **THEN** solo una apertura se registra (índice único parcial de caja `ABIERTA` en la base) y la otra recibe el mismo mensaje de caja ya abierta
+
 ### Requirement: Apertura de caja con monto inicial y comentario opcional
 El sistema SHALL registrar la apertura de una nueva sesión de caja requiriendo obligatoriamente un monto inicial mayor o igual a cero y permitiendo opcionalmente un comentario de apertura.
 
@@ -30,6 +34,10 @@ El sistema SHALL vincular cualquier venta registrada a la sesión de caja actual
 #### Scenario: Registro de venta con caja abierta
 - **WHEN** un usuario autorizado registra una venta por 45.00 Bs mientras la caja está `ABIERTA`
 - **THEN** la venta se asocia automáticamente a la sesión de caja activa y se registra con el identificador del usuario que realizó la venta
+
+#### Scenario: Ventas y movimientos simultáneos (T-14)
+- **WHEN** se registran varias ventas o movimientos de dinero al mismo tiempo sobre la misma caja o cuenta
+- **THEN** cada operación bloquea la caja y las cuentas que toca hasta terminar, y los totales de la caja y los saldos de las cuentas reflejan todas las operaciones sin perder ninguna
 
 #### Scenario: Rechazo de venta sin caja abierta
 - **WHEN** un usuario intenta registrar una venta y no existe ninguna sesión de caja en estado `ABIERTA`

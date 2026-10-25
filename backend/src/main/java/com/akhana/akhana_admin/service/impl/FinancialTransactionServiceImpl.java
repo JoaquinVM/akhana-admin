@@ -19,7 +19,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -89,7 +94,16 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse createTransaction(FinancialTransactionRequest request, String currentUsername) {
-        FinancialAccount sourceAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getSourceAccountId())
+        // Lock order for every money operation: cash session first, then accounts by id (T-14)
+        boolean touchesCash = financialAccountRepository.existsByIdAndIsCashAccountTrue(request.getSourceAccountId())
+                || (request.getDestinationAccountId() != null
+                    && financialAccountRepository.existsByIdAndIsCashAccountTrue(request.getDestinationAccountId()));
+        Optional<CashSession> lockedSession = request.getCashSessionId() != null
+                ? cashSessionRepository.findByIdForUpdate(request.getCashSessionId())
+                : touchesCash ? cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA) : Optional.empty();
+        Map<UUID, FinancialAccount> accounts = lockAccounts(request.getSourceAccountId(), request.getDestinationAccountId());
+
+        FinancialAccount sourceAccount = activeAccount(accounts, request.getSourceAccountId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
 
         BigDecimal amount = request.getAmount();
@@ -99,9 +113,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         UUID sessionToLink = request.getCashSessionId();
         if (sessionToLink == null && Boolean.TRUE.equals(sourceAccount.getIsCashAccount())) {
-            sessionToLink = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
-                    .map(CashSession::getId)
-                    .orElse(null);
+            sessionToLink = lockedSession.map(CashSession::getId).orElse(null);
         }
 
         Instant txDate = request.getTransactionDate() != null ? request.getTransactionDate() : Instant.now();
@@ -157,7 +169,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             if (request.getSourceAccountId().equals(request.getDestinationAccountId())) {
                 throw new IllegalArgumentException("La cuenta origen y la cuenta destino deben ser diferentes.");
             }
-            FinancialAccount destinationAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getDestinationAccountId())
+            FinancialAccount destinationAccount = activeAccount(accounts, request.getDestinationAccountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cuenta destino no encontrada con ID: " + request.getDestinationAccountId()));
 
             // Validar saldo suficiente
@@ -196,7 +208,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse updateTransaction(UUID id, FinancialTransactionRequest request, String currentUsername) {
-        FinancialTransaction tx = financialTransactionRepository.findById(id)
+        FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
 
         if (tx.getSaleId() != null) {
@@ -220,11 +232,16 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
         }
 
-        FinancialAccount currentSource = tx.getSourceAccount();
+        if (tx.getCashSessionId() != null) {
+            cashSessionRepository.findByIdForUpdate(tx.getCashSessionId());
+        }
+        UUID currentSourceId = tx.getSourceAccount().getId();
+        Map<UUID, FinancialAccount> accounts = lockAccounts(currentSourceId, request.getSourceAccountId());
+        FinancialAccount currentSource = accounts.get(currentSourceId);
         FinancialAccount targetSource = currentSource;
 
         if (!currentSource.getId().equals(request.getSourceAccountId())) {
-            targetSource = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getSourceAccountId())
+            targetSource = activeAccount(accounts, request.getSourceAccountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Nueva cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
         }
 
@@ -288,14 +305,14 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse voidCashExpense(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
-        FinancialTransaction tx = financialTransactionRepository.findById(id)
+        FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
 
         // The POS screen only voids its own cash expenses; any other movement is voided from Finanzas
         if (tx.getType() != FinancialTransactionType.GASTO_MANUAL || tx.getCashSessionId() == null) {
             throw new IllegalStateException("Solo se pueden anular desde el POS los gastos de caja.");
         }
-        boolean sessionOpen = cashSessionRepository.findById(tx.getCashSessionId())
+        boolean sessionOpen = cashSessionRepository.findByIdForUpdate(tx.getCashSessionId())
                 .map(session -> session.getStatus() == CashSessionStatus.ABIERTA)
                 .orElse(false);
         if (!sessionOpen) {
@@ -308,7 +325,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
-        FinancialTransaction tx = financialTransactionRepository.findById(id)
+        FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
 
         if (tx.getStatus() == FinancialTransactionStatus.ANULADO) {
@@ -318,6 +335,13 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         if (tx.getSaleId() != null) {
             throw new IllegalStateException("Las transacciones generadas por ventas no pueden anularse desde Finanzas. Deben anularse desde el módulo de Ventas.");
         }
+
+        if (tx.getCashSessionId() != null) {
+            cashSessionRepository.findByIdForUpdate(tx.getCashSessionId());
+        }
+        lockAccounts(
+                tx.getSourceAccount() != null ? tx.getSourceAccount().getId() : null,
+                tx.getDestinationAccount() != null ? tx.getDestinationAccount().getId() : null);
 
         // Revertir impacto en los saldos
         BigDecimal amount = tx.getAmount();
@@ -353,6 +377,21 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         }
 
         return mapToResponse(voidedTx);
+    }
+
+    // Locked accounts are loaded fresh into the persistence context, so lazy references to them see the locked state
+    private Map<UUID, FinancialAccount> lockAccounts(UUID... ids) {
+        Set<UUID> idSet = Arrays.stream(ids).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (idSet.isEmpty()) {
+            return Map.of();
+        }
+        return financialAccountRepository.findAllByIdForUpdate(idSet).stream()
+                .collect(Collectors.toMap(FinancialAccount::getId, account -> account));
+    }
+
+    private Optional<FinancialAccount> activeAccount(Map<UUID, FinancialAccount> accounts, UUID id) {
+        return Optional.ofNullable(id != null ? accounts.get(id) : null)
+                .filter(account -> account.getDeletedAt() == null);
     }
 
     private Instant getDefaultStartDate() {

@@ -61,6 +61,15 @@ El sistema SHALL permitir la aplicación de un descuento general en monto fijo s
 
 ---
 
+### Requirement: Número de venta único (T-06)
+El sistema SHALL numerar cada venta con una secuencia de la base de datos, única en todo el sistema y no por caja, con formato `VTA-000001`; la base impide números repetidos con un índice único sobre `sale_number`.
+
+#### Scenario: Ventas simultáneas
+- **WHEN** dos ventas se registran al mismo tiempo en la misma caja
+- **THEN** cada una recibe un número distinto de la secuencia
+
+---
+
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
 El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
 

@@ -10,6 +10,7 @@ import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.CashSessionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -67,7 +68,7 @@ class CashSessionServiceTest {
     @DisplayName("Debe abrir exitosamente una caja cuando no existe ninguna sesión abierta")
     void openSession_success() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
-        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> {
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> {
             CashSession cs = invocation.getArgument(0);
             cs.setId(sessionId);
             cs.setSessionNumber(1L);
@@ -94,7 +95,21 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.openSession(request, "admin"))
             .isInstanceOf(DuplicateResourceException.class)
             .hasMessageContaining("Ya existe una caja abierta");
-        verify(cashSessionRepository, never()).save(any());
+        verify(cashSessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Debe rechazar la apertura si otra caja se abrió al mismo tiempo (índice único de caja ABIERTA)")
+    void openSession_concurrentOpening_throwsDuplicate() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class)))
+            .thenThrow(new DataIntegrityViolationException("idx_cash_sessions_only_one_open"));
+
+        OpenCashRequest request = new OpenCashRequest(new BigDecimal("100.00"), null);
+
+        assertThatThrownBy(() -> cashSessionService.openSession(request, "admin"))
+            .isInstanceOf(DuplicateResourceException.class)
+            .hasMessageContaining("Ya existe una caja abierta");
     }
 
     @Test
@@ -124,8 +139,8 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("Debe registrar venta en EFECTIVO incrementando totalSales y expectedCash")
     void registerSale_cash_updatesExpectedCash() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(0L);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
             Sale s = invocation.getArgument(0);
             s.setId(UUID.randomUUID());
@@ -148,8 +163,8 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("Debe registrar venta por QR incrementando totalSalesQr y totalSales, pero NO expectedCash")
     void registerSale_qr_doesNotUpdateExpectedCash() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(0L);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(saleRepository.nextSaleNumber()).thenReturn(2L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
             Sale s = invocation.getArgument(0);
             s.setId(UUID.randomUUID());
@@ -171,7 +186,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("Debe cerrar caja y calcular la diferencia frente al efectivo esperado")
     void closeSession_withDifferenceAndCuts_success() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(saleRepository.countByCashSessionId(sessionId)).thenReturn(2L);
 
@@ -249,7 +264,7 @@ class CashSessionServiceTest {
     void closeSession_withActiveExpenses_calculatesDifferenceAccurately() {
         activeSession.setOpeningAmount(new BigDecimal("200.00"));
         activeSession.setTotalSalesCash(new BigDecimal("850.00"));
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
         when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId))

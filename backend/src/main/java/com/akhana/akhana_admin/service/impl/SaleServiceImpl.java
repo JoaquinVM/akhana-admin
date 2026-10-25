@@ -23,6 +23,8 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,7 +42,8 @@ public class SaleServiceImpl implements SaleService {
 
     @Override
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
-        CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
+        // Lock order for every money operation: cash session first, then accounts by id (T-14)
+        CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new IllegalStateException("Para registrar una venta debe existir una caja abierta."));
 
         if (request.items() == null || request.items().isEmpty()) {
@@ -133,9 +136,7 @@ public class SaleServiceImpl implements SaleService {
             changeGiven = amountReceived.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
         }
 
-        long currentSalesCount = saleRepository.countByCashSessionId(session.getId());
-        Long sessionNum = session.getSessionNumber() != null ? session.getSessionNumber() : 1L;
-        String saleNumber = String.format("VTA-%04d-%03d", sessionNum, currentSalesCount + 1);
+        String saleNumber = formatSaleNumber(saleRepository.nextSaleNumber());
 
         Sale sale = Sale.builder()
             .saleNumber(saleNumber)
@@ -176,8 +177,10 @@ public class SaleServiceImpl implements SaleService {
         FinancialCategory salesCategory = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
             .orElse(null);
 
+        List<FinancialAccount> saleAccounts = financialAccountRepository.findSaleAccountsForUpdate();
+
         if (amountCash.compareTo(BigDecimal.ZERO) > 0) {
-            var cashOpt = financialAccountRepository.findByIsCashAccountTrue();
+            var cashOpt = saleAccounts.stream().filter(a -> Boolean.TRUE.equals(a.getIsCashAccount())).findFirst();
             if (cashOpt.isPresent()) {
                 FinancialAccount cashAccount = cashOpt.get();
                 cashAccount.setCurrentBalance(cashAccount.getCurrentBalance().add(amountCash));
@@ -200,7 +203,9 @@ public class SaleServiceImpl implements SaleService {
         }
 
         if (amountQr.compareTo(BigDecimal.ZERO) > 0) {
-            var qrOpt = financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull();
+            var qrOpt = saleAccounts.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsQrAccount()) && a.getDeletedAt() == null)
+                .findFirst();
             if (qrOpt.isPresent()) {
                 FinancialAccount qrAccount = qrOpt.get();
                 qrAccount.setCurrentBalance(qrAccount.getCurrentBalance().add(amountQr));
@@ -227,6 +232,9 @@ public class SaleServiceImpl implements SaleService {
 
     @Override
     public SaleResponse voidSale(UUID saleId, VoidSaleRequest request, String username) {
+        // The open session is locked before the sale is read, so a second void sees it already voided
+        Optional<CashSession> openSession = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA);
+
         Sale sale = saleRepository.findById(saleId)
             .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada con ID: " + saleId));
 
@@ -234,10 +242,9 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalStateException("La venta ya ha sido anulada previamente.");
         }
 
-        CashSession session = sale.getCashSession();
-        if (session.getStatus() != CashSessionStatus.ABIERTA) {
-            throw new IllegalStateException("Solo se pueden anular ventas pertenecientes a una caja abierta.");
-        }
+        CashSession session = openSession
+            .filter(open -> open.getId().equals(sale.getCashSession().getId()))
+            .orElseThrow(() -> new IllegalStateException("Solo se pueden anular ventas pertenecientes a una caja abierta."));
 
         sale.setStatus(SaleStatus.ANULADA);
         sale.setVoidedAt(Instant.now());
@@ -256,6 +263,13 @@ public class SaleServiceImpl implements SaleService {
 
         // Anular transacciones financieras generadas por la venta
         List<FinancialTransaction> relatedTxs = financialTransactionRepository.findBySaleId(saleId);
+        Set<UUID> accountIds = relatedTxs.stream()
+            .filter(tx -> tx.getSourceAccount() != null)
+            .map(tx -> tx.getSourceAccount().getId())
+            .collect(Collectors.toSet());
+        if (!accountIds.isEmpty()) {
+            financialAccountRepository.findAllByIdForUpdate(accountIds);
+        }
         for (FinancialTransaction tx : relatedTxs) {
             if (tx.getStatus() == FinancialTransactionStatus.ACTIVO) {
                 tx.setStatus(FinancialTransactionStatus.ANULADO);
@@ -273,6 +287,10 @@ public class SaleServiceImpl implements SaleService {
         }
 
         return SaleResponse.fromEntity(updatedSale);
+    }
+
+    static String formatSaleNumber(long sequenceValue) {
+        return String.format("VTA-%06d", sequenceValue);
     }
 
     @Override

@@ -90,9 +90,9 @@ class SaleServiceTest {
     @Test
     @DisplayName("Debe registrar venta en efectivo calculando cambio y afectando saldos de caja")
     void shouldRegisterSaleWithCashAndCalculateChange() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
-        when(saleRepository.countByCashSessionId(activeSession.getId())).thenReturn(0L);
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
             Sale s = invocation.getArgument(0);
             s.setId(UUID.randomUUID());
@@ -128,10 +128,10 @@ class SaleServiceTest {
     @Test
     @DisplayName("Debe registrar venta con pago mixto (Efectivo + QR) actualizando ambos saldos")
     void shouldRegisterSaleWithMixedPayment() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
         when(productRepository.findById(product2.getId())).thenReturn(Optional.of(product2));
-        when(saleRepository.countByCashSessionId(activeSession.getId())).thenReturn(1L);
+        when(saleRepository.nextSaleNumber()).thenReturn(2L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
             Sale s = invocation.getArgument(0);
             s.setId(UUID.randomUUID());
@@ -165,7 +165,7 @@ class SaleServiceTest {
     @Test
     @DisplayName("Debe rechazar venta cuando no existe caja abierta")
     void shouldRejectSaleWhenNoCashSessionOpen() {
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
 
         SaleDetailRequest req = new SaleDetailRequest(
             List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
@@ -202,6 +202,7 @@ class SaleServiceTest {
             .items(new ArrayList<>())
             .build();
 
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
         when(saleRepository.save(any(Sale.class))).thenReturn(sale);
 
@@ -264,9 +265,9 @@ class SaleServiceTest {
             .isSalesDefault(true)
             .build();
 
-        when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
-        when(saleRepository.countByCashSessionId(activeSession.getId())).thenReturn(0L);
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(i -> {
             Sale s = i.getArgument(0);
             s.setId(UUID.randomUUID());
@@ -274,8 +275,7 @@ class SaleServiceTest {
         });
 
         when(financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()).thenReturn(Optional.of(salesCat));
-        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cashAcc));
-        when(financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()).thenReturn(Optional.of(qrAcc));
+        when(financialAccountRepository.findSaleAccountsForUpdate()).thenReturn(List.of(cashAcc, qrAcc));
 
         SaleDetailRequest req = new SaleDetailRequest(
             List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO)),
@@ -325,6 +325,7 @@ class SaleServiceTest {
             .saleId(sale.getId())
             .build();
 
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
         when(saleRepository.save(any(Sale.class))).thenReturn(sale);
         when(financialTransactionRepository.findBySaleId(sale.getId())).thenReturn(List.of(relatedTx));

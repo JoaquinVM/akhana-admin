@@ -3,7 +3,9 @@ package com.akhana.akhana_admin.repository;
 import com.akhana.akhana_admin.model.FinancialTransaction;
 import com.akhana.akhana_admin.model.FinancialTransactionStatus;
 import com.akhana.akhana_admin.model.FinancialTransactionType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,12 +13,18 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface FinancialTransactionRepository extends JpaRepository<FinancialTransaction, UUID> {
 
     List<FinancialTransaction> findBySaleId(UUID saleId);
+
+    // Locked first so two voids or edits of the same movement cannot both revert it (T-14)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM FinancialTransaction t WHERE t.id = :id")
+    Optional<FinancialTransaction> findByIdForUpdate(@Param("id") UUID id);
 
     List<FinancialTransaction> findByCashSessionIdOrderByTransactionDateDesc(UUID cashSessionId);
 

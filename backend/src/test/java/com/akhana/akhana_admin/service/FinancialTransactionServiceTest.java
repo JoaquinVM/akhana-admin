@@ -107,7 +107,7 @@ class FinancialTransactionServiceTest {
                 .description("Inyección de capital")
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
         when(financialCategoryRepository.findByIdAndDeletedAtIsNull(incomeCat.getId())).thenReturn(Optional.of(incomeCat));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -129,7 +129,7 @@ class FinancialTransactionServiceTest {
                 .description("Ingreso en caja")
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(cajaAccount));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
@@ -147,7 +147,7 @@ class FinancialTransactionServiceTest {
                 .description("Compra de café y azúcar")
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(cajaAccount));
         when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -169,8 +169,7 @@ class FinancialTransactionServiceTest {
                 .description("Transferencia operativa")
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount, joacoAccount));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
@@ -193,8 +192,7 @@ class FinancialTransactionServiceTest {
                 .description("Transferencia excesiva")
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount, joacoAccount));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
@@ -212,7 +210,7 @@ class FinancialTransactionServiceTest {
                 .status(FinancialTransactionStatus.ACTIVO)
                 .build();
 
-        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         VoidFinancialTransactionRequest voidReq = VoidFinancialTransactionRequest.builder()
@@ -240,7 +238,7 @@ class FinancialTransactionServiceTest {
                 .status(FinancialTransactionStatus.ACTIVO)
                 .build();
 
-        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialTransactionService.voidTransaction(tx.getId(), new VoidFinancialTransactionRequest(), "admin"));
@@ -287,9 +285,10 @@ class FinancialTransactionServiceTest {
     void testVoidCashExpenseOpenSession() {
         UUID sessionId = UUID.randomUUID();
         FinancialTransaction tx = cashExpense(sessionId);
-        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
         CashSession session = CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA)
                 .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+        when(cashSessionRepository.findByIdForUpdate(sessionId)).thenReturn(Optional.of(session));
         when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId)).thenReturn(BigDecimal.ZERO);
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
@@ -308,8 +307,8 @@ class FinancialTransactionServiceTest {
     void testVoidCashExpenseClosedSession() {
         UUID sessionId = UUID.randomUUID();
         FinancialTransaction tx = cashExpense(sessionId);
-        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
-        when(cashSessionRepository.findById(sessionId))
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.CERRADA).build()));
 
         assertThrows(IllegalStateException.class,
@@ -321,7 +320,7 @@ class FinancialTransactionServiceTest {
     @DisplayName("POS: rechaza anular un movimiento que no es gasto de caja")
     void testVoidCashExpenseRejectsOtherMovements() {
         FinancialTransaction tx = cashExpense(null);
-        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
 
         assertThrows(IllegalStateException.class,
                 () -> financialTransactionService.voidCashExpense(tx.getId(), new VoidFinancialTransactionRequest(), "operador"));

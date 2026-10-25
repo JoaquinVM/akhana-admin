@@ -9,6 +9,7 @@ import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +30,12 @@ public class CashSessionServiceImpl implements CashSessionService {
     private final SaleRepository saleRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
 
+    private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
+
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
         if (cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)) {
-            throw new DuplicateResourceException("Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.");
+            throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
         }
 
         BigDecimal openingAmount = request.openingAmount().setScale(2, RoundingMode.HALF_UP);
@@ -49,7 +52,13 @@ public class CashSessionServiceImpl implements CashSessionService {
             .totalSales(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .build();
 
-        CashSession saved = cashSessionRepository.save(session);
+        // A concurrent opening passes the check above; the partial unique index on ABIERTA rejects it here
+        CashSession saved;
+        try {
+            saved = cashSessionRepository.saveAndFlush(session);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
+        }
         return mapToSummary(saved, 0);
     }
 
@@ -66,13 +75,11 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     @Override
     public SaleResponse registerSaleInCurrentSession(SaleRequest request, String username) {
-        CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
+        CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new IllegalStateException("No se pueden registrar ventas porque no existe una caja abierta actualmente."));
 
         BigDecimal amount = request.totalAmount().setScale(2, RoundingMode.HALF_UP);
-        long currentSalesCount = saleRepository.countByCashSessionId(session.getId());
-        Long sessionNum = session.getSessionNumber() != null ? session.getSessionNumber() : 1L;
-        String saleNumber = String.format("VTA-%04d-%03d", sessionNum, currentSalesCount + 1);
+        String saleNumber = SaleServiceImpl.formatSaleNumber(saleRepository.nextSaleNumber());
 
         BigDecimal amountCash = request.paymentMethod() == PaymentMethod.EFECTIVO ? amount : BigDecimal.ZERO;
         BigDecimal amountQr = request.paymentMethod() == PaymentMethod.QR ? amount : BigDecimal.ZERO;
@@ -114,7 +121,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     @Override
     public CashSessionSummaryResponse closeCurrentSession(CloseCashRequest request, String username) {
-        CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
+        CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));
 
         BigDecimal closingAmount = request.closingAmount().setScale(2, RoundingMode.HALF_UP);
