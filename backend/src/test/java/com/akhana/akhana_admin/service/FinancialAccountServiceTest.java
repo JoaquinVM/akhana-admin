@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -95,6 +96,39 @@ class FinancialAccountServiceTest {
         assertEquals("Cuenta Nueva", response.getName());
         assertEquals(new BigDecimal("500.00"), response.getCurrentBalance());
         verify(financialTransactionRepository, times(1)).save(any(FinancialTransaction.class));
+    }
+
+    @Test
+    @DisplayName("T-18: el saldo inicial se guarda con escala 2 HALF_UP en la cuenta y en su movimiento")
+    void testCreateAccountNormalizesInitialBalance() {
+        FinancialAccountRequest request = FinancialAccountRequest.builder()
+                .name("Cuenta Redondeo")
+                .initialBalance(new BigDecimal("100.005"))
+                .build();
+
+        when(financialAccountRepository.existsByNameIgnoreCaseAndDeletedAtIsNull("Cuenta Redondeo")).thenReturn(false);
+        when(financialAccountRepository.save(any(FinancialAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        FinancialAccountResponse response = financialAccountService.createAccount(request, "admin");
+
+        ArgumentCaptor<FinancialTransaction> txCaptor = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository).save(txCaptor.capture());
+        assertEquals(new BigDecimal("100.01"), response.getCurrentBalance());
+        assertEquals(new BigDecimal("100.01"), response.getInitialBalance());
+        assertEquals(new BigDecimal("100.01"), txCaptor.getValue().getAmount());
+    }
+
+    @Test
+    @DisplayName("T-18: sin saldo inicial, la cuenta arranca en 0.00")
+    void testCreateAccountWithoutInitialBalance() {
+        FinancialAccountRequest request = FinancialAccountRequest.builder().name("Cuenta Cero").build();
+
+        when(financialAccountRepository.existsByNameIgnoreCaseAndDeletedAtIsNull("Cuenta Cero")).thenReturn(false);
+        when(financialAccountRepository.save(any(FinancialAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        FinancialAccountResponse response = financialAccountService.createAccount(request, "admin");
+
+        assertEquals(new BigDecimal("0.00"), response.getCurrentBalance());
     }
 
     @Test

@@ -73,52 +73,6 @@ public class CashSessionServiceImpl implements CashSessionService {
     }
 
     @Override
-    public SaleResponse registerSaleInCurrentSession(SaleRequest request, String username) {
-        CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
-            .orElseThrow(() -> new IllegalStateException("No se pueden registrar ventas porque no existe una caja abierta actualmente."));
-
-        BigDecimal amount = request.totalAmount().setScale(2, RoundingMode.HALF_UP);
-        String saleNumber = SaleServiceImpl.formatSaleNumber(saleRepository.nextSaleNumber());
-
-        BigDecimal amountCash = request.paymentMethod() == PaymentMethod.EFECTIVO ? amount : BigDecimal.ZERO;
-        BigDecimal amountQr = request.paymentMethod() == PaymentMethod.QR ? amount : BigDecimal.ZERO;
-
-        Sale sale = Sale.builder()
-            .saleNumber(saleNumber)
-            .cashSession(session)
-            .status(SaleStatus.COMPLETADA)
-            .subtotalAmount(amount)
-            .discountItemsTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-            .globalDiscountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-            .discountTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-            .totalAmount(amount)
-            .paymentMethod(request.paymentMethod())
-            .amountCash(amountCash)
-            .amountQr(amountQr)
-            .amountReceived(amountCash)
-            .changeGiven(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-            .description(request.description() != null ? request.description().trim() : null)
-            .createdBy(username)
-            .createdAt(Instant.now())
-            .build();
-
-        Sale savedSale = saleRepository.save(sale);
-
-        // Actualizar métricas acumuladas de la caja activa
-        if (request.paymentMethod() == PaymentMethod.EFECTIVO) {
-            session.setTotalSalesCash(session.getTotalSalesCash().add(amount));
-        } else if (request.paymentMethod() == PaymentMethod.QR) {
-            session.setTotalSalesQr(session.getTotalSalesQr().add(amount));
-        }
-        session.setTotalSales(session.getTotalSales().add(amount));
-        expectedCashCalculator.refresh(session);
-
-        cashSessionRepository.save(session);
-
-        return SaleResponse.fromEntity(savedSale);
-    }
-
-    @Override
     public CashSessionSummaryResponse closeCurrentSession(CloseCashRequest request, String username) {
         CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));

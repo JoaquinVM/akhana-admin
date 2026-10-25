@@ -127,40 +127,6 @@ class CashSessionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/cash-sessions/current/sales - Debe registrar una venta rápida")
-    void registerSale_success() throws Exception {
-        SaleResponse saleResponse = new SaleResponse(
-            UUID.randomUUID(),
-            "VTA-0001-001",
-            sessionId,
-            new BigDecimal("45.00"),
-            PaymentMethod.EFECTIVO,
-            "Té y hierbas",
-            "admin",
-            Instant.now()
-        );
-
-        when(cashSessionService.registerSaleInCurrentSession(any(SaleRequest.class), any())).thenReturn(saleResponse);
-
-        String json = """
-            {
-                "totalAmount": 45.00,
-                "paymentMethod": "EFECTIVO",
-                "description": "Té y hierbas"
-            }
-            """;
-
-        mockMvc.perform(post("/api/cash-sessions/current/sales")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.saleNumber").value("VTA-0001-001"))
-            .andExpect(jsonPath("$.totalAmount").value(45.00))
-            .andExpect(jsonPath("$.paymentMethod").value("EFECTIVO"));
-    }
-
-    @Test
     @DisplayName("POST /api/cash-sessions/current/close - Debe cerrar caja exitosamente")
     void closeSession_success() throws Exception {
         CashSessionSummaryResponse closedSummary = new CashSessionSummaryResponse(

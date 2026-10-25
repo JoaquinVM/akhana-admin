@@ -13,6 +13,10 @@ El sistema SHALL permitir la administración de cuentas financieras iniciando co
 - **WHEN** el usuario registra una cuenta con nombre, color y saldo inicial de 1000.00 Bs
 - **THEN** el sistema crea la cuenta con saldo actual de 1000.00 Bs, registra un movimiento de tipo `SALDO_INICIAL` por 1000.00 Bs y genera la auditoría de creación
 
+#### Scenario: Saldo inicial con más de dos decimales (T-18)
+- **WHEN** el usuario registra una cuenta con saldo inicial de 100.005 Bs
+- **THEN** el sistema guarda la cuenta y su movimiento `SALDO_INICIAL` por 100.01 Bs (escala 2, `HALF_UP`)
+
 #### Scenario: Edición de nombre y color de cuenta
 - **WHEN** el usuario actualiza el nombre o la selección de color de una cuenta existente
 - **THEN** el sistema persiste los cambios visuales y registra los datos de usuario y fecha de modificación en la auditoría sin alterar los saldos ni movimientos
@@ -80,15 +84,19 @@ El sistema SHALL permitir administrar categorías clasificadas obligatoriamente 
 ---
 
 ### Requirement: Registro y edición de ingresos manuales
-El sistema SHALL permitir registrar y editar ingresos manuales en cualquier cuenta distinta de Caja, especificando cuenta, monto, categoría de ingreso, fecha de transacción, descripción y comentario opcional.
+El sistema SHALL permitir registrar y editar ingresos manuales en cualquier cuenta distinta de Caja, especificando cuenta, monto, categoría de ingreso, descripción y comentario opcional. La fecha del movimiento la pone el servidor al registrarlo (T-18).
 
 #### Scenario: Registro exitoso de ingreso manual
-- **WHEN** el usuario registra un ingreso manual de 500.00 Bs en la «Cuenta bancaria BISA» con categoría «Aportes» y fecha de transacción seleccionada
-- **THEN** el sistema crea la transacción en estado `ACTIVO`, incrementa el saldo de la cuenta en 500.00 Bs y registra la fecha/hora actual del sistema y usuario como auditoría de registro
+- **WHEN** el usuario registra un ingreso manual de 500.00 Bs en la «Cuenta bancaria BISA» con categoría «Aportes»
+- **THEN** el sistema crea la transacción en estado `ACTIVO` con la fecha/hora actual del servidor, incrementa el saldo de la cuenta en 500.00 Bs y registra el usuario como auditoría de registro
+
+#### Scenario: Monto con más de dos decimales (T-18)
+- **WHEN** el usuario registra o edita un ingreso, gasto o transferencia con un monto de 10.555 Bs
+- **THEN** el sistema lo guarda como 10.56 Bs (escala 2, `HALF_UP`); un monto que redondea a 0.00 Bs se rechaza
 
 #### Scenario: Edición de ingreso manual
 - **WHEN** el usuario modifica el monto o descripción de un ingreso manual existente
-- **THEN** el sistema ajusta el saldo de la cuenta por la diferencia, actualiza los datos y conserva la auditoría de registro original registrando usuario y fecha de modificación
+- **THEN** el sistema ajusta el saldo de la cuenta por la diferencia, actualiza los datos, conserva la fecha original del movimiento y la auditoría de registro, registrando usuario y fecha de modificación
 
 ---
 
@@ -123,7 +131,7 @@ El sistema SHALL permitir registrar transferencias entre dos cuentas diferentes 
 ---
 
 ### Requirement: Anulación auditada de transacciones financieras
-El sistema SHALL permitir anular ingresos manuales, gastos y transferencias sin eliminación física, revirtiendo el impacto económico en los saldos de las cuentas y registrando usuario, fecha/hora y comentario de anulación.
+El sistema SHALL permitir anular ingresos manuales, gastos y transferencias sin eliminación física, revirtiendo el impacto económico en los saldos de las cuentas y registrando usuario, fecha/hora y motivo obligatorio de anulación (RG-03). El saldo inicial de una cuenta no se anula ni se edita (T-18).
 
 #### Scenario: Anulación de gasto manual
 - **WHEN** el usuario anula un gasto de 150.00 Bs registrando el motivo «Factura cancelada por duplicidad»
@@ -136,6 +144,14 @@ El sistema SHALL permitir anular ingresos manuales, gastos y transferencias sin 
 #### Scenario: Movimiento de una caja cerrada
 - **WHEN** el usuario intenta editar o anular un gasto o transferencia vinculado a una caja ya cerrada
 - **THEN** el sistema lo rechaza indicando que se corrija en la caja actual (CAJ-06, T-16)
+
+#### Scenario: Anulación sin motivo (T-18)
+- **WHEN** el usuario intenta anular un movimiento desde Finanzas, o un gasto de caja desde el POS, sin indicar motivo
+- **THEN** el sistema rechaza la anulación indicando que el motivo es obligatorio y no toca saldos
+
+#### Scenario: Anulación del saldo inicial (T-18)
+- **WHEN** el usuario intenta anular o editar el movimiento `SALDO_INICIAL` de una cuenta
+- **THEN** el sistema lo rechaza indicando que el saldo inicial no se puede anular ni editar
 
 ---
 

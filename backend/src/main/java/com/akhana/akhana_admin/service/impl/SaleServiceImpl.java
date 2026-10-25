@@ -41,6 +41,11 @@ public class SaleServiceImpl implements SaleService {
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
 
+    static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
+    static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
+    static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
+    static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
+
     @Override
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
         // Lock order for every money operation: cash session first, then accounts by id (T-14)
@@ -137,6 +142,25 @@ public class SaleServiceImpl implements SaleService {
             changeGiven = amountReceived.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
         }
 
+        // The sale fails if its category or accounts are missing (RG-05); accounts are locked after the session (T-14)
+        FinancialCategory salesCategory = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
+            .orElseThrow(() -> new IllegalStateException(SALES_CATEGORY_MISSING));
+        List<FinancialAccount> saleAccounts = financialAccountRepository.findSaleAccountsForUpdate();
+        FinancialAccount cashAccount = null;
+        if (amountCash.compareTo(BigDecimal.ZERO) > 0) {
+            cashAccount = saleAccounts.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsCashAccount()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(CASH_ACCOUNT_MISSING));
+        }
+        FinancialAccount qrAccount = null;
+        if (amountQr.compareTo(BigDecimal.ZERO) > 0) {
+            qrAccount = saleAccounts.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsQrAccount()) && a.getDeletedAt() == null)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(QR_ACCOUNT_MISSING));
+        }
+
         String saleNumber = formatSaleNumber(saleRepository.nextSaleNumber());
 
         Sale sale = Sale.builder()
@@ -174,57 +198,11 @@ public class SaleServiceImpl implements SaleService {
         cashSessionRepository.save(session);
 
         // Generar movimientos financieros automáticos por venta
-        FinancialCategory salesCategory = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
-            .orElse(null);
-
-        List<FinancialAccount> saleAccounts = financialAccountRepository.findSaleAccountsForUpdate();
-
-        if (amountCash.compareTo(BigDecimal.ZERO) > 0) {
-            var cashOpt = saleAccounts.stream().filter(a -> Boolean.TRUE.equals(a.getIsCashAccount())).findFirst();
-            if (cashOpt.isPresent()) {
-                FinancialAccount cashAccount = cashOpt.get();
-                cashAccount.setCurrentBalance(cashAccount.getCurrentBalance().add(amountCash));
-                financialAccountRepository.save(cashAccount);
-
-                FinancialTransaction cashTx = FinancialTransaction.builder()
-                    .type(FinancialTransactionType.VENTA_INGRESO)
-                    .sourceAccount(cashAccount)
-                    .category(salesCategory)
-                    .amount(amountCash)
-                    .transactionDate(savedSale.getCreatedAt())
-                    .description("Venta #" + savedSale.getSaleNumber() + " (Efectivo)")
-                    .status(FinancialTransactionStatus.ACTIVO)
-                    .saleId(savedSale.getId())
-                    .createdBy(username)
-                    .createdAt(Instant.now())
-                    .build();
-                financialTransactionRepository.save(cashTx);
-            }
+        if (cashAccount != null) {
+            recordSaleIncome(cashAccount, salesCategory, amountCash, savedSale, "Efectivo", username);
         }
-
-        if (amountQr.compareTo(BigDecimal.ZERO) > 0) {
-            var qrOpt = saleAccounts.stream()
-                .filter(a -> Boolean.TRUE.equals(a.getIsQrAccount()) && a.getDeletedAt() == null)
-                .findFirst();
-            if (qrOpt.isPresent()) {
-                FinancialAccount qrAccount = qrOpt.get();
-                qrAccount.setCurrentBalance(qrAccount.getCurrentBalance().add(amountQr));
-                financialAccountRepository.save(qrAccount);
-
-                FinancialTransaction qrTx = FinancialTransaction.builder()
-                    .type(FinancialTransactionType.VENTA_INGRESO)
-                    .sourceAccount(qrAccount)
-                    .category(salesCategory)
-                    .amount(amountQr)
-                    .transactionDate(savedSale.getCreatedAt())
-                    .description("Venta #" + savedSale.getSaleNumber() + " (QR)")
-                    .status(FinancialTransactionStatus.ACTIVO)
-                    .saleId(savedSale.getId())
-                    .createdBy(username)
-                    .createdAt(Instant.now())
-                    .build();
-                financialTransactionRepository.save(qrTx);
-            }
+        if (qrAccount != null) {
+            recordSaleIncome(qrAccount, salesCategory, amountQr, savedSale, "QR", username);
         }
 
         return SaleResponse.fromEntity(savedSale);
@@ -232,6 +210,12 @@ public class SaleServiceImpl implements SaleService {
 
     @Override
     public SaleResponse voidSale(UUID saleId, VoidSaleRequest request, String username) {
+        // Every void needs a reason (RG-03), also when the service is called without bean validation
+        if (request == null || request.voidReason() == null || request.voidReason().isBlank()) {
+            throw new IllegalArgumentException(VOID_REASON_REQUIRED);
+        }
+        String voidReason = request.voidReason().trim();
+
         // The open session is locked before the sale is read, so a second void sees it already voided
         Optional<CashSession> openSession = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA);
 
@@ -249,7 +233,7 @@ public class SaleServiceImpl implements SaleService {
         sale.setStatus(SaleStatus.ANULADA);
         sale.setVoidedAt(Instant.now());
         sale.setVoidedBy(username);
-        sale.setVoidReason(request.voidReason().trim());
+        sale.setVoidReason(voidReason);
 
         // Revertir acumuladores financieros de la caja abierta
         session.setTotalSalesCash(session.getTotalSalesCash().subtract(sale.getAmountCash()));
@@ -274,7 +258,7 @@ public class SaleServiceImpl implements SaleService {
                 tx.setStatus(FinancialTransactionStatus.ANULADO);
                 tx.setVoidedAt(Instant.now());
                 tx.setVoidedBy(username);
-                tx.setVoidReason(request.voidReason().trim());
+                tx.setVoidReason(voidReason);
 
                 FinancialAccount acc = tx.getSourceAccount();
                 if (acc != null) {
@@ -286,6 +270,26 @@ public class SaleServiceImpl implements SaleService {
         }
 
         return SaleResponse.fromEntity(updatedSale);
+    }
+
+    private void recordSaleIncome(FinancialAccount account, FinancialCategory category, BigDecimal amount,
+                                  Sale sale, String paymentLabel, String username) {
+        account.setCurrentBalance(account.getCurrentBalance().add(amount));
+        financialAccountRepository.save(account);
+
+        FinancialTransaction tx = FinancialTransaction.builder()
+            .type(FinancialTransactionType.VENTA_INGRESO)
+            .sourceAccount(account)
+            .category(category)
+            .amount(amount)
+            .transactionDate(sale.getCreatedAt())
+            .description("Venta #" + sale.getSaleNumber() + " (" + paymentLabel + ")")
+            .status(FinancialTransactionStatus.ACTIVO)
+            .saleId(sale.getId())
+            .createdBy(username)
+            .createdAt(Instant.now())
+            .build();
+        financialTransactionRepository.save(tx);
     }
 
     static String formatSaleNumber(long sequenceValue) {

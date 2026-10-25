@@ -39,16 +39,6 @@ public class CashSessionController {
     }
 
     @PreAuthorize("hasAuthority('POS')")
-    @PostMapping("/current/sales")
-    public ResponseEntity<SaleResponse> registerSale(
-            @Valid @RequestBody SaleRequest request,
-            Authentication authentication) {
-        String username = extractUsername(authentication);
-        SaleResponse response = cashSessionService.registerSaleInCurrentSession(request, username);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/current/close")
     public ResponseEntity<CashSessionSummaryResponse> closeSession(
             @Valid @RequestBody CloseCashRequest request,

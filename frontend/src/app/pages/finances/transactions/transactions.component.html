@@ -386,20 +386,6 @@
           }
         </div>
 
-        <div class="form-group">
-          <label for="inc-date" class="form-label">
-            <span>Fecha y Hora <span class="required-mark">*</span></span>
-          </label>
-          <input
-            id="inc-date"
-            type="datetime-local"
-            class="form-control"
-            formControlName="transactionDate"
-            [class.is-invalid]="incomeForm.get('transactionDate')?.touched && incomeForm.get('transactionDate')?.invalid" />
-          @if (incomeForm.get('transactionDate')?.touched && incomeForm.get('transactionDate')?.invalid) {
-            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
-          }
-        </div>
       </div>
 
       <div class="form-group">
@@ -517,20 +503,6 @@
           }
         </div>
 
-        <div class="form-group">
-          <label for="exp-date" class="form-label">
-            <span>Fecha y Hora <span class="required-mark">*</span></span>
-          </label>
-          <input
-            id="exp-date"
-            type="datetime-local"
-            class="form-control"
-            formControlName="transactionDate"
-            [class.is-invalid]="expenseForm.get('transactionDate')?.touched && expenseForm.get('transactionDate')?.invalid" />
-          @if (expenseForm.get('transactionDate')?.touched && expenseForm.get('transactionDate')?.invalid) {
-            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
-          }
-        </div>
       </div>
 
       <div class="form-group">
@@ -648,20 +620,6 @@
           }
         </div>
 
-        <div class="form-group">
-          <label for="trf-date" class="form-label">
-            <span>Fecha y Hora <span class="required-mark">*</span></span>
-          </label>
-          <input
-            id="trf-date"
-            type="datetime-local"
-            class="form-control"
-            formControlName="transactionDate"
-            [class.is-invalid]="transferForm.get('transactionDate')?.touched && transferForm.get('transactionDate')?.invalid" />
-          @if (transferForm.get('transactionDate')?.touched && transferForm.get('transactionDate')?.invalid) {
-            <span class="invalid-feedback">La fecha y hora son obligatorias.</span>
-          }
-        </div>
       </div>
 
       <div class="form-group">
@@ -771,7 +729,7 @@
       </p>
 
       <div class="form-group">
-        <label for="void-reason" class="form-label">Motivo de Anulación</label>
+        <label for="void-reason" class="form-label">Motivo de Anulación <span class="required-mark">*</span></label>
         <textarea
           id="void-reason"
           class="form-control"

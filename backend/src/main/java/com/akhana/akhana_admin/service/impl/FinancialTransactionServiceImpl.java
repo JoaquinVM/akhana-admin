@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -40,6 +41,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String CLOSED_SESSION_EDIT = "No se pueden editar movimientos de una caja cerrada; corríjalos en la caja actual.";
+    static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
+    static final String INITIAL_BALANCE_VOID = "El saldo inicial de una cuenta no se puede anular.";
+    static final String INITIAL_BALANCE_EDIT = "El saldo inicial de una cuenta no se puede editar.";
     static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
 
     @Override
@@ -109,14 +113,12 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         FinancialAccount sourceAccount = activeAccount(accounts, request.getSourceAccountId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
 
-        BigDecimal amount = request.getAmount();
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
-        }
+        BigDecimal amount = normalizeAmount(request.getAmount());
 
         UUID sessionToLink = lockedSession.map(CashSession::getId).orElse(null);
 
-        Instant txDate = request.getTransactionDate() != null ? request.getTransactionDate() : Instant.now();
+        // The server dates every movement; the historical import (FIN-11) will have its own path
+        Instant txDate = Instant.now();
         FinancialTransaction.FinancialTransactionBuilder builder = FinancialTransaction.builder()
                 .type(request.getType())
                 .sourceAccount(sourceAccount)
@@ -217,14 +219,15 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException("Las transferencias entre cuentas no pueden editarse; en caso de error deben anularse y registrarse nuevamente.");
         }
 
+        if (tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
+            throw new IllegalStateException(INITIAL_BALANCE_EDIT);
+        }
+
         if (tx.getType() != request.getType()) {
             throw new IllegalArgumentException("No se puede cambiar el tipo de una transacción ya registrada.");
         }
 
-        BigDecimal newAmount = request.getAmount();
-        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
-        }
+        BigDecimal newAmount = normalizeAmount(request.getAmount());
 
         // A movement of a closed session is immutable (CAJ-06); one moved onto Caja is bound to the open session (T-16)
         Optional<CashSession> lockedSession;
@@ -282,9 +285,6 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 ? lockedSession.map(CashSession::getId).orElse(null)
                 : null);
         tx.setAmount(newAmount);
-        if (request.getTransactionDate() != null) {
-            tx.setTransactionDate(request.getTransactionDate());
-        }
         tx.setDescription(request.getDescription().trim());
         tx.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
         tx.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
@@ -300,6 +300,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse voidCashExpense(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
+        requireVoidReason(request);
         FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
 
@@ -315,6 +316,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
+        String voidReason = requireVoidReason(request);
         FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
 
@@ -324,6 +326,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         if (tx.getSaleId() != null) {
             throw new IllegalStateException("Las transacciones generadas por ventas no pueden anularse desde Finanzas. Deben anularse desde el módulo de Ventas.");
+        }
+
+        if (tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
+            throw new IllegalStateException(INITIAL_BALANCE_VOID);
         }
 
         Optional<CashSession> lockedSession = tx.getCashSessionId() != null
@@ -337,7 +343,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         BigDecimal amount = tx.getAmount();
         FinancialAccount source = tx.getSourceAccount();
 
-        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL || tx.getType() == FinancialTransactionType.VENTA_INGRESO || tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
+        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL || tx.getType() == FinancialTransactionType.VENTA_INGRESO) {
             source.setCurrentBalance(source.getCurrentBalance().subtract(amount));
             financialAccountRepository.save(source);
         } else if (tx.getType() == FinancialTransactionType.GASTO_MANUAL) {
@@ -354,13 +360,30 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         tx.setStatus(FinancialTransactionStatus.ANULADO);
         tx.setVoidedAt(Instant.now());
         tx.setVoidedBy(currentUsername != null ? currentUsername : "SYSTEM");
-        tx.setVoidReason(request != null && request.getVoidReason() != null ? request.getVoidReason().trim() : null);
+        tx.setVoidReason(voidReason);
 
         FinancialTransaction voidedTx = financialTransactionRepository.save(tx);
 
         lockedSession.ifPresent(this::refreshExpectedCash);
 
         return mapToResponse(voidedTx);
+    }
+
+    // Amounts are stored with scale 2 HALF_UP; one that rounds to 0.00 is rejected
+    static BigDecimal normalizeAmount(BigDecimal amount) {
+        BigDecimal normalized = amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : null;
+        if (normalized == null || normalized.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
+        }
+        return normalized;
+    }
+
+    // Every void needs a reason (RG-03), also when the request has no body
+    private static String requireVoidReason(VoidFinancialTransactionRequest request) {
+        if (request == null || request.getVoidReason() == null || request.getVoidReason().isBlank()) {
+            throw new IllegalArgumentException(VOID_REASON_REQUIRED);
+        }
+        return request.getVoidReason().trim();
     }
 
     private boolean isCashAccount(UUID accountId) {

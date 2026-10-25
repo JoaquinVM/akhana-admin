@@ -20,12 +20,6 @@ export interface CloseCashRequest {
   cuts?: CashCutItem[];
 }
 
-export interface SaleRequest {
-  totalAmount: number;
-  paymentMethod: PaymentMethod;
-  description?: string | null;
-}
-
 export interface SaleItem {
   id?: string;
   productId: string;

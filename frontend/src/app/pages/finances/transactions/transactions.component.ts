@@ -79,7 +79,6 @@ export class TransactionsComponent implements OnInit {
     accountId: ['', Validators.required],
     categoryId: ['', Validators.required],
     amount: [null, [Validators.required, Validators.min(0.01)]],
-    transactionDate: [this.getCurrentLocalIso(), Validators.required],
     description: ['', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
@@ -88,7 +87,6 @@ export class TransactionsComponent implements OnInit {
     accountId: ['', Validators.required],
     categoryId: ['', Validators.required],
     amount: [null, [Validators.required, Validators.min(0.01)]],
-    transactionDate: [this.getCurrentLocalIso(), Validators.required],
     description: ['', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
@@ -97,7 +95,6 @@ export class TransactionsComponent implements OnInit {
     sourceAccountId: ['', Validators.required],
     destinationAccountId: ['', Validators.required],
     amount: [null, [Validators.required, Validators.min(0.01)]],
-    transactionDate: [this.getCurrentLocalIso(), Validators.required],
     description: ['Transferencia entre cuentas', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
@@ -126,13 +123,6 @@ export class TransactionsComponent implements OnInit {
     this.setDefaultDateRange();
     this.loadMetadata();
     this.loadTransactions();
-  }
-
-  getCurrentLocalIso(): string {
-    const now = new Date();
-    const offsetMs = now.getTimezoneOffset() * 60000;
-    const local = new Date(now.getTime() - offsetMs);
-    return local.toISOString().slice(0, 16);
   }
 
   setDefaultDateRange(): void {
@@ -229,12 +219,6 @@ export class TransactionsComponent implements OnInit {
     return isNaN(end.getTime()) ? undefined : end.toISOString();
   }
 
-  private formatDateTimeToInstantIso(datetimeLocalStr: string): string | undefined {
-    if (!datetimeLocalStr) return undefined;
-    const d = new Date(datetimeLocalStr);
-    return isNaN(d.getTime()) ? undefined : d.toISOString();
-  }
-
   onFilterChange(): void {
     this.loadTransactions();
   }
@@ -257,7 +241,6 @@ export class TransactionsComponent implements OnInit {
       accountId: this.incomeEligibleAccounts()[0]?.id || '',
       categoryId: this.incomeCategories()[0]?.id || '',
       amount: null,
-      transactionDate: this.getCurrentLocalIso(),
       description: '',
       notes: ''
     });
@@ -270,7 +253,6 @@ export class TransactionsComponent implements OnInit {
       accountId: this.accounts()[0]?.id || '',
       categoryId: this.expenseCategories()[0]?.id || '',
       amount: null,
-      transactionDate: this.getCurrentLocalIso(),
       description: '',
       notes: ''
     });
@@ -284,7 +266,6 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: accs[0]?.id || '',
       destinationAccountId: accs[1]?.id || '',
       amount: null,
-      transactionDate: this.getCurrentLocalIso(),
       description: 'Transferencia entre cuentas',
       notes: ''
     });
@@ -322,7 +303,6 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: val.accountId,
       categoryId: val.categoryId,
       amount: Number(val.amount),
-      transactionDate: this.formatDateTimeToInstantIso(val.transactionDate),
       description: val.description.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
@@ -355,7 +335,6 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: val.accountId,
       categoryId: val.categoryId,
       amount: Number(val.amount),
-      transactionDate: this.formatDateTimeToInstantIso(val.transactionDate),
       description: val.description.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
@@ -394,7 +373,6 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: val.sourceAccountId,
       destinationAccountId: val.destinationAccountId,
       amount: Number(val.amount),
-      transactionDate: this.formatDateTimeToInstantIso(val.transactionDate),
       description: val.description.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
@@ -431,7 +409,6 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: tx.sourceAccount.id,
       destinationAccountId: tx.destinationAccount?.id,
       amount: tx.amount,
-      transactionDate: tx.transactionDate,
       description: val.description.trim(),
       notes: val.notes ? val.notes.trim() : undefined,
       categoryId: val.categoryId || undefined
@@ -475,7 +452,7 @@ export class TransactionsComponent implements OnInit {
     this.voidError.set(null);
 
     const req: VoidFinancialTransactionRequest = {
-      voidReason: this.voidReason().trim() || undefined
+      voidReason: this.voidReason().trim()
     };
 
     this.transactionService.voidTransaction(tx.id, req).subscribe({

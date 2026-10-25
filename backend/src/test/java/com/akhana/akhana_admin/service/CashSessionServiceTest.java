@@ -138,53 +138,6 @@ class CashSessionServiceTest {
     }
 
     @Test
-    @DisplayName("Debe registrar venta en EFECTIVO incrementando totalSales y expectedCash")
-    void registerSale_cash_updatesExpectedCash() {
-        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.nextSaleNumber()).thenReturn(1L);
-        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
-            Sale s = invocation.getArgument(0);
-            s.setId(UUID.randomUUID());
-            return s;
-        });
-
-        SaleRequest request = new SaleRequest(new BigDecimal("50.00"), PaymentMethod.EFECTIVO, "Venta productos");
-        SaleResponse response = cashSessionService.registerSaleInCurrentSession(request, "vendedor1");
-
-        assertThat(response).isNotNull();
-        assertThat(response.totalAmount()).isEqualByComparingTo("50.00");
-        assertThat(response.paymentMethod()).isEqualTo(PaymentMethod.EFECTIVO);
-
-        assertThat(activeSession.getTotalSalesCash()).isEqualByComparingTo("50.00");
-        assertThat(activeSession.getTotalSales()).isEqualByComparingTo("50.00");
-        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("150.00"); // 100 inicial + 50 efectivo
-        assertThat(activeSession.getTotalSalesQr()).isEqualByComparingTo("0.00");
-    }
-
-    @Test
-    @DisplayName("Debe registrar venta por QR incrementando totalSalesQr y totalSales, pero NO expectedCash")
-    void registerSale_qr_doesNotUpdateExpectedCash() {
-        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.nextSaleNumber()).thenReturn(2L);
-        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
-            Sale s = invocation.getArgument(0);
-            s.setId(UUID.randomUUID());
-            return s;
-        });
-
-        SaleRequest request = new SaleRequest(new BigDecimal("80.00"), PaymentMethod.QR, "Venta té matcha QR");
-        SaleResponse response = cashSessionService.registerSaleInCurrentSession(request, "vendedor1");
-
-        assertThat(response).isNotNull();
-        assertThat(response.paymentMethod()).isEqualTo(PaymentMethod.QR);
-
-        assertThat(activeSession.getTotalSalesQr()).isEqualByComparingTo("80.00");
-        assertThat(activeSession.getTotalSales()).isEqualByComparingTo("80.00");
-        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("100.00"); // Permanece 100 inicial
-        assertThat(activeSession.getTotalSalesCash()).isEqualByComparingTo("0.00");
-    }
-
-    @Test
     @DisplayName("Debe cerrar caja y calcular la diferencia frente al efectivo esperado")
     void closeSession_withDifferenceAndCuts_success() {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -61,7 +62,8 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
                     });
         }
 
-        BigDecimal initial = request.getInitialBalance() != null ? request.getInitialBalance() : BigDecimal.ZERO;
+        BigDecimal initial = (request.getInitialBalance() != null ? request.getInitialBalance() : BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
         String color = (request.getColor() != null && !request.getColor().isBlank()) ? request.getColor() : "#2E5B27";
 
         FinancialAccount account = FinancialAccount.builder()

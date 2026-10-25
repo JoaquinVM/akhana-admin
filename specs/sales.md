@@ -102,6 +102,10 @@ El sistema SHALL procesar el cobro de la venta mediante el modal ergonómico de 
 - **WHEN** una venta de 100.00 Bs se paga con método `MIXTO` y el usuario ingresa 40.00 Bs en efectivo
 - **THEN** el sistema calcula automáticamente que el monto por QR es 60.00 Bs, procesa la transacción desglosando ambos importes y genera dos movimientos financieros de ingreso: 40.00 Bs en la cuenta «Caja» y 60.00 Bs en la cuenta configurada como pagos QR, ambos bajo la categoría de ventas
 
+#### Scenario: Venta sin cuenta o categoría de ventas (T-17)
+- **WHEN** falta la categoría Venta, o el cobro tiene parte en efectivo y no existe la cuenta «Caja», o tiene parte QR y no hay cuenta marcada para pagos QR
+- **THEN** el sistema rechaza la venta indicando qué falta y no guarda la venta, ni toca la caja, ni genera movimientos (RG-05)
+
 ---
 
 ### Requirement: Anulación auditada de ventas en caja abierta

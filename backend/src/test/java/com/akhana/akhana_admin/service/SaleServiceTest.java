@@ -55,6 +55,9 @@ class SaleServiceTest {
     private CashSession activeSession;
     private Product product1;
     private Product product2;
+    private FinancialAccount cashAcc;
+    private FinancialAccount qrAcc;
+    private FinancialCategory salesCat;
 
     @BeforeEach
     void setUp() {
@@ -86,12 +89,51 @@ class SaleServiceTest {
             .sellPrice(new BigDecimal("15.00"))
             .status(ProductStatus.ACTIVO)
             .build();
+
+        cashAcc = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("Caja")
+            .currentBalance(new BigDecimal("100.00"))
+            .isCashAccount(true)
+            .build();
+
+        qrAcc = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("BISA")
+            .currentBalance(new BigDecimal("200.00"))
+            .isQrAccount(true)
+            .build();
+
+        salesCat = FinancialCategory.builder()
+            .id(UUID.randomUUID())
+            .name("Ventas")
+            .type(FinancialCategoryType.INGRESO)
+            .isSalesDefault(true)
+            .build();
+    }
+
+    private void stubSaleFinance(List<FinancialAccount> accounts, Optional<FinancialCategory> category) {
+        when(financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()).thenReturn(category);
+        lenient().when(financialAccountRepository.findSaleAccountsForUpdate()).thenReturn(accounts);
+    }
+
+    private SaleDetailRequest singleItemSale(PaymentMethod method) {
+        return new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
+            BigDecimal.ZERO,
+            method,
+            method == PaymentMethod.EFECTIVO ? new BigDecimal("20.00") : BigDecimal.ZERO,
+            method == PaymentMethod.QR ? new BigDecimal("20.00") : BigDecimal.ZERO,
+            method == PaymentMethod.EFECTIVO ? new BigDecimal("20.00") : null,
+            null
+        );
     }
 
     @Test
     @DisplayName("Debe registrar venta en efectivo calculando cambio y afectando saldos de caja")
     void shouldRegisterSaleWithCashAndCalculateChange() {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
         when(saleRepository.nextSaleNumber()).thenReturn(1L);
         when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
@@ -130,6 +172,7 @@ class SaleServiceTest {
     @DisplayName("Debe registrar venta con pago mixto (Efectivo + QR) actualizando ambos saldos")
     void shouldRegisterSaleWithMixedPayment() {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
         when(productRepository.findById(product2.getId())).thenReturn(Optional.of(product2));
         when(saleRepository.nextSaleNumber()).thenReturn(2L);
@@ -245,27 +288,6 @@ class SaleServiceTest {
     @Test
     @DisplayName("Debe generar transacciones financieras al registrar venta mixta")
     void shouldGenerateFinancialIncomeTransactionsOnSale() {
-        FinancialAccount cashAcc = FinancialAccount.builder()
-            .id(UUID.randomUUID())
-            .name("Caja")
-            .currentBalance(new BigDecimal("100.00"))
-            .isCashAccount(true)
-            .build();
-
-        FinancialAccount qrAcc = FinancialAccount.builder()
-            .id(UUID.randomUUID())
-            .name("BISA")
-            .currentBalance(new BigDecimal("200.00"))
-            .isQrAccount(true)
-            .build();
-
-        FinancialCategory salesCat = FinancialCategory.builder()
-            .id(UUID.randomUUID())
-            .name("Ventas")
-            .type(FinancialCategoryType.INGRESO)
-            .isSalesDefault(true)
-            .build();
-
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
         when(saleRepository.nextSaleNumber()).thenReturn(1L);
@@ -275,8 +297,7 @@ class SaleServiceTest {
             return s;
         });
 
-        when(financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()).thenReturn(Optional.of(salesCat));
-        when(financialAccountRepository.findSaleAccountsForUpdate()).thenReturn(List.of(cashAcc, qrAcc));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
 
         SaleDetailRequest req = new SaleDetailRequest(
             List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO)),
@@ -299,11 +320,7 @@ class SaleServiceTest {
     @Test
     @DisplayName("Debe anular transacciones financieras asociadas al anular venta")
     void shouldVoidFinancialIncomeTransactionsOnSaleVoid() {
-        FinancialAccount cashAcc = FinancialAccount.builder()
-            .id(UUID.randomUUID())
-            .name("Caja")
-            .currentBalance(new BigDecimal("150.00"))
-            .build();
+        cashAcc.setCurrentBalance(new BigDecimal("150.00"));
 
         Sale sale = Sale.builder()
             .id(UUID.randomUUID())
@@ -339,5 +356,101 @@ class SaleServiceTest {
         assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("100.00");
         verify(financialTransactionRepository).save(relatedTx);
         verify(financialAccountRepository).save(cashAcc);
+    }
+
+    @Test
+    @DisplayName("T-17: rechaza la venta si no existe la categoría Venta y no guarda nada")
+    void shouldRejectSaleWithoutSalesCategory() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.empty());
+
+        assertThatThrownBy(() -> saleService.registerSale(singleItemSale(PaymentMethod.EFECTIVO), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("categoría Venta");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+        verify(financialTransactionRepository, never()).save(any(FinancialTransaction.class));
+        assertThat(activeSession.getTotalSales()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @DisplayName("T-17: rechaza la venta en efectivo si no existe la cuenta Caja")
+    void shouldRejectCashSaleWithoutCashAccount() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        stubSaleFinance(List.of(qrAcc), Optional.of(salesCat));
+
+        assertThatThrownBy(() -> saleService.registerSale(singleItemSale(PaymentMethod.EFECTIVO), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("cuenta Caja");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+        verify(cashSessionRepository, never()).save(any(CashSession.class));
+    }
+
+    @Test
+    @DisplayName("T-17: rechaza la venta QR si no hay cuenta marcada para cobros QR")
+    void shouldRejectQrSaleWithoutQrAccount() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        stubSaleFinance(List.of(cashAcc), Optional.of(salesCat));
+
+        assertThatThrownBy(() -> saleService.registerSale(singleItemSale(PaymentMethod.QR), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("cobros QR");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+        assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    @DisplayName("T-17: rechaza la venta mixta si falta la cuenta QR aunque exista Caja")
+    void shouldRejectMixedSaleWithoutQrAccount() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        stubSaleFinance(List.of(cashAcc), Optional.of(salesCat));
+
+        SaleDetailRequest req = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal("5.00"), new BigDecimal("15.00"), new BigDecimal("5.00"), null);
+
+        assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("cobros QR");
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("T-17: la venta QR no exige la cuenta Caja")
+    void shouldRegisterQrSaleWithoutCashAccount() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.nextSaleNumber()).thenReturn(3L);
+        when(saleRepository.save(any(Sale.class))).thenAnswer(i -> {
+            Sale s = i.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+        stubSaleFinance(List.of(qrAcc), Optional.of(salesCat));
+
+        saleService.registerSale(singleItemSale(PaymentMethod.QR), "cajero");
+
+        assertThat(qrAcc.getCurrentBalance()).isEqualByComparingTo("220.00");
+        verify(financialTransactionRepository, times(1)).save(any(FinancialTransaction.class));
+    }
+
+    @Test
+    @DisplayName("RG-03: rechaza la anulación de venta sin motivo")
+    void shouldRejectSaleVoidWithoutReason() {
+        UUID saleId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> saleService.voidSale(saleId, new VoidSaleRequest("   "), "supervisor"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("motivo de anulación es obligatorio");
+        assertThatThrownBy(() -> saleService.voidSale(saleId, null, "supervisor"))
+            .isInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(saleRepository, cashSessionRepository);
     }
 }

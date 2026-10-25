@@ -5,9 +5,7 @@ import {
   CashSessionSummary,
   CashSessionDetail,
   OpenCashRequest,
-  CloseCashRequest,
-  SaleRequest,
-  Sale
+  CloseCashRequest
 } from './models/cash.models';
 
 @Injectable({
@@ -46,15 +44,6 @@ export class CashService {
   closeSession(request: CloseCashRequest): Observable<CashSessionSummary> {
     return this.http.post<CashSessionSummary>(`${this.apiUrl}/current/close`, request).pipe(
       tap(() => this.currentSession.set(null))
-    );
-  }
-
-  registerSale(request: SaleRequest): Observable<Sale> {
-    return this.http.post<Sale>(`${this.apiUrl}/current/sales`, request).pipe(
-      tap(() => {
-        // Refrescar métricas de la sesión tras la venta
-        this.getCurrentSession().subscribe();
-      })
     );
   }
 

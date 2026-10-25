@@ -11,8 +11,6 @@ public interface CashSessionService {
 
     CashSessionSummaryResponse getCurrentSession();
 
-    SaleResponse registerSaleInCurrentSession(SaleRequest request, String username);
-
     CashSessionSummaryResponse closeCurrentSession(CloseCashRequest request, String username);
 
     List<CashSessionSummaryResponse> getAllSessions();

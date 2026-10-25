@@ -10,7 +10,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -25,8 +24,6 @@ public class CashExpenseRequest {
 
     @NotNull(message = "La categoría de gasto es obligatoria")
     private UUID categoryId;
-
-    private Instant transactionDate;
 
     @NotBlank(message = "La descripción es obligatoria")
     @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")

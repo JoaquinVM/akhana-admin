@@ -76,7 +76,6 @@ public class FinancialTransactionController {
                 .sourceAccountId(cashAccount.getId())
                 .categoryId(request.getCategoryId())
                 .amount(request.getAmount())
-                .transactionDate(request.getTransactionDate())
                 .description(request.getDescription())
                 .notes(request.getNotes())
                 .build();
@@ -104,7 +103,7 @@ public class FinancialTransactionController {
     @PostMapping("/{id}/void")
     public ResponseEntity<FinancialTransactionResponse> voidTransaction(
             @PathVariable UUID id,
-            @RequestBody(required = false) VoidFinancialTransactionRequest request,
+            @Valid @RequestBody(required = false) VoidFinancialTransactionRequest request,
             Authentication authentication
     ) {
         String username = extractUsername(authentication);
@@ -115,7 +114,7 @@ public class FinancialTransactionController {
     @PostMapping("/cash-expense/{id}/void")
     public ResponseEntity<FinancialTransactionResponse> voidCashExpense(
             @PathVariable UUID id,
-            @RequestBody(required = false) VoidFinancialTransactionRequest request,
+            @Valid @RequestBody(required = false) VoidFinancialTransactionRequest request,
             Authentication authentication
     ) {
         String username = extractUsername(authentication);

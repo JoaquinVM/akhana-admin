@@ -95,7 +95,6 @@ export interface FinancialTransactionRequest {
   categoryId?: string;
   cashSessionId?: string;
   amount: number;
-  transactionDate?: string;
   description: string;
   notes?: string;
 }
@@ -104,13 +103,12 @@ export interface CashExpenseRequest {
   amount: number;
   categoryId: string;
   cashSessionId?: string;
-  transactionDate?: string;
   description: string;
   notes?: string;
 }
 
 export interface VoidFinancialTransactionRequest {
-  voidReason?: string;
+  voidReason: string;
 }
 
 export interface FinancialSummary {

@@ -6,9 +6,7 @@ import {
   CashSessionSummary,
   CashSessionDetail,
   OpenCashRequest,
-  CloseCashRequest,
-  SaleRequest,
-  Sale
+  CloseCashRequest
 } from './models/cash.models';
 
 describe('CashService', () => {
@@ -90,33 +88,6 @@ describe('CashService', () => {
     req.flush({ ...mockSession, status: 'CERRADA', closingAmount: 200.0 });
 
     expect(service.currentSession()).toBeNull();
-  });
-
-  it('debe registrar una venta y refrescar la sesión activa', () => {
-    const saleReq: SaleRequest = { totalAmount: 45.0, paymentMethod: 'EFECTIVO' };
-    const mockSale: Sale = {
-      id: 'sale-1',
-      saleNumber: 'VTA-0001-001',
-      cashSessionId: 'session-1',
-      totalAmount: 45.0,
-      paymentMethod: 'EFECTIVO',
-      description: null,
-      createdBy: 'admin',
-      createdAt: '2026-10-01T11:00:00Z'
-    };
-
-    service.registerSale(saleReq).subscribe((res) => {
-      expect(res.saleNumber).toBe('VTA-0001-001');
-    });
-
-    const saleHttp = httpTesting.expectOne('/api/cash-sessions/current/sales');
-    expect(saleHttp.request.method).toBe('POST');
-    saleHttp.flush(mockSale);
-
-    // Debe invocar refresh de la sesión actual
-    const refreshHttp = httpTesting.expectOne('/api/cash-sessions/current');
-    expect(refreshHttp.request.method).toBe('GET');
-    refreshHttp.flush(mockSession);
   });
 
   it('debe obtener el historial de sesiones', () => {

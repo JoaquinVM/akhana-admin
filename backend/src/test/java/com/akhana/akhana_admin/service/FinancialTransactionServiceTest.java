@@ -498,7 +498,7 @@ class FinancialTransactionServiceTest {
         when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> financialTransactionService.voidTransaction(tx.getId(), new VoidFinancialTransactionRequest(), "admin"));
+                () -> financialTransactionService.voidTransaction(tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
         assertTrue(ex.getMessage().contains("generadas por ventas no pueden anularse desde Finanzas"));
     }
 
@@ -568,7 +568,7 @@ class FinancialTransactionServiceTest {
                 .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.CERRADA).build()));
 
         assertThrows(IllegalStateException.class,
-                () -> financialTransactionService.voidCashExpense(tx.getId(), new VoidFinancialTransactionRequest(), "operador"));
+                () -> financialTransactionService.voidCashExpense(tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "operador"));
         verify(financialTransactionRepository, never()).save(any());
     }
 
@@ -579,7 +579,160 @@ class FinancialTransactionServiceTest {
         when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
 
         assertThrows(IllegalStateException.class,
-                () -> financialTransactionService.voidCashExpense(tx.getId(), new VoidFinancialTransactionRequest(), "operador"));
+                () -> financialTransactionService.voidCashExpense(tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "operador"));
         verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("T-18: el alta guarda el monto con escala 2 HALF_UP y la fecha del servidor")
+    void testCreateNormalizesAmountAndServerDate() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.INGRESO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(incomeCat.getId())
+                .amount(new BigDecimal("10.555"))
+                .description("Redondeo")
+                .build();
+
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(incomeCat.getId())).thenReturn(Optional.of(incomeCat));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        Instant before = Instant.now();
+        FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
+        Instant after = Instant.now();
+
+        assertEquals(new BigDecimal("10.56"), res.getAmount());
+        assertEquals(new BigDecimal("1010.56"), bisaAccount.getCurrentBalance());
+        assertFalse(res.getTransactionDate().isBefore(before));
+        assertFalse(res.getTransactionDate().isAfter(after));
+    }
+
+    @Test
+    @DisplayName("T-18: rechaza un monto que redondeado a 2 decimales queda en 0.00")
+    void testCreateRejectsAmountRoundingToZero() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.INGRESO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(incomeCat.getId())
+                .amount(new BigDecimal("0.004"))
+                .description("Casi cero")
+                .build();
+
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.createTransaction(req, "admin"));
+        assertTrue(ex.getMessage().contains("mayor a 0.00"));
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any(FinancialTransaction.class));
+    }
+
+    @Test
+    @DisplayName("T-18: la edición normaliza el monto y conserva la fecha original del movimiento")
+    void testUpdateNormalizesAmountAndKeepsDate() {
+        Instant originalDate = Instant.parse("2026-10-01T15:00:00Z");
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccount(bisaAccount)
+                .category(expenseCat)
+                .amount(new BigDecimal("100.00"))
+                .transactionDate(originalDate)
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("50.125"))
+                .description("Corrección")
+                .build();
+
+        FinancialTransactionResponse res = financialTransactionService.updateTransaction(tx.getId(), req, "admin");
+
+        assertEquals(new BigDecimal("50.13"), res.getAmount());
+        assertEquals(new BigDecimal("1049.87"), bisaAccount.getCurrentBalance());
+        assertEquals(originalDate, res.getTransactionDate());
+    }
+
+    @Test
+    @DisplayName("RG-03: rechaza anular un movimiento sin motivo (vacío, en blanco o sin cuerpo)")
+    void testVoidRequiresReason() {
+        UUID id = UUID.randomUUID();
+
+        for (VoidFinancialTransactionRequest req : java.util.Arrays.asList(
+                null,
+                new VoidFinancialTransactionRequest(),
+                VoidFinancialTransactionRequest.builder().voidReason("   ").build())) {
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> financialTransactionService.voidTransaction(id, req, "admin"));
+            assertTrue(ex.getMessage().contains("motivo de anulación es obligatorio"));
+        }
+        verifyNoInteractions(financialTransactionRepository, financialAccountRepository, cashSessionRepository);
+    }
+
+    @Test
+    @DisplayName("RG-03: el POS rechaza anular un gasto de caja sin motivo")
+    void testVoidCashExpenseRequiresReason() {
+        UUID id = UUID.randomUUID();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.voidCashExpense(id, new VoidFinancialTransactionRequest(), "operador"));
+        assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.voidCashExpense(id, null, "operador"));
+        verifyNoInteractions(financialTransactionRepository, financialAccountRepository, cashSessionRepository);
+    }
+
+    @Test
+    @DisplayName("T-18: el saldo inicial de una cuenta no se anula")
+    void testVoidInitialBalanceForbidden() {
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.SALDO_INICIAL)
+                .sourceAccount(bisaAccount)
+                .amount(new BigDecimal("1000.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
+
+        assertTrue(ex.getMessage().contains("saldo inicial"));
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("T-18: el saldo inicial de una cuenta no se edita")
+    void testUpdateInitialBalanceForbidden() {
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.SALDO_INICIAL)
+                .sourceAccount(bisaAccount)
+                .amount(new BigDecimal("1000.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.SALDO_INICIAL)
+                .sourceAccountId(bisaAccount.getId())
+                .amount(new BigDecimal("5.00"))
+                .description("Cambio")
+                .build();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
+        assertTrue(ex.getMessage().contains("saldo inicial"));
+        assertEquals(new BigDecimal("1000.00"), tx.getAmount());
     }
 }

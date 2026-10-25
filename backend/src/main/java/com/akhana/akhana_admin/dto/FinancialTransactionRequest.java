@@ -11,7 +11,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -33,8 +32,6 @@ public class FinancialTransactionRequest {
     @NotNull(message = "El monto es obligatorio")
     @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0")
     private BigDecimal amount;
-
-    private Instant transactionDate;
 
     @NotBlank(message = "La descripción es obligatoria")
     @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")

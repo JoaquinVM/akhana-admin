@@ -387,7 +387,7 @@ export class PosComponent implements OnInit {
     this.voidExpenseError.set(null);
 
     const req: VoidFinancialTransactionRequest = {
-      voidReason: this.voidExpenseReason().trim() || undefined
+      voidReason: this.voidExpenseReason().trim()
     };
 
     this.transactionService.voidCashExpense(tx.id, req).subscribe({

@@ -74,8 +74,6 @@ class EndpointAuthorizationTest {
             {"openingAmount":100.00}""";
     private static final String CLOSE_CASH = """
             {"closingAmount":100.00}""";
-    private static final String LEGACY_SALE = """
-            {"totalAmount":10.00,"paymentMethod":"EFECTIVO"}""";
     private static final String NAME_COLOR = """
             {"name":"Snacks","color":"#ffffff"}""";
     private static final String PRODUCT = """
@@ -148,7 +146,6 @@ class EndpointAuthorizationTest {
                 // Caja: abrir, ver y cerrar; historial
                 both(post, "/api/cash-sessions/open", OPEN_CASH),
                 both(get, "/api/cash-sessions/current", null),
-                both(post, "/api/cash-sessions/current/sales", LEGACY_SALE),
                 both(post, "/api/cash-sessions/current/close", CLOSE_CASH),
                 both(get, "/api/cash-sessions", null),
                 both(get, "/api/cash-sessions/" + ID, null),
