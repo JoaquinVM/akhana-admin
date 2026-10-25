@@ -116,6 +116,10 @@ El sistema SHALL permitir registrar transferencias entre dos cuentas diferentes 
 - **WHEN** el usuario intenta transferir un monto mayor al saldo actual disponible en la cuenta origen
 - **THEN** el sistema bloquea la operación indicando saldo insuficiente en la cuenta origen
 
+#### Scenario: Transferencia desde o hacia Caja
+- **WHEN** el usuario transfiere desde o hacia la cuenta «Caja»
+- **THEN** el sistema exige una caja abierta, vincula la transferencia a ella y la incluye en el efectivo esperado (CAJ-08, T-15, T-16)
+
 ---
 
 ### Requirement: Anulación auditada de transacciones financieras
@@ -128,6 +132,10 @@ El sistema SHALL permitir anular ingresos manuales, gastos y transferencias sin 
 #### Scenario: Anulación de transferencia entre cuentas
 - **WHEN** el usuario anula una transferencia de 300.00 Bs
 - **THEN** el sistema revierte automáticamente los saldos (incrementa origen y disminuye destino) y marca la transferencia como `ANULADO`
+
+#### Scenario: Movimiento de una caja cerrada
+- **WHEN** el usuario intenta editar o anular un gasto o transferencia vinculado a una caja ya cerrada
+- **THEN** el sistema lo rechaza indicando que se corrija en la caja actual (CAJ-06, T-16)
 
 ---
 

@@ -28,12 +28,22 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findByCashSessionIdOrderByTransactionDateDesc(UUID cashSessionId);
 
+    // Cash leaving the drawer during the session: Caja expenses and transfers out of Caja (CAJ-03, T-15)
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
            "WHERE t.cashSessionId = :cashSessionId " +
-           "AND t.type = com.akhana.akhana_admin.model.FinancialTransactionType.GASTO_MANUAL " +
            "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
+           "AND t.type IN (com.akhana.akhana_admin.model.FinancialTransactionType.GASTO_MANUAL, " +
+           "com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA) " +
            "AND t.sourceAccount.isCashAccount = true")
-    BigDecimal sumActiveCashExpensesBySessionId(@Param("cashSessionId") UUID cashSessionId);
+    BigDecimal sumActiveCashOutflowsBySessionId(@Param("cashSessionId") UUID cashSessionId);
+
+    // Cash entering the drawer during the session other than sales: transfers into Caja (CAJ-08, T-15)
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
+           "WHERE t.cashSessionId = :cashSessionId " +
+           "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
+           "AND t.type = com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA " +
+           "AND t.destinationAccount.isCashAccount = true")
+    BigDecimal sumActiveCashInflowsBySessionId(@Param("cashSessionId") UUID cashSessionId);
 
     List<FinancialTransaction> findTop10ByOrderByTransactionDateDesc();
 

@@ -446,7 +446,7 @@ describe('PosComponent', () => {
     expect(headerButtons[1].nativeElement.textContent).toContain('Cerrar Caja');
   });
 
-  it('debe mostrar el indicador Gastos de Caja y calcular monto esperado en gaveta con fórmula monto inicial + ventas efectivo - gastos activos', () => {
+  it('debe mostrar el indicador Gastos de Caja y el efectivo esperado en gaveta calculado por el servidor', () => {
     // Configurar sesión: Inicial 200, Ventas Efectivo 850, Ventas QR 300
     mockCashService.currentSession.set({
       ...mockSession,
@@ -493,9 +493,10 @@ describe('PosComponent', () => {
     expect(expectedKpi).toBeTruthy();
     expect(expectedKpi!.nativeElement.textContent).toContain('Bs 930.00');
 
-    // Al anular el gasto de 40:
+    // Al anular el gasto de 40 el POS recarga la caja y el servidor devuelve el nuevo esperado
     expense2.status = 'ANULADO';
     component.recentExpenses.set([expense1, { ...expense2 }]);
+    mockCashService.currentSession.set({ ...mockCashService.currentSession()!, expectedCash: 970.0 });
     fixture.detectChanges();
 
     // Gastos activos pasan a 80
@@ -504,5 +505,18 @@ describe('PosComponent', () => {
     expect(component.expectedCashInDrawer()).toBe(970.0);
     expect(expensesKpi!.nativeElement.textContent).toContain('Bs 80.00');
     expect(expectedKpi!.nativeElement.textContent).toContain('Bs 970.00');
+  });
+
+  it('solo lista como gastos los GASTO_MANUAL de la sesión, no las transferencias de Caja', () => {
+    const movements: any[] = [
+      { id: 'tx-1', type: 'GASTO_MANUAL', amount: 50.0, status: 'ACTIVO', cashSessionId: 'session-1' },
+      { id: 'tx-2', type: 'TRANSFERENCIA', amount: 300.0, status: 'ACTIVO', cashSessionId: 'session-1' }
+    ];
+    mockTransactionService.getExpensesByCashSession.mockReturnValue(of(movements));
+
+    component.loadExpensesForSession('session-1');
+
+    expect(component.recentExpenses().map((e) => e.id)).toEqual(['tx-1']);
+    expect(component.totalExpensesAmount()).toBe(50.0);
   });
 });

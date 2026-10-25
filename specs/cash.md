@@ -60,7 +60,7 @@ El sistema SHALL consolidar el terminal de punto de venta (POS) y la gestión op
 
 #### Scenario: Visualización de POS con caja abierta
 - **WHEN** el usuario accede a la pantalla "POS" y la caja compartida está abierta
-- **THEN** el sistema muestra el resumen financiero de la caja actual con sus indicadores (monto inicial, ventas efectivo, ventas QR, gastos de caja y efectivo esperado en gaveta: monto inicial + ventas en efectivo − gastos activos de Caja), selector de vistas para alternar entre ventas y compras/gastos de la sesión, los datos de apertura y la opción de cerrar la caja
+- **THEN** el sistema muestra el resumen financiero de la caja actual con sus indicadores (monto inicial, ventas efectivo, ventas QR, gastos de caja y efectivo esperado en gaveta calculado por el servidor según CAJ-03), selector de vistas para alternar entre ventas y compras/gastos de la sesión, los datos de apertura y la opción de cerrar la caja
 
 #### Scenario: Registro de ventas dentro del POS
 - **WHEN** un usuario registra una venta desde la pantalla POS abierta con método `EFECTIVO` o `QR`
@@ -102,6 +102,28 @@ El sistema SHALL calcular y mostrar automáticamente la diferencia entre el mont
 #### Scenario: Presentación de balance con diferencia
 - **WHEN** el usuario se encuentra en el diálogo de confirmación de cierre
 - **THEN** el sistema muestra el monto esperado en efectivo, el monto de cierre y la diferencia calculada (`monto de cierre - monto esperado en efectivo`), permitiendo cerrar la caja aún si existe diferencia (positiva o negativa)
+
+### Requirement: Efectivo esperado único (CAJ-03, T-15)
+El sistema SHALL calcular el efectivo esperado en un solo lugar del servidor como monto inicial + ventas en efectivo + transferencias hacia Caja − gastos de Caja − transferencias desde Caja, contando solo movimientos activos vinculados a la caja. Las pantallas muestran ese valor y no lo recalculan.
+
+#### Scenario: Transferencias en ambos sentidos
+- **WHEN** la caja abrió con 200.00 Bs, vendió 850.00 Bs en efectivo, gastó 120.00 Bs, retiró 300.00 Bs a «Efectivo» y recibió 50.00 Bs de cambio desde «Efectivo»
+- **THEN** el efectivo esperado es 680.00 Bs
+
+#### Scenario: Anulación de un movimiento de Caja
+- **WHEN** se anula un gasto o una transferencia de Caja de la caja abierta
+- **THEN** el efectivo esperado deja de contarlo
+
+### Requirement: Movimientos de Caja con caja abierta (T-16)
+El sistema SHALL exigir una caja abierta para todo gasto o transferencia que salga o entre a la cuenta Caja y vincularlo a esa caja en el servidor, ignorando la caja que envíe el cliente.
+
+#### Scenario: Movimiento de Caja sin caja abierta
+- **WHEN** no hay caja abierta y se registra un gasto en Caja o una transferencia desde o hacia Caja
+- **THEN** el sistema lo rechaza con «Los movimientos de la cuenta Caja requieren una caja abierta.» sin tocar saldos
+
+#### Scenario: Movimiento de una caja cerrada
+- **WHEN** se intenta editar o anular un movimiento vinculado a una caja cerrada
+- **THEN** el sistema lo rechaza (CAJ-06); la corrección se registra en la caja actual
 
 ### Requirement: Historial y consulta detallada en pantalla "Cajas"
 El sistema SHALL listar el historial cronológico de sesiones de caja y permitir consultar el detalle integral de cada sesión seleccionada.

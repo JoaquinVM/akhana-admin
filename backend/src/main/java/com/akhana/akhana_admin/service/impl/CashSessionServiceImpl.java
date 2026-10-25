@@ -5,7 +5,6 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
-import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +27,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     private final CashSessionRepository cashSessionRepository;
     private final SaleRepository saleRepository;
-    private final FinancialTransactionRepository financialTransactionRepository;
+    private final ExpectedCashCalculator expectedCashCalculator;
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
 
@@ -68,7 +67,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta actualmente."));
 
-        session.setExpectedCash(calculateExpectedCash(session));
+        expectedCashCalculator.refresh(session);
         long salesCount = saleRepository.countByCashSessionId(session.getId());
         return mapToSummary(session, salesCount);
     }
@@ -112,7 +111,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.setTotalSalesQr(session.getTotalSalesQr().add(amount));
         }
         session.setTotalSales(session.getTotalSales().add(amount));
-        session.setExpectedCash(calculateExpectedCash(session));
+        expectedCashCalculator.refresh(session);
 
         cashSessionRepository.save(session);
 
@@ -125,7 +124,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));
 
         BigDecimal closingAmount = request.closingAmount().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal expectedCash = calculateExpectedCash(session);
+        BigDecimal expectedCash = expectedCashCalculator.calculate(session);
         BigDecimal difference = closingAmount.subtract(expectedCash).setScale(2, RoundingMode.HALF_UP);
 
         session.setClosingAmount(closingAmount);
@@ -197,7 +196,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             : Collections.emptyList();
 
         BigDecimal expectedCash = session.getStatus() == CashSessionStatus.ABIERTA
-            ? calculateExpectedCash(session)
+            ? expectedCashCalculator.calculate(session)
             : session.getExpectedCash();
 
         return new CashSessionDetailResponse(
@@ -243,15 +242,5 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getDifference(),
             salesCount
         );
-    }
-
-    private BigDecimal calculateExpectedCash(CashSession session) {
-        BigDecimal opening = session.getOpeningAmount() != null ? session.getOpeningAmount() : BigDecimal.ZERO;
-        BigDecimal salesCash = session.getTotalSalesCash() != null ? session.getTotalSalesCash() : BigDecimal.ZERO;
-        BigDecimal expenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-        if (expenses == null) {
-            expenses = BigDecimal.ZERO;
-        }
-        return opening.add(salesCash).subtract(expenses).setScale(2, RoundingMode.HALF_UP);
     }
 }

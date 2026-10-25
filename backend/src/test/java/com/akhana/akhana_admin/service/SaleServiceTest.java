@@ -11,12 +11,12 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
+import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import com.akhana.akhana_admin.service.impl.SaleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -50,7 +50,6 @@ class SaleServiceTest {
     @Mock
     private FinancialTransactionRepository financialTransactionRepository;
 
-    @InjectMocks
     private SaleServiceImpl saleService;
 
     private CashSession activeSession;
@@ -59,6 +58,8 @@ class SaleServiceTest {
 
     @BeforeEach
     void setUp() {
+        saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
+            financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository));
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)

@@ -91,15 +91,8 @@ export class PosComponent implements OnInit {
     this.activeExpenses().reduce((sum, e) => sum + e.amount, 0)
   );
 
-  // Monto esperado en gaveta = monto inicial + ventas en efectivo - gastos activos de Caja
-  expectedCashInDrawer = computed(() => {
-    const session = this.cashService.currentSession();
-    if (!session) return 0;
-    const opening = Number(session.openingAmount) || 0;
-    const salesCash = Number(session.totalSalesCash) || 0;
-    const activeExpenses = this.totalExpensesAmount();
-    return opening + salesCash - activeExpenses;
-  });
+  // Efectivo esperado en gaveta: lo calcula el servidor (CAJ-03: incluye gastos y transferencias de Caja)
+  expectedCashInDrawer = computed(() => Number(this.cashService.currentSession()?.expectedCash) || 0);
 
   // Modal de anulación de gastos
   selectedExpenseToVoid = signal<FinancialTransaction | null>(null);
@@ -145,8 +138,9 @@ export class PosComponent implements OnInit {
   loadExpensesForSession(sessionId: string): void {
     this.isLoadingExpenses.set(true);
     this.transactionService.getExpensesByCashSession(sessionId).subscribe({
-      next: (expenses) => {
-        this.recentExpenses.set(expenses || []);
+      next: (movements) => {
+        // La sesión también vincula transferencias de Caja; esta vista solo lista gastos
+        this.recentExpenses.set((movements || []).filter((m) => m.type === 'GASTO_MANUAL'));
         this.isLoadingExpenses.set(false);
       },
       error: () => {

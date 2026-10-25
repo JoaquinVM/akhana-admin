@@ -36,6 +36,11 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialCategoryRepository financialCategoryRepository;
     private final CashSessionRepository cashSessionRepository;
+    private final ExpectedCashCalculator expectedCashCalculator;
+
+    static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
+    static final String CLOSED_SESSION_EDIT = "No se pueden editar movimientos de una caja cerrada; corríjalos en la caja actual.";
+    static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
 
     @Override
     @Transactional(readOnly = true)
@@ -94,13 +99,11 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional
     public FinancialTransactionResponse createTransaction(FinancialTransactionRequest request, String currentUsername) {
-        // Lock order for every money operation: cash session first, then accounts by id (T-14)
-        boolean touchesCash = financialAccountRepository.existsByIdAndIsCashAccountTrue(request.getSourceAccountId())
-                || (request.getDestinationAccountId() != null
-                    && financialAccountRepository.existsByIdAndIsCashAccountTrue(request.getDestinationAccountId()));
-        Optional<CashSession> lockedSession = request.getCashSessionId() != null
-                ? cashSessionRepository.findByIdForUpdate(request.getCashSessionId())
-                : touchesCash ? cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA) : Optional.empty();
+        // Lock order for every money operation: cash session first, then accounts by id (T-14).
+        // Movements of the Caja account need the open session and are bound to it; the client's cashSessionId is ignored (T-16)
+        boolean touchesCash = isCashAccount(request.getSourceAccountId())
+                || (request.getType() == FinancialTransactionType.TRANSFERENCIA && isCashAccount(request.getDestinationAccountId()));
+        Optional<CashSession> lockedSession = touchesCash ? Optional.of(lockOpenSession()) : Optional.empty();
         Map<UUID, FinancialAccount> accounts = lockAccounts(request.getSourceAccountId(), request.getDestinationAccountId());
 
         FinancialAccount sourceAccount = activeAccount(accounts, request.getSourceAccountId())
@@ -111,10 +114,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
         }
 
-        UUID sessionToLink = request.getCashSessionId();
-        if (sessionToLink == null && Boolean.TRUE.equals(sourceAccount.getIsCashAccount())) {
-            sessionToLink = lockedSession.map(CashSession::getId).orElse(null);
-        }
+        UUID sessionToLink = lockedSession.map(CashSession::getId).orElse(null);
 
         Instant txDate = request.getTransactionDate() != null ? request.getTransactionDate() : Instant.now();
         FinancialTransaction.FinancialTransactionBuilder builder = FinancialTransaction.builder()
@@ -194,13 +194,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         FinancialTransaction savedTx = financialTransactionRepository.save(builder.build());
 
-        if (savedTx.getCashSessionId() != null && savedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
-            cashSessionRepository.findById(savedTx.getCashSessionId()).ifPresent(session -> {
-                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
-                cashSessionRepository.save(session);
-            });
-        }
+        lockedSession.ifPresent(this::refreshExpectedCash);
 
         return mapToResponse(savedTx);
     }
@@ -232,8 +226,12 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
         }
 
+        // A movement of a closed session is immutable (CAJ-06); one moved onto Caja is bound to the open session (T-16)
+        Optional<CashSession> lockedSession;
         if (tx.getCashSessionId() != null) {
-            cashSessionRepository.findByIdForUpdate(tx.getCashSessionId());
+            lockedSession = Optional.of(lockSessionIfOpen(tx.getCashSessionId(), CLOSED_SESSION_EDIT));
+        } else {
+            lockedSession = isCashAccount(request.getSourceAccountId()) ? Optional.of(lockOpenSession()) : Optional.empty();
         }
         UUID currentSourceId = tx.getSourceAccount().getId();
         Map<UUID, FinancialAccount> accounts = lockAccounts(currentSourceId, request.getSourceAccountId());
@@ -280,6 +278,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         }
 
         tx.setSourceAccount(targetSource);
+        tx.setCashSessionId(Boolean.TRUE.equals(targetSource.getIsCashAccount())
+                ? lockedSession.map(CashSession::getId).orElse(null)
+                : null);
         tx.setAmount(newAmount);
         if (request.getTransactionDate() != null) {
             tx.setTransactionDate(request.getTransactionDate());
@@ -291,13 +292,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         FinancialTransaction updatedTx = financialTransactionRepository.save(tx);
 
-        if (updatedTx.getCashSessionId() != null && updatedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
-            cashSessionRepository.findById(updatedTx.getCashSessionId()).ifPresent(session -> {
-                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
-                cashSessionRepository.save(session);
-            });
-        }
+        lockedSession.ifPresent(this::refreshExpectedCash);
 
         return mapToResponse(updatedTx);
     }
@@ -312,12 +307,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         if (tx.getType() != FinancialTransactionType.GASTO_MANUAL || tx.getCashSessionId() == null) {
             throw new IllegalStateException("Solo se pueden anular desde el POS los gastos de caja.");
         }
-        boolean sessionOpen = cashSessionRepository.findByIdForUpdate(tx.getCashSessionId())
-                .map(session -> session.getStatus() == CashSessionStatus.ABIERTA)
-                .orElse(false);
-        if (!sessionOpen) {
-            throw new IllegalStateException("No se pueden anular gastos de una caja cerrada.");
-        }
+        lockSessionIfOpen(tx.getCashSessionId(), "No se pueden anular gastos de una caja cerrada.");
 
         return voidTransaction(id, request, currentUsername);
     }
@@ -336,9 +326,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException("Las transacciones generadas por ventas no pueden anularse desde Finanzas. Deben anularse desde el módulo de Ventas.");
         }
 
-        if (tx.getCashSessionId() != null) {
-            cashSessionRepository.findByIdForUpdate(tx.getCashSessionId());
-        }
+        Optional<CashSession> lockedSession = tx.getCashSessionId() != null
+                ? Optional.of(lockSessionIfOpen(tx.getCashSessionId(), CLOSED_SESSION_VOID))
+                : Optional.empty();
         lockAccounts(
                 tx.getSourceAccount() != null ? tx.getSourceAccount().getId() : null,
                 tx.getDestinationAccount() != null ? tx.getDestinationAccount().getId() : null);
@@ -368,15 +358,31 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         FinancialTransaction voidedTx = financialTransactionRepository.save(tx);
 
-        if (voidedTx.getCashSessionId() != null && voidedTx.getType() == FinancialTransactionType.GASTO_MANUAL) {
-            cashSessionRepository.findById(voidedTx.getCashSessionId()).ifPresent(session -> {
-                BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-                session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, java.math.RoundingMode.HALF_UP));
-                cashSessionRepository.save(session);
-            });
-        }
+        lockedSession.ifPresent(this::refreshExpectedCash);
 
         return mapToResponse(voidedTx);
+    }
+
+    private boolean isCashAccount(UUID accountId) {
+        return accountId != null && financialAccountRepository.existsByIdAndIsCashAccountTrue(accountId);
+    }
+
+    private CashSession lockOpenSession() {
+        return cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
+    }
+
+    private CashSession lockSessionIfOpen(UUID sessionId, String closedMessage) {
+        return cashSessionRepository.findByIdForUpdate(sessionId)
+                .filter(session -> session.getStatus() == CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(closedMessage));
+    }
+
+    // Flushes first so the repository sums see the movement just saved
+    private void refreshExpectedCash(CashSession session) {
+        financialTransactionRepository.flush();
+        expectedCashCalculator.refresh(session);
+        cashSessionRepository.save(session);
     }
 
     // Locked accounts are loaded fresh into the persistence context, so lazy references to them see the locked state

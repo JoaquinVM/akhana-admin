@@ -39,6 +39,7 @@ public class SaleServiceImpl implements SaleService {
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
+    private final ExpectedCashCalculator expectedCashCalculator;
 
     @Override
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
@@ -168,8 +169,7 @@ public class SaleServiceImpl implements SaleService {
         session.setTotalSalesCash(session.getTotalSalesCash().add(amountCash));
         session.setTotalSalesQr(session.getTotalSalesQr().add(amountQr));
         session.setTotalSales(session.getTotalSales().add(totalAmount));
-        BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+        expectedCashCalculator.refresh(session);
 
         cashSessionRepository.save(session);
 
@@ -255,8 +255,7 @@ public class SaleServiceImpl implements SaleService {
         session.setTotalSalesCash(session.getTotalSalesCash().subtract(sale.getAmountCash()));
         session.setTotalSalesQr(session.getTotalSalesQr().subtract(sale.getAmountQr()));
         session.setTotalSales(session.getTotalSales().subtract(sale.getTotalAmount()));
-        BigDecimal activeExpenses = financialTransactionRepository.sumActiveCashExpensesBySessionId(session.getId());
-        session.setExpectedCash(session.getOpeningAmount().add(session.getTotalSalesCash()).subtract(activeExpenses != null ? activeExpenses : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+        expectedCashCalculator.refresh(session);
 
         cashSessionRepository.save(session);
         Sale updatedSale = saleRepository.save(sale);

@@ -79,7 +79,6 @@ public class FinancialTransactionController {
                 .transactionDate(request.getTransactionDate())
                 .description(request.getDescription())
                 .notes(request.getNotes())
-                .cashSessionId(request.getCashSessionId())
                 .build();
 
         FinancialTransactionResponse created = financialTransactionService.createTransaction(txRequest, username);

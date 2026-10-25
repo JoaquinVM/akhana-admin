@@ -7,13 +7,13 @@ import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
+import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import com.akhana.akhana_admin.service.impl.CashSessionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,7 +38,6 @@ class CashSessionServiceTest {
     @Mock
     private FinancialTransactionRepository financialTransactionRepository;
 
-    @InjectMocks
     private CashSessionServiceImpl cashSessionService;
 
     private UUID sessionId;
@@ -46,6 +45,8 @@ class CashSessionServiceTest {
 
     @BeforeEach
     void setUp() {
+        cashSessionService = new CashSessionServiceImpl(cashSessionRepository, saleRepository,
+            new ExpectedCashCalculator(financialTransactionRepository));
         sessionId = UUID.randomUUID();
         activeSession = CashSession.builder()
             .id(sessionId)
@@ -250,7 +251,7 @@ class CashSessionServiceTest {
         activeSession.setTotalSalesQr(new BigDecimal("300.00"));
         when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
-        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId))
+        when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId))
                 .thenReturn(new BigDecimal("120.00"));
 
         CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
@@ -267,7 +268,7 @@ class CashSessionServiceTest {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
-        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId))
+        when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId))
                 .thenReturn(new BigDecimal("120.00"));
 
         // expectedCash es 930.00. Si se cuentan 950.00, hay sobrante de +20.00
@@ -281,5 +282,23 @@ class CashSessionServiceTest {
 
         assertThat(response.expectedCash()).isEqualByComparingTo("930.00");
         assertThat(response.difference()).isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    @DisplayName("Cierre con transferencias desde y hacia Caja: el esperado las incluye (CAJ-03, T-15)")
+    void closeSession_withTransfers_includesThemInExpectedCash() {
+        activeSession.setOpeningAmount(new BigDecimal("200.00"));
+        activeSession.setTotalSalesCash(new BigDecimal("850.00"));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // 120 de gastos + 300 retirados a Efectivo; 50 de cambio ingresado a Caja
+        when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId)).thenReturn(new BigDecimal("420.00"));
+        when(financialTransactionRepository.sumActiveCashInflowsBySessionId(sessionId)).thenReturn(new BigDecimal("50.00"));
+
+        CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("680.00"), null, Collections.emptyList()), "admin");
+
+        assertThat(response.expectedCash()).isEqualByComparingTo("680.00");
+        assertThat(response.difference()).isEqualByComparingTo("0.00");
     }
 }

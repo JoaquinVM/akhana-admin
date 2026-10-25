@@ -8,12 +8,12 @@ import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
+import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import com.akhana.akhana_admin.service.impl.FinancialTransactionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -42,7 +42,6 @@ class FinancialTransactionServiceTest {
     @Mock
     private CashSessionRepository cashSessionRepository;
 
-    @InjectMocks
     private FinancialTransactionServiceImpl financialTransactionService;
 
     private FinancialAccount bisaAccount;
@@ -53,6 +52,10 @@ class FinancialTransactionServiceTest {
 
     @BeforeEach
     void setUp() {
+        financialTransactionService = new FinancialTransactionServiceImpl(financialTransactionRepository,
+                financialAccountRepository, financialCategoryRepository, cashSessionRepository,
+                new ExpectedCashCalculator(financialTransactionRepository));
+
         bisaAccount = FinancialAccount.builder()
                 .id(UUID.randomUUID())
                 .name("Cuenta bancaria BISA")
@@ -136,8 +139,20 @@ class FinancialTransactionServiceTest {
         assertTrue(ex.getMessage().contains("cuenta Caja"));
     }
 
+    private CashSession openSession() {
+        CashSession session = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(session));
+        return session;
+    }
+
+    private void stubSessionSums(UUID sessionId, String outflows, String inflows) {
+        when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId)).thenReturn(new BigDecimal(outflows));
+        when(financialTransactionRepository.sumActiveCashInflowsBySessionId(sessionId)).thenReturn(new BigDecimal(inflows));
+    }
+
     @Test
-    @DisplayName("Debe permitir registrar gasto manual en cuenta Caja deduciendo su saldo")
+    @DisplayName("Gasto en Caja: se vincula a la caja abierta (ignora el cashSessionId del cliente) y recalcula el esperado")
     void testCreateExpenseInCaja() {
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()
                 .type(FinancialTransactionType.GASTO_MANUAL)
@@ -145,17 +160,259 @@ class FinancialTransactionServiceTest {
                 .categoryId(expenseCat.getId())
                 .amount(new BigDecimal("50.00"))
                 .description("Compra de café y azúcar")
+                .cashSessionId(UUID.randomUUID())
                 .build();
 
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        CashSession session = openSession();
         when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(cajaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "50.00", "0");
+
+        FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
+
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("450.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("200.00"), session.getExpectedCash());
+        verify(financialAccountRepository).save(cajaAccount);
+        verify(cashSessionRepository, never()).findByIdForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("Gasto en Caja sin caja abierta: se rechaza sin tocar saldos")
+    void testCreateExpenseInCajaWithoutOpenSession() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cajaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("50.00"))
+                .description("Gasto fuera de caja")
+                .build();
+
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.createTransaction(req, "admin"));
+        assertTrue(ex.getMessage().contains("requieren una caja abierta"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Transferencia hacia Caja: se vincula a la caja abierta y suma al esperado")
+    void testTransferIntoCajaBindsOpenSession() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccountId(joacoAccount.getId())
+                .destinationAccountId(cajaAccount.getId())
+                .amount(new BigDecimal("80.00"))
+                .description("Ingreso de cambio")
+                .build();
+
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(joacoAccount.getId())).thenReturn(false);
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        CashSession session = openSession();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(joacoAccount, cajaAccount));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "0", "80.00");
+
+        FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
+
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("580.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("330.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("Transferencia desde Caja: se vincula a la caja abierta y resta del esperado")
+    void testTransferFromCajaBindsOpenSession() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccountId(cajaAccount.getId())
+                .destinationAccountId(joacoAccount.getId())
+                .amount(new BigDecimal("100.00"))
+                .description("Retiro de caja")
+                .build();
+
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        CashSession session = openSession();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(joacoAccount, cajaAccount));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "100.00", "0");
+
+        FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
+
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("150.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("Transferencia hacia Caja sin caja abierta: se rechaza")
+    void testTransferIntoCajaWithoutOpenSession() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccountId(joacoAccount.getId())
+                .destinationAccountId(cajaAccount.getId())
+                .amount(new BigDecimal("80.00"))
+                .description("Ingreso de cambio")
+                .build();
+
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(joacoAccount.getId())).thenReturn(false);
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalStateException.class, () -> financialTransactionService.createTransaction(req, "admin"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Movimiento fuera de Caja: ignora el cashSessionId del cliente y no toca la caja")
+    void testNonCashMovementIgnoresClientSession() {
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("30.00"))
+                .description("Comisión bancaria")
+                .cashSessionId(UUID.randomUUID())
+                .build();
+
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
         when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
 
-        assertNotNull(res);
-        assertEquals(new BigDecimal("450.00"), cajaAccount.getCurrentBalance());
-        verify(financialAccountRepository).save(cajaAccount);
+        assertNull(res.getCashSessionId());
+        verifyNoInteractions(cashSessionRepository);
+    }
+
+    @Test
+    @DisplayName("Editar un movimiento de una caja cerrada: se rechaza sin tocar saldos")
+    void testUpdateMovementOfClosedSessionRejected() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialTransaction tx = cashExpense(sessionId);
+        tx.setSourceAccount(cajaAccount);
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findByIdForUpdate(sessionId))
+                .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.CERRADA).build()));
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cajaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("60.00"))
+                .description("Corrección")
+                .build();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
+        assertTrue(ex.getMessage().contains("caja cerrada"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar un gasto de la caja abierta: recalcula el esperado de esa caja")
+    void testUpdateMovementOfOpenSessionRefreshesExpected() {
+        CashSession session = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+        FinancialTransaction tx = cashExpense(session.getId());
+        tx.setSourceAccount(cajaAccount);
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findByIdForUpdate(session.getId())).thenReturn(Optional.of(session));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(cajaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "60.00", "0");
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cajaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("60.00"))
+                .description("Corrección")
+                .build();
+
+        FinancialTransactionResponse res = financialTransactionService.updateTransaction(tx.getId(), req, "admin");
+
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("540.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("190.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("Mover un gasto a la cuenta Caja sin caja abierta: se rechaza")
+    void testUpdateMovingOntoCajaWithoutOpenSession() {
+        FinancialTransaction tx = cashExpense(null);
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cajaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("100.00"))
+                .description("A Caja")
+                .build();
+
+        assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Anular una transferencia de una caja cerrada: se rechaza sin tocar saldos")
+    void testVoidTransferOfClosedSessionRejected() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccount(cajaAccount)
+                .destinationAccount(joacoAccount)
+                .amount(new BigDecimal("100.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(sessionId)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findByIdForUpdate(sessionId))
+                .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.CERRADA).build()));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
+        assertTrue(ex.getMessage().contains("caja cerrada"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+    }
+
+    @Test
+    @DisplayName("Anular una transferencia hacia Caja de la caja abierta: el esperado deja de sumarla")
+    void testVoidTransferIntoCajaRefreshesExpected() {
+        CashSession session = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00"))
+                .expectedCash(new BigDecimal("330.00")).build();
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccount(joacoAccount)
+                .destinationAccount(cajaAccount)
+                .amount(new BigDecimal("80.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(session.getId())
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findByIdForUpdate(session.getId())).thenReturn(Optional.of(session));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "0", "0");
+
+        financialTransactionService.voidTransaction(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin");
+
+        assertEquals(new BigDecimal("420.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("250.00"), session.getExpectedCash());
     }
 
     @Test
@@ -289,8 +546,7 @@ class FinancialTransactionServiceTest {
         CashSession session = CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA)
                 .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
         when(cashSessionRepository.findByIdForUpdate(sessionId)).thenReturn(Optional.of(session));
-        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
-        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId)).thenReturn(BigDecimal.ZERO);
+        stubSessionSums(sessionId, "0", "0");
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         FinancialTransactionResponse res = financialTransactionService.voidCashExpense(
