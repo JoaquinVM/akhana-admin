@@ -35,8 +35,8 @@ public class AuthServiceImpl implements AuthService {
                 return new AuthenticationFailedException(GENERIC_AUTH_ERROR);
             });
 
-        if (!user.isActive()) {
-            log.warn("Authentication failed: User '{}' is inactive", username);
+        if (!user.isActive() || user.getDeletedAt() != null) {
+            log.warn("Authentication failed: User '{}' is inactive or deleted", username);
             throw new AuthenticationFailedException(GENERIC_AUTH_ERROR);
         }
 
@@ -53,7 +53,9 @@ public class AuthServiceImpl implements AuthService {
             token,
             user.getId(),
             user.getUsername(),
+            user.getFullName(),
             user.getRole(),
+            user.getPermissions() != null ? new java.util.HashSet<>(user.getPermissions()) : java.util.Set.of(),
             "Authentication successful"
         );
     }

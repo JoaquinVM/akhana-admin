@@ -10,7 +10,7 @@
   </div>
 
   <nav class="navbar-center nav-groups" (mouseleave)="closeAllMenus()" aria-label="Navegación Principal">
-    @for (group of navGroups; track group.id) {
+    @for (group of visibleNavGroups(); track group.id) {
       <div class="nav-group-container"
            [class.group-active]="isGroupActive(group)"
            [class.menu-open]="openGroupId() === group.id"

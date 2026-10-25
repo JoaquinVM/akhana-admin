@@ -54,8 +54,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 User user = userRepository.findByUsername(username).orElse(null);
 
-                if (user != null && user.isActive() && jwtService.isTokenValid(token, user.getUsername())) {
-                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+                if (user != null && user.isActive() && user.getDeletedAt() == null && jwtService.isTokenValid(token, user.getUsername())) {
+                    var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+                    if (user.getPermissions() != null) {
+                        for (String perm : user.getPermissions()) {
+                            authorities.add(new SimpleGrantedAuthority("PERMISSION_" + perm));
+                        }
+                    }
                     var authToken = UsernamePasswordAuthenticationToken.authenticated(user, null, authorities);
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
@@ -64,9 +70,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.setContext(context);
                     securityContextRepository.saveContext(context, request, response);
 
-                    log.debug("Authenticated user '{}' with role '{}' via JWT", username, user.getRole());
+                    log.debug("Authenticated user '{}' with role '{}' and {} permissions via JWT",
+                            username, user.getRole(), user.getPermissions() != null ? user.getPermissions().size() : 0);
                 } else {
-                    log.debug("User '{}' is inactive or token is invalid", username);
+                    log.debug("User '{}' is inactive, logically deleted, or token is invalid", username);
                 }
             }
         } catch (JwtException | IllegalArgumentException e) {

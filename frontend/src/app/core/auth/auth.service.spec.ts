@@ -44,7 +44,9 @@ describe('AuthService', () => {
       token: 'jwt.test.token',
       id: '123e4567-e89b-12d3-a456-426614174000',
       username: 'admin',
+      fullName: 'Administrador General',
       role: 'ADMIN',
+      permissions: ['SALES_POS', 'SECURITY_USERS'],
       message: 'Authentication successful'
     };
 
@@ -60,10 +62,15 @@ describe('AuthService', () => {
     expect(service.isAuthenticated()).toBe(true);
     expect(service.getToken()).toBe('jwt.test.token');
     expect(service.userRole()).toBe('ADMIN');
+    expect(service.permissions()).toEqual(['SALES_POS', 'SECURITY_USERS']);
+    expect(service.hasPermission('SALES_POS')).toBe(true);
+    expect(service.hasPermission('FINANCES_SUMMARY')).toBe(false);
     expect(service.getCurrentUser()).toEqual({
       id: '123e4567-e89b-12d3-a456-426614174000',
       username: 'admin',
-      role: 'ADMIN'
+      fullName: 'Administrador General',
+      role: 'ADMIN',
+      permissions: ['SALES_POS', 'SECURITY_USERS']
     });
     expect(localStorage.getItem('akhana_token')).toBe('jwt.test.token');
   });

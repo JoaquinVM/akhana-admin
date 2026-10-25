@@ -10,7 +10,8 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
   - `app.config.ts`: Configuración global de providers (`provideRouter`, `provideHttpClient(withInterceptors([authInterceptor]))`).
   - `app.routes.ts`: Enrutamiento principal. Configura layout protegido `MainLayoutComponent` para rutas internas (`/pos`, `/sales`, `/products`, `/categories`, `/tags`, `/users`), redirección por defecto de `/` a `/pos`, y `/login` para invitados.
   - `core/`:
-    - `auth/`: Modelos (`auth.models.ts`), servicio centralizado con Signals (`auth.service.ts`), interceptor JWT (`auth.interceptor.ts`) y guards de navegación (`auth.guard.ts`).
+    - `auth/`: Modelos (`auth.models.ts`), servicio centralizado con Signals (`auth.service.ts`), interceptor JWT (`auth.interceptor.ts`), guards de autenticación (`auth.guard.ts`) y control de acceso granular por permisos de submenú (`permission.guard.ts`).
+    - `user/`: Modelos (`user.models.ts`) y servicio HTTP (`user.service.ts`) para administración de usuarios, auditoría y matriz de permisos.
     - `supplier/`: Modelos (`supplier.models.ts`) y servicio HTTP (`supplier.service.ts`).
     - `category/`: Modelos (`category.models.ts`) y servicio HTTP (`category.service.ts`).
     - `tag/`: Modelos (`tag.models.ts`) y servicio HTTP (`tag.service.ts`).
@@ -20,8 +21,8 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `quick-product/`: Modelos de grupos y productos rápidos (`quick-product.models.ts`) y servicio reactivo con Signals (`quick-product.service.ts`).
     - `finance/`: Modelos del módulo financiero (`models/finance.models.ts`) y servicios HTTP reactivos con Signals (`financial-account.service.ts`, `financial-category.service.ts`, `financial-transaction.service.ts`, `finance-summary.service.ts`).
     - `navigation/`:
-      - `models/navigation.models.ts`: Interfaces `NavItem`, `NavGroup`.
-      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal (5 grupos corporativos: Ventas, Finanzas, Catálogo, Compras, Seguridad; grupo Finanzas con Resumen, Transacciones, Cuentas, Categorías).
+      - `models/navigation.models.ts`: Interfaces `NavItem` (con `permissionKey`), `NavGroup`.
+      - `navigation.config.ts`: Estructura centralizada y extensible del menú principal con 12 claves canónicas y catálogo exportado `PERMISSION_GROUPS_CONFIG`.
   - `shared/components/`:
     - `modal/`: Componente modal accesible con control de backdrop (`ModalComponent`).
     - `confirm-modal/`: Diálogo de confirmación para descarte o eliminación (`ConfirmModalComponent`).
@@ -61,6 +62,8 @@ Capa de interfaz de usuario para el panel de administración de Akhana. Proyecto
     - `cash/`:
       - `cash-history/`: Consulta histórica y auditoría de sesiones (`CashHistoryComponent`), accesible exclusivamente desde el menú Ventas.
       - `components/`: Componentes y modales reutilizables de caja: `OpenCashModalComponent`, `CloseCashModalComponent`, `CashDetailModalComponent` y `CashSessionInfoModalComponent`.
+    - `security/`:
+      - `users/` (`UsersComponent` en `/users`): Módulo de gestión integral de usuarios y permisos. Incluye tabla con acciones estándar (Ver auditoría con `AuditModalComponent`, Editar con inmutabilidad de username y detección reactiva de cambios `.is-modified`, y Dar de baja con confirmación), modales de creación y edición con matriz de permisos agrupada por menú y selección global.
     - `section-page/`: Contenedor reactivo data-driven reutilizable que renderiza el encabezado y estado de la sección activa según `route.data`.
 - `public/`:
   - `images/akhana-logo.png`: Logo oficial de Akhana (círculo zen dorado y follaje verde).

@@ -21,17 +21,20 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        initializeUserIfAbsent("admin", "12345admin", Role.ADMIN);
-        initializeUserIfAbsent("seller", "12345seller", Role.SELLER);
+        initializeUserIfAbsent("admin", "Administrador General", "12345admin", Role.ADMIN);
+        initializeUserIfAbsent("seller", "Vendedor", "12345seller", Role.SELLER);
     }
 
-    private void initializeUserIfAbsent(String username, String rawPassword, Role role) {
+    private void initializeUserIfAbsent(String username, String fullName, String rawPassword, Role role) {
         if (userRepository.findByUsername(username).isEmpty()) {
             User user = User.builder()
                 .username(username)
+                .fullName(fullName)
                 .password(passwordEncoder.encode(rawPassword))
                 .role(role)
                 .active(true)
+                .createdBy("SYSTEM")
+                .permissions(new java.util.HashSet<>(com.akhana.akhana_admin.model.UserPermission.allPermissionKeys()))
                 .build();
 
             userRepository.save(user);

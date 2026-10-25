@@ -13,7 +13,9 @@ import { FinanceSummaryComponent } from './pages/finances/summary/finance-summar
 import { TransactionsComponent } from './pages/finances/transactions/transactions.component';
 import { AccountsComponent } from './pages/finances/accounts/accounts.component';
 import { FinancialCategoriesComponent } from './pages/finances/categories/categories.component';
+import { UsersComponent } from './pages/security/users/users.component';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { permissionGuard } from './core/auth/permission.guard';
 
 export const routes: Routes = [
   {
@@ -28,20 +30,31 @@ export const routes: Routes = [
     children: [
       {
         path: 'pos',
-        component: PosComponent
+        component: PosComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'SALES_POS' }
       },
       {
         path: 'pos/sale',
-        component: RegisterSaleComponent
+        component: RegisterSaleComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'SALES_POS' }
       },
       {
         path: 'cash/history',
-        component: CashHistoryComponent
+        component: CashHistoryComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'SALES_CASH_HISTORY' }
       },
       {
         path: 'sales',
         component: SectionPageComponent,
-        data: { title: 'Ventas', subtitle: 'Historial y Reporte de Transacciones' }
+        canActivate: [permissionGuard],
+        data: {
+          permission: 'SALES_HISTORY',
+          title: 'Ventas',
+          subtitle: 'Historial y Reporte de Transacciones'
+        }
       },
       {
         path: 'finances',
@@ -50,40 +63,65 @@ export const routes: Routes = [
       },
       {
         path: 'finances/summary',
-        component: FinanceSummaryComponent
+        component: FinanceSummaryComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'FINANCES_SUMMARY' }
       },
       {
         path: 'finances/transactions',
-        component: TransactionsComponent
+        component: TransactionsComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'FINANCES_TRANSACTIONS' }
       },
       {
         path: 'finances/accounts',
-        component: AccountsComponent
+        component: AccountsComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'FINANCES_ACCOUNTS' }
       },
       {
         path: 'finances/categories',
-        component: FinancialCategoriesComponent
+        component: FinancialCategoriesComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'FINANCES_CATEGORIES' }
       },
       {
         path: 'products',
-        component: ProductsComponent
+        component: ProductsComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'CATALOG_PRODUCTS' }
       },
       {
         path: 'categories',
-        component: CategoriesComponent
+        component: CategoriesComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'CATALOG_CATEGORIES' }
       },
       {
         path: 'tags',
-        component: TagsComponent
+        component: TagsComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'CATALOG_TAGS' }
       },
       {
         path: 'suppliers',
-        component: SuppliersComponent
+        component: SuppliersComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'PURCHASES_SUPPLIERS' }
       },
       {
         path: 'users',
+        component: UsersComponent,
+        canActivate: [permissionGuard],
+        data: { permission: 'SECURITY_USERS' }
+      },
+      {
+        path: 'unauthorized',
         component: SectionPageComponent,
-        data: { title: 'Usuarios', subtitle: 'Gestión de Cuentas y Accesos' }
+        data: {
+          title: 'Acceso Restringido',
+          subtitle: 'No cuenta con permisos asignados para acceder a ningún módulo del sistema. Comuníquese con el administrador.'
+        }
       },
       {
         path: '',

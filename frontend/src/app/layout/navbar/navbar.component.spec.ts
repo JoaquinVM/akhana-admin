@@ -17,6 +17,7 @@ describe('NavbarComponent', () => {
   let router: Router;
   let mockAuthService: any;
   let currentUserSignal: any;
+  let permissionsSignal: any;
 
   const mockUser: UserSession = {
     id: 'user-1',
@@ -26,9 +27,17 @@ describe('NavbarComponent', () => {
 
   beforeEach(async () => {
     currentUserSignal = signal<UserSession | null>(mockUser);
+    permissionsSignal = signal<string[]>([
+      'SALES_POS', 'SALES_HISTORY', 'SALES_CASH_HISTORY',
+      'FINANCES_SUMMARY', 'FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS', 'FINANCES_CATEGORIES',
+      'CATALOG_PRODUCTS', 'CATALOG_CATEGORIES', 'CATALOG_TAGS',
+      'PURCHASES_SUPPLIERS', 'SECURITY_USERS'
+    ]);
 
     mockAuthService = {
       currentUser: currentUserSignal,
+      permissions: permissionsSignal,
+      hasPermission: vi.fn().mockImplementation((key: string) => permissionsSignal().includes(key)),
       logout: vi.fn()
     };
 
@@ -189,5 +198,27 @@ describe('NavbarComponent', () => {
 
     expect(mockAuthService.logout).toHaveBeenCalledTimes(1);
     expect(component.openGroupId()).toBeNull();
+  });
+
+  it('debe filtrar reactivamente los submenús y ocultar grupos no autorizados según permisos', () => {
+    permissionsSignal.set(['SALES_POS', 'SECURITY_USERS']);
+    fixture.detectChanges();
+
+    const groupLabels = fixture.debugElement
+      .queryAll(By.css('.group-label'))
+      .map(el => el.nativeElement.textContent.trim());
+
+    expect(groupLabels).toContain('Ventas');
+    expect(groupLabels).toContain('Seguridad');
+    expect(groupLabels).not.toContain('Finanzas');
+    expect(groupLabels).not.toContain('Catálogo');
+    expect(groupLabels).not.toContain('Compras');
+
+    component.openGroup('sales');
+    fixture.detectChanges();
+
+    const items = fixture.debugElement.queryAll(By.css('.dropdown-item'));
+    expect(items.length).toBe(1);
+    expect(items[0].nativeElement.textContent).toContain('POS');
   });
 });

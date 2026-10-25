@@ -4,6 +4,7 @@ export interface NavItem {
   icon?: string;
   badge?: string;
   caption?: string;
+  permissionKey?: string;
 }
 
 export interface NavGroup {

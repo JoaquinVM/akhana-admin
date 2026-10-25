@@ -4,8 +4,9 @@
 Gestión centralizada del modelo relacional, scripts SQL de creación, migraciones incrementales numeradas y definiciones de esquemas para la base de datos PostgreSQL (`akhana`).
 
 ## Estructura Interna
-- `migrations/`: Scripts SQL versionados (`V1__...sql` a `V8__create_financial_management_tables.sql`) para evolución incremental del esquema.
+- `migrations/`: Scripts SQL versionados (`V1__...sql` a `V9__create_user_management_and_permissions_tables.sql`) para evolución incremental del esquema.
   - `V8`: Tablas `financial_accounts`, `financial_categories` y `financial_transactions`, restricciones únicas condicionales (única cuenta QR activa, única categoría de ventas por tipo), semillas iniciales (Caja protegida, Cuenta bancaria BISA como QR inicial, Cuenta Joaco, Categoría Ventas).
+  - `V9`: Extensión de `app_users` con `full_name`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`. Creación de `user_permissions (user_id, permission_key)` con clave primaria compuesta e índices. Asignación inicial idempotente de los 12 permisos a usuarios existentes (`admin`, `seller`).
 - `schemas/`: Vistas consolidadas del modelo relacional actual (DDL canónico).
 - `seeds/`: Datos iniciales de prueba y catálogos maestros.
 

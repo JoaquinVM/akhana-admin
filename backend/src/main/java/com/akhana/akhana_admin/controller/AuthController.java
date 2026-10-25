@@ -37,7 +37,9 @@ public class AuthController {
         return ResponseEntity.ok(new UserProfileResponse(
             user.getId(),
             user.getUsername(),
-            user.getRole()
+            user.getFullName(),
+            user.getRole(),
+            user.getPermissions() != null ? new java.util.HashSet<>(user.getPermissions()) : java.util.Set.of()
         ));
     }
 }

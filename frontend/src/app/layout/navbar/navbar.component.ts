@@ -17,7 +17,23 @@ export class NavbarComponent implements OnInit {
   authService = inject(AuthService);
   readonly cashService = inject(CashService);
 
-  readonly navGroups: NavGroup[] = NAVIGATION_CONFIG;
+  // Navegación filtrada reactivamente según los permisos del usuario activo
+  readonly visibleNavGroups = computed<NavGroup[]>(() => {
+    if (typeof this.authService.permissions === 'function') {
+      this.authService.permissions();
+    }
+    return NAVIGATION_CONFIG.map(group => {
+      const authorizedChildren = group.children.filter(item => this.hasItemPermission(item));
+      return {
+        ...group,
+        children: authorizedChildren
+      };
+    }).filter(group => group.children.length > 0);
+  });
+
+  get navGroups(): NavGroup[] {
+    return this.visibleNavGroups();
+  }
 
   // Control estricto de menú desplegable único
   openGroupId = signal<string | null>(null);
@@ -41,6 +57,16 @@ export class NavbarComponent implements OnInit {
       return this.isCashOpen() ? 'Abierta' : 'Cerrada';
     }
     return item.badge || null;
+  }
+
+  hasItemPermission(item: NavItem): boolean {
+    if (!item.permissionKey) {
+      return true;
+    }
+    if (typeof this.authService.hasPermission === 'function') {
+      return this.authService.hasPermission(item.permissionKey);
+    }
+    return true;
   }
 
   isGroupActive(group: NavGroup): boolean {
