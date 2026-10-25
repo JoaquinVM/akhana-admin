@@ -100,6 +100,22 @@ describe('LoginComponent', () => {
     expect(component.errorMessage()).toBe('No fue posible comunicarse con el servidor. Intente nuevamente.');
   });
 
+  it('should display the backend message when login is blocked (429)', () => {
+    const message = 'Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente.';
+    const errorResponse = new HttpErrorResponse({ status: 429, error: { error: 'Too Many Requests', message } });
+    authServiceSpy.login.mockReturnValue(throwError(() => errorResponse));
+
+    component.loginForm.setValue({
+      username: 'admin',
+      password: 'any'
+    });
+
+    component.onSubmit();
+
+    expect(component.errorMessage()).toBe(message);
+    expect(component.loginForm.enabled).toBe(true);
+  });
+
   it('should toggle password visibility flag', () => {
     expect(component.showPassword()).toBe(false);
     component.togglePasswordVisibility();

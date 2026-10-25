@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface AuthService {
 
-    LoginResponse login(LoginRequest request);
+    LoginResponse login(LoginRequest request, String clientIp);
 
     void changePassword(UUID userId, ChangePasswordRequest request);
 }

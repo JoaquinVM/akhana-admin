@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 
@@ -20,13 +21,13 @@ import java.util.Date;
 public class JwtServiceImpl implements JwtService {
 
     private final String secret;
-    private final long expirationMs;
+    private final Duration expiration;
 
     public JwtServiceImpl(
             @Value("${security.jwt.secret}") String secret,
-            @Value("${security.jwt.expiration:86400000}") long expirationMs) {
+            @Value("${security.jwt.expiration:12h}") Duration expiration) {
         this.secret = secret;
-        this.expirationMs = expirationMs;
+        this.expiration = expiration;
     }
 
     private SecretKey getSigningKey() {
@@ -37,7 +38,7 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public String generateToken(User user) {
         Instant now = Instant.now();
-        Instant expiry = now.plusMillis(expirationMs);
+        Instant expiry = now.plus(expiration);
 
         return Jwts.builder()
                 .subject(user.getId().toString())

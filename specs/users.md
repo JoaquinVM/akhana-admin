@@ -220,7 +220,43 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 - **WHEN** la contraseña actual no coincide, o la nueva no cumple las reglas
 - **THEN** el backend responde 400 con el motivo y la contraseña no cambia
 
+### Requirement: Límite de intentos de login (USR-07, T-19)
+El sistema SHALL contar los intentos fallidos de login por nombre de usuario (sin distinguir mayúsculas ni espacios) y por IP de la conexión, y SHALL rechazar nuevos intentos durante un bloqueo cuando se supera el límite dentro de la ventana. Valores por defecto: 5 fallos por usuario o 20 por IP en 15 minutos, bloqueo de 15 minutos, configurables en `application.properties` (`security.login.*`). El contador vive en memoria (un solo servidor).
+
+#### Scenario: Bloqueo tras N fallos
+- **WHEN** un usuario acumula 5 fallos dentro de 15 minutos
+- **THEN** el quinto fallo y todo intento siguiente, incluso con la contraseña correcta, responden 429 `Too Many Requests` con "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente." y no se valida la contraseña ni se genera token
+
+#### Scenario: Desbloqueo al pasar el tiempo
+- **WHEN** termina el bloqueo, o pasan 15 minutos desde el primer fallo sin llegar al límite
+- **THEN** el contador se olvida y el usuario puede ingresar con normalidad
+
+#### Scenario: Login exitoso reinicia el contador
+- **WHEN** un usuario con fallos previos (sin bloqueo) ingresa con la contraseña correcta
+- **THEN** su contador vuelve a cero; el contador de la IP no se reinicia
+
+#### Scenario: Bloqueo por IP con usuarios distintos
+- **WHEN** desde una misma IP fallan 20 intentos dentro de 15 minutos, aunque sean con usuarios distintos
+- **THEN** esa IP queda bloqueada para cualquier usuario; desde otra IP el usuario puede ingresar
+
+#### Scenario: Usuario inexistente
+- **WHEN** se intenta ingresar con un usuario que no existe, inactivo o dado de baja
+- **THEN** el fallo cuenta igual y las respuestas (401 genérico y luego 429) son las mismas que para un usuario existente
+
+#### Scenario: IP detrás de un proxy
+- **WHEN** el pedido trae `X-Forwarded-For` y `FORWARD_HEADERS_STRATEGY` no está en `native`
+- **THEN** se usa la IP de la conexión y el encabezado se ignora; con `native` (solo detrás del proxy del VPS) Tomcat lo acepta únicamente desde direcciones internas
+
+#### Scenario: Mensaje en la pantalla de login
+- **WHEN** el login responde 429
+- **THEN** la pantalla de login muestra el mensaje del backend y deja el formulario habilitado
+
+#### Scenario: Duración del token
+- **WHEN** un usuario inicia sesión
+- **THEN** el token dura 12 h por defecto (`JWT_EXPIRATION`); al vencer, el siguiente pedido responde 401 y el frontend vuelve al login
+
 ### Tareas
+- [x] USR-07 / T-19: `LoginAttemptService` en memoria (usuario e IP), 429 `LoginBlockedException`, `security.login.*`, IP sin confiar en `X-Forwarded-For`, token de 12 h configurable, mensaje del backend en `/login` (25-10-2026).
 - [x] USR-06: migración `V2__user_must_change_password.sql`, `DataInitializer`, `POST /api/auth/change-password`, bloqueo en `JwtAuthenticationFilter`, pantalla `/change-password` (T-03, 25-10-2026).
 - [x] USR-05 / T-08 / T-13: roles Operador y Administrador con permisos por pantalla (`Permission`, `Role`), migración `V3__operator_administrator_roles.sql`, `@PreAuthorize` por pantalla en todos los controllers, 403 con mensaje en `GlobalExceptionHandler`, `EndpointAuthorizationTest` (matriz de todos los endpoints), selector de rol en `/users`, `PERMISSIONS` en `navigation.config.ts` (25-10-2026).
 - [x] P-33: permisos por pantalla; el POS anula gastos con `POST /api/finances/transactions/cash-expense/{id}/void` (25-10-2026).

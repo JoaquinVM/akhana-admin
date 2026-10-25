@@ -21,6 +21,13 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.unauthorized(ex.getMessage()));
     }
 
+    @ExceptionHandler(LoginBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleLoginBlocked(LoginBlockedException ex) {
+        return ResponseEntity
+            .status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(ErrorResponse.tooManyRequests(ex.getMessage()));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity

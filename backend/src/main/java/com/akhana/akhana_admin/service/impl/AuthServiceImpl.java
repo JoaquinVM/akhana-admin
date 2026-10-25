@@ -9,6 +9,7 @@ import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.AuthService;
 import com.akhana.akhana_admin.service.JwtService;
+import com.akhana.akhana_admin.service.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,30 +26,33 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
 
     private static final String GENERIC_AUTH_ERROR = "Invalid username or password";
 
     @Override
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, String clientIp) {
         String username = request.username().trim();
+        loginAttemptService.checkNotBlocked(username, clientIp);
 
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> {
-                log.warn("Authentication failed: User '{}' not found", username);
-                return new AuthenticationFailedException(GENERIC_AUTH_ERROR);
-            });
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            log.warn("Authentication failed: User '{}' not found", username);
+            throw failure(username, clientIp);
+        }
 
         if (!user.isActive() || user.getDeletedAt() != null) {
             log.warn("Authentication failed: User '{}' is inactive or deleted", username);
-            throw new AuthenticationFailedException(GENERIC_AUTH_ERROR);
+            throw failure(username, clientIp);
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             log.warn("Authentication failed: Incorrect password for user '{}'", username);
-            throw new AuthenticationFailedException(GENERIC_AUTH_ERROR);
+            throw failure(username, clientIp);
         }
 
+        loginAttemptService.recordSuccess(username);
         String token = jwtService.generateToken(user);
 
         log.info("User '{}' successfully authenticated with role '{}'", user.getUsername(), user.getRole());
@@ -63,6 +67,12 @@ public class AuthServiceImpl implements AuthService {
             user.isMustChangePassword(),
             user.isMustChangePassword() ? "Password change required" : "Authentication successful"
         );
+    }
+
+    /** Records the failure (which may throw LoginBlockedException) and returns the generic error. */
+    private AuthenticationFailedException failure(String username, String clientIp) {
+        loginAttemptService.recordFailure(username, clientIp);
+        return new AuthenticationFailedException(GENERIC_AUTH_ERROR);
     }
 
     @Override

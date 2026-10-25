@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class JwtServiceTest {
 
     private static final String TEST_SECRET = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
-    private static final long TEST_EXPIRATION = 3600000; // 1 hour
+    private static final Duration TEST_EXPIRATION = Duration.ofHours(1);
 
     private JwtService jwtService;
     private User testUser;
@@ -60,7 +61,7 @@ class JwtServiceTest {
     @DisplayName("Should detect expired token")
     void shouldDetectExpiredToken() {
         // Service with negative expiration -> immediately expired
-        JwtService expiredJwtService = new JwtServiceImpl(TEST_SECRET, -1000);
+        JwtService expiredJwtService = new JwtServiceImpl(TEST_SECRET, Duration.ofSeconds(-1));
         String token = expiredJwtService.generateToken(testUser);
 
         assertThat(expiredJwtService.isTokenExpired(token)).isTrue();

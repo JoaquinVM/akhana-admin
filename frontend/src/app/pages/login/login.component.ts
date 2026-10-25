@@ -56,6 +56,8 @@ export class LoginComponent {
         this.loginForm.enable();
         if (err.status === 401) {
           this.errorMessage.set('Credenciales no válidas. Verifique su usuario y contraseña.');
+        } else if (err.status === 429) {
+          this.errorMessage.set(err.error?.message ?? 'Demasiados intentos fallidos. Intente más tarde.');
         } else if (err.status === 0 || err.error instanceof ProgressEvent) {
           this.errorMessage.set('No fue posible comunicarse con el servidor. Intente nuevamente.');
         } else {

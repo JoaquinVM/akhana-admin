@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.dto.UserProfileResponse;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,8 +26,10 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        // getRemoteAddr only honors X-Forwarded-For when server.forward-headers-strategy enables a trusted proxy
+        LoginResponse response = authService.login(request, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
     }
 

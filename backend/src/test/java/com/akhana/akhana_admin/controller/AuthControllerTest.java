@@ -8,6 +8,7 @@ import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
+import com.akhana.akhana_admin.exception.LoginBlockedException;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,7 +61,7 @@ class AuthControllerTest {
         String fakeToken = "eyJhbGciOiJIUzI1NiJ9.fake.jwt.token";
         LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMINISTRATOR, "Authentication successful");
 
-        when(authService.login(any(LoginRequest.class))).thenReturn(response);
+        when(authService.login(any(LoginRequest.class), anyString())).thenReturn(response);
 
         String jsonPayload = """
             {
@@ -80,9 +82,39 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/auth/login - Retorna 429 con mensaje en español cuando el login está bloqueado")
+    void login_TooManyRequests_WhenBlocked() throws Exception {
+        when(authService.login(any(LoginRequest.class), anyString()))
+            .thenThrow(new LoginBlockedException("Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente."));
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\": \"admin\", \"password\": \"x\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.error").value("Too Many Requests"))
+            .andExpect(jsonPath("$.message").value("Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente."));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login - Usa la IP de la conexión e ignora X-Forwarded-For sin proxy configurado")
+    void login_UsesRemoteAddressNotForwardedHeader() throws Exception {
+        when(authService.login(any(LoginRequest.class), anyString()))
+            .thenReturn(new LoginResponse("t", UUID.randomUUID(), "admin", Role.ADMINISTRATOR, "Authentication successful"));
+
+        mockMvc.perform(post("/api/auth/login")
+                .with(request -> { request.setRemoteAddr("203.0.113.10"); return request; })
+                .header("X-Forwarded-For", "1.2.3.4")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\": \"admin\", \"password\": \"x\"}"))
+            .andExpect(status().isOk());
+
+        verify(authService).login(any(LoginRequest.class), eq("203.0.113.10"));
+    }
+
+    @Test
     @DisplayName("POST /api/auth/login - Retorna 401 Unauthorized cuando las credenciales son incorrectas")
     void login_Unauthorized_InvalidCredentials() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class), anyString()))
             .thenThrow(new AuthenticationFailedException("Invalid username or password"));
 
         String jsonPayload = """

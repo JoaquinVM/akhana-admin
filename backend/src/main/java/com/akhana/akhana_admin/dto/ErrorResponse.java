@@ -23,6 +23,10 @@ public record ErrorResponse(
         return new ErrorResponse("Conflict", message, Instant.now());
     }
 
+    public static ErrorResponse tooManyRequests(String message) {
+        return new ErrorResponse("Too Many Requests", message, Instant.now());
+    }
+
     public static ErrorResponse notFound(String message) {
         return new ErrorResponse("Not Found", message, Instant.now());
     }
