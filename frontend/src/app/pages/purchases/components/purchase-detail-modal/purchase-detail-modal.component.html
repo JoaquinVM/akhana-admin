@@ -1,0 +1,132 @@
+<app-modal
+  [isOpen]="!!purchaseId()"
+  [title]="purchase() ? 'Pedido ' + purchase()!.purchaseNumber : 'Pedido'"
+  [subtitle]="purchase() ? purchase()!.supplierName + ' · ' + (purchase()!.purchaseDate | date:'dd/MM/yyyy') : ''"
+  size="lg"
+  (close)="onClose()">
+
+  @if (isLoading()) {
+    <p class="loading">Cargando pedido…</p>
+  } @else if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  } @else if (purchase(); as p) {
+    <div class="detail">
+      <div class="summary-grid">
+        <div><span class="label">Estado de pago</span>
+          <span class="status-badge" [ngClass]="'pay-' + p.paymentStatus">{{ statusLabel(p.paymentStatus) }}</span>
+        </div>
+        <div><span class="label">Total líneas</span><strong>Bs {{ p.itemsTotal | number:'1.2-2' }}</strong></div>
+        <div><span class="label">Envío</span><strong>Bs {{ p.shippingCost | number:'1.2-2' }}</strong>
+          @if (p.shippingAccountName) { <span class="hint">desde {{ p.shippingAccountName }}</span> }
+        </div>
+        <div><span class="label">Total con envío</span><strong>Bs {{ p.totalAmount | number:'1.2-2' }}</strong></div>
+        <div><span class="label">Pagado</span><strong>Bs {{ p.paidAmount | number:'1.2-2' }}</strong></div>
+        <div><span class="label">Saldo</span><strong class="balance">Bs {{ p.balance | number:'1.2-2' }}</strong></div>
+      </div>
+      @if (p.consignment) {
+        <p class="hint">Pedido en consignación.</p>
+      }
+      @if (p.comment) {
+        <p class="comment">{{ p.comment }}</p>
+      }
+
+      <h4 class="section-title">Líneas</h4>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="text-right">Cantidad</th>
+              <th class="text-right">Costo unitario</th>
+              <th class="text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of p.items; track item.id) {
+              <tr>
+                <td>
+                  {{ item.productName }}
+                  @if (costChanged(item)) {
+                    <span class="cost-note">
+                      costo registrado Bs {{ item.previousUnitCost | number:'1.2-2' }}{{ item.costUpdated ? ' → actualizado' : ' (sin actualizar)' }}
+                    </span>
+                  }
+                </td>
+                <td class="text-right">{{ item.quantity | number:(item.saleUnit === 'KILOGRAM' ? '1.3-3' : '1.0-0') }} {{ item.saleUnit === 'KILOGRAM' ? 'kg' : 'u' }}</td>
+                <td class="text-right">Bs {{ item.unitCost | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ item.subtotal | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="section-title">Pagos</h4>
+      @if (p.payments.length === 0) {
+        <p class="hint">Sin pagos registrados.</p>
+      } @else {
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Origen</th>
+                <th>Registró</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (payment of p.payments; track payment.id) {
+                <tr>
+                  <td>{{ payment.paymentDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>{{ payment.accountName }}</td>
+                  <td>{{ payment.createdBy }}</td>
+                  <td class="text-right">Bs {{ payment.amount | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (canPay()) {
+        <form class="payment-form" (ngSubmit)="registerPayment()">
+          <h4 class="section-title">Registrar pago</h4>
+          @if (paymentError()) {
+            <div class="alert alert-danger" role="alert"><span>{{ paymentError() }}</span></div>
+          }
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="payment-account">Pagado desde <span class="required-mark">*</span></label>
+              <select id="payment-account" class="form-control" name="accountId"
+                      [ngModel]="paymentAccountId()" (ngModelChange)="paymentAccountId.set($event)">
+                <option value="">Seleccione…</option>
+                @for (account of accounts(); track account.id) {
+                  <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="payment-amount">Monto (Bs) <span class="required-mark">*</span></label>
+              <input id="payment-amount" type="number" min="0.01" step="0.01" class="form-control" name="amount"
+                     [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" />
+              <span class="form-hint">Saldo pendiente Bs {{ p.balance | number:'1.2-2' }}</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="payment-notes">Nota</label>
+              <input id="payment-notes" class="form-control" name="notes" maxlength="500"
+                     [ngModel]="paymentNotes()" (ngModelChange)="paymentNotes.set($event)" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="isPaying()">
+              {{ isPaying() ? 'Registrando…' : 'Registrar pago' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <p class="audit">Registrado por {{ p.createdBy }} el {{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+    </div>
+  }
+</app-modal>

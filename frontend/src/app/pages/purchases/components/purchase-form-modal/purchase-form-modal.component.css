@@ -1,0 +1,176 @@
+.purchase-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title,
+.section-subtitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: #111f0f;
+}
+
+.section-title {
+  font-size: 1rem;
+}
+
+.section-subtitle {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.lines-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.product-search {
+  position: relative;
+  flex: 1;
+}
+
+.product-matches {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.match-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.match-item:hover {
+  background: #f1f5f9;
+}
+
+.match-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.match-meta,
+.line-code,
+.unit-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.line-name {
+  display: block;
+  font-weight: 600;
+}
+
+.input-number {
+  display: inline-block;
+  width: 7rem;
+  text-align: right;
+}
+
+.unit-hint {
+  margin-left: 0.25rem;
+}
+
+.new-product-card {
+  padding: 1rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-lg);
+  background: #f8fafc;
+}
+
+.cost-alert-row td {
+  padding-top: 0;
+}
+
+.cost-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f5d38a;
+  border-radius: var(--radius-md);
+  background: #fff8e6;
+  font-size: 0.875rem;
+}
+
+.cost-alert p {
+  margin: 0;
+}
+
+.price-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.price-title {
+  width: 100%;
+  font-weight: 600;
+}
+
+.checkbox-label,
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.consignment-field {
+  justify-content: center;
+}
+
+.empty-lines {
+  color: #64748b;
+  padding: 1.5rem;
+}
+
+.totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.totals div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.grand-total strong {
+  font-size: 1.25rem;
+  color: var(--primary-color);
+}
+
+@media (max-width: 720px) {
+  .lines-header {
+    flex-wrap: wrap;
+  }
+
+  .totals {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}

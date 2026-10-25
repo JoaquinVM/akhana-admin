@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   CATEGORIES: 'CATEGORIES',
   TAGS: 'TAGS',
   SUPPLIERS: 'SUPPLIERS',
+  PURCHASES: 'PURCHASES',
   FINANCES_SUMMARY: 'FINANCES_SUMMARY',
   FINANCES_TRANSACTIONS: 'FINANCES_TRANSACTIONS',
   FINANCES_ACCOUNTS: 'FINANCES_ACCOUNTS',
@@ -33,7 +34,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'OPERATOR',
     label: 'Operador',
-    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo y proveedores. No entra a finanzas ni usuarios.'
+    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo, proveedores y pedidos con sus pagos. No entra a finanzas ni usuarios.'
   },
   {
     value: 'ADMINISTRATOR',
@@ -122,6 +123,11 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     id: 'purchases',
     label: 'Compras',
     children: [
+      {
+        label: 'Pedidos',
+        route: '/purchases',
+        permissionKey: PERMISSIONS.PURCHASES
+      },
       {
         label: 'Proveedores',
         route: '/suppliers',

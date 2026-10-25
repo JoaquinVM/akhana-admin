@@ -1,0 +1,122 @@
+<div class="purchases-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Compras</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Pedidos</span>
+      </nav>
+      <h1 class="page-title">Pedidos</h1>
+      <p class="page-subtitle">Compras a proveedores, envío y pagos</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openForm()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Nuevo pedido</span>
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+  }
+
+  <div class="filters-card">
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado de pago">
+      @for (filter of statusFilters; track filter.value) {
+        <button type="button" role="tab" class="filter-pill"
+                [class.active]="statusFilter() === filter.value"
+                [attr.aria-selected]="statusFilter() === filter.value"
+                (click)="setStatusFilter(filter.value)">
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+    <div class="filters-right">
+      <select class="form-control supplier-filter" aria-label="Filtrar por proveedor"
+              [ngModel]="supplierFilter()" (ngModelChange)="onSupplierFilter($event)">
+        <option value="">Todos los proveedores</option>
+        @for (supplier of suppliers(); track supplier.id) {
+          <option [value]="supplier.id">{{ supplier.name }}</option>
+        }
+      </select>
+      <input type="text" class="form-control search-input" placeholder="Buscar por número o comentario…"
+             aria-label="Buscar pedidos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">N.º</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Proveedor</th>
+            <th scope="col" class="text-right">Total líneas</th>
+            <th scope="col" class="text-right">Envío</th>
+            <th scope="col" class="text-right">Pagado</th>
+            <th scope="col" class="text-right">Saldo</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr><td colspan="9" class="text-center">Cargando pedidos…</td></tr>
+          } @else {
+            @for (purchase of purchases(); track purchase.id) {
+              <tr>
+                <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
+                <td>{{ purchase.purchaseDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ purchase.supplierName }}</td>
+                <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ purchase.balance | number:'1.2-2' }}</td>
+                <td><span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span></td>
+                <td class="text-right">
+                  <div class="table-actions" style="justify-content: flex-end">
+                    <button type="button" class="btn-icon" (click)="openDetail(purchase)"
+                            title="Ver detalle y pagos" aria-label="Ver detalle y pagos">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9">
+                  <div class="table-empty">
+                    <div class="table-empty-icon">📦</div>
+                    <h4 class="table-empty-title">No hay pedidos</h4>
+                    <p class="table-empty-desc">Pulse «Nuevo pedido» para registrar una compra.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <app-purchase-form-modal
+    [isOpen]="isFormOpen()"
+    [suppliers]="suppliers()"
+    [accounts]="accounts()"
+    (saved)="onPurchaseSaved($event)"
+    (close)="isFormOpen.set(false)" />
+
+  <app-purchase-detail-modal
+    [purchaseId]="detailPurchaseId()"
+    [accounts]="accounts()"
+    (paid)="onPaid($event)"
+    (close)="detailPurchaseId.set(null)" />
+</div>

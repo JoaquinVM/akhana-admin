@@ -1,0 +1,246 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Nuevo pedido"
+  subtitle="Proveedor, líneas, envío y comentario. Los pagos se registran desde el detalle."
+  size="xl"
+  [closeOnBackdrop]="false"
+  [closeOnEscape]="false"
+  (close)="onClose()">
+
+  <form class="purchase-form" (ngSubmit)="submit()">
+    @if (formError()) {
+      <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
+    }
+
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="purchase-supplier">Proveedor <span class="required-mark">*</span></label>
+        <select id="purchase-supplier" class="form-control" name="supplierId"
+                [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event)">
+          <option value="">Seleccione…</option>
+          @for (supplier of activeSuppliers(); track supplier.id) {
+            <option [value]="supplier.id">{{ supplier.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="purchase-date">Fecha del pedido</label>
+        <input id="purchase-date" type="date" class="form-control" name="purchaseDate" [max]="maxDate"
+               [ngModel]="purchaseDate()" (ngModelChange)="purchaseDate.set($event)" />
+      </div>
+      <div class="form-group consignment-field">
+        <label class="checkbox-label">
+          <input type="checkbox" name="consignment"
+                 [ngModel]="consignment()" (ngModelChange)="consignment.set($event)" />
+          <span>Consignación</span>
+        </label>
+        <span class="form-hint">Queda por pagar hasta registrar el pago.</span>
+      </div>
+    </div>
+
+    <!-- Buscador de productos para agregar líneas -->
+    <div class="lines-header">
+      <h4 class="section-title">Líneas</h4>
+      <div class="product-search">
+        <input type="text" class="form-control" placeholder="Buscar producto por nombre o código…"
+               name="productSearch" aria-label="Buscar producto"
+               [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)" />
+        @if (productMatches().length > 0) {
+          <ul class="product-matches" role="listbox">
+            @for (product of productMatches(); track product.id) {
+              <li>
+                <button type="button" class="match-item" (click)="addProduct(product)">
+                  <span class="match-name">{{ product.name }}</span>
+                  <span class="match-meta">{{ product.code }} · {{ product.supplierName }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+      <button type="button" class="btn btn-outline" (click)="openNewProduct()">+ Producto nuevo</button>
+    </div>
+
+    @if (showNewProduct()) {
+      <div class="new-product-card">
+        <h5 class="section-subtitle">Producto nuevo del proveedor del pedido</h5>
+        @if (newProductError()) {
+          <div class="alert alert-danger" role="alert"><span>{{ newProductError() }}</span></div>
+        }
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label class="form-label" for="np-code">Código</label>
+            <input id="np-code" class="form-control" name="npCode"
+                   [ngModel]="newProduct().code" (ngModelChange)="patchNewProduct({ code: $event })" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-name">Nombre</label>
+            <input id="np-name" class="form-control" name="npName"
+                   [ngModel]="newProduct().name" (ngModelChange)="patchNewProduct({ name: $event })" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-category">Categoría</label>
+            <select id="np-category" class="form-control" name="npCategory"
+                    [ngModel]="newProduct().categoryId" (ngModelChange)="patchNewProduct({ categoryId: $event })">
+              <option value="">Seleccione…</option>
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-unit">Se vende por</label>
+            <select id="np-unit" class="form-control" name="npUnit"
+                    [ngModel]="newProduct().saleUnit" (ngModelChange)="patchNewProduct({ saleUnit: $event })">
+              <option value="UNIT">Unidad</option>
+              <option value="KILOGRAM">Kilo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-buy">Costo (Bs)</label>
+            <input id="np-buy" type="number" min="0.01" step="0.01" class="form-control" name="npBuy"
+                   [ngModel]="newProduct().buyPrice" (ngModelChange)="patchNewProduct({ buyPrice: $event })" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-sell">Precio de venta (Bs)</label>
+            <input id="np-sell" type="number" min="0.01" step="0.01" class="form-control" name="npSell"
+                   [ngModel]="newProduct().sellPrice" (ngModelChange)="patchNewProduct({ sellPrice: $event })" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" (click)="showNewProduct.set(false)">Cancelar</button>
+          <button type="button" class="btn btn-primary" [disabled]="isCreatingProduct()" (click)="createProduct()">
+            {{ isCreatingProduct() ? 'Creando…' : 'Crear y agregar' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="table-responsive">
+      <table class="table lines-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th class="text-right">Cantidad</th>
+            <th class="text-right">Costo unitario (Bs)</th>
+            <th class="text-right">Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of lines(); track line.product.id; let i = $index) {
+            <tr>
+              <td>
+                <span class="line-name">{{ line.product.name }}</span>
+                <span class="line-code">{{ line.product.code }}</span>
+              </td>
+              <td class="text-right">
+                <input type="number" class="form-control input-number" [name]="'qty-' + i"
+                       [step]="isWeighted(line.product) ? 0.001 : 1" min="0"
+                       [ngModel]="line.quantity" (ngModelChange)="onQuantityChange(i, $event)" />
+                <span class="unit-hint">{{ isWeighted(line.product) ? 'kg' : 'u' }}</span>
+              </td>
+              <td class="text-right">
+                <input type="number" class="form-control input-number" [name]="'cost-' + i" step="0.01" min="0"
+                       [ngModel]="line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
+              </td>
+              <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
+              <td class="text-right">
+                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea">✕</button>
+              </td>
+            </tr>
+            @if (costDiffers(line)) {
+              <tr class="cost-alert-row">
+                <td colspan="5">
+                  <div class="cost-alert" role="alert">
+                    <p>
+                      El costo registrado de <strong>{{ line.product.name }}</strong> es
+                      <strong>Bs {{ line.product.buyPrice | number:'1.2-2' }}</strong> y en esta línea es
+                      <strong>Bs {{ line.unitCost | number:'1.2-2' }}</strong>.
+                    </p>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [name]="'update-' + i"
+                             [ngModel]="line.updateCost" (ngModelChange)="onUpdateCostToggle(i, $event)" />
+                      <span>Actualizar el costo del producto a Bs {{ line.unitCost | number:'1.2-2' }}</span>
+                    </label>
+                    @if (line.updateCost) {
+                      <div class="price-options">
+                        <span class="price-title">Precio de venta (actual Bs {{ line.product.sellPrice | number:'1.2-2' }})</span>
+                        @if (line.suggestion?.suggestedSellPrice !== null && line.suggestion) {
+                          <label class="radio-label">
+                            <input type="radio" [name]="'price-' + i" value="SUGGESTED"
+                                   [ngModel]="line.priceChoice" (ngModelChange)="updateLine(i, { priceChoice: $event })" />
+                            <span>Sugerido Bs {{ line.suggestion.suggestedSellPrice | number:'1.2-2' }}
+                              (mantiene {{ line.suggestion.currentPercentageProfit | number:'1.0-2' }} % de utilidad)</span>
+                          </label>
+                        } @else if (line.suggestion) {
+                          <span class="form-hint">El costo actual es 0: no hay utilidad porcentual que mantener.</span>
+                        }
+                        <label class="radio-label">
+                          <input type="radio" [name]="'price-' + i" value="CURRENT"
+                                 [ngModel]="line.priceChoice" (ngModelChange)="updateLine(i, { priceChoice: $event })" />
+                          <span>Mantener Bs {{ line.product.sellPrice | number:'1.2-2' }}</span>
+                        </label>
+                        <label class="radio-label">
+                          <input type="radio" [name]="'price-' + i" value="CUSTOM"
+                                 [ngModel]="line.priceChoice" (ngModelChange)="updateLine(i, { priceChoice: $event })" />
+                          <span>Otro:</span>
+                          <input type="number" class="form-control input-number" [name]="'custom-' + i" step="0.01" min="0.01"
+                                 [disabled]="line.priceChoice !== 'CUSTOM'"
+                                 [ngModel]="line.customPrice" (ngModelChange)="updateLine(i, { customPrice: $event })" />
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td colspan="5" class="text-center empty-lines">Busque un producto para agregar la primera línea.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="purchase-shipping">Costo de envío (Bs)</label>
+        <input id="purchase-shipping" type="number" min="0" step="0.01" class="form-control" name="shippingCost"
+               [ngModel]="shippingCost()" (ngModelChange)="shippingCost.set($event)" />
+        <span class="form-hint">Se registra como gasto de Transporte vinculado al pedido.</span>
+      </div>
+      @if (needsShippingAccount()) {
+        <div class="form-group">
+          <label class="form-label" for="purchase-shipping-account">Envío pagado desde <span class="required-mark">*</span></label>
+          <select id="purchase-shipping-account" class="form-control" name="shippingAccountId"
+                  [ngModel]="shippingAccountId()" (ngModelChange)="shippingAccountId.set($event)">
+            <option value="">Seleccione…</option>
+            @for (account of accounts(); track account.id) {
+              <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="form-group">
+        <label class="form-label" for="purchase-comment">Comentario</label>
+        <input id="purchase-comment" class="form-control" name="comment" maxlength="500"
+               [ngModel]="comment()" (ngModelChange)="comment.set($event)" />
+      </div>
+    </div>
+
+    <div class="totals">
+      <div><span>Total líneas</span><strong>Bs {{ itemsTotal() | number:'1.2-2' }}</strong></div>
+      <div><span>Envío</span><strong>Bs {{ (shippingCost() || 0) | number:'1.2-2' }}</strong></div>
+      <div class="grand-total"><span>Total con envío</span><strong>Bs {{ totalAmount() | number:'1.2-2' }}</strong></div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" (click)="onClose()" [disabled]="isSubmitting()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registrando…' : 'Registrar pedido' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

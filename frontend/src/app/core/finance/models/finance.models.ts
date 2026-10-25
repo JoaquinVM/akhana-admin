@@ -75,6 +75,8 @@ export interface FinancialTransaction {
   notes?: string;
   status: FinancialTransactionStatus;
   saleId?: string;
+  // COM-06: pago o envío de un pedido; se gestiona desde Compras
+  purchaseId?: string | null;
   cashSessionId?: string;
   sourceAccount: AccountSummary;
   destinationAccount?: AccountSummary;

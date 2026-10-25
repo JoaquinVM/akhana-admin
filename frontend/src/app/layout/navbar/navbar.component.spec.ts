@@ -28,7 +28,7 @@ describe('NavbarComponent', () => {
   beforeEach(async () => {
     currentUserSignal = signal<UserSession | null>(mockUser);
     permissionsSignal = signal<string[]>([
-      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS',
+      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS', 'PURCHASES',
       'FINANCES_SUMMARY', 'FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS', 'FINANCES_CATEGORIES', 'USERS'
     ]);
 
@@ -85,16 +85,18 @@ describe('NavbarComponent', () => {
     expect(groupLabels).not.toContain('Caja');
   });
 
-  it('debe desplegar la opción Proveedores al abrir el grupo Compras', () => {
+  it('debe desplegar Pedidos y Proveedores al abrir el grupo Compras', () => {
     component.openGroup('purchases');
     fixture.detectChanges();
 
     expect(component.openGroupId()).toBe('purchases');
     const menu = fixture.debugElement.query(By.css('.dropdown-menu'));
     expect(menu).toBeTruthy();
-    const item = menu.query(By.css('.dropdown-item'));
-    expect(item.nativeElement.textContent).toContain('Proveedores');
-    expect(item.nativeElement.getAttribute('href')).toBe('/suppliers');
+    const items = menu.queryAll(By.css('.dropdown-item'));
+    expect(items[0].nativeElement.textContent).toContain('Pedidos');
+    expect(items[0].nativeElement.getAttribute('href')).toBe('/purchases');
+    expect(items[1].nativeElement.textContent).toContain('Proveedores');
+    expect(items[1].nativeElement.getAttribute('href')).toBe('/suppliers');
   });
 
   it('debe desplegar POS, Ventas e Historial de cajas al abrir el grupo Ventas', () => {
@@ -222,7 +224,7 @@ describe('NavbarComponent', () => {
 
   it('el operador ve caja, ventas, catálogo y compras, pero no finanzas ni seguridad', () => {
     permissionsSignal.set([
-      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS'
+      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS', 'PURCHASES'
     ]);
     fixture.detectChanges();
 

@@ -4,6 +4,7 @@ import { ChangePasswordComponent } from './pages/change-password/change-password
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { SectionPageComponent } from './pages/section-page/section-page.component';
 import { SuppliersComponent } from './pages/suppliers/suppliers.component';
+import { PurchasesComponent } from './pages/purchases/purchases.component';
 import { CategoriesComponent } from './pages/categories/categories.component';
 import { TagsComponent } from './pages/tags/tags.component';
 import { ProductsComponent } from './pages/products/products.component';
@@ -115,6 +116,12 @@ export const routes: Routes = [
         component: SuppliersComponent,
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.SUPPLIERS }
+      },
+      {
+        path: 'purchases',
+        component: PurchasesComponent,
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.PURCHASES }
       },
       {
         path: 'users',
