@@ -86,7 +86,7 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 (Caja con la caja abierta, Bisa u otra cuenta activa), fecha y comentario.
 
 - **Cuando** se devuelven Bs 150,00 a Mami desde Bisa **entonces** se crea la devolución y un gasto
-  (`GASTO_MANUAL`) en Bisa con la categoría de sistema de devolución (ver Categorías de sistema), descripción
+  (`GASTO_MANUAL`) en Bisa con la categoría Pedido (P-34), descripción
   «Devolución a Mami», vinculado a la devolución (`financial_transactions.creditor_repayment_id`); baja el saldo
   de Bisa y la deuda con Mami.
 - **Cuando** se devuelve desde Caja **entonces** exige caja abierta («Los movimientos de la cuenta Caja
@@ -157,9 +157,8 @@ Registro de lo que paga el cliente después (`customer_collections`): cliente, m
 abierta, o la cuenta QR), fecha y comentario.
 
 - **Cuando** la tienda amiga paga Bs 50,00 en efectivo **entonces** se crea el cobro y un ingreso en Caja
-  vinculado a la caja abierta y al cobro (`financial_transactions.customer_collection_id`), con la categoría de
-  sistema de cobro (ver Categorías de sistema), descripción «Cobro a <cliente>»; sube el efectivo esperado y baja
-  el saldo por cobrar.
+  vinculado a la caja abierta y al cobro (`financial_transactions.customer_collection_id`), con la categoría
+  Venta (P-34), descripción «Cobro a <cliente>»; sube el efectivo esperado y baja el saldo por cobrar.
 - **Cuando** paga por QR **entonces** el ingreso entra a la cuenta QR (FIN-03).
 - **Cuando** se elige otra cuenta **entonces** se rechaza: «Los cobros entran a Caja o a la cuenta QR.»
 - **Cuando** no hay caja abierta y el cobro es a Caja **entonces** se rechaza: «Los movimientos de la cuenta
@@ -190,11 +189,11 @@ abierta, o la cuenta QR), fecha y comentario.
 
 ## Categorías de sistema
 
-La devolución a una persona es un gasto con la categoría de sistema `DEBT_REPAYMENT` y el cobro un ingreso con
-`CUSTOMER_COLLECTION` (`financial_categories.system_key`, que Finanzas no elimina). Supuesto P-34 mientras no se
-confirme: para que los reportes por categoría (FIN-10) coincidan con la planilla, la devolución usa la categoría
-Pedido (es el pago diferido de un pedido) y el cobro la categoría Venta; en ese caso las claves se agregan a esas
-filas en lugar de crear categorías nuevas.
+Decidido en P-34: para que los reportes por categoría (FIN-10) coincidan con la planilla, la devolución a una
+persona es un gasto con la categoría Pedido (es el pago diferido de un pedido) y el cobro un ingreso con la
+categoría Venta. No se crean categorías nuevas: Pedido ya es de sistema (`PURCHASE_PAYMENT`) y Venta ya existe
+como fila de sistema (T-17). Los reportes distinguen devoluciones y cobros por su vínculo
+(`creditor_repayment_id`, `customer_collection_id`), no por la categoría.
 
 ## API
 
@@ -218,8 +217,7 @@ filas en lugar de crear categorías nuevas.
 Deudas con personas (se puede construir ya):
 
 - [ ] Migración `V10__creditors.sql`: `creditors`, `creditor_repayments`, `purchase_payments.creditor_id` con
-  `account_id` opcional y `CHECK` de un solo origen, `financial_transactions.creditor_repayment_id`, clave de
-  sistema `DEBT_REPAYMENT`.
+  `account_id` opcional y `CHECK` de un solo origen y `financial_transactions.creditor_repayment_id`.
 - [ ] Permiso `DEBTS` (Operador y Administrador) y lectura de personas con `PURCHASES`.
 - [ ] `CreditorService`: ABM, deuda calculada, historial, devolución y su anulación.
 - [ ] `PurchaseService`: pago por persona y anulación de pago y de pedido con pagos por persona.
@@ -232,8 +230,7 @@ Deudas con personas (se puede construir ya):
 Cuentas por cobrar (junto con o después de CON-02):
 
 - [ ] Migración: `customers`, `customer_collections`, `sales.customer_id`, `sales.credit_amount`,
-  `CREDITO` en el `CHECK` de `sales.payment_method`, `financial_transactions.customer_collection_id`, clave de
-  sistema `CUSTOMER_COLLECTION`.
+  `CREDITO` en el `CHECK` de `sales.payment_method` y `financial_transactions.customer_collection_id`.
 - [ ] `SaleService`: crédito en la venta al costo y regla de anulación; `ExpectedCashCalculator` suma los cobros
   a Caja.
 - [ ] `CustomerService`: ABM, saldo calculado, historial, cobro y su anulación.

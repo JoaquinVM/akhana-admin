@@ -126,10 +126,10 @@ Detalle en `specs/debts.md` (escenarios del 25-10-2026). Pantalla Deudas, permis
 
 - **DEU-01** Registro de personas a las que el negocio puede deber dinero (ej. Mami): `creditors`, con nombre único sin distinguir mayúsculas, teléfono, descripción y baja lógica; no se da de baja con deuda mayor a 0.
 - **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con esa persona. Es el origen «persona» de COM-05: `purchase_payments.creditor_id`, con exactamente un origen (cuenta o persona). No crea movimiento financiero. Su anulación (COM-09) baja la deuda y se rechaza si ya se devolvió ese dinero.
-- **DEU-03** La devolución a la persona se registra desde Caja (con caja abierta) o desde una cuenta, y baja la deuda; no puede superarla. Genera un gasto vinculado (`financial_transactions.creditor_repayment_id`) que solo se anula desde Deudas, con motivo y no si su caja está cerrada.
+- **DEU-03** La devolución a la persona se registra desde Caja (con caja abierta) o desde una cuenta, y baja la deuda; no puede superarla. Genera un gasto con la categoría Pedido (P-34) vinculado (`financial_transactions.creditor_repayment_id`) que solo se anula desde Deudas, con motivo y no si su caja está cerrada.
 - **DEU-04** Saldo adeudado por persona e historial de lo que pagó y de lo que se le devolvió, con el saldo después de cada registro.
 - **DEU-05** Una venta al costo a la tienda amiga puede quedar total o parcialmente a crédito; el saldo pendiente queda como cuenta por cobrar a ese cliente. Clientes en `customers`; la venta guarda `customer_id` y `credit_amount` (método `CREDITO` si no se paga nada). Solo la venta al costo admite crédito (P-12). Se construye con CON-02.
-- **DEU-06** Los cobros posteriores se registran en Caja o en la cuenta QR y bajan el saldo por cobrar; no pueden superarlo. El cobro a Caja es un ingreso de caja que suma al efectivo esperado (CAJ-03, amplía FIN-02).
+- **DEU-06** Los cobros posteriores se registran en Caja o en la cuenta QR y bajan el saldo por cobrar; no pueden superarlo. Genera un ingreso con la categoría Venta (P-34); el cobro a Caja es un ingreso de caja que suma al efectivo esperado (CAJ-03, amplía FIN-02).
 - **DEU-07** Vista de saldos por cobrar por cliente, con historial de ventas a crédito y cobros.
 
 ### 3.5 Consumos y ventas al costo · V1
@@ -234,7 +234,7 @@ Requerimientos no funcionales, todos para la V1:
 
 ## 5. Preguntas
 
-No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3, salvo P-34, que tiene un supuesto y se confirma antes de los reportes de la V1. Cada respuesta se convierte en requerimientos de la sección 3.
+No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
 
 ### 5.1 Pendientes
 
@@ -245,7 +245,6 @@ No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó deci
 | P-09 | ¿Devoluciones de clientes después de cerrar la caja? | No. | V2 |
 | P-13 | ¿Otros métodos de pago (tarjeta, transferencia)? | Solo efectivo y QR. | V2 |
 | P-33 | ¿Qué variantes hay (sabor, tamaño) y comparten costo y precio? | Hasta la V2, cada variante sigue siendo un producto aparte. | V2 |
-| P-34 | ¿Con qué categoría se reportan la devolución a una persona y el cobro a la tienda amiga? | Devolución como Pedido y cobro como Venta, para que los reportes por categoría coincidan con la planilla (`specs/debts.md`). | Reportes V1 (FIN-10) |
 | P-01 | ¿Habrá más tiendas, depósitos o cajas? | Una tienda, una caja. | V3 |
 | P-10 | ¿Hay que emitir factura (SIN) o solo nota de venta? | Solo nota de venta. | V3 |
 | P-12 | ¿Se vende a crédito a clientes registrados (además de la tienda amiga)? | No. | V3 |
@@ -279,6 +278,7 @@ No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó deci
 | P-31 | ¿Qué productos se venden por peso? | Frutos secos y productos del proveedor Granel. Precio por kilo (decidido el 25-10-2026, CAT-08); antes de migrar se marcan en la planilla y se lleva su precio a Bs por kilo. |
 | P-32 | ¿Cómo se importan las ventas históricas? | Una venta histórica por día con sus líneas por producto, costo y utilidad, sin caja ni pagos. |
 | P-33 | ¿Los permisos son por acción o por pantalla? | Por pantalla: quien entra a una pantalla puede hacer todo en ella, incluidas las anulaciones (25-10-2026). El operador anula ventas y gastos de caja en el POS, y pedidos y pagos en Compras. |
+| P-34 | ¿Con qué categoría se reportan la devolución a una persona y el cobro a la tienda amiga? | La devolución como Pedido (es el pago diferido de un pedido) y el cobro como Venta, para que los reportes por categoría coincidan con la planilla (25-10-2026, DEU-03, DEU-06). |
 
 ## 6. Hoja de ruta
 
