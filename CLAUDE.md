@@ -34,7 +34,8 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 - Backend: `controller/`, `service/` + `service/impl/`, `repository/`, `model/`, `dto/`, `config/`, `exception/`.
 - Frontend: `core/<dominio>/` (models + service), `pages/<pantalla>/`, `layout/` (navbar),
   `shared/components/` (modal, confirm-modal, audit-modal, color-picker, sale-detail-modal).
-- Migraciones SQL: `database/migrations/` (pasan a Flyway en la fase 0, T-01).
+- Migraciones SQL (Flyway): `backend/src/main/resources/db/migration/V<n>__descripcion.sql`. Hibernate solo valida
+  (`ddl-auto=validate`): todo cambio de esquema es una migración nueva, nunca se edita una ya aplicada.
 
 ## Patrones de referencia: copiar en vez de explorar
 
