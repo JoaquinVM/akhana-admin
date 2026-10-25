@@ -23,6 +23,7 @@ describe('ProductService', () => {
     sellPrice: 50.00,
     fixedProfit: 10.00,
     percentageProfit: 25.00,
+    saleUnit: 'UNIT',
     status: 'ACTIVO',
     createdBy: 'admin',
     createdAt: '2026-09-28T10:00:00Z',

@@ -151,7 +151,8 @@ class ProductServiceTest {
                 List.of(tagId),
                 new BigDecimal("40.00"),
                 new BigDecimal("50.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                null
         );
 
         when(productRepository.existsByCodeIgnoreCaseAndStatusNot("PROD-002", ProductStatus.ELIMINADO)).thenReturn(false);
@@ -172,6 +173,7 @@ class ProductServiceTest {
         assertThat(response.fixedProfit()).isEqualByComparingTo("10.00");
         assertThat(response.percentageProfit()).isEqualByComparingTo("25.00");
         assertThat(response.status()).isEqualTo(ProductStatus.ACTIVO);
+        assertThat(response.saleUnit()).isEqualTo(SaleUnit.UNIT);
     }
 
     @Test
@@ -186,7 +188,8 @@ class ProductServiceTest {
                 null,
                 new BigDecimal("10.00"),
                 new BigDecimal("15.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                null
         );
 
         when(productRepository.existsByCodeIgnoreCaseAndStatusNot("PROD-001", ProductStatus.ELIMINADO)).thenReturn(true);
@@ -208,7 +211,8 @@ class ProductServiceTest {
                 null,
                 new BigDecimal("10.00"),
                 new BigDecimal("15.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                null
         );
 
         when(productRepository.existsByCodeIgnoreCaseAndStatusNot("PROD-999", ProductStatus.ELIMINADO)).thenReturn(false);
@@ -237,7 +241,8 @@ class ProductServiceTest {
                 null,
                 new BigDecimal("10.00"),
                 new BigDecimal("15.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                null
         );
 
         when(productRepository.existsByCodeIgnoreCaseAndStatusNot("PROD-NEW", ProductStatus.ELIMINADO)).thenReturn(false);
@@ -268,7 +273,8 @@ class ProductServiceTest {
                 List.of(tagId),
                 new BigDecimal("10.00"),
                 new BigDecimal("15.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                null
         );
 
         when(productRepository.existsByCodeIgnoreCaseAndStatusNot("PROD-NEW", ProductStatus.ELIMINADO)).thenReturn(false);
@@ -294,7 +300,8 @@ class ProductServiceTest {
                 List.of(tagId),
                 new BigDecimal("50.00"),
                 new BigDecimal("75.00"),
-                ProductStatus.ACTIVO
+                ProductStatus.ACTIVO,
+                SaleUnit.KILOGRAM
         );
 
         when(productRepository.findByIdWithRelations(productId)).thenReturn(Optional.of(activeProduct));
@@ -310,6 +317,7 @@ class ProductServiceTest {
         assertThat(response).isNotNull();
         assertThat(activeProduct.getFixedProfit()).isEqualByComparingTo("25.00");
         assertThat(activeProduct.getPercentageProfit()).isEqualByComparingTo("50.00");
+        assertThat(activeProduct.getSaleUnit()).isEqualTo(SaleUnit.KILOGRAM);
     }
 
     @Test

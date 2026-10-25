@@ -95,6 +95,7 @@ describe('ProductsComponent', () => {
       sellPrice: 50.00,
       fixedProfit: 10.00,
       percentageProfit: 25.00,
+      saleUnit: 'UNIT',
       status: 'ACTIVO',
       createdBy: 'admin',
       createdAt: '2026-09-28T10:00:00Z',
@@ -118,6 +119,7 @@ describe('ProductsComponent', () => {
       sellPrice: 35.00,
       fixedProfit: 15.00,
       percentageProfit: 75.00,
+      saleUnit: 'UNIT',
       status: 'INACTIVO',
       createdBy: 'admin',
       createdAt: '2026-09-28T11:00:00Z',
@@ -141,6 +143,7 @@ describe('ProductsComponent', () => {
       sellPrice: 15.00,
       fixedProfit: 5.00,
       percentageProfit: 50.00,
+      saleUnit: 'UNIT',
       status: 'ELIMINADO',
       createdBy: 'admin',
       createdAt: '2026-09-20T10:00:00Z',
@@ -267,7 +270,8 @@ describe('ProductsComponent', () => {
       categoryId: 'cat-1',
       supplierId: 'sup-1',
       buyPrice: 30,
-      sellPrice: 45
+      sellPrice: 45,
+      saleUnit: 'KILOGRAM'
     });
 
     const newProd: Product = {
@@ -287,7 +291,8 @@ describe('ProductsComponent', () => {
       categoryId: 'cat-1',
       supplierId: 'sup-1',
       buyPrice: 30,
-      sellPrice: 45
+      sellPrice: 45,
+      saleUnit: 'KILOGRAM'
     }));
     expect(component.isFormModalOpen()).toBe(false);
     expect(component.products()).toContainEqual(newProd);

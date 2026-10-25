@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
 import com.akhana.akhana_admin.model.ProductStatus;
+import com.akhana.akhana_admin.model.SaleUnit;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,5 +39,8 @@ public record ProductRequest(
     @DecimalMin(value = "0.01", message = "El precio de venta debe ser mayor a 0.")
     BigDecimal sellPrice,
 
-    ProductStatus status
+    ProductStatus status,
+
+    // Optional: null keeps UNIT on create and the current unit on update
+    SaleUnit saleUnit
 ) {}

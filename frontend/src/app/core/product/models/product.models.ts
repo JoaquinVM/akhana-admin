@@ -1,5 +1,8 @@
 export type ProductStatus = 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
+// CAT-08: KILOGRAM means the sell price is Bs per kg and quantities take up to 3 decimals
+export type SaleUnit = 'UNIT' | 'KILOGRAM';
+
 export interface ProductTagItem {
   id: string;
   name: string;
@@ -22,6 +25,7 @@ export interface Product {
   fixedProfit: number;
   percentageProfit: number;
   status: ProductStatus;
+  saleUnit: SaleUnit;
   createdBy: string;
   createdAt: string;
   updatedBy?: string | null;
@@ -40,4 +44,5 @@ export interface ProductRequest {
   buyPrice: number;
   sellPrice: number;
   status?: ProductStatus;
+  saleUnit?: SaleUnit;
 }

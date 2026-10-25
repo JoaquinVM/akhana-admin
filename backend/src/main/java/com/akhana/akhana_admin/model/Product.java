@@ -56,6 +56,11 @@ public class Product {
     @Builder.Default
     private ProductStatus status = ProductStatus.ACTIVO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sale_unit", nullable = false, length = 20)
+    @Builder.Default
+    private SaleUnit saleUnit = SaleUnit.UNIT;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "product_tags",

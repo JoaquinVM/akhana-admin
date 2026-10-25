@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.dto;
 
 import com.akhana.akhana_admin.model.Product;
 import com.akhana.akhana_admin.model.ProductStatus;
+import com.akhana.akhana_admin.model.SaleUnit;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,6 +26,7 @@ public record ProductResponse(
     BigDecimal fixedProfit,
     BigDecimal percentageProfit,
     ProductStatus status,
+    SaleUnit saleUnit,
     String createdBy,
     Instant createdAt,
     String updatedBy,
@@ -62,6 +64,7 @@ public record ProductResponse(
             product.getFixedProfit(),
             product.getPercentageProfit(),
             product.getStatus(),
+            product.getSaleUnit(),
             product.getCreatedBy(),
             product.getCreatedAt(),
             product.getUpdatedBy(),

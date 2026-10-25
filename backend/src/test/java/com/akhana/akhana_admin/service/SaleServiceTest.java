@@ -503,6 +503,7 @@ class SaleServiceTest {
     @Test
     @DisplayName("CAT-08: registra cantidades decimales por peso con subtotales en escala 2 HALF_UP")
     void shouldRegisterDecimalQuantityWithRoundedSubtotals() {
+        product1.setSaleUnit(SaleUnit.KILOGRAM);
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
@@ -539,6 +540,7 @@ class SaleServiceTest {
     @Test
     @DisplayName("CAT-08: rechaza cantidades en cero, negativas o con más de 3 decimales")
     void shouldRejectInvalidDecimalQuantities() {
+        product1.setSaleUnit(SaleUnit.KILOGRAM);
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
 
@@ -550,6 +552,19 @@ class SaleServiceTest {
         assertThatThrownBy(() -> saleService.registerSale(saleWithQuantity("0.1255"), "cajero"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("hasta 3 decimales");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("POS-10: un producto por unidad rechaza cantidades con decimales")
+    void shouldRejectDecimalQuantityForUnitProduct() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        assertThatThrownBy(() -> saleService.registerSale(saleWithQuantity("0.5"), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("debe ser entera");
 
         verify(saleRepository, never()).save(any(Sale.class));
     }

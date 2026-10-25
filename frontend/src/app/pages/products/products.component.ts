@@ -85,7 +85,8 @@ export class ProductsComponent implements OnInit {
     tagIds: [[] as string[]],
     buyPrice: [null, [Validators.required, Validators.min(0.01)]],
     sellPrice: [null, [Validators.required, Validators.min(0.01)]],
-    status: ['ACTIVO']
+    status: ['ACTIVO'],
+    saleUnit: ['UNIT']
   });
 
   // Lista de productos filtrada y ordenada por Nombre A-Z
@@ -200,7 +201,8 @@ export class ProductsComponent implements OnInit {
            this.isFieldModified('tagIds') ||
            this.isFieldModified('buyPrice') ||
            this.isFieldModified('sellPrice') ||
-           this.isFieldModified('status');
+           this.isFieldModified('status') ||
+           this.isFieldModified('saleUnit');
   });
 
   ngOnInit(): void {
@@ -386,7 +388,8 @@ export class ProductsComponent implements OnInit {
       tagIds: [],
       buyPrice: null,
       sellPrice: null,
-      status: 'ACTIVO'
+      status: 'ACTIVO',
+      saleUnit: 'UNIT'
     });
     this.formVersion.update(v => v + 1);
     this.isFormModalOpen.set(true);
@@ -409,7 +412,8 @@ export class ProductsComponent implements OnInit {
       tagIds: product.tags ? product.tags.map(t => t.id) : [],
       buyPrice: product.buyPrice,
       sellPrice: product.sellPrice,
-      status: product.status
+      status: product.status,
+      saleUnit: product.saleUnit ?? 'UNIT'
     };
 
     this.originalFormValues.set(initialData);
@@ -451,7 +455,8 @@ export class ProductsComponent implements OnInit {
       tagIds: [],
       buyPrice: null,
       sellPrice: null,
-      status: 'ACTIVO'
+      status: 'ACTIVO',
+      saleUnit: 'UNIT'
     });
     this.formVersion.update(v => v + 1);
   }
@@ -479,7 +484,8 @@ export class ProductsComponent implements OnInit {
       tagIds: val.tagIds || [],
       buyPrice: Number(val.buyPrice),
       sellPrice: Number(val.sellPrice),
-      status: this.isEditing() ? val.status : 'ACTIVO'
+      status: this.isEditing() ? val.status : 'ACTIVO',
+      saleUnit: val.saleUnit
     };
 
     if (this.isEditing() && this.selectedProductId()) {

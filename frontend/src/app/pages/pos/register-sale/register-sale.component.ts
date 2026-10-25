@@ -16,6 +16,13 @@ import {
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
+// POS-10 / CAT-08: el precio de los productos por peso es por kilo
+export const WEIGHT_STEP_KG = 0.1;
+export const WEIGHT_PRESETS: ReadonlyArray<{ label: string; kilograms: number }> = [
+  { label: '100 g', kilograms: 0.1 },
+  { label: '1/2 libra', kilograms: 0.227 }
+];
+
 export interface CartItem {
   product: Product;
   quantity: number;
@@ -43,6 +50,7 @@ export class RegisterSaleComponent implements OnInit {
   private readonly productService = inject(ProductService);
   readonly quickProductService = inject(QuickProductService);
   private readonly saleService = inject(SaleService);
+  readonly weightPresets = WEIGHT_PRESETS;
 
   // Estados de catálogo y búsqueda
   catalogProducts = signal<Product[]>([]);
@@ -86,8 +94,9 @@ export class RegisterSaleComponent implements OnInit {
   });
 
   // Computed: Métricas del Carrito
+  // Un producto por peso cuenta como un ítem, sin importar los kilos
   cartCount = computed<number>(() => {
-    return this.cartItems().reduce((sum, item) => sum + item.quantity, 0);
+    return this.cartItems().reduce((sum, item) => sum + (this.isWeighted(item.product) ? 1 : item.quantity), 0);
   });
 
   subtotalGross = computed<number>(() => {
@@ -215,18 +224,23 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   // Operaciones de Carrito
+  isWeighted(product: Product): boolean {
+    return product.saleUnit === 'KILOGRAM';
+  }
+
   addToCart(product: Product): void {
     const existing = this.cartItems().find((it) => it.product.id === product.id);
     if (existing) {
       this.incrementQuantity(product.id);
     } else {
+      const quantity = this.quantityStep(product);
       const newItem: CartItem = {
         product,
-        quantity: 1,
+        quantity,
         unitPrice: product.sellPrice,
         unitDiscount: 0,
         unitFinalPrice: product.sellPrice,
-        subtotal: product.sellPrice
+        subtotal: Math.round(quantity * product.sellPrice * 100) / 100
       };
       this.cartItems.update((items) => [...items, newItem]);
     }
@@ -235,46 +249,27 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   incrementQuantity(productId: string): void {
-    this.cartItems.update((items) =>
-      items.map((it) => {
-        if (it.product.id === productId) {
-          const newQty = it.quantity + 1;
-          return {
-            ...it,
-            quantity: newQty,
-            subtotal: Math.round(newQty * it.unitFinalPrice * 100) / 100
-          };
-        }
-        return it;
-      })
-    );
+    const item = this.cartItems().find((it) => it.product.id === productId);
+    if (!item) return;
+    this.updateQuantity(productId, item.quantity + this.quantityStep(item.product));
   }
 
   decrementQuantity(productId: string): void {
     const item = this.cartItems().find((it) => it.product.id === productId);
     if (!item) return;
+    this.updateQuantity(productId, item.quantity - this.quantityStep(item.product));
+  }
 
-    if (item.quantity > 1) {
-      this.cartItems.update((items) =>
-        items.map((it) => {
-          if (it.product.id === productId) {
-            const newQty = it.quantity - 1;
-            return {
-              ...it,
-              quantity: newQty,
-              subtotal: Math.round(newQty * it.unitFinalPrice * 100) / 100
-            };
-          }
-          return it;
-        })
-      );
-    } else {
-      this.removeFromCart(productId);
-    }
+  // POS-10: presentaciones rápidas de un producto por peso (precio por kilo)
+  applyWeightPreset(productId: string, kilograms: number): void {
+    this.updateQuantity(productId, kilograms);
   }
 
   updateQuantity(productId: string, quantity: number): void {
-    if (quantity <= 0) {
+    const item = this.cartItems().find((it) => it.product.id === productId);
+    if (!item) return;
+    const normalized = this.normalizeQuantity(item.product, Number(quantity) || 0);
+    if (normalized <= 0) {
       this.removeFromCart(productId);
       return;
     }
@@ -283,13 +278,25 @@ export class RegisterSaleComponent implements OnInit {
         if (it.product.id === productId) {
           return {
             ...it,
-            quantity,
-            subtotal: Math.round(quantity * it.unitFinalPrice * 100) / 100
+            quantity: normalized,
+            subtotal: Math.round(normalized * it.unitFinalPrice * 100) / 100
           };
         }
         return it;
       })
     );
+  }
+
+  // Por peso: kilos con hasta 3 decimales (paso de 100 g); por unidad: cantidades enteras
+  private quantityStep(product: Product): number {
+    return this.isWeighted(product) ? WEIGHT_STEP_KG : 1;
+  }
+
+  private normalizeQuantity(product: Product, quantity: number): number {
+    if (quantity <= 0) return 0;
+    return this.isWeighted(product)
+      ? Math.round(quantity * 1000) / 1000
+      : Math.max(1, Math.round(quantity));
   }
 
   updateUnitDiscount(productId: string, discount: number): void {

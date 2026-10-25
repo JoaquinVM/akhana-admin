@@ -523,6 +523,24 @@
         </div>
       </div>
 
+      <!-- Unidad de venta (CAT-08) -->
+      <div class="form-group">
+        <label class="form-label" for="product-sale-unit">
+          <span>Se vende por <span class="required-mark">*</span></span>
+          @if (isFieldModified('saleUnit')) {
+            <span class="field-modified-badge">Modificado</span>
+          }
+        </label>
+        <select
+          id="product-sale-unit"
+          class="form-control"
+          [class.is-modified]="isFieldModified('saleUnit')"
+          formControlName="saleUnit">
+          <option value="UNIT">Unidad</option>
+          <option value="KILOGRAM">Peso (precio por kilo)</option>
+        </select>
+      </div>
+
       <!-- Fila de Precios y Utilidad Automática -->
       <div class="form-row prices-row">
         <!-- Precio Compra -->

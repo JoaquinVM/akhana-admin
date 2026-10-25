@@ -8,6 +8,7 @@ import com.akhana.akhana_admin.dto.ProductResponse;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
 import com.akhana.akhana_admin.model.ProductStatus;
+import com.akhana.akhana_admin.model.SaleUnit;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
@@ -90,6 +91,7 @@ class ProductControllerTest {
                 new BigDecimal("10.00"),
                 new BigDecimal("25.00"),
                 ProductStatus.ACTIVO,
+                SaleUnit.UNIT,
                 "admin",
                 Instant.now(),
                 null,

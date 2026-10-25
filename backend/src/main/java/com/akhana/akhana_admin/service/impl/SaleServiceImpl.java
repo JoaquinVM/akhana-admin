@@ -68,7 +68,7 @@ public class SaleServiceImpl implements SaleService {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' no se encuentra activo para la venta.");
             }
 
-            BigDecimal qty = normalizeQuantity(itemReq.quantity(), product.getName());
+            BigDecimal qty = normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
             BigDecimal unitPrice = product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
             // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
             BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
@@ -296,8 +296,9 @@ public class SaleServiceImpl implements SaleService {
         financialTransactionRepository.save(tx);
     }
 
-    // Quantities may be decimal for products sold by weight (CAT-08): more than 0, up to 3 decimals
-    static BigDecimal normalizeQuantity(BigDecimal quantity, String productName) {
+    // Quantities may be decimal for products sold by weight (CAT-08): more than 0, up to 3 decimals;
+    // products sold by unit only take whole quantities
+    static BigDecimal normalizeQuantity(BigDecimal quantity, String productName, SaleUnit saleUnit) {
         if (quantity == null) {
             return BigDecimal.ONE.setScale(3);
         }
@@ -306,6 +307,9 @@ public class SaleServiceImpl implements SaleService {
         }
         if (quantity.stripTrailingZeros().scale() > 3) {
             throw new IllegalArgumentException("La cantidad de '" + productName + "' admite hasta 3 decimales.");
+        }
+        if (saleUnit != SaleUnit.KILOGRAM && quantity.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("La cantidad de '" + productName + "' debe ser entera: se vende por unidad.");
         }
         return quantity.setScale(3);
     }

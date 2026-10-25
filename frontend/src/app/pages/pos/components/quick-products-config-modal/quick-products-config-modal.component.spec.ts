@@ -28,6 +28,7 @@ describe('QuickProductsConfigModalComponent', () => {
     sellPrice: 25,
     fixedProfit: 15,
     percentageProfit: 150,
+    saleUnit: 'UNIT',
     status: 'ACTIVO',
     createdBy: 'admin',
     createdAt: '2026-01-01'
@@ -47,6 +48,7 @@ describe('QuickProductsConfigModalComponent', () => {
     sellPrice: 18,
     fixedProfit: 10,
     percentageProfit: 125,
+    saleUnit: 'UNIT',
     status: 'ACTIVO',
     createdBy: 'admin',
     createdAt: '2026-01-01'

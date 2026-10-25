@@ -129,6 +129,7 @@ public class ProductServiceImpl implements ProductService {
                 .fixedProfit(fixedProfit)
                 .percentageProfit(percentageProfit)
                 .status(status)
+                .saleUnit(request.saleUnit() != null ? request.saleUnit() : SaleUnit.UNIT)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
                 .createdAt(Instant.now())
                 .build();
@@ -195,6 +196,9 @@ public class ProductServiceImpl implements ProductService {
 
         if (request.status() != null && request.status() != ProductStatus.ELIMINADO) {
             product.setStatus(request.status());
+        }
+        if (request.saleUnit() != null) {
+            product.setSaleUnit(request.saleUnit());
         }
 
         product.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");

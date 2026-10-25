@@ -211,6 +211,22 @@
               <div class="item-identity">
                 <span class="item-code">{{ item.product.code }}</span>
                 <strong class="item-name" [title]="item.product.name">{{ item.product.name }}</strong>
+                <!-- Presentaciones rápidas por peso (POS-10) -->
+                @if (isWeighted(item.product)) {
+                  <div class="weight-presets">
+                    <span class="weight-unit">Peso en kg:</span>
+                    @for (preset of weightPresets; track preset.label) {
+                      <button
+                        type="button"
+                        class="weight-preset-btn"
+                        [class.active]="item.quantity === preset.kilograms"
+                        [title]="preset.label + ' = ' + preset.kilograms + ' kg'"
+                        (click)="applyWeightPreset(item.product.id, preset.kilograms)">
+                        {{ preset.label }}
+                      </button>
+                    }
+                  </div>
+                }
               </div>
 
               <!-- Control de Cantidad -->
@@ -226,8 +242,11 @@
                 </button>
                 <input
                   type="number"
-                  min="1"
+                  [min]="isWeighted(item.product) ? 0.001 : 1"
+                  [step]="isWeighted(item.product) ? 0.001 : 1"
                   class="qty-input"
+                  [class.qty-input-weight]="isWeighted(item.product)"
+                  [title]="isWeighted(item.product) ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
                   [ngModel]="item.quantity"
                   (ngModelChange)="updateQuantity(item.product.id, $event)" />
                 <button
@@ -264,7 +283,7 @@
                   @if (item.unitDiscount > 0) {
                     <span class="old-price">Bs {{ item.unitPrice | number:'1.2-2' }}</span>
                   }
-                  <span class="final-unit-price">Bs {{ item.unitFinalPrice | number:'1.2-2' }} c/u</span>
+                  <span class="final-unit-price">Bs {{ item.unitFinalPrice | number:'1.2-2' }} {{ isWeighted(item.product) ? '/kg' : 'c/u' }}</span>
                 </div>
                 <strong class="item-subtotal">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
               </div>

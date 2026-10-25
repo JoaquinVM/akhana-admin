@@ -35,6 +35,7 @@ describe('RegisterSaleComponent', () => {
     sellPrice: 20,
     fixedProfit: 10,
     percentageProfit: 100,
+    saleUnit: 'UNIT',
     status: 'ACTIVO',
     createdBy: 'admin',
     createdAt: '2026-01-01'
@@ -54,6 +55,7 @@ describe('RegisterSaleComponent', () => {
     sellPrice: 15,
     fixedProfit: 7,
     percentageProfit: 87.5,
+    saleUnit: 'UNIT',
     status: 'ACTIVO',
     createdBy: 'admin',
     createdAt: '2026-01-01'
@@ -170,6 +172,59 @@ describe('RegisterSaleComponent', () => {
     component.decrementQuantity(mockProduct2.id); // de 1 pasa a 0 -> se remueve
     expect(component.cartItems().length).toBe(1);
     expect(component.cartItems()[0].product.id).toBe('prod-1');
+  });
+
+  describe('POS-10: venta por peso', () => {
+    // Almendras a Bs 80,00 el kilo
+    const weightProduct: Product = { ...mockProduct1, id: 'prod-kg', code: 'G001', name: 'Almendras', sellPrice: 80, saleUnit: 'KILOGRAM' };
+
+    it('agrega 100 g y suma de a 100 g sin errores de redondeo', () => {
+      component.addToCart(weightProduct);
+      expect(component.cartItems()[0].quantity).toBe(0.1);
+      expect(component.cartItems()[0].subtotal).toBe(8);
+
+      component.incrementQuantity(weightProduct.id);
+      component.incrementQuantity(weightProduct.id);
+      expect(component.cartItems()[0].quantity).toBe(0.3);
+      expect(component.subtotalGross()).toBe(24);
+      expect(component.cartCount()).toBe(1);
+    });
+
+    it('aplica las presentaciones rápidas 100 g y 1/2 libra', () => {
+      component.addToCart(weightProduct);
+      component.applyWeightPreset(weightProduct.id, 0.227);
+      expect(component.cartItems()[0].quantity).toBe(0.227);
+      expect(component.cartItems()[0].subtotal).toBe(18.16);
+      expect(component.checkoutItems()[0].quantity).toBe(0.227);
+
+      component.applyWeightPreset(weightProduct.id, 0.1);
+      expect(component.cartItems()[0].quantity).toBe(0.1);
+    });
+
+    it('acepta kilos con hasta 3 decimales y redondea el resto', () => {
+      component.addToCart(weightProduct);
+      component.updateQuantity(weightProduct.id, 0.3755);
+      expect(component.cartItems()[0].quantity).toBe(0.376);
+      expect(component.cartItems()[0].subtotal).toBe(30.08);
+    });
+
+    it('un producto por unidad sigue con cantidades enteras', () => {
+      component.addToCart(mockProduct1);
+      component.updateQuantity(mockProduct1.id, 2.4);
+      expect(component.cartItems()[0].quantity).toBe(2);
+      component.updateQuantity(mockProduct1.id, 0.4);
+      expect(component.cartItems()[0].quantity).toBe(1);
+    });
+
+    it('muestra las presentaciones solo en productos por peso', () => {
+      component.addToCart(mockProduct1);
+      component.addToCart(weightProduct);
+      fixture.detectChanges();
+      const buttons = fixture.nativeElement.querySelectorAll('.weight-preset-btn');
+      expect(buttons.length).toBe(2);
+      expect(buttons[0].textContent.trim()).toBe('100 g');
+      expect(buttons[1].textContent.trim()).toBe('1/2 libra');
+    });
   });
 
   it('debe calcular descuentos unitarios y descuento general correctamente', () => {

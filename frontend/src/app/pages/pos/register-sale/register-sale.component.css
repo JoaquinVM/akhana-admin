@@ -504,7 +504,7 @@
 
 .cart-item-row {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) 84px 92px minmax(80px, auto) 28px;
+  grid-template-columns: minmax(110px, 1fr) auto 92px minmax(80px, auto) 28px;
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
@@ -586,6 +586,49 @@
 .qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+.qty-input.qty-input-weight {
+  width: 52px;
+}
+
+.qty-stepper:has(.qty-input-weight) {
+  width: 104px;
+}
+
+.weight-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.weight-unit {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.weight-preset-btn {
+  height: 22px;
+  padding: 0 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: 0.75rem;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.weight-preset-btn:hover {
+  background: #f1f5f9;
+}
+
+.weight-preset-btn.active {
+  border-color: var(--primary-color, #2e5b27);
+  color: var(--primary-color, #2e5b27);
+  font-weight: 600;
 }
 
 .item-discount-group {

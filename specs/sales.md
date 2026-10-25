@@ -94,6 +94,35 @@ El sistema SHALL aceptar en cada línea de venta una cantidad mayor a 0 con hast
 - **WHEN** la cantidad es 0, negativa o tiene más de 3 decimales
 - **THEN** la venta se rechaza con «La cantidad de '<producto>' debe ser mayor a 0.» o «… admite hasta 3 decimales.» y no se guarda nada
 
+#### Scenario: Producto por unidad con decimales
+- **WHEN** la cantidad de un producto con `sale_unit = UNIT` tiene decimales (ej. 0,5)
+- **THEN** la venta se rechaza con «La cantidad de '<producto>' debe ser entera: se vende por unidad.» y no se guarda nada
+
+---
+
+### Requirement: Venta por peso en el carrito (POS-10, CAT-08)
+El sistema SHALL permitir en `/pos/sale` vender en kilos los productos con `sale_unit = KILOGRAM`, cuyo precio de venta es Bs por kilo, con cantidades de hasta 3 decimales y presentaciones rápidas «100 g» (0,100 kg) y «1/2 libra» (0,227 kg). Los productos por unidad siguen con cantidades enteras.
+
+#### Scenario: Agregar un producto por peso
+- **WHEN** se agrega al carrito un producto por kilo de Bs 80,00
+- **THEN** la línea entra con 0,100 kg y subtotal Bs 8,00, el precio se muestra «Bs 80,00 /kg» y la línea cuenta como un ítem
+
+#### Scenario: Sumar y restar de a 100 g
+- **WHEN** se pulsa + dos veces sobre esa línea
+- **THEN** la cantidad pasa a 0,300 kg (sin errores de redondeo) y el subtotal a Bs 24,00; con − la cantidad baja 100 g y la línea se quita al llegar a 0
+
+#### Scenario: Presentaciones rápidas
+- **WHEN** se pulsa «1/2 libra» en la línea de un producto por peso
+- **THEN** la cantidad pasa a 0,227 kg, el subtotal a Bs 18,16 (para Bs 80,00 /kg) y el botón queda marcado; «100 g» la deja en 0,100 kg
+
+#### Scenario: Cantidad escrita a mano
+- **WHEN** se escribe 0,3755 en la cantidad de un producto por peso
+- **THEN** se toma 0,376 kg (3 decimales); en un producto por unidad se toma el entero más cercano, mínimo 1
+
+#### Scenario: Presentaciones solo para productos por peso
+- **WHEN** el carrito tiene un producto por unidad y uno por peso
+- **THEN** solo la línea del producto por peso muestra los botones «100 g» y «1/2 libra»
+
 ---
 
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
