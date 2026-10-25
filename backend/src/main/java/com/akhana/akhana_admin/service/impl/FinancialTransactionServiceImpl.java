@@ -40,6 +40,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private final ExpectedCashCalculator expectedCashCalculator;
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
+    static final String AMOUNT_EDIT = "El monto de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
+    static final String ACCOUNT_EDIT = "La cuenta de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
     static final String CLOSED_SESSION_EDIT = "No se pueden editar movimientos de una caja cerrada; corríjalos en la caja actual.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String INITIAL_BALANCE_VOID = "El saldo inicial de una cuenta no se puede anular.";
@@ -227,46 +229,18 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalArgumentException("No se puede cambiar el tipo de una transacción ya registrada.");
         }
 
-        BigDecimal newAmount = normalizeAmount(request.getAmount());
+        // Money movements are immutable (T-05): amount and account are fixed once registered
+        if (normalizeAmount(request.getAmount()).compareTo(tx.getAmount()) != 0) {
+            throw new IllegalArgumentException(AMOUNT_EDIT);
+        }
+        if (!tx.getSourceAccount().getId().equals(request.getSourceAccountId())) {
+            throw new IllegalArgumentException(ACCOUNT_EDIT);
+        }
 
-        // A movement of a closed session is immutable (CAJ-06); one moved onto Caja is bound to the open session (T-16)
-        Optional<CashSession> lockedSession;
+        // A movement of a closed session is immutable (CAJ-06); same lock order as T-14: movement, then session
         if (tx.getCashSessionId() != null) {
-            lockedSession = Optional.of(lockSessionIfOpen(tx.getCashSessionId(), CLOSED_SESSION_EDIT));
-        } else {
-            lockedSession = isCashAccount(request.getSourceAccountId()) ? Optional.of(lockOpenSession()) : Optional.empty();
+            lockSessionIfOpen(tx.getCashSessionId(), CLOSED_SESSION_EDIT);
         }
-        UUID currentSourceId = tx.getSourceAccount().getId();
-        Map<UUID, FinancialAccount> accounts = lockAccounts(currentSourceId, request.getSourceAccountId());
-        FinancialAccount currentSource = accounts.get(currentSourceId);
-        FinancialAccount targetSource = currentSource;
-
-        if (!currentSource.getId().equals(request.getSourceAccountId())) {
-            targetSource = activeAccount(accounts, request.getSourceAccountId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Nueva cuenta origen no encontrada con ID: " + request.getSourceAccountId()));
-        }
-
-        // Revertir impacto del monto anterior
-        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL) {
-            currentSource.setCurrentBalance(currentSource.getCurrentBalance().subtract(tx.getAmount()));
-        } else if (tx.getType() == FinancialTransactionType.GASTO_MANUAL) {
-            currentSource.setCurrentBalance(currentSource.getCurrentBalance().add(tx.getAmount()));
-        }
-
-        // Aplicar nuevo impacto
-        if (request.getType() == FinancialTransactionType.INGRESO_MANUAL) {
-            if (Boolean.TRUE.equals(targetSource.getIsCashAccount())) {
-                throw new IllegalStateException("Los ingresos manuales no pueden registrarse en la cuenta Caja.");
-            }
-            targetSource.setCurrentBalance(targetSource.getCurrentBalance().add(newAmount));
-        } else if (request.getType() == FinancialTransactionType.GASTO_MANUAL) {
-            targetSource.setCurrentBalance(targetSource.getCurrentBalance().subtract(newAmount));
-        }
-
-        if (!currentSource.getId().equals(targetSource.getId())) {
-            financialAccountRepository.save(currentSource);
-        }
-        financialAccountRepository.save(targetSource);
 
         if (request.getCategoryId() != null) {
             FinancialCategory category = financialCategoryRepository.findByIdAndDeletedAtIsNull(request.getCategoryId())
@@ -280,19 +254,12 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             tx.setCategory(category);
         }
 
-        tx.setSourceAccount(targetSource);
-        tx.setCashSessionId(Boolean.TRUE.equals(targetSource.getIsCashAccount())
-                ? lockedSession.map(CashSession::getId).orElse(null)
-                : null);
-        tx.setAmount(newAmount);
         tx.setDescription(request.getDescription().trim());
         tx.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
         tx.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
         tx.setUpdatedAt(Instant.now());
 
         FinancialTransaction updatedTx = financialTransactionRepository.save(tx);
-
-        lockedSession.ifPresent(this::refreshExpectedCash);
 
         return mapToResponse(updatedTx);
     }

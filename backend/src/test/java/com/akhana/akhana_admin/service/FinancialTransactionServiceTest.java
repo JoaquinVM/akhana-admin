@@ -303,7 +303,7 @@ class FinancialTransactionServiceTest {
                 .type(FinancialTransactionType.GASTO_MANUAL)
                 .sourceAccountId(cajaAccount.getId())
                 .categoryId(expenseCat.getId())
-                .amount(new BigDecimal("60.00"))
+                .amount(new BigDecimal("100.00"))
                 .description("Corrección")
                 .build();
 
@@ -315,41 +315,70 @@ class FinancialTransactionServiceTest {
     }
 
     @Test
-    @DisplayName("Editar un gasto de la caja abierta: recalcula el esperado de esa caja")
-    void testUpdateMovementOfOpenSessionRefreshesExpected() {
+    @DisplayName("T-05: editar descripción y categoría de un gasto de la caja abierta no toca saldos ni el esperado")
+    void testUpdateDescriptionAndCategoryKeepsBalances() {
         CashSession session = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
-                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+                .openingAmount(new BigDecimal("200.00")).expectedCash(new BigDecimal("150.00")).build();
         FinancialTransaction tx = cashExpense(session.getId());
         tx.setSourceAccount(cajaAccount);
+        FinancialCategory otherExpenseCat = FinancialCategory.builder()
+                .id(UUID.randomUUID()).name("Limpieza").type(FinancialCategoryType.GASTO).build();
         when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
         when(cashSessionRepository.findByIdForUpdate(session.getId())).thenReturn(Optional.of(session));
-        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(cajaAccount));
-        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(otherExpenseCat.getId())).thenReturn(Optional.of(otherExpenseCat));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
-        stubSessionSums(session.getId(), "60.00", "0");
 
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()
                 .type(FinancialTransactionType.GASTO_MANUAL)
                 .sourceAccountId(cajaAccount.getId())
+                .categoryId(otherExpenseCat.getId())
+                .amount(new BigDecimal("100.00"))
+                .description("  Productos de limpieza  ")
+                .notes(" Factura 12 ")
+                .build();
+
+        FinancialTransactionResponse res = financialTransactionService.updateTransaction(tx.getId(), req, "admin");
+
+        assertEquals("Productos de limpieza", res.getDescription());
+        assertEquals("Factura 12", tx.getNotes());
+        assertEquals(otherExpenseCat, tx.getCategory());
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("100.00"), res.getAmount());
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("150.00"), session.getExpectedCash());
+        verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
+        verify(financialAccountRepository, never()).save(any());
+        verify(cashSessionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("T-05: editar el monto de un movimiento se rechaza; se corrige anulando y registrando de nuevo")
+    void testUpdateAmountChangeRejected() {
+        FinancialTransaction tx = cashExpense(null);
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
                 .categoryId(expenseCat.getId())
                 .amount(new BigDecimal("60.00"))
                 .description("Corrección")
                 .build();
 
-        FinancialTransactionResponse res = financialTransactionService.updateTransaction(tx.getId(), req, "admin");
-
-        assertEquals(session.getId(), res.getCashSessionId());
-        assertEquals(new BigDecimal("540.00"), cajaAccount.getCurrentBalance());
-        assertEquals(new BigDecimal("190.00"), session.getExpectedCash());
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
+        assertTrue(ex.getMessage().contains("anúlelo y regístrelo de nuevo"));
+        assertEquals(new BigDecimal("100.00"), tx.getAmount());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+        verifyNoInteractions(financialAccountRepository, cashSessionRepository);
     }
 
     @Test
-    @DisplayName("Mover un gasto a la cuenta Caja sin caja abierta: se rechaza")
-    void testUpdateMovingOntoCajaWithoutOpenSession() {
+    @DisplayName("T-05: cambiar la cuenta de un movimiento se rechaza; se corrige anulando y registrando de nuevo")
+    void testUpdateAccountChangeRejected() {
         FinancialTransaction tx = cashExpense(null);
         when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
-        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
-        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
 
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()
                 .type(FinancialTransactionType.GASTO_MANUAL)
@@ -359,9 +388,14 @@ class FinancialTransactionServiceTest {
                 .description("A Caja")
                 .build();
 
-        assertThrows(IllegalStateException.class,
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
+        assertTrue(ex.getMessage().contains("anúlelo y regístrelo de nuevo"));
+        assertEquals(bisaAccount, tx.getSourceAccount());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any());
+        verifyNoInteractions(financialAccountRepository, cashSessionRepository);
     }
 
     @Test
@@ -629,7 +663,7 @@ class FinancialTransactionServiceTest {
     }
 
     @Test
-    @DisplayName("T-18: la edición normaliza el monto y conserva la fecha original del movimiento")
+    @DisplayName("T-18: la edición compara el monto normalizado y conserva la fecha original del movimiento")
     void testUpdateNormalizesAmountAndKeepsDate() {
         Instant originalDate = Instant.parse("2026-10-01T15:00:00Z");
         FinancialTransaction tx = FinancialTransaction.builder()
@@ -643,22 +677,22 @@ class FinancialTransactionServiceTest {
                 .build();
 
         when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
-        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
         when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
+        // 100.004 rounds to the stored 100.00, so it is not an amount change
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()
                 .type(FinancialTransactionType.GASTO_MANUAL)
                 .sourceAccountId(bisaAccount.getId())
                 .categoryId(expenseCat.getId())
-                .amount(new BigDecimal("50.125"))
+                .amount(new BigDecimal("100.004"))
                 .description("Corrección")
                 .build();
 
         FinancialTransactionResponse res = financialTransactionService.updateTransaction(tx.getId(), req, "admin");
 
-        assertEquals(new BigDecimal("50.13"), res.getAmount());
-        assertEquals(new BigDecimal("1049.87"), bisaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("100.00"), res.getAmount());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         assertEquals(originalDate, res.getTransactionDate());
     }
 

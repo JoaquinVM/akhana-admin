@@ -84,24 +84,28 @@ El sistema SHALL permitir administrar categorías clasificadas obligatoriamente 
 ---
 
 ### Requirement: Registro y edición de ingresos manuales
-El sistema SHALL permitir registrar y editar ingresos manuales en cualquier cuenta distinta de Caja, especificando cuenta, monto, categoría de ingreso, descripción y comentario opcional. La fecha del movimiento la pone el servidor al registrarlo (T-18).
+El sistema SHALL permitir registrar ingresos manuales en cualquier cuenta distinta de Caja, especificando cuenta, monto, categoría de ingreso, descripción y comentario opcional. La fecha del movimiento la pone el servidor al registrarlo (T-18). Un ingreso registrado solo admite editar descripción, comentario y categoría; el monto y la cuenta no cambian (T-05).
 
 #### Scenario: Registro exitoso de ingreso manual
 - **WHEN** el usuario registra un ingreso manual de 500.00 Bs en la «Cuenta bancaria BISA» con categoría «Aportes»
 - **THEN** el sistema crea la transacción en estado `ACTIVO` con la fecha/hora actual del servidor, incrementa el saldo de la cuenta en 500.00 Bs y registra el usuario como auditoría de registro
 
 #### Scenario: Monto con más de dos decimales (T-18)
-- **WHEN** el usuario registra o edita un ingreso, gasto o transferencia con un monto de 10.555 Bs
+- **WHEN** el usuario registra un ingreso, gasto o transferencia con un monto de 10.555 Bs
 - **THEN** el sistema lo guarda como 10.56 Bs (escala 2, `HALF_UP`); un monto que redondea a 0.00 Bs se rechaza
 
-#### Scenario: Edición de ingreso manual
-- **WHEN** el usuario modifica el monto o descripción de un ingreso manual existente
-- **THEN** el sistema ajusta el saldo de la cuenta por la diferencia, actualiza los datos, conserva la fecha original del movimiento y la auditoría de registro, registrando usuario y fecha de modificación
+#### Scenario: Edición de ingreso manual (T-05)
+- **WHEN** el usuario modifica la descripción, el comentario o la categoría de un ingreso manual existente
+- **THEN** el sistema actualiza esos datos sin tocar el saldo de la cuenta, valida que la categoría sea de tipo INGRESO, conserva el monto, la cuenta, la fecha original y la auditoría de registro, y registra usuario y fecha de modificación
+
+#### Scenario: Corrección de monto o cuenta de un ingreso (T-05)
+- **WHEN** el pedido de edición de un ingreso cambia el monto o la cuenta
+- **THEN** el sistema lo rechaza indicando que el error se corrige anulando el movimiento y registrándolo de nuevo, sin tocar saldos
 
 ---
 
 ### Requirement: Registro de gastos manuales y gastos de caja
-El sistema SHALL permitir registrar y editar gastos manuales en cualquier cuenta (incluida Caja), y proveer un acceso específico desde la pantalla de Caja con la cuenta Caja preseleccionada y bloqueada.
+El sistema SHALL permitir registrar gastos manuales en cualquier cuenta (incluida Caja), y proveer un acceso específico desde la pantalla de Caja con la cuenta Caja preseleccionada y bloqueada. Un gasto registrado solo admite editar descripción, comentario y categoría (T-05).
 
 #### Scenario: Registro de gasto en cuenta bancaria
 - **WHEN** el usuario registra un gasto de 200.00 Bs en la «Cuenta Joaco» con categoría «Servicios»
@@ -110,6 +114,14 @@ El sistema SHALL permitir registrar y editar gastos manuales en cualquier cuenta
 #### Scenario: Registro de gasto directo desde terminal de Caja
 - **WHEN** el usuario ejecuta «Registrar gasto de caja» desde la interfaz de Caja
 - **THEN** el sistema abre el formulario de gasto con la cuenta «Caja» fijada sin posibilidad de cambio y registra la transacción afectando el efectivo de caja
+
+#### Scenario: Edición de gasto manual (T-05)
+- **WHEN** el usuario modifica la descripción, el comentario o la categoría de un gasto manual existente, incluido un gasto de la caja abierta
+- **THEN** el sistema actualiza esos datos sin tocar el saldo de la cuenta ni el efectivo esperado de la caja, valida que la categoría sea de tipo GASTO y conserva monto, cuenta, caja y fecha original
+
+#### Scenario: Corrección de monto o cuenta de un gasto (T-05)
+- **WHEN** el pedido de edición de un gasto cambia el monto o la cuenta
+- **THEN** el sistema lo rechaza indicando que el error se corrige anulando el movimiento y registrándolo de nuevo; un gasto de una caja cerrada tampoco se edita (T-16)
 
 ---
 
