@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.dto.PriceSuggestionResponse;
 import com.akhana.akhana_admin.dto.PurchaseDeliveryRequest;
 import com.akhana.akhana_admin.dto.PurchaseItemRequest;
 import com.akhana.akhana_admin.dto.PurchasePaymentRequest;
+import com.akhana.akhana_admin.dto.PurchasePaymentResponse;
 import com.akhana.akhana_admin.dto.PurchaseRequest;
 import com.akhana.akhana_admin.dto.PurchaseResponse;
 import com.akhana.akhana_admin.dto.VoidPurchaseRequest;
@@ -48,6 +49,7 @@ class PurchaseServiceTest {
     @Mock private FinancialAccountRepository financialAccountRepository;
     @Mock private FinancialCategoryRepository financialCategoryRepository;
     @Mock private FinancialTransactionRepository financialTransactionRepository;
+    @Mock private CreditorRepository creditorRepository;
 
     private PurchaseServiceImpl purchaseService;
 
@@ -59,12 +61,13 @@ class PurchaseServiceTest {
     private FinancialCategory pedido;
     private FinancialCategory transporte;
     private CashSession openSession;
+    private Creditor mami;
 
     @BeforeEach
     void setUp() {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
-            financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository));
+            financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -83,6 +86,9 @@ class PurchaseServiceTest {
             .systemKey(FinancialCategorySystemKey.PURCHASE_PAYMENT).build();
         transporte = FinancialCategory.builder().id(UUID.randomUUID()).name("Transporte").type(FinancialCategoryType.GASTO)
             .systemKey(FinancialCategorySystemKey.PURCHASE_SHIPPING).build();
+        mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
+        when(creditorRepository.findByIdForUpdate(mami.getId())).thenReturn(Optional.of(mami));
+        when(creditorRepository.findAllByIdForUpdate(any())).thenReturn(List.of(mami));
         openSession = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
             .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO).build();
 
@@ -121,7 +127,7 @@ class PurchaseServiceTest {
 
     private PurchaseRequest request(List<PurchaseItemRequest> items, String shipping, UUID shippingAccountId, boolean consignment) {
         return new PurchaseRequest(supplier.getId(), null, items, shipping != null ? new BigDecimal(shipping) : null,
-            shippingAccountId, consignment, "  Pedido semanal  ", null, null, null);
+            shippingAccountId, consignment, "  Pedido semanal  ", null, null, null, null);
     }
 
     private Purchase existingPurchase(String itemsTotal, String paid) {
@@ -183,7 +189,7 @@ class PurchaseServiceTest {
             .hasMessage("El pedido debe tener al menos una línea.");
 
         PurchaseRequest future = new PurchaseRequest(supplier.getId(), LocalDate.now(ZoneId.of("America/La_Paz")).plusDays(1),
-            List.of(line(tea, "1", "10")), null, null, false, null, null, null, null);
+            List.of(line(tea, "1", "10")), null, null, false, null, null, null, null, null);
         assertThatThrownBy(() -> purchaseService.registerPurchase(future, "operator"))
             .hasMessage("La fecha del pedido no puede ser futura.");
 
@@ -405,7 +411,7 @@ class PurchaseServiceTest {
         Purchase purchase = existingPurchase("300.00", "0.00");
 
         PurchaseResponse res = purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("100"), null), "operator");
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("100"), null), "operator");
 
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
@@ -431,20 +437,20 @@ class PurchaseServiceTest {
         Purchase purchase = existingPurchase("300.00", "100.00");
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("200.01"), null), "operator"))
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("200.01"), null), "operator"))
             .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("0.004"), null), "operator"))
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("0.004"), null), "operator"))
             .hasMessage("El monto debe ser estrictamente mayor a 0.00 Bs.");
         verify(financialTransactionRepository, never()).save(any());
 
         PurchaseResponse res = purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("200"), null), "operator");
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("200"), null), "operator");
         assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
         assertThat(res.balance()).isEqualByComparingTo("0.00");
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("1"), null), "operator"))
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("1"), null), "operator"))
             .hasMessage("El pago supera el saldo pendiente del pedido (Bs 0.00).");
     }
 
@@ -456,7 +462,7 @@ class PurchaseServiceTest {
             .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(bisa.getId(), new BigDecimal("50"), null), "operator"))
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("50"), null), "operator"))
             .hasMessage("No existe la categoría Pedido; no se puede registrar el pago.");
         assertThat(purchase.getPaidAmount()).isEqualByComparingTo("0.00");
         verify(financialTransactionRepository, never()).save(any());
@@ -469,14 +475,14 @@ class PurchaseServiceTest {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(caja.getId(), new BigDecimal("50"), null), "operator"))
+            new PurchasePaymentRequest(caja.getId(), null, new BigDecimal("50"), null), "operator"))
             .hasMessage("Los movimientos de la cuenta Caja requieren una caja abierta.");
         assertThat(purchase.getPaidAmount()).isEqualByComparingTo("0.00");
 
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(openSession));
         when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(openSession.getId())).thenReturn(new BigDecimal("50.00"));
         PurchaseResponse res = purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(caja.getId(), new BigDecimal("50"), "Pagó Juan"), "operator");
+            new PurchasePaymentRequest(caja.getId(), null, new BigDecimal("50"), "Pagó Juan"), "operator");
 
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
@@ -494,7 +500,7 @@ class PurchaseServiceTest {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(openSession));
 
         purchaseService.registerPayment(purchase.getId(),
-            new PurchasePaymentRequest(caja.getId(), new BigDecimal("50"), null), "operator");
+            new PurchasePaymentRequest(caja.getId(), null, new BigDecimal("50"), null), "operator");
 
         var order = inOrder(purchaseRepository, cashSessionRepository, financialAccountRepository);
         order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
@@ -508,7 +514,7 @@ class PurchaseServiceTest {
 
     private PurchaseRequest deliveryRequest(DeliveryType type, DeliveryStatus status, LocalDate date) {
         return new PurchaseRequest(supplier.getId(), TODAY.minusDays(3), List.of(line(tea, "1", "10")), null, null,
-            false, null, type, status, date);
+            false, null, type, status, date, null);
     }
 
     @Test
@@ -781,5 +787,158 @@ class PurchaseServiceTest {
         verify(productRepository, never()).save(any());
         verify(productPriceChangeRepository, never()).save(any());
         verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
+    }
+
+    // ---------------------------------------------------------------- DEU-02
+
+    private PurchasePaymentRequest byMami(String amount) {
+        return new PurchasePaymentRequest(null, mami.getId(), new BigDecimal(amount), null);
+    }
+
+    private PurchasePayment addMamiPayment(Purchase purchase, String amount) {
+        PurchasePayment payment = PurchasePayment.builder().id(UUID.randomUUID()).purchase(purchase).creditor(mami)
+            .amount(new BigDecimal(amount)).paymentDate(Instant.now()).status(PurchasePaymentRecordStatus.ACTIVO).build();
+        purchase.getPayments().add(payment);
+        return payment;
+    }
+
+    @Test
+    @DisplayName("DEU-02: Mami paga Bs 200 de un pedido de Bs 300: queda a cuenta, sin movimiento ni cambio de cuentas")
+    void registerPayment_byPerson() {
+        Purchase purchase = existingPurchase("300.00", "0.00");
+
+        PurchaseResponse res = purchaseService.registerPayment(purchase.getId(), byMami("200"), "operator");
+
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.A_CUENTA);
+        assertThat(res.balance()).isEqualByComparingTo("100.00");
+        assertThat(res.payments()).hasSize(1);
+        assertThat(res.payments().get(0).creditorName()).isEqualTo("Mami");
+        assertThat(res.payments().get(0).accountId()).isNull();
+        assertThat(res.payments().get(0).financialTransactionId()).isNull();
+        verify(financialTransactionRepository, never()).save(any());
+        verify(financialAccountRepository, never()).findActiveByIdForUpdate(any());
+        verifyNoInteractions(cashSessionRepository);
+
+        var order = inOrder(purchaseRepository, creditorRepository);
+        order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
+        order.verify(creditorRepository).findByIdForUpdate(mami.getId());
+
+        res = purchaseService.registerPayment(purchase.getId(), byMami("100"), "operator");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
+    }
+
+    @Test
+    @DisplayName("DEU-02: pago por persona mayor al saldo, persona inactiva u origen doble o vacío se rechazan")
+    void registerPayment_byPersonRejections() {
+        Purchase purchase = existingPurchase("300.00", "100.00");
+
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("200.01"), "operator"))
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
+            new PurchasePaymentRequest(bisa.getId(), mami.getId(), new BigDecimal("10"), null), "operator"))
+            .hasMessage("Elija una cuenta o una persona como origen del pago.");
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
+            new PurchasePaymentRequest(null, null, new BigDecimal("10"), null), "operator"))
+            .hasMessage("Elija una cuenta o una persona como origen del pago.");
+
+        mami.setStatus(CreditorStatus.INACTIVO);
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("10"), "operator"))
+            .hasMessage("La persona 'Mami' no está activa.");
+        mami.setStatus(CreditorStatus.ELIMINADO);
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("10"), "operator"))
+            .hasMessage("La persona 'Mami' no está activa.");
+        assertThat(purchase.getPayments()).isEmpty();
+        assertThat(purchase.getPaidAmount()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    @DisplayName("DEU-02: un pedido con pagos de Bisa y de Mami muestra cada pago con su origen")
+    void registerPayment_mixedSources() {
+        Purchase purchase = existingPurchase("300.00", "0.00");
+
+        purchaseService.registerPayment(purchase.getId(), new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("100"), null), "operator");
+        PurchaseResponse res = purchaseService.registerPayment(purchase.getId(), byMami("200"), "operator");
+
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
+        assertThat(res.payments()).extracting(p -> p.accountName() != null ? p.accountName() : p.creditorName())
+            .containsExactly("Bisa", "Mami");
+    }
+
+    @Test
+    @DisplayName("DEU-02: el pago inicial de un pedido puede hacerlo una persona, en la misma transacción")
+    void registerPurchase_initialPaymentByPerson() {
+        PurchaseRequest req = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "10", "10")), null, null,
+            false, null, null, null, null, byMami("40"));
+
+        PurchaseResponse res = purchaseService.registerPurchase(req, "operator");
+
+        assertThat(res.paidAmount()).isEqualByComparingTo("40.00");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.A_CUENTA);
+        assertThat(res.payments()).extracting(PurchasePaymentResponse::creditorName).containsExactly("Mami");
+        verify(financialTransactionRepository, never()).save(any());
+
+        PurchaseRequest fromBisa = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "10", "10")), null, null,
+            false, null, null, null, null, new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("100"), null));
+        res = purchaseService.registerPurchase(fromBisa, "operator");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("900.00");
+
+        PurchaseRequest tooMuch = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "1", "10")), null, null,
+            false, null, null, null, null, byMami("11"));
+        assertThatThrownBy(() -> purchaseService.registerPurchase(tooMuch, "operator"))
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 10.00).");
+    }
+
+    @Test
+    @DisplayName("DEU-02: anular un pago de Mami baja la deuda sin movimiento; si ya se le devolvió, se rechaza")
+    void voidPayment_byPerson() {
+        Purchase purchase = existingPurchase("300.00", "200.00");
+        PurchasePayment payment = addMamiPayment(purchase, "200.00");
+
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("50.00"));
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+        assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ACTIVO);
+
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("200.00"));
+        PurchaseResponse res = purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator");
+
+        assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ANULADO);
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.POR_PAGAR);
+        verify(financialTransactionRepository, never()).findById(any());
+        verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
+        var order = inOrder(purchaseRepository, creditorRepository);
+        order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
+        order.verify(creditorRepository).findByIdForUpdate(mami.getId());
+    }
+
+    @Test
+    @DisplayName("DEU-02: anular un pedido con pagos de Mami y de Bisa; si la deuda quedaría negativa no se anula nada")
+    void voidPurchase_withPersonPayments() {
+        Purchase purchase = existingPurchase("300.00", "300.00");
+        PurchasePayment mamiPayment = addMamiPayment(purchase, "200.00");
+        FinancialTransaction bisaTx = purchaseExpense(purchase, bisa, "100.00", null);
+        PurchasePayment bisaPayment = addPayment(purchase, bisaTx);
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId())).thenReturn(List.of(bisaTx));
+        lockAccounts(bisa);
+
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("199.99"));
+        assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+        assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.REGISTRADO);
+        assertThat(bisaTx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1000.00");
+
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("200.00"));
+        purchaseService.voidPurchase(purchase.getId(), REASON, "operator");
+
+        assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.ANULADO);
+        assertThat(mamiPayment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ANULADO);
+        assertThat(bisaPayment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ANULADO);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1100.00");
+        var order = inOrder(purchaseRepository, creditorRepository, financialAccountRepository);
+        order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
+        order.verify(creditorRepository).findAllByIdForUpdate(any());
+        order.verify(financialAccountRepository).findAllByIdForUpdate(any());
     }
 }

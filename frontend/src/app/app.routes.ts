@@ -124,6 +124,13 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.PURCHASES }
       },
       {
+        path: 'debts',
+        // Carga diferida: mantiene el bundle inicial dentro del presupuesto
+        loadComponent: () => import('./pages/debts/debts.component').then(m => m.DebtsComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.DEBTS }
+      },
+      {
         path: 'users',
         component: UsersComponent,
         canActivate: [permissionGuard],

@@ -22,6 +22,8 @@ public enum Permission {
     SUPPLIERS,
     /** Purchases (orders), their shipping and payments, including creating products and changing their cost and price. */
     PURCHASES,
+    /** Debts with people and their repayments, including voids (DEU-01 to DEU-04). */
+    DEBTS,
     /** Finances summary. */
     FINANCES_SUMMARY,
     /** Manual incomes, expenses and transfers, including voids. */

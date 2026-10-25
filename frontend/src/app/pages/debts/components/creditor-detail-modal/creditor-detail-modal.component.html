@@ -1,0 +1,113 @@
+<app-modal [isOpen]="!!creditorId()" [title]="history()?.creditor?.name || 'Persona'"
+           subtitle="Pagos de pedidos y devoluciones" size="lg" (close)="onClose()">
+  @if (isLoading() && !history()) {
+    <p class="hint">Cargando historial…</p>
+  }
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  @if (history(); as h) {
+    <div class="summary">
+      <span>Deuda actual</span>
+      <strong [class.has-debt]="h.creditor.debt > 0">Bs {{ h.creditor.debt | number:'1.2-2' }}</strong>
+    </div>
+
+    <h4 class="section-title">Historial</h4>
+    @if (h.entries.length === 0) {
+      <p class="hint">Todavía no pagó pedidos por el negocio.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Movimiento</th>
+              <th class="text-right">Monto</th>
+              <th class="text-right">Saldo</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of h.entries; track entry.id) {
+              <tr [class.voided-row]="entry.voided">
+                <td>{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  @if (entry.type === 'PAYMENT') {
+                    <span class="entry-title">Pagó pedido {{ entry.purchaseNumber }}</span>
+                    <span class="entry-note">{{ entry.supplierName }}</span>
+                  } @else {
+                    <span class="entry-title">Devolución desde {{ entry.accountName }}</span>
+                    @if (entry.comment) {
+                      <span class="entry-note">{{ entry.comment }}</span>
+                    }
+                  }
+                  @if (entry.voided) {
+                    <span class="entry-note">Anulado por {{ entry.voidedBy }}: {{ entry.voidReason }}</span>
+                  }
+                </td>
+                <td class="text-right">
+                  {{ entry.type === 'PAYMENT' ? '+' : '−' }} Bs {{ entry.amount | number:'1.2-2' }}
+                </td>
+                <td class="text-right">Bs {{ entry.balanceAfter | number:'1.2-2' }}</td>
+                <td class="text-right">
+                  @if (entry.type === 'PAYMENT' && entry.purchaseId) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openPurchase.emit(entry.purchaseId)">Ver pedido</button>
+                  } @else if (entry.type === 'REPAYMENT' && !entry.voided) {
+                    <button type="button" class="btn btn-ghost btn-sm btn-void" (click)="openVoid(entry)">Anular</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (canRepay()) {
+      <form class="repayment-form" (ngSubmit)="registerRepayment()">
+        <h4 class="section-title">Registrar devolución</h4>
+        @if (repaymentError()) {
+          <div class="alert alert-danger" role="alert"><span>{{ repaymentError() }}</span></div>
+        }
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label class="form-label" for="repayment-account">Devuelto desde <span class="required-mark">*</span></label>
+            <select id="repayment-account" class="form-control" name="accountId"
+                    [ngModel]="repaymentAccountId()" (ngModelChange)="repaymentAccountId.set($event)">
+              <option value="">Seleccione…</option>
+              @for (account of accounts(); track account.id) {
+                <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="repayment-amount">Monto (Bs) <span class="required-mark">*</span></label>
+            <input id="repayment-amount" type="number" min="0.01" step="0.01" class="form-control" name="amount"
+                   [ngModel]="repaymentAmount()" (ngModelChange)="repaymentAmount.set($event)" />
+            <span class="form-hint">Deuda Bs {{ h.creditor.debt | number:'1.2-2' }}</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="repayment-comment">Comentario</label>
+            <input id="repayment-comment" class="form-control" name="comment" maxlength="500"
+                   [ngModel]="repaymentComment()" (ngModelChange)="repaymentComment.set($event)" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="isRepaying()">
+            {{ isRepaying() ? 'Registrando…' : 'Registrar devolución' }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+</app-modal>
+
+<app-void-reason-modal
+  [isOpen]="!!voidTarget()"
+  title="Anular devolución"
+  [message]="voidMessage()"
+  [isLoading]="isVoiding()"
+  [errorMessage]="voidError()"
+  (confirmed)="confirmVoid($event)"
+  (close)="closeVoid()" />

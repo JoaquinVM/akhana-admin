@@ -1,0 +1,32 @@
+<div class="debts-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Compras</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Deudas</span>
+      </nav>
+      <h1 class="page-title">Deudas</h1>
+      <p class="page-subtitle">Lo que el negocio debe a personas que pagaron pedidos, y sus devoluciones</p>
+    </div>
+  </header>
+
+  <div class="view-tabs" role="tablist" aria-label="Vista de deudas">
+    <button type="button" role="tab" class="view-tab" [class.active]="activeTab() === 'CREDITORS'"
+            [attr.aria-selected]="activeTab() === 'CREDITORS'" (click)="activeTab.set('CREDITORS')">Personas</button>
+    <button type="button" role="tab" class="view-tab" [class.active]="activeTab() === 'CUSTOMERS'"
+            [attr.aria-selected]="activeTab() === 'CUSTOMERS'" (click)="activeTab.set('CUSTOMERS')">Clientes</button>
+  </div>
+
+  @if (activeTab() === 'CREDITORS') {
+    <app-creditors-view />
+  } @else {
+    <div class="table-container">
+      <div class="table-empty">
+        <div class="table-empty-icon">🧾</div>
+        <h4 class="table-empty-title">Cuentas por cobrar</h4>
+        <p class="table-empty-desc">Los saldos por cobrar a la tienda amiga llegan junto con la venta al costo.</p>
+      </div>
+    </div>
+  }
+</div>

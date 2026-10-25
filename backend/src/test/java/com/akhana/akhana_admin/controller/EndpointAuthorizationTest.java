@@ -47,6 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {
         CashSessionController.class,
         CategoryController.class,
+        CreditorController.class,
+        DebtController.class,
         FinancialAccountController.class,
         FinancialCategoryController.class,
         FinancialSummaryController.class,
@@ -88,6 +90,12 @@ class EndpointAuthorizationTest {
             {"accountId":"%s","amount":50.00}""".formatted(ID);
     private static final String PURCHASE_DELIVERY = """
             {"deliveryType":"TERMINAL","deliveryStatus":"PENDIENTE"}""";
+    private static final String CREDITOR = """
+            {"name":"Mami"}""";
+    private static final String REPAYMENT = """
+            {"accountId":"%s","amount":50.00}""".formatted(ID);
+    private static final String VOID_DEBT = """
+            {"voidReason":"Error de carga"}""";
     private static final String VOID_PURCHASE = """
             {"voidReason":"Error de carga"}""";
     private static final String QUICK_GROUP = """
@@ -119,6 +127,7 @@ class EndpointAuthorizationTest {
 
     @MockitoBean private CashSessionService cashSessionService;
     @MockitoBean private CategoryService categoryService;
+    @MockitoBean private CreditorService creditorService;
     @MockitoBean private FinancialAccountService financialAccountService;
     @MockitoBean private FinancialCategoryService financialCategoryService;
     @MockitoBean private FinancialSummaryService financialSummaryService;
@@ -206,6 +215,16 @@ class EndpointAuthorizationTest {
                 both(put, "/api/purchases/" + ID + "/delivery", PURCHASE_DELIVERY),
                 both(post, "/api/purchases/" + ID + "/void", VOID_PURCHASE),
                 both(post, "/api/purchases/" + ID + "/payments/" + ID + "/void", VOID_PURCHASE),
+                // Deudas con personas
+                both(get, "/api/creditors", null),
+                both(get, "/api/creditors/" + ID, null),
+                both(post, "/api/creditors", CREDITOR),
+                both(put, "/api/creditors/" + ID, CREDITOR),
+                both(delete, "/api/creditors/" + ID, null),
+                both(get, "/api/creditors/" + ID + "/history", null),
+                both(post, "/api/creditors/" + ID + "/repayments", REPAYMENT),
+                both(post, "/api/creditors/" + ID + "/repayments/" + ID + "/void", VOID_DEBT),
+                both(get, "/api/debts/accounts", null),
                 // Gastos de caja desde el POS: registrar y anular
                 both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
                 both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),

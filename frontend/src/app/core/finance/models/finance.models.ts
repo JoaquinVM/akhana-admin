@@ -77,6 +77,8 @@ export interface FinancialTransaction {
   saleId?: string;
   // COM-06: pago o envío de un pedido; se gestiona desde Compras
   purchaseId?: string | null;
+  // Gasto de una devolución a una persona (DEU-03): se gestiona desde Deudas
+  creditorRepaymentId?: string | null;
   cashSessionId?: string;
   sourceAccount: AccountSummary;
   destinationAccount?: AccountSummary;

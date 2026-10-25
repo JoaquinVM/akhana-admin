@@ -144,12 +144,14 @@
     [isOpen]="isFormOpen()"
     [suppliers]="suppliers()"
     [accounts]="accounts()"
+    [creditors]="creditors()"
     (saved)="onPurchaseSaved($event)"
     (close)="isFormOpen.set(false)" />
 
   <app-purchase-detail-modal
     [purchaseId]="detailPurchaseId()"
     [accounts]="accounts()"
+    [creditors]="creditors()"
     (updated)="onUpdated($event)"
     (close)="detailPurchaseId.set(null)" />
 </div>

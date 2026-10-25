@@ -13,8 +13,11 @@ import {
   PaymentAccount,
   Purchase,
   PurchasePayment,
-  PurchasePaymentStatus
+  PurchasePaymentStatus,
+  paymentSourceFields,
+  paymentSourceName
 } from '../../../../core/purchase/models/purchase.models';
+import { Creditor } from '../../../../core/debt/models/debt.models';
 
 @Component({
   selector: 'app-purchase-detail-modal',
@@ -28,6 +31,8 @@ export class PurchaseDetailModalComponent {
 
   purchaseId = input<string | null>(null);
   accounts = input<PaymentAccount[]>([]);
+  // Personas activas que pueden pagar un pedido por el negocio (DEU-02)
+  creditors = input<Creditor[]>([]);
 
   // Emite el pedido actualizado tras un pago, un cambio de entrega o una anulación, para refrescar el listado
   updated = output<Purchase>();
@@ -37,7 +42,8 @@ export class PurchaseDetailModalComponent {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  paymentAccountId = signal<string>('');
+  // 'account:<id>' o 'creditor:<id>'
+  paymentSource = signal<string>('');
   paymentAmount = signal<number | null>(null);
   paymentNotes = signal<string>('');
   paymentError = signal<string | null>(null);
@@ -81,6 +87,9 @@ export class PurchaseDetailModalComponent {
         + 'El costo y precio de los productos no cambian.';
     }
     if (target) {
+      if (target.creditorName) {
+        return `Se anula el pago de Bs ${target.amount.toFixed(2)} hecho por ${target.creditorName} y baja la deuda con esa persona.`;
+      }
       return `Se anula el pago de Bs ${target.amount.toFixed(2)} desde ${target.accountName} y la cuenta recupera el monto.`;
     }
     return '';
@@ -95,6 +104,13 @@ export class PurchaseDetailModalComponent {
         this.purchase.set(null);
       }
     });
+  }
+
+  // Un pago hecho por una persona no mueve dinero: la nota va en el movimiento de la cuenta
+  paysFromAccount = computed(() => this.paymentSource().startsWith('account:'));
+
+  sourceName(payment: PurchasePayment): string {
+    return paymentSourceName(payment);
   }
 
   statusLabel(status: PurchasePaymentStatus): string {
@@ -128,7 +144,7 @@ export class PurchaseDetailModalComponent {
   }
 
   private resetPaymentForm(purchase: Purchase): void {
-    this.paymentAccountId.set('');
+    this.paymentSource.set('');
     this.paymentAmount.set(purchase.balance > 0 ? purchase.balance : null);
     this.paymentNotes.set('');
   }
@@ -143,8 +159,8 @@ export class PurchaseDetailModalComponent {
     if (!purchase) {
       return;
     }
-    if (!this.paymentAccountId()) {
-      this.paymentError.set('Elija la cuenta de origen del pago.');
+    if (!this.paymentSource()) {
+      this.paymentError.set('Elija la cuenta o la persona que pagó.');
       return;
     }
     const amount = Number(this.paymentAmount());
@@ -156,9 +172,9 @@ export class PurchaseDetailModalComponent {
     this.paymentError.set(null);
     const notes = this.paymentNotes().trim();
     this.purchaseService.registerPayment(purchase.id, {
-      accountId: this.paymentAccountId(),
+      ...paymentSourceFields(this.paymentSource()),
       amount,
-      notes: notes.length > 0 ? notes : null
+      notes: this.paysFromAccount() && notes.length > 0 ? notes : null
     }).subscribe({
       next: updated => {
         this.purchase.set(updated);

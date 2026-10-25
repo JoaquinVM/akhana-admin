@@ -48,6 +48,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String INITIAL_BALANCE_EDIT = "El saldo inicial de una cuenta no se puede editar.";
     static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
     static final String PURCHASE_MOVEMENT = "Los movimientos de un pedido se gestionan desde Compras.";
+    static final String DEBT_MOVEMENT = "Los movimientos de una deuda se gestionan desde Deudas.";
 
     @Override
     @Transactional(readOnly = true)
@@ -218,6 +219,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
+        if (tx.getCreditorRepaymentId() != null) {
+            throw new IllegalStateException(DEBT_MOVEMENT);
+        }
+
         if (tx.getStatus() == FinancialTransactionStatus.ANULADO) {
             throw new IllegalStateException("No se puede editar una transacción que ya ha sido anulada.");
         }
@@ -283,6 +288,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         if (tx.getPurchaseId() != null) {
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
+
+        if (tx.getCreditorRepaymentId() != null) {
+            throw new IllegalStateException(DEBT_MOVEMENT);
+        }
         lockSessionIfOpen(tx.getCashSessionId(), "No se pueden anular gastos de una caja cerrada.");
 
         return voidTransaction(id, request, currentUsername);
@@ -305,6 +314,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         if (tx.getPurchaseId() != null) {
             throw new IllegalStateException(PURCHASE_MOVEMENT);
+        }
+
+        if (tx.getCreditorRepaymentId() != null) {
+            throw new IllegalStateException(DEBT_MOVEMENT);
         }
 
         if (tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
@@ -449,6 +462,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .status(tx.getStatus())
                 .saleId(tx.getSaleId())
                 .purchaseId(tx.getPurchaseId())
+                .creditorRepaymentId(tx.getCreditorRepaymentId())
                 .cashSessionId(tx.getCashSessionId())
                 .sourceAccount(sourceSummary)
                 .destinationAccount(destSummary)

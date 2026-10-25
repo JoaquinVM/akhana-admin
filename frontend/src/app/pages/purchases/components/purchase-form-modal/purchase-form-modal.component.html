@@ -262,6 +262,40 @@
       </div>
     </div>
 
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="purchase-initial-source">Pago inicial</label>
+        <select id="purchase-initial-source" class="form-control" name="initialPaymentSource"
+                [ngModel]="initialPaymentSource()" (ngModelChange)="initialPaymentSource.set($event)">
+          <option value="">Sin pago por ahora</option>
+          <optgroup label="Cuentas">
+            @for (account of accounts(); track account.id) {
+              <option [value]="'account:' + account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+            }
+          </optgroup>
+          @if (creditors().length > 0) {
+            <optgroup label="Pagó una persona">
+              @for (creditor of creditors(); track creditor.id) {
+                <option [value]="'creditor:' + creditor.id">{{ creditor.name }}</option>
+              }
+            </optgroup>
+          }
+        </select>
+        @if (initialPaymentSource().startsWith('creditor:')) {
+          <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
+        }
+      </div>
+      @if (initialPaymentSource()) {
+        <div class="form-group">
+          <label class="form-label" for="purchase-initial-amount">Monto pagado (Bs) <span class="required-mark">*</span></label>
+          <input id="purchase-initial-amount" type="number" min="0.01" step="0.01" class="form-control"
+                 name="initialPaymentAmount"
+                 [ngModel]="initialPaymentAmount()" (ngModelChange)="initialPaymentAmount.set($event)" />
+          <span class="form-hint">Hasta el total de las líneas, Bs {{ itemsTotal() | number:'1.2-2' }}.</span>
+        </div>
+      }
+    </div>
+
     <div class="totals">
       <div><span>Total líneas</span><strong>Bs {{ itemsTotal() | number:'1.2-2' }}</strong></div>
       <div><span>Envío</span><strong>Bs {{ (shippingCost() || 0) | number:'1.2-2' }}</strong></div>

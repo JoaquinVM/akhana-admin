@@ -37,6 +37,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String CLOSED_SESSION_PURCHASE = "El pedido tiene movimientos de una caja cerrada; no se puede anular.";
     static final String FUTURE_DELIVERY_DATE = "La fecha de entrega no puede ser futura.";
     static final String DELIVERY_BEFORE_PURCHASE = "La fecha de entrega no puede ser anterior a la fecha del pedido.";
+    static final String PAYMENT_SOURCE_REQUIRED = "Elija una cuenta o una persona como origen del pago.";
 
     private final PurchaseRepository purchaseRepository;
     private final SupplierRepository supplierRepository;
@@ -47,6 +48,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    private final CreditorRepository creditorRepository;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -173,6 +175,12 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
 
+        // A person who pays the first payment is locked before the cash session and the accounts (T-14)
+        PurchasePaymentRequest initialPayment = request.initialPayment();
+        if (initialPayment != null && initialPayment.creditorId() != null && initialPayment.accountId() == null) {
+            lockCreditor(initialPayment.creditorId());
+        }
+
         // Category and accounts are resolved before saving anything (RG-05); lock order: session, then account (T-14)
         FinancialCategory shippingCategory = null;
         Payer shippingPayer = null;
@@ -217,50 +225,72 @@ public class PurchaseServiceImpl implements PurchaseService {
                 "Envío pedido " + saved.getPurchaseNumber(), null, username);
         }
 
+        // Saved in the same transaction: a rejected payment leaves no purchase (RG-05)
+        if (initialPayment != null) {
+            applyPayment(saved, initialPayment, username);
+            saved = purchaseRepository.save(saved);
+        }
+
         return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account().getName() : null);
     }
 
     @Override
     public PurchaseResponse registerPayment(UUID purchaseId, PurchasePaymentRequest request, String username) {
-        BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
-
-        // Lock order: purchase, then cash session, then account (T-14)
-        Purchase purchase = purchaseRepository.findByIdForUpdate(purchaseId)
-            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + purchaseId));
+        // Lock order: purchase, then the person or the cash session and the account (T-14)
+        Purchase purchase = lockPurchase(purchaseId);
         if (purchase.getStatus() == PurchaseStatus.ANULADO) {
             throw new IllegalStateException(VOIDED_PURCHASE);
         }
+        applyPayment(purchase, request, username);
+        Purchase saved = purchaseRepository.save(purchase);
+
+        return getPurchaseById(saved.getId());
+    }
+
+    /**
+     * COM-05 / DEU-02: a payment from an account generates a Pedido expense; one made by an active person only
+     * raises the debt with them, since no money left the business until it is repaid (DEU-03).
+     */
+    private void applyPayment(Purchase purchase, PurchasePaymentRequest request, String username) {
+        if (request == null || (request.accountId() == null) == (request.creditorId() == null)) {
+            throw new IllegalArgumentException(PAYMENT_SOURCE_REQUIRED);
+        }
+        BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
         BigDecimal balance = purchase.getBalance();
         if (amount.compareTo(balance) > 0) {
             throw new IllegalArgumentException("El pago supera el saldo pendiente del pedido (Bs " + balance.toPlainString() + ").");
         }
 
-        FinancialCategory paymentCategory = financialCategoryRepository
-            .findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_PAYMENT)
-            .orElseThrow(() -> new IllegalStateException(PAYMENT_CATEGORY_MISSING));
-        Payer payer = lockPayer(request.accountId());
-
-        String notes = request.notes() != null && !request.notes().isBlank() ? request.notes().trim() : null;
-        FinancialTransaction tx = recordExpense(payer, paymentCategory, amount, purchase,
-            "Pago pedido " + purchase.getPurchaseNumber(), notes, username);
-
-        PurchasePayment payment = PurchasePayment.builder()
+        Instant now = Instant.now();
+        PurchasePayment.PurchasePaymentBuilder payment = PurchasePayment.builder()
             .purchase(purchase)
-            .account(payer.account())
             .amount(amount)
-            .paymentDate(tx.getTransactionDate())
-            .financialTransactionId(tx.getId())
             .status(PurchasePaymentRecordStatus.ACTIVO)
             .createdBy(username)
-            .createdAt(Instant.now())
-            .build();
-        purchase.getPayments().add(payment);
+            .createdAt(now);
+
+        if (request.creditorId() != null) {
+            Creditor creditor = lockCreditor(request.creditorId());
+            if (creditor.getStatus() != CreditorStatus.ACTIVO) {
+                throw new IllegalArgumentException("La persona '" + creditor.getName() + "' no está activa.");
+            }
+            payment.creditor(creditor).paymentDate(now);
+        } else {
+            FinancialCategory paymentCategory = financialCategoryRepository
+                .findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_PAYMENT)
+                .orElseThrow(() -> new IllegalStateException(PAYMENT_CATEGORY_MISSING));
+            Payer payer = lockPayer(request.accountId());
+
+            String notes = request.notes() != null && !request.notes().isBlank() ? request.notes().trim() : null;
+            FinancialTransaction tx = recordExpense(payer, paymentCategory, amount, purchase,
+                "Pago pedido " + purchase.getPurchaseNumber(), notes, username);
+            payment.account(payer.account()).paymentDate(tx.getTransactionDate()).financialTransactionId(tx.getId());
+        }
+
+        purchase.getPayments().add(payment.build());
         purchase.setPaidAmount(purchase.getPaidAmount().add(amount));
         purchase.setUpdatedBy(username);
-        purchase.setUpdatedAt(Instant.now());
-        Purchase saved = purchaseRepository.save(purchase);
-
-        return getPurchaseById(saved.getId());
+        purchase.setUpdatedAt(now);
     }
 
     @Override
@@ -296,11 +326,16 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (payment.getStatus() == PurchasePaymentRecordStatus.ANULADO) {
             throw new IllegalStateException(ALREADY_VOIDED_PAYMENT);
         }
-        FinancialTransaction tx = financialTransactionRepository.findById(payment.getFinancialTransactionId())
-            .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del pago."));
 
         Instant now = Instant.now();
-        voidExpenses(List.of(tx), CLOSED_SESSION_PAYMENT, voidReason, username, now);
+        if (payment.getCreditor() != null) {
+            // DEU-02: no movement to revert; the debt drops, but never below what was already repaid
+            ensureDebtCovers(lockCreditor(payment.getCreditor().getId()), payment.getAmount());
+        } else {
+            FinancialTransaction tx = financialTransactionRepository.findById(payment.getFinancialTransactionId())
+                .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del pago."));
+            voidExpenses(List.of(tx), CLOSED_SESSION_PAYMENT, voidReason, username, now);
+        }
         markVoided(payment, voidReason, username, now);
         purchase.setPaidAmount(purchase.getPaidAmount().subtract(payment.getAmount()));
         purchase.setUpdatedBy(username);
@@ -318,6 +353,18 @@ public class PurchaseServiceImpl implements PurchaseService {
         Purchase purchase = lockPurchase(purchaseId);
         if (purchase.getStatus() == PurchaseStatus.ANULADO) {
             throw new IllegalStateException(ALREADY_VOIDED_PURCHASE);
+        }
+
+        // Payments made by people: nothing is voided if any debt would go below 0 (DEU-02); people are locked
+        // after the purchase and before the cash session (T-14)
+        Map<UUID, BigDecimal> paidByCreditor = new HashMap<>();
+        purchase.getPayments().stream()
+            .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO && p.getCreditor() != null)
+            .forEach(p -> paidByCreditor.merge(p.getCreditor().getId(), p.getAmount(), BigDecimal::add));
+        if (!paidByCreditor.isEmpty()) {
+            for (Creditor creditor : creditorRepository.findAllByIdForUpdate(paidByCreditor.keySet())) {
+                ensureDebtCovers(creditor, paidByCreditor.get(creditor.getId()));
+            }
         }
 
         // Payments and shipping: every movement linked to the purchase (P-24, COM-06)
@@ -425,6 +472,19 @@ public class PurchaseServiceImpl implements PurchaseService {
         product.setUpdatedBy(username);
         product.setUpdatedAt(now);
         productRepository.save(product);
+    }
+
+    private Creditor lockCreditor(UUID creditorId) {
+        return creditorRepository.findByIdForUpdate(creditorId)
+            .orElseThrow(() -> new ResourceNotFoundException("Persona no encontrada con ID: " + creditorId));
+    }
+
+    // Voiding a payment made by a person lowers their debt; it cannot go below 0 (DEU-02)
+    private void ensureDebtCovers(Creditor creditor, BigDecimal amount) {
+        if (creditorRepository.computeDebt(creditor.getId()).compareTo(amount) < 0) {
+            throw new IllegalStateException("Ya se devolvió a " + creditor.getName()
+                + " parte de este pago; anule primero la devolución.");
+        }
     }
 
     private Purchase lockPurchase(UUID purchaseId) {

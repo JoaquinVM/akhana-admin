@@ -47,7 +47,8 @@ describe('PurchaseService', () => {
       comment: null,
       deliveryType: 'EN_TIENDA',
       deliveryStatus: 'PENDIENTE',
-      deliveryDate: null
+      deliveryDate: null,
+      initialPayment: null
     };
     service.registerPurchase(request).subscribe();
     const req = httpTesting.expectOne('/api/purchases');
@@ -57,7 +58,7 @@ describe('PurchaseService', () => {
   });
 
   it('COM-05: registra un pago del pedido', () => {
-    service.registerPayment('pur-1', { accountId: 'acc-1', amount: 100, notes: null }).subscribe();
+    service.registerPayment('pur-1', { accountId: 'acc-1', creditorId: null, amount: 100, notes: null }).subscribe();
     const req = httpTesting.expectOne('/api/purchases/pur-1/payments');
     expect(req.request.method).toBe('POST');
     expect(req.request.body.amount).toBe(100);

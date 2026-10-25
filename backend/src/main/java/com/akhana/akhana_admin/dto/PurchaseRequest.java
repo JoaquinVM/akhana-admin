@@ -39,5 +39,8 @@ public record PurchaseRequest(
 
     DeliveryStatus deliveryStatus,
 
-    LocalDate deliveryDate
+    LocalDate deliveryDate,
+
+    // Optional first payment, from an account or a person, saved with the purchase (COM-05, DEU-02)
+    @Valid PurchasePaymentRequest initialPayment
 ) {}

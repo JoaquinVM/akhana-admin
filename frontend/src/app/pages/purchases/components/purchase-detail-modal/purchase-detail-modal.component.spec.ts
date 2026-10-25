@@ -51,26 +51,46 @@ describe('PurchaseDetailModalComponent', () => {
 
   it('COM-05: exige cuenta antes de pagar', () => {
     component.registerPayment();
-    expect(component.paymentError()).toBe('Elija la cuenta de origen del pago.');
+    expect(component.paymentError()).toBe('Elija la cuenta o la persona que pagó.');
     expect(purchaseService.registerPayment).not.toHaveBeenCalled();
   });
 
   it('COM-05: registra el pago y emite el pedido actualizado', () => {
     const paid = vi.fn();
     component.updated.subscribe(paid);
-    component.paymentAccountId.set('acc-1');
+    component.paymentSource.set('account:acc-1');
     component.paymentAmount.set(100);
     component.registerPayment();
 
-    expect(purchaseService.registerPayment).toHaveBeenCalledWith('pur-1', { accountId: 'acc-1', amount: 100, notes: null });
+    expect(purchaseService.registerPayment).toHaveBeenCalledWith('pur-1', { accountId: 'acc-1', creditorId: null, amount: 100, notes: null });
     expect(component.purchase()?.paymentStatus).toBe('A_CUENTA');
     expect(component.paymentAmount()).toBe(200);
     expect(paid).toHaveBeenCalled();
   });
 
+  it('DEU-02: registra un pago hecho por una persona, sin nota', () => {
+    component.paymentSource.set('creditor:cre-1');
+    component.paymentAmount.set(200);
+    component.paymentNotes.set('no se envía');
+    component.registerPayment();
+
+    expect(purchaseService.registerPayment).toHaveBeenCalledWith('pur-1', { accountId: null, creditorId: 'cre-1', amount: 200, notes: null });
+  });
+
+  it('DEU-02: muestra el origen persona y explica su anulación', () => {
+    const payment: PurchasePayment = {
+      id: 'pay-1', accountId: null, accountName: null, cashAccount: false, creditorId: 'cre-1', creditorName: 'Mami',
+      amount: 200, paymentDate: '2026-10-25T12:00:00Z', financialTransactionId: null, status: 'ACTIVO',
+      createdBy: 'operator', createdAt: '2026-10-25T12:00:00Z', voidedBy: null, voidedAt: null, voidReason: null
+    };
+    expect(component.sourceName(payment)).toBe('Mami (persona)');
+    component.openVoid(payment);
+    expect(component.voidMessage()).toContain('hecho por Mami');
+  });
+
   it('COM-05: muestra el error del servidor', () => {
     purchaseService.registerPayment.mockReturnValue(throwError(() => ({ error: { message: 'El pago supera el saldo pendiente del pedido (Bs 300.00).' } })));
-    component.paymentAccountId.set('acc-1');
+    component.paymentSource.set('account:acc-1');
     component.paymentAmount.set(500);
     component.registerPayment();
     expect(component.paymentError()).toBe('El pago supera el saldo pendiente del pedido (Bs 300.00).');

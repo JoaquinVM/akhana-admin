@@ -143,7 +143,7 @@
               @for (payment of p.payments; track payment.id) {
                 <tr [class.voided-row]="payment.status === 'ANULADO'">
                   <td>{{ payment.paymentDate | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>{{ payment.accountName }}</td>
+                  <td>{{ sourceName(payment) }}</td>
                   <td>
                     {{ payment.createdBy }}
                     @if (payment.status === 'ANULADO') {
@@ -172,13 +172,25 @@
           <div class="form-grid form-grid-3">
             <div class="form-group">
               <label class="form-label" for="payment-account">Pagado desde <span class="required-mark">*</span></label>
-              <select id="payment-account" class="form-control" name="accountId"
-                      [ngModel]="paymentAccountId()" (ngModelChange)="paymentAccountId.set($event)">
+              <select id="payment-account" class="form-control" name="paymentSource"
+                      [ngModel]="paymentSource()" (ngModelChange)="paymentSource.set($event)">
                 <option value="">Seleccione…</option>
-                @for (account of accounts(); track account.id) {
-                  <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+                <optgroup label="Cuentas">
+                  @for (account of accounts(); track account.id) {
+                    <option [value]="'account:' + account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+                  }
+                </optgroup>
+                @if (creditors().length > 0) {
+                  <optgroup label="Pagó una persona">
+                    @for (creditor of creditors(); track creditor.id) {
+                      <option [value]="'creditor:' + creditor.id">{{ creditor.name }}</option>
+                    }
+                  </optgroup>
                 }
               </select>
+              @if (!paysFromAccount() && paymentSource()) {
+                <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
+              }
             </div>
             <div class="form-group">
               <label class="form-label" for="payment-amount">Monto (Bs) <span class="required-mark">*</span></label>
@@ -186,11 +198,13 @@
                      [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" />
               <span class="form-hint">Saldo pendiente Bs {{ p.balance | number:'1.2-2' }}</span>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="payment-notes">Nota</label>
-              <input id="payment-notes" class="form-control" name="notes" maxlength="500"
-                     [ngModel]="paymentNotes()" (ngModelChange)="paymentNotes.set($event)" />
-            </div>
+            @if (paysFromAccount() || !paymentSource()) {
+              <div class="form-group">
+                <label class="form-label" for="payment-notes">Nota</label>
+                <input id="payment-notes" class="form-control" name="notes" maxlength="500"
+                       [ngModel]="paymentNotes()" (ngModelChange)="paymentNotes.set($event)" />
+              </div>
+            }
           </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" [disabled]="isPaying()">

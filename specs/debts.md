@@ -67,8 +67,13 @@ uno de los dos.
 - **Cuando** el pedido tiene pagos de distintos orígenes (Bisa y Mami) **entonces** el detalle del pedido muestra
   cada pago con su origen.
 - **Cuando** se registra un pedido **entonces** el formulario permite elegir como origen del pago inicial una
-  cuenta o una persona.
-- Bloqueo: pedido, luego persona (T-14).
+  cuenta o una persona. El pago inicial viaja en el pedido (`PurchaseRequest.initialPayment`, mismo formato que
+  un pago) y se guarda en la misma transacción: si se rechaza, no queda el pedido (RG-05).
+- **Cuando** el pago trae cuenta y persona, o ninguna **entonces** se rechaza: «Elija una cuenta o una persona
+  como origen del pago.» La nota del pago solo se guarda en el movimiento, así que un pago por persona no la
+  lleva.
+- Bloqueo: pedido, luego persona (T-14). Al registrar un pedido con pago inicial por persona, la persona se
+  bloquea antes que la caja y la cuenta del envío.
 
 ### Anulación de un pago por persona (COM-09)
 
@@ -98,6 +103,8 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 - **Cuando** el gasto de la devolución se mira desde Finanzas o el POS **entonces** no se edita ni anula allí:
   «Los movimientos de una deuda se gestionan desde Deudas.»
 - Bloqueo: persona, caja, cuentas (T-14).
+- El vínculo entre devolución y gasto vive solo en `financial_transactions.creditor_repayment_id` (índice único:
+  un gasto por devolución), sin columna inversa, para no tener una referencia circular.
 
 ### Anulación de una devolución
 
@@ -216,15 +223,15 @@ como fila de sistema (T-17). Los reportes distinguen devoluciones y cobros por s
 
 Deudas con personas (se puede construir ya):
 
-- [ ] Migración `V10__creditors.sql`: `creditors`, `creditor_repayments`, `purchase_payments.creditor_id` con
+- [x] Migración `V10__creditors.sql`: `creditors`, `creditor_repayments`, `purchase_payments.creditor_id` con
   `account_id` opcional y `CHECK` de un solo origen y `financial_transactions.creditor_repayment_id`.
-- [ ] Permiso `DEBTS` (Operador y Administrador) y lectura de personas con `PURCHASES`.
-- [ ] `CreditorService`: ABM, deuda calculada, historial, devolución y su anulación.
-- [ ] `PurchaseService`: pago por persona y anulación de pago y de pedido con pagos por persona.
-- [ ] Finanzas y POS rechazan editar o anular movimientos de deudas.
-- [ ] Pruebas: `CreditorServiceTest`, `PurchaseServiceTest` (pago por persona), `CreditorRepositoryTest`
+- [x] Permiso `DEBTS` (Operador y Administrador) y lectura de personas con `PURCHASES`.
+- [x] `CreditorService`: ABM, deuda calculada, historial, devolución y su anulación.
+- [x] `PurchaseService`: pago por persona y anulación de pago y de pedido con pagos por persona.
+- [x] Finanzas y POS rechazan editar o anular movimientos de deudas.
+- [x] Pruebas: `CreditorServiceTest`, `PurchaseServiceTest` (pago por persona), `CreditorRepositoryTest`
   (contra PostgreSQL), `EndpointAuthorizationTest`.
-- [ ] Frontend: `core/debt`, `pages/debts` (pestaña Personas con detalle e historial, devolución y anulación),
+- [x] Frontend: `core/debt`, `pages/debts` (pestaña Personas con detalle e historial, devolución y anulación),
   origen persona en el pago y en el formulario de pedidos, menú Deudas.
 
 Cuentas por cobrar (junto con o después de CON-02):

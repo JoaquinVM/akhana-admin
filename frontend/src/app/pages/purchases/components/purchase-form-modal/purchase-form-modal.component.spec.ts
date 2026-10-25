@@ -121,6 +121,17 @@ describe('PurchaseFormModalComponent', () => {
     expect(component.buildRequest().shippingAccountId).toBeNull();
   });
 
+  it('DEU-02: el pago inicial puede ser de una cuenta o de una persona, y exige monto', () => {
+    expect(component.buildRequest().initialPayment).toBeNull();
+
+    component.initialPaymentSource.set('creditor:cre-1');
+    component.initialPaymentAmount.set(40);
+    expect(component.buildRequest().initialPayment).toEqual({ accountId: null, creditorId: 'cre-1', amount: 40, notes: null });
+
+    component.initialPaymentSource.set('account:acc-1');
+    expect(component.buildRequest().initialPayment?.accountId).toBe('acc-1');
+  });
+
   it('no envía sin proveedor ni líneas y muestra el error del servidor', () => {
     component.submit();
     expect(component.formError()).toBe('Elija el proveedor del pedido.');

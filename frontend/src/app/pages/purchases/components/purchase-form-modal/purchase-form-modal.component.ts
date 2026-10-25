@@ -8,6 +8,7 @@ import { CategoryService } from '../../../../core/category/category.service';
 import { Product, SaleUnit } from '../../../../core/product/models/product.models';
 import { Category } from '../../../../core/category/models/category.models';
 import { Supplier } from '../../../../core/supplier/models/supplier.models';
+import { Creditor } from '../../../../core/debt/models/debt.models';
 import {
   DELIVERY_STATUS_LABELS,
   DELIVERY_TYPE_LABELS,
@@ -17,7 +18,9 @@ import {
   PriceSuggestion,
   Purchase,
   PurchaseItemRequest,
-  PurchaseRequest
+  PurchasePaymentRequest,
+  PurchaseRequest,
+  paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
 
 // COM-03: qué precio de venta toma el producto si se actualiza su costo
@@ -71,6 +74,8 @@ export class PurchaseFormModalComponent {
   isOpen = input<boolean>(false);
   suppliers = input<Supplier[]>([]);
   accounts = input<PaymentAccount[]>([]);
+  // Personas activas que pueden pagar el pedido por el negocio (DEU-02)
+  creditors = input<Creditor[]>([]);
 
   saved = output<Purchase>();
   close = output<void>();
@@ -87,6 +92,9 @@ export class PurchaseFormModalComponent {
   deliveryType = signal<DeliveryType>('EN_TIENDA');
   deliveryStatus = signal<DeliveryStatus>('PENDIENTE');
   deliveryDate = signal<string>('');
+  // Pago inicial opcional (COM-05, DEU-02): 'account:<id>' o 'creditor:<id>'; vacío, sin pago
+  initialPaymentSource = signal<string>('');
+  initialPaymentAmount = signal<number | null>(null);
   lines = signal<PurchaseLineDraft[]>([]);
 
   products = signal<Product[]>([]);
@@ -146,6 +154,8 @@ export class PurchaseFormModalComponent {
     this.deliveryType.set('EN_TIENDA');
     this.deliveryStatus.set('PENDIENTE');
     this.deliveryDate.set('');
+    this.initialPaymentSource.set('');
+    this.initialPaymentAmount.set(null);
     this.lines.set([]);
     this.productSearch.set('');
     this.showNewProduct.set(false);
@@ -328,8 +338,17 @@ export class PurchaseFormModalComponent {
       comment: comment.length > 0 ? comment : null,
       deliveryType: this.deliveryType(),
       deliveryStatus: this.deliveryStatus(),
-      deliveryDate: this.deliveryDate() || null
+      deliveryDate: this.deliveryDate() || null,
+      initialPayment: this.buildInitialPayment()
     };
+  }
+
+  private buildInitialPayment(): PurchasePaymentRequest | null {
+    const source = this.initialPaymentSource();
+    if (!source) {
+      return null;
+    }
+    return { ...paymentSourceFields(source), amount: round2(Number(this.initialPaymentAmount()) || 0), notes: null };
   }
 
   submit(): void {
@@ -339,6 +358,10 @@ export class PurchaseFormModalComponent {
     }
     if (this.lines().length === 0) {
       this.formError.set('El pedido debe tener al menos una línea.');
+      return;
+    }
+    if (this.initialPaymentSource() && !(Number(this.initialPaymentAmount()) > 0)) {
+      this.formError.set('Ingrese el monto del pago inicial.');
       return;
     }
     this.isSubmitting.set(true);

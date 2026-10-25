@@ -27,6 +27,7 @@ public class FinancialTransactionResponse {
     private UUID saleId;
     private UUID cashSessionId;
     private UUID purchaseId;
+    private UUID creditorRepaymentId;
 
     private AccountSummary sourceAccount;
     private AccountSummary destinationAccount;

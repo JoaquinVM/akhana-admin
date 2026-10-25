@@ -17,6 +17,8 @@ import {
 import { PurchaseFormModalComponent } from './components/purchase-form-modal/purchase-form-modal.component';
 import { PurchaseDetailModalComponent } from './components/purchase-detail-modal/purchase-detail-modal.component';
 import { PayablesViewComponent } from './components/payables-view/payables-view.component';
+import { CreditorService } from '../../core/debt/creditor.service';
+import { Creditor } from '../../core/debt/models/debt.models';
 
 // 'ANULADO' filtra por estado del pedido (COM-09); el resto, por estado de pago de los registrados
 export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus | 'ANULADO';
@@ -33,6 +35,7 @@ export type PurchasesTab = 'ORDERS' | 'PAYABLES';
 export class PurchasesComponent implements OnInit {
   private readonly purchaseService = inject(PurchaseService);
   private readonly supplierService = inject(SupplierService);
+  private readonly creditorService = inject(CreditorService);
 
   readonly statusFilters: { value: PaymentStatusFilter; label: string }[] = [
     { value: 'ALL', label: 'Todos' },
@@ -52,6 +55,8 @@ export class PurchasesComponent implements OnInit {
   purchases = signal<Purchase[]>([]);
   suppliers = signal<Supplier[]>([]);
   accounts = signal<PaymentAccount[]>([]);
+  // DEU-02: solo las personas activas pagan pedidos
+  creditors = signal<Creditor[]>([]);
   supplierFilter = signal<string>('');
   statusFilter = signal<PaymentStatusFilter>('ALL');
   searchTerm = signal<string>('');
@@ -69,6 +74,10 @@ export class PurchasesComponent implements OnInit {
     this.purchaseService.getPaymentAccounts().subscribe({
       next: accounts => this.accounts.set(accounts),
       error: () => this.errorMessage.set('No se pudieron cargar las cuentas para pagar.')
+    });
+    this.creditorService.getCreditors('ACTIVO').subscribe({
+      next: creditors => this.creditors.set(creditors),
+      error: () => this.errorMessage.set('No se pudieron cargar las personas que pagan pedidos.')
     });
     this.loadPurchases();
   }

@@ -24,9 +24,14 @@ public class PurchasePayment {
     @JoinColumn(name = "purchase_id", nullable = false)
     private Purchase purchase;
 
+    // Exactly one source: an account or a person who paid for the business (DEU-02)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false)
+    @JoinColumn(name = "account_id")
     private FinancialAccount account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creditor_id")
+    private Creditor creditor;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
@@ -34,8 +39,8 @@ public class PurchasePayment {
     @Column(name = "payment_date", nullable = false)
     private Instant paymentDate;
 
-    // The Pedido expense this payment generated (COM-06)
-    @Column(name = "financial_transaction_id", nullable = false)
+    // The Pedido expense this payment generated (COM-06); null when a person paid (DEU-02)
+    @Column(name = "financial_transaction_id")
     private UUID financialTransactionId;
 
     @Enumerated(EnumType.STRING)

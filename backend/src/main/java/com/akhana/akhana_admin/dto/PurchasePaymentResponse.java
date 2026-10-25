@@ -1,5 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.Creditor;
+import com.akhana.akhana_admin.model.FinancialAccount;
 import com.akhana.akhana_admin.model.PurchasePayment;
 import com.akhana.akhana_admin.model.PurchasePaymentRecordStatus;
 
@@ -12,6 +14,9 @@ public record PurchasePaymentResponse(
     UUID accountId,
     String accountName,
     boolean cashAccount,
+    // Person who paid (DEU-02); null for account payments
+    UUID creditorId,
+    String creditorName,
     BigDecimal amount,
     Instant paymentDate,
     UUID financialTransactionId,
@@ -23,11 +28,15 @@ public record PurchasePaymentResponse(
     String voidReason
 ) {
     public static PurchasePaymentResponse fromEntity(PurchasePayment payment) {
+        FinancialAccount account = payment.getAccount();
+        Creditor creditor = payment.getCreditor();
         return new PurchasePaymentResponse(
             payment.getId(),
-            payment.getAccount().getId(),
-            payment.getAccount().getName(),
-            Boolean.TRUE.equals(payment.getAccount().getIsCashAccount()),
+            account != null ? account.getId() : null,
+            account != null ? account.getName() : null,
+            account != null && Boolean.TRUE.equals(account.getIsCashAccount()),
+            creditor != null ? creditor.getId() : null,
+            creditor != null ? creditor.getName() : null,
             payment.getAmount(),
             payment.getPaymentDate(),
             payment.getFinancialTransactionId(),

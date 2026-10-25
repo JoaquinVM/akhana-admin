@@ -43,12 +43,15 @@ export interface PurchaseItem {
 
 export interface PurchasePayment {
   id: string;
-  accountId: string;
-  accountName: string;
+  // Un solo origen: una cuenta o una persona que pagó por el negocio (DEU-02)
+  accountId: string | null;
+  accountName: string | null;
   cashAccount: boolean;
+  creditorId: string | null;
+  creditorName: string | null;
   amount: number;
   paymentDate: string;
-  financialTransactionId: string;
+  financialTransactionId: string | null;
   status: 'ACTIVO' | 'ANULADO';
   createdBy: string;
   createdAt: string;
@@ -105,6 +108,8 @@ export interface PurchaseRequest {
   deliveryType: DeliveryType;
   deliveryStatus: DeliveryStatus;
   deliveryDate: string | null;
+  // Pago inicial opcional, desde una cuenta o hecho por una persona (COM-05, DEU-02)
+  initialPayment: PurchasePaymentRequest | null;
 }
 
 export interface PurchaseDeliveryRequest {
@@ -132,9 +137,23 @@ export interface Payables {
 }
 
 export interface PurchasePaymentRequest {
-  accountId: string;
+  accountId: string | null;
+  creditorId: string | null;
   amount: number;
   notes: string | null;
+}
+
+// El origen del pago se elige en un solo select: 'account:<id>' o 'creditor:<id>'
+export function paymentSourceFields(source: string): Pick<PurchasePaymentRequest, 'accountId' | 'creditorId'> {
+  const [kind, id] = source.split(':');
+  return {
+    accountId: kind === 'account' && id ? id : null,
+    creditorId: kind === 'creditor' && id ? id : null
+  };
+}
+
+export function paymentSourceName(payment: PurchasePayment): string {
+  return payment.creditorName ? `${payment.creditorName} (persona)` : payment.accountName ?? '';
 }
 
 export interface PaymentAccount {

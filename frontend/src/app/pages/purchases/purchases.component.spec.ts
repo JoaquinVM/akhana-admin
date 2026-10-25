@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { PurchasesComponent } from './purchases.component';
 import { PurchaseService } from '../../core/purchase/purchase.service';
+import { CreditorService } from '../../core/debt/creditor.service';
 import { SupplierService } from '../../core/supplier/supplier.service';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
@@ -32,6 +33,7 @@ describe('PurchasesComponent', () => {
       providers: [
         { provide: PurchaseService, useValue: purchaseService },
         { provide: SupplierService, useValue: { getSuppliers: vi.fn().mockReturnValue(of([])) } },
+        { provide: CreditorService, useValue: { getCreditors: vi.fn().mockReturnValue(of([])) } },
         { provide: ProductService, useValue: { getProducts: vi.fn().mockReturnValue(of([])) } },
         { provide: CategoryService, useValue: { getCategories: vi.fn().mockReturnValue(of([])) } }
       ]

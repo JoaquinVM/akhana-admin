@@ -23,6 +23,9 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findByPurchaseIdOrderByTransactionDateAsc(UUID purchaseId);
 
+    // The expense of a repayment to a person (DEU-03)
+    Optional<FinancialTransaction> findByCreditorRepaymentId(UUID creditorRepaymentId);
+
     // Locked first so two voids or edits of the same movement cannot both revert it (T-14)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM FinancialTransaction t WHERE t.id = :id")

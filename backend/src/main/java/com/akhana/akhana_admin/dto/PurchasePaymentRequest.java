@@ -6,9 +6,11 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+/** Purchase payment from an account or made by a person (COM-05, DEU-02): exactly one of the two. */
 public record PurchasePaymentRequest(
-    @NotNull(message = "La cuenta de origen es obligatoria.")
     UUID accountId,
+
+    UUID creditorId,
 
     @NotNull(message = "El monto es obligatorio.")
     BigDecimal amount,
