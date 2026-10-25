@@ -9,8 +9,7 @@ Objetivo actual: la V1, que reemplaza las planillas de Google Sheets (sin invent
   Cuando se decida o descubra algo nuevo (respuesta a una pregunta, hallazgo tecnico, requerimiento nuevo),
   actualizar este archivo en el mismo commit.
 - `specs/<modulo>.md`: detalle por modulo (escenarios cuando/entonces + tareas), con los mismos IDs.
-- Todo lo demas es del flujo anterior y se va a eliminar: `requirements/`, `project/`, `.agents/`,
-  `.antigravity/`, `openspec/changes/`, los `_context.md`. No leerlos ni actualizarlos.
+- No existe otra documentacion ademas de `specs/requirements.md` y `specs/<modulo>.md`.
 - No crear otros documentos (planes, informes, logs, user stories).
 
 ## Stack y comandos
