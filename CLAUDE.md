@@ -17,9 +17,14 @@ Objetivo actual: la V1, que reemplaza las planillas de Google Sheets (sin invent
 - Backend: Spring Boot 4.1, Java 21, Gradle. Paquete `com.akhana.akhana_admin`. Puerto 8080, API en `/api`.
 - Frontend: Angular 21 (standalone components + signals), pruebas con Vitest. Puerto 4200.
 - Base: PostgreSQL 17 en Docker (`docker compose up -d postgres`).
+- Secretos solo por entorno (`DB_PASSWORD`, `JWT_SECRET`, `ADMIN_USERNAME`/`ADMIN_PASSWORD` para el primer admin).
+  En desarrollo: `cp .env.example .env` en la raíz y completar; lo leen docker compose, `bootRun` y las pruebas.
+  Sin esas variables el backend no arranca. El primer admin debe cambiar su contraseña al ingresar.
+- Node >= 20.19 o 22.12 (Angular CLI 21); con nvm: `nvm use 22`.
 
 | Tarea | Comando |
 | --- | --- |
+| Preparar entorno (una vez) | `cp .env.example .env` y completar `JWT_SECRET`, `DB_PASSWORD`, `ADMIN_PASSWORD` |
 | Levantar backend | `cd backend && ./gradlew bootRun` |
 | Pruebas de lo que cambiaste | `cd backend && ./gradlew test --tests "*NombreClase*"` |
 | Suite backend completa (solo al cerrar un modulo) | `cd backend && ./gradlew test` |

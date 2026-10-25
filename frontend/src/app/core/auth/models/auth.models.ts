@@ -12,7 +12,13 @@ export interface LoginResponse {
   fullName?: string;
   role: Role;
   permissions?: string[];
+  mustChangePassword?: boolean;
   message: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface UserSession {
@@ -21,4 +27,5 @@ export interface UserSession {
   fullName?: string;
   role: Role;
   permissions?: string[];
+  mustChangePassword?: boolean;
 }

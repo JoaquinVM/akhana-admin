@@ -12,13 +12,14 @@ public record LoginResponse(
     String fullName,
     Role role,
     Set<String> permissions,
+    boolean mustChangePassword,
     String message
 ) {
     public LoginResponse(String token, UUID id, String username, Role role, String message) {
-        this(token, id, username, username, role, Set.of(), message);
+        this(token, id, username, username, role, Set.of(), false, message);
     }
 
     public LoginResponse(UUID id, String username, Role role, String message) {
-        this(null, id, username, username, role, Set.of(), message);
+        this(null, id, username, username, role, Set.of(), false, message);
     }
 }

@@ -10,7 +10,14 @@ Punto de venta, caja, compras y control de dinero de la tienda Akhana (Spring Bo
 
 ## Puesta en marcha
 
-Base de datos (PostgreSQL 17 en `localhost:5432`, base `akhana`, usuario `akhana`, clave `akhana_dev`):
+Variables de entorno: los secretos no tienen valor por defecto. Para desarrollo, copiar el ejemplo y completar
+`DB_PASSWORD`, `JWT_SECRET` (`openssl rand -hex 32`) y `ADMIN_PASSWORD` (primer admin; debe cambiarla al ingresar):
+
+```bash
+cp .env.example .env
+```
+
+Base de datos (PostgreSQL 17 en `localhost:5432`, base y usuario `akhana`, clave `DB_PASSWORD` del `.env`):
 
 ```bash
 docker compose up -d postgres

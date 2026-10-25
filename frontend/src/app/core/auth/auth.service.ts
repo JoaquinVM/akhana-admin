@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { LoginRequest, LoginResponse, UserSession } from './models/auth.models';
+import { ChangePasswordRequest, LoginRequest, LoginResponse, UserSession } from './models/auth.models';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +15,7 @@ export class AuthService {
   private readonly USER_KEY = 'akhana_user';
   private readonly LOGIN_URL = '/api/auth/login';
   private readonly ME_URL = '/api/auth/me';
+  private readonly CHANGE_PASSWORD_URL = '/api/auth/change-password';
 
   // Reactive State via Angular Signals
   private readonly _currentUser = signal<UserSession | null>(this.restoreSession());
@@ -23,6 +24,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => !!this._currentUser() && !!this.getToken());
   readonly userRole = computed(() => this._currentUser()?.role ?? null);
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
+  readonly mustChangePassword = computed(() => !!this._currentUser()?.mustChangePassword);
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(this.LOGIN_URL, credentials).pipe(
@@ -33,7 +35,8 @@ export class AuthService {
             username: response.username,
             fullName: response.fullName,
             role: response.role,
-            permissions: response.permissions ? Array.from(response.permissions) : []
+            permissions: response.permissions ? Array.from(response.permissions) : [],
+            mustChangePassword: !!response.mustChangePassword
           };
           this.saveSession(response.token, userSession);
         }
@@ -49,10 +52,22 @@ export class AuthService {
             ...this._currentUser()!,
             fullName: profile.fullName || this._currentUser()!.fullName,
             role: profile.role || this._currentUser()!.role,
-            permissions: profile.permissions ? Array.from(profile.permissions) : this._currentUser()!.permissions
+            permissions: profile.permissions ? Array.from(profile.permissions) : this._currentUser()!.permissions,
+            mustChangePassword: profile.mustChangePassword ?? this._currentUser()!.mustChangePassword
           };
           const token = this.getToken() || '';
           this.saveSession(token, updated);
+        }
+      })
+    );
+  }
+
+  changePassword(request: ChangePasswordRequest): Observable<void> {
+    return this.http.post<void>(this.CHANGE_PASSWORD_URL, request).pipe(
+      tap(() => {
+        const user = this._currentUser();
+        if (user) {
+          this.saveSession(this.getToken() || '', { ...user, mustChangePassword: false });
         }
       })
     );

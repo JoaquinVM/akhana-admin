@@ -70,7 +70,8 @@ describe('AuthService', () => {
       username: 'admin',
       fullName: 'Administrador General',
       role: 'ADMIN',
-      permissions: ['SALES_POS', 'SECURITY_USERS']
+      permissions: ['SALES_POS', 'SECURITY_USERS'],
+      mustChangePassword: false
     });
     expect(localStorage.getItem('akhana_token')).toBe('jwt.test.token');
   });
@@ -91,5 +92,30 @@ describe('AuthService', () => {
     expect(localStorage.getItem('akhana_user')).toBeNull();
     expect(navigateSpy).toHaveBeenCalledTimes(1);
     expect(navigateSpy).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('should flag a required password change on login and clear it after changing the password', () => {
+    service.login({ username: 'admin', password: 'initial-pass' }).subscribe();
+    httpTesting.expectOne('/api/auth/login').flush({
+      token: 'jwt.first.login',
+      id: 'uuid-admin',
+      username: 'admin',
+      role: 'ADMIN',
+      permissions: [],
+      mustChangePassword: true,
+      message: 'Password change required'
+    } satisfies LoginResponse);
+
+    expect(service.mustChangePassword()).toBe(true);
+
+    service.changePassword({ currentPassword: 'initial-pass', newPassword: 'new-strong-pass' }).subscribe();
+    const req = httpTesting.expectOne('/api/auth/change-password');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ currentPassword: 'initial-pass', newPassword: 'new-strong-pass' });
+    req.flush(null);
+
+    expect(service.mustChangePassword()).toBe(false);
+    expect(service.getToken()).toBe('jwt.first.login');
+    expect(JSON.parse(localStorage.getItem('akhana_user')!).mustChangePassword).toBe(false);
   });
 });

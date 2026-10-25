@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
+import { ChangePasswordComponent } from './pages/change-password/change-password.component';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { SectionPageComponent } from './pages/section-page/section-page.component';
 import { SuppliersComponent } from './pages/suppliers/suppliers.component';
@@ -14,7 +15,7 @@ import { TransactionsComponent } from './pages/finances/transactions/transaction
 import { AccountsComponent } from './pages/finances/accounts/accounts.component';
 import { FinancialCategoriesComponent } from './pages/finances/categories/categories.component';
 import { UsersComponent } from './pages/security/users/users.component';
-import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { authGuard, guestGuard, sessionGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/auth/permission.guard';
 
 export const routes: Routes = [
@@ -22,6 +23,11 @@ export const routes: Routes = [
     path: 'login',
     component: LoginComponent,
     canActivate: [guestGuard]
+  },
+  {
+    path: 'change-password',
+    component: ChangePasswordComponent,
+    canActivate: [sessionGuard]
   },
   {
     path: '',

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
@@ -130,5 +131,72 @@ class AuthServiceTest {
         verify(userRepository, times(1)).findByUsername("seller");
         verifyNoInteractions(passwordEncoder);
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    @DisplayName("El login informa que el usuario debe cambiar la contraseña")
+    void login_MustChangePassword_IsReported() {
+        activeUser.setMustChangePassword(true);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("initial-pass", activeUser.getPassword())).thenReturn(true);
+        when(jwtService.generateToken(activeUser)).thenReturn("token");
+
+        LoginResponse response = authService.login(new LoginRequest("admin", "initial-pass"));
+
+        assertThat(response.mustChangePassword()).isTrue();
+        assertThat(response.message()).isEqualTo("Password change required");
+    }
+
+    @Test
+    @DisplayName("Cambiar la contraseña guarda el nuevo hash y quita la marca de cambio obligatorio")
+    void changePassword_Success() {
+        activeUser.setMustChangePassword(true);
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("initial-pass", "$2a$10$hashedPassword")).thenReturn(true);
+        when(passwordEncoder.encode("new-strong-pass")).thenReturn("$2a$10$newHash");
+
+        authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "new-strong-pass"));
+
+        assertThat(activeUser.getPassword()).isEqualTo("$2a$10$newHash");
+        assertThat(activeUser.isMustChangePassword()).isFalse();
+        assertThat(activeUser.getUpdatedBy()).isEqualTo("admin");
+        verify(userRepository).save(activeUser);
+    }
+
+    @Test
+    @DisplayName("Cambiar la contraseña falla si la actual no coincide")
+    void changePassword_WrongCurrentPassword_Fails() {
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("wrong", "$2a$10$hashedPassword")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("wrong", "new-strong-pass")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La contraseña actual no es correcta");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cambiar la contraseña falla si la nueva es igual a la actual")
+    void changePassword_SameAsCurrent_Fails() {
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("same-password", "$2a$10$hashedPassword")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("same-password", "same-password")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La nueva contraseña debe ser distinta de la actual");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cambiar la contraseña falla si la nueva es igual al nombre de usuario")
+    void changePassword_SameAsUsername_Fails() {
+        activeUser.setUsername("administrador");
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("initial-pass", "$2a$10$hashedPassword")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "Administrador")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La nueva contraseña no puede ser igual al nombre de usuario");
+        verify(userRepository, never()).save(any());
     }
 }

@@ -107,4 +107,20 @@ describe('LoginComponent', () => {
     component.togglePasswordVisibility();
     expect(component.showPassword()).toBe(false);
   });
+
+  it('should navigate to /change-password when the login requires a password change', () => {
+    authServiceSpy.login.mockReturnValue(of({
+      token: 'jwt.token',
+      id: 'uuid-1',
+      username: 'admin',
+      role: 'ADMIN',
+      mustChangePassword: true,
+      message: 'Password change required'
+    } satisfies LoginResponse));
+
+    component.loginForm.setValue({ username: 'admin', password: 'initial-pass' });
+    component.onSubmit();
+
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/change-password']);
+  });
 });

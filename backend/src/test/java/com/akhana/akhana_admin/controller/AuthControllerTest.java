@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.controller;
 import com.akhana.akhana_admin.config.JwtAuthenticationEntryPoint;
 import com.akhana.akhana_admin.config.JwtAuthenticationFilter;
 import com.akhana.akhana_admin.config.SecurityConfig;
+import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
@@ -26,6 +27,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -158,5 +162,74 @@ class AuthControllerTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
             .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+    }
+
+    private User authenticate(String token, boolean mustChangePassword) {
+        User user = User.builder()
+            .id(UUID.randomUUID())
+            .username("admin")
+            .role(Role.ADMIN)
+            .active(true)
+            .mustChangePassword(mustChangePassword)
+            .build();
+        when(jwtService.extractUsername(token)).thenReturn("admin");
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
+        when(jwtService.isTokenValid(token, "admin")).thenReturn(true);
+        return user;
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/change-password - Retorna 204 y delega en el servicio con el usuario autenticado")
+    void changePassword_Success() throws Exception {
+        User user = authenticate("valid.token", true);
+
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "currentPassword": "initial-pass", "newPassword": "new-strong-pass" }
+                    """))
+            .andExpect(status().isNoContent());
+
+        verify(authService).changePassword(eq(user.getId()), any(ChangePasswordRequest.class));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/change-password - Retorna 400 si la nueva contraseña es demasiado corta")
+    void changePassword_TooShort_BadRequest() throws Exception {
+        authenticate("valid.token", true);
+
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "currentPassword": "initial-pass", "newPassword": "short" }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 8 y 100 caracteres"));
+
+        verify(authService, never()).changePassword(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/change-password - Retorna 401 sin token")
+    void changePassword_Unauthorized() throws Exception {
+        mockMvc.perform(post("/api/auth/change-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "currentPassword": "initial-pass", "newPassword": "new-strong-pass" }
+                    """))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/auth/me - Informa mustChangePassword y sigue accesible mientras la contraseña debe cambiarse")
+    void getCurrentUser_MustChangePassword() throws Exception {
+        authenticate("valid.token", true);
+
+        mockMvc.perform(get("/api/auth/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mustChangePassword").value(true));
     }
 }

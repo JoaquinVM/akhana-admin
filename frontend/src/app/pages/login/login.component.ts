@@ -46,10 +46,10 @@ export class LoginComponent {
       username: (username ?? '').trim(),
       password: password ?? ''
     }).subscribe({
-      next: () => {
+      next: (response) => {
         this.isLoading.set(false);
         this.loginForm.enable();
-        this.router.navigate(['/pos']);
+        this.router.navigate([response.mustChangePassword ? '/change-password' : '/pos']);
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);

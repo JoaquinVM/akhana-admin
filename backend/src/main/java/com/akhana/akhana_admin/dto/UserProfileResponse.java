@@ -10,9 +10,10 @@ public record UserProfileResponse(
     String username,
     String fullName,
     Role role,
-    Set<String> permissions
+    Set<String> permissions,
+    boolean mustChangePassword
 ) {
     public UserProfileResponse(UUID id, String username, Role role) {
-        this(id, username, username, role, Set.of());
+        this(id, username, username, role, Set.of(), false);
     }
 }

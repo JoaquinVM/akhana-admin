@@ -1,14 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
-import { authGuard, guestGuard } from './auth.guard';
+import { authGuard, guestGuard, sessionGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
 describe('Auth Guards', () => {
-  let authServiceSpy: { isAuthenticated: ReturnType<typeof vi.fn> };
+  let authServiceSpy: { isAuthenticated: ReturnType<typeof vi.fn>; mustChangePassword: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     authServiceSpy = {
-      isAuthenticated: vi.fn()
+      isAuthenticated: vi.fn(),
+      mustChangePassword: vi.fn().mockReturnValue(false)
     };
 
     TestBed.configureTestingModule({
@@ -49,6 +50,37 @@ describe('Auth Guards', () => {
       const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
       expect(result instanceof UrlTree).toBe(true);
       expect((result as UrlTree).toString()).toBe('/pos');
+    });
+  });
+
+  describe('password change required', () => {
+    beforeEach(() => {
+      authServiceSpy.isAuthenticated.mockReturnValue(true);
+      authServiceSpy.mustChangePassword.mockReturnValue(true);
+    });
+
+    it('authGuard should redirect to /change-password', () => {
+      const result = TestBed.runInInjectionContext(() => authGuard({} as any, {} as any));
+      expect((result as UrlTree).toString()).toBe('/change-password');
+    });
+
+    it('guestGuard should redirect to /change-password', () => {
+      const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
+      expect((result as UrlTree).toString()).toBe('/change-password');
+    });
+
+    it('sessionGuard should allow the change-password screen', () => {
+      const result = TestBed.runInInjectionContext(() => sessionGuard({} as any, {} as any));
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('sessionGuard', () => {
+    it('should redirect to /login when user is unauthenticated', () => {
+      authServiceSpy.isAuthenticated.mockReturnValue(false);
+
+      const result = TestBed.runInInjectionContext(() => sessionGuard({} as any, {} as any));
+      expect((result as UrlTree).toString()).toBe('/login');
     });
   });
 });

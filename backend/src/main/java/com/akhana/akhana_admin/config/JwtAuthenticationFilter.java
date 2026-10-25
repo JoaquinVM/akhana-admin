@@ -22,7 +22,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -32,6 +34,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final SecurityContextRepository securityContextRepository = new RequestAttributeSecurityContextRepository();
+
+    /** Only endpoints reachable while the user must still change the password. */
+    private static final Set<String> PASSWORD_CHANGE_ALLOWED_PATHS = Set.of("/api/auth/me", "/api/auth/change-password");
 
     @Override
     protected void doFilterInternal(
@@ -55,6 +60,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User user = userRepository.findByUsername(username).orElse(null);
 
                 if (user != null && user.isActive() && user.getDeletedAt() == null && jwtService.isTokenValid(token, user.getUsername())) {
+                    if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED_PATHS.contains(request.getRequestURI().substring(request.getContextPath().length()))) {
+                        writePasswordChangeRequired(response);
+                        return;
+                    }
                     var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
                     if (user.getPermissions() != null) {
@@ -81,5 +90,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writePasswordChangeRequired(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(String.format(
+            "{\"error\":\"PasswordChangeRequired\",\"message\":\"Debe cambiar su contraseña antes de continuar\",\"timestamp\":\"%s\"}",
+            Instant.now()));
     }
 }

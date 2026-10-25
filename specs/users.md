@@ -149,3 +149,35 @@ El sistema SHALL ejecutar una migración de base de datos idempotente que incorp
 #### Scenario: Ejecución de migración sobre usuarios existentes
 - **WHEN** se aplica la migración V9 en la base de datos
 - **THEN** los usuarios existentes reciben acceso a todos los submenús del sistema, se conservan sus hashes de contraseña intactos y quedan habilitados para ingresar normalmente
+
+---
+
+### Requirement: Primer administrador y cambio de contraseña (USR-06)
+El sistema SHALL crear el primer administrador solo cuando no existe ningún usuario, con usuario y contraseña tomados de `ADMIN_USERNAME` y `ADMIN_PASSWORD`, marcado para cambiar la contraseña en su primer ingreso, y SHALL permitir que un usuario autenticado cambie su contraseña validando las reglas en el backend.
+
+#### Scenario: Primer arranque sin usuarios
+- **WHEN** el backend arranca con la tabla de usuarios vacía y `ADMIN_USERNAME`/`ADMIN_PASSWORD` definidas
+- **THEN** crea un único usuario administrador activo, con todos los permisos y `must_change_password = true`; no crea ningún vendedor
+
+#### Scenario: Arranque sin usuarios y sin variables del admin
+- **WHEN** la tabla de usuarios está vacía y falta `ADMIN_USERNAME` o `ADMIN_PASSWORD`, o la contraseña tiene menos de 8 caracteres
+- **THEN** el arranque falla con un mensaje que nombra las variables
+
+#### Scenario: Arranque con usuarios existentes
+- **WHEN** ya existe al menos un usuario
+- **THEN** no se crea ni modifica ningún usuario, aunque las variables del admin no estén definidas
+
+#### Scenario: Primer ingreso con cambio obligatorio
+- **WHEN** un usuario con `must_change_password` inicia sesión
+- **THEN** el login responde con `mustChangePassword: true`, el frontend muestra la pantalla de cambio de contraseña y el backend responde 403 `PasswordChangeRequired` a toda llamada distinta de `/api/auth/me` y `/api/auth/change-password`
+
+#### Scenario: Cambio de contraseña válido
+- **WHEN** el usuario envía su contraseña actual correcta y una nueva de 8 a 100 caracteres, distinta de la actual y del nombre de usuario
+- **THEN** se guarda el nuevo hash, se quita la marca de cambio obligatorio, se registra `updated_by` y el usuario puede usar el sistema
+
+#### Scenario: Cambio de contraseña rechazado
+- **WHEN** la contraseña actual no coincide, o la nueva no cumple las reglas
+- **THEN** el backend responde 400 con el motivo y la contraseña no cambia
+
+### Tareas
+- [x] USR-06: migración `V2__user_must_change_password.sql`, `DataInitializer`, `POST /api/auth/change-password`, bloqueo en `JwtAuthenticationFilter`, pantalla `/change-password` (T-03, 25-10-2026).

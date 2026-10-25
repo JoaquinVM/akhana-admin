@@ -1,8 +1,10 @@
 package com.akhana.akhana_admin.service.impl;
 
+import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
+import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.AuthService;
@@ -12,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +60,32 @@ public class AuthServiceImpl implements AuthService {
             user.getFullName(),
             user.getRole(),
             user.getPermissions() != null ? new java.util.HashSet<>(user.getPermissions()) : java.util.Set.of(),
-            "Authentication successful"
+            user.isMustChangePassword(),
+            user.isMustChangePassword() ? "Password change required" : "Authentication successful"
         );
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("La contraseña actual no es correcta");
+        }
+        if (request.newPassword().equals(request.currentPassword())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser distinta de la actual");
+        }
+        if (request.newPassword().equalsIgnoreCase(user.getUsername())) {
+            throw new IllegalArgumentException("La nueva contraseña no puede ser igual al nombre de usuario");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setMustChangePassword(false);
+        user.setUpdatedBy(user.getUsername());
+        userRepository.save(user);
+
+        log.info("User '{}' changed their password", user.getUsername());
     }
 }

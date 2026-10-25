@@ -40,6 +40,10 @@ public class User {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "must_change_password", nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "permission_key", nullable = false, length = 100)
