@@ -537,6 +537,42 @@ class FinancialTransactionServiceTest {
     }
 
     @Test
+    @DisplayName("COM-06: los pagos y envíos de pedidos no se anulan ni editan desde Finanzas ni desde el POS")
+    void testPurchaseMovementsAreManagedFromPurchases() {
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .purchaseId(UUID.randomUUID())
+                .cashSessionId(UUID.randomUUID())
+                .sourceAccount(cajaAccount)
+                .amount(new BigDecimal("100.00"))
+                .description("Pago pedido PED-000001")
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        VoidFinancialTransactionRequest voidRequest = VoidFinancialTransactionRequest.builder().voidReason("Error").build();
+
+        IllegalStateException fromFinances = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidTransaction(tx.getId(), voidRequest, "admin"));
+        IllegalStateException fromPos = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidCashExpense(tx.getId(), voidRequest, "operator"));
+        FinancialTransactionRequest edit = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(cajaAccount.getId())
+                .amount(new BigDecimal("100.00"))
+                .description("Otro texto")
+                .build();
+        IllegalStateException onEdit = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.updateTransaction(tx.getId(), edit, "admin"));
+
+        assertEquals("Los movimientos de un pedido se gestionan desde Compras.", fromFinances.getMessage());
+        assertEquals(fromFinances.getMessage(), fromPos.getMessage());
+        assertEquals(fromFinances.getMessage(), onEdit.getMessage());
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+        verify(financialAccountRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Debe consultar gastos de una sesión de caja específica")
     void testGetExpensesByCashSession() {
         UUID sessionId = UUID.randomUUID();

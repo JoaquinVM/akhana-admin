@@ -34,6 +34,11 @@ public class FinancialCategory {
     @Builder.Default
     private Boolean isSalesDefault = false;
 
+    // Set on the categories the code needs (Pedido, Transporte); those cannot be deleted
+    @Enumerated(EnumType.STRING)
+    @Column(name = "system_key", length = 30, updatable = false)
+    private FinancialCategorySystemKey systemKey;
+
     // Auditoría
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     @Builder.Default

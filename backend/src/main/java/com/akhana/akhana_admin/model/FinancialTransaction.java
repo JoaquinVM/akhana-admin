@@ -59,6 +59,10 @@ public class FinancialTransaction {
     @Column(name = "cash_session_id")
     private UUID cashSessionId;
 
+    // Payment or shipping of a purchase (COM-06, P-24): managed only from Compras
+    @Column(name = "purchase_id", updatable = false)
+    private UUID purchaseId;
+
     // Auditoría de registro (independiente de transactionDate)
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;

@@ -47,6 +47,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String INITIAL_BALANCE_VOID = "El saldo inicial de una cuenta no se puede anular.";
     static final String INITIAL_BALANCE_EDIT = "El saldo inicial de una cuenta no se puede editar.";
     static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
+    static final String PURCHASE_MOVEMENT = "Los movimientos de un pedido se gestionan desde Compras.";
 
     @Override
     @Transactional(readOnly = true)
@@ -213,6 +214,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException("Los movimientos financieros originados por ventas no pueden editarse desde este módulo; se gestionan exclusivamente desde Ventas.");
         }
 
+        if (tx.getPurchaseId() != null) {
+            throw new IllegalStateException(PURCHASE_MOVEMENT);
+        }
+
         if (tx.getStatus() == FinancialTransactionStatus.ANULADO) {
             throw new IllegalStateException("No se puede editar una transacción que ya ha sido anulada.");
         }
@@ -275,6 +280,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         if (tx.getType() != FinancialTransactionType.GASTO_MANUAL || tx.getCashSessionId() == null) {
             throw new IllegalStateException("Solo se pueden anular desde el POS los gastos de caja.");
         }
+        if (tx.getPurchaseId() != null) {
+            throw new IllegalStateException(PURCHASE_MOVEMENT);
+        }
         lockSessionIfOpen(tx.getCashSessionId(), "No se pueden anular gastos de una caja cerrada.");
 
         return voidTransaction(id, request, currentUsername);
@@ -293,6 +301,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         if (tx.getSaleId() != null) {
             throw new IllegalStateException("Las transacciones generadas por ventas no pueden anularse desde Finanzas. Deben anularse desde el módulo de Ventas.");
+        }
+
+        if (tx.getPurchaseId() != null) {
+            throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
         if (tx.getType() == FinancialTransactionType.SALDO_INICIAL) {
@@ -436,6 +448,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .notes(tx.getNotes())
                 .status(tx.getStatus())
                 .saleId(tx.getSaleId())
+                .purchaseId(tx.getPurchaseId())
                 .cashSessionId(tx.getCashSessionId())
                 .sourceAccount(sourceSummary)
                 .destinationAccount(destSummary)

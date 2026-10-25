@@ -20,6 +20,8 @@ public enum Permission {
     TAGS,
     /** Suppliers. */
     SUPPLIERS,
+    /** Purchases (orders), their shipping and payments, including creating products and changing their cost and price. */
+    PURCHASES,
     /** Finances summary. */
     FINANCES_SUMMARY,
     /** Manual incomes, expenses and transfers, including voids. */

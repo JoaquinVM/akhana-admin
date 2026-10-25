@@ -157,6 +157,9 @@ public class FinancialCategoryServiceImpl implements FinancialCategoryService {
         if (Boolean.TRUE.equals(category.getIsSalesDefault())) {
             throw new IllegalStateException("No se puede eliminar la categoría configurada actualmente como categoría de ventas.");
         }
+        if (category.getSystemKey() != null) {
+            throw new IllegalStateException("Las categorías de sistema no se pueden eliminar.");
+        }
 
         category.setDeletedAt(Instant.now());
         category.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
@@ -170,6 +173,7 @@ public class FinancialCategoryServiceImpl implements FinancialCategoryService {
                 .type(category.getType())
                 .color(category.getColor())
                 .isSalesDefault(category.getIsSalesDefault())
+                .systemKey(category.getSystemKey())
                 .createdBy(category.getCreatedBy())
                 .createdAt(category.getCreatedAt())
                 .updatedBy(category.getUpdatedBy())

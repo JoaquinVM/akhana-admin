@@ -24,7 +24,7 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS')")
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES')")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts(
             @RequestParam(required = false) String search,
@@ -33,13 +33,15 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS')")
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES')")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable UUID id) {
         ProductResponse product = productService.getProductById(id);
         return ResponseEntity.ok(product);
     }
 
+    // Compras creates a product from a purchase line (COM-03)
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'PURCHASES')")
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request,

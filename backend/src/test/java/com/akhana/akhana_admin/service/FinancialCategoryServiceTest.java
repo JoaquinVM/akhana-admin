@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.FinancialCategoryRequest;
 import com.akhana.akhana_admin.dto.FinancialCategoryResponse;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.model.FinancialCategory;
+import com.akhana.akhana_admin.model.FinancialCategorySystemKey;
 import com.akhana.akhana_admin.model.FinancialCategoryType;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.service.impl.FinancialCategoryServiceImpl;
@@ -79,6 +80,24 @@ class FinancialCategoryServiceTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialCategoryService.deleteCategory(salesCategory.getId(), "admin"));
         assertTrue(ex.getMessage().contains("categoría de ventas"));
+    }
+
+    @Test
+    @DisplayName("Las categorías de sistema Pedido y Transporte no se eliminan")
+    void testDeleteSystemCategoryForbidden() {
+        FinancialCategory transport = FinancialCategory.builder()
+                .id(UUID.randomUUID())
+                .name("Transporte")
+                .type(FinancialCategoryType.GASTO)
+                .isSalesDefault(false)
+                .systemKey(FinancialCategorySystemKey.PURCHASE_SHIPPING)
+                .build();
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(transport.getId())).thenReturn(Optional.of(transport));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialCategoryService.deleteCategory(transport.getId(), "admin"));
+        assertEquals("Las categorías de sistema no se pueden eliminar.", ex.getMessage());
+        assertNull(transport.getDeletedAt());
     }
 
     @Test

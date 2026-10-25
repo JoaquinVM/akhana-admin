@@ -32,6 +32,10 @@ public interface FinancialAccountRepository extends JpaRepository<FinancialAccou
 
     boolean existsByIdAndIsCashAccountTrue(UUID id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM FinancialAccount a WHERE a.id = :id AND a.deletedAt IS NULL")
+    Optional<FinancialAccount> findActiveByIdForUpdate(@Param("id") UUID id);
+
     // Accounts are always locked in id order, in a single query, to avoid deadlocks (T-14)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM FinancialAccount a WHERE a.id IN :ids ORDER BY a.id")

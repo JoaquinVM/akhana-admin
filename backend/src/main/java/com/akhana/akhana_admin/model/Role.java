@@ -18,7 +18,8 @@ public enum Role {
         Permission.PRODUCTS,
         Permission.CATEGORIES,
         Permission.TAGS,
-        Permission.SUPPLIERS
+        Permission.SUPPLIERS,
+        Permission.PURCHASES
     )),
     ADMINISTRATOR(EnumSet.allOf(Permission.class));
 

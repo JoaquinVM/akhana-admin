@@ -259,11 +259,11 @@ public class ProductServiceImpl implements ProductService {
         return new HashSet<>(foundTags);
     }
 
-    private BigDecimal calculateFixedProfit(BigDecimal buyPrice, BigDecimal sellPrice) {
+    static BigDecimal calculateFixedProfit(BigDecimal buyPrice, BigDecimal sellPrice) {
         return sellPrice.subtract(buyPrice).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal calculatePercentageProfit(BigDecimal buyPrice, BigDecimal fixedProfit) {
+    static BigDecimal calculatePercentageProfit(BigDecimal buyPrice, BigDecimal fixedProfit) {
         if (buyPrice.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }

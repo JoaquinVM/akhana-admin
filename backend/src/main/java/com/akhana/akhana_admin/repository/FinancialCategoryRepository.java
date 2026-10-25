@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.repository;
 
 import com.akhana.akhana_admin.model.FinancialCategory;
+import com.akhana.akhana_admin.model.FinancialCategorySystemKey;
 import com.akhana.akhana_admin.model.FinancialCategoryType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,8 @@ public interface FinancialCategoryRepository extends JpaRepository<FinancialCate
     Optional<FinancialCategory> findByIdAndDeletedAtIsNull(UUID id);
 
     Optional<FinancialCategory> findByIsSalesDefaultTrueAndDeletedAtIsNull();
+
+    Optional<FinancialCategory> findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey systemKey);
 
     boolean existsByNameIgnoreCaseAndTypeAndDeletedAtIsNull(String name, FinancialCategoryType type);
 

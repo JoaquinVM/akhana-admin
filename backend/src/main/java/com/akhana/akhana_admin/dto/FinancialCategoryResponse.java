@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.FinancialCategorySystemKey;
 import com.akhana.akhana_admin.model.FinancialCategoryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,7 @@ public class FinancialCategoryResponse {
     private FinancialCategoryType type;
     private String color;
     private Boolean isSalesDefault;
+    private FinancialCategorySystemKey systemKey;
 
     // Auditoría
     private String createdBy;

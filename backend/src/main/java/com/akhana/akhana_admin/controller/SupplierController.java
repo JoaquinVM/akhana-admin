@@ -23,7 +23,7 @@ public class SupplierController {
 
     private final SupplierService supplierService;
 
-    @PreAuthorize("hasAnyAuthority('SUPPLIERS', 'PRODUCTS')")
+    @PreAuthorize("hasAnyAuthority('SUPPLIERS', 'PRODUCTS', 'PURCHASES')")
     @GetMapping
     public ResponseEntity<List<SupplierResponse>> getAllSuppliers(
             @RequestParam(required = false) String search,
@@ -32,7 +32,7 @@ public class SupplierController {
         return ResponseEntity.ok(suppliers);
     }
 
-    @PreAuthorize("hasAnyAuthority('SUPPLIERS', 'PRODUCTS')")
+    @PreAuthorize("hasAnyAuthority('SUPPLIERS', 'PRODUCTS', 'PURCHASES')")
     @GetMapping("/{id}")
     public ResponseEntity<SupplierResponse> getSupplierById(@PathVariable UUID id) {
         SupplierResponse supplier = supplierService.getSupplierById(id);

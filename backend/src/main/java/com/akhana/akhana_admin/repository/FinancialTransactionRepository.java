@@ -21,6 +21,8 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findBySaleId(UUID saleId);
 
+    List<FinancialTransaction> findByPurchaseIdOrderByTransactionDateAsc(UUID purchaseId);
+
     // Locked first so two voids or edits of the same movement cannot both revert it (T-14)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM FinancialTransaction t WHERE t.id = :id")

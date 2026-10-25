@@ -23,7 +23,7 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @PreAuthorize("hasAnyAuthority('CATEGORIES', 'PRODUCTS')")
+    @PreAuthorize("hasAnyAuthority('CATEGORIES', 'PRODUCTS', 'PURCHASES')")
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories(
             @RequestParam(required = false) String search,
@@ -32,7 +32,7 @@ public class CategoryController {
         return ResponseEntity.ok(categories);
     }
 
-    @PreAuthorize("hasAnyAuthority('CATEGORIES', 'PRODUCTS')")
+    @PreAuthorize("hasAnyAuthority('CATEGORIES', 'PRODUCTS', 'PURCHASES')")
     @GetMapping("/{id}")
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable UUID id) {
         CategoryResponse category = categoryService.getCategoryById(id);

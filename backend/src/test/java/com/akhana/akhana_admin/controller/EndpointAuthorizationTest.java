@@ -52,6 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialSummaryController.class,
         FinancialTransactionController.class,
         ProductController.class,
+        PurchaseController.class,
         QuickProductController.class,
         SaleController.class,
         SupplierController.class,
@@ -81,6 +82,10 @@ class EndpointAuthorizationTest {
             .formatted(ID, ID);
     private static final String SUPPLIER = """
             {"name":"Granel","code":"GR"}""";
+    private static final String PURCHASE = """
+            {"supplierId":"%s","items":[{"productId":"%s","quantity":1,"unitCost":5.00}]}""".formatted(ID, ID);
+    private static final String PURCHASE_PAYMENT = """
+            {"accountId":"%s","amount":50.00}""".formatted(ID);
     private static final String QUICK_GROUP = """
             {"name":"Bebidas"}""";
     private static final String REORDER_GROUPS = """
@@ -115,6 +120,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private FinancialSummaryService financialSummaryService;
     @MockitoBean private FinancialTransactionService financialTransactionService;
     @MockitoBean private ProductService productService;
+    @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
     @MockitoBean private SaleService saleService;
     @MockitoBean private SupplierService supplierService;
@@ -185,6 +191,13 @@ class EndpointAuthorizationTest {
                 both(post, "/api/suppliers", SUPPLIER),
                 both(put, "/api/suppliers/" + ID, SUPPLIER),
                 both(delete, "/api/suppliers/" + ID, null),
+                // Compras: pedidos, pagos, cuentas para pagar y precio sugerido (COM-02 a COM-06)
+                both(get, "/api/purchases", null),
+                both(get, "/api/purchases/" + ID, null),
+                both(post, "/api/purchases", PURCHASE),
+                both(post, "/api/purchases/" + ID + "/payments", PURCHASE_PAYMENT),
+                both(get, "/api/purchases/payment-accounts", null),
+                both(get, "/api/purchases/price-suggestion?productId=" + ID + "&newCost=12.30", null),
                 // Gastos de caja desde el POS: registrar y anular
                 both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
                 both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),
