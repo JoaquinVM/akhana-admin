@@ -44,7 +44,10 @@ describe('PurchaseService', () => {
       shippingCost: 25,
       shippingAccountId: 'acc-1',
       consignment: false,
-      comment: null
+      comment: null,
+      deliveryType: 'EN_TIENDA',
+      deliveryStatus: 'PENDIENTE',
+      deliveryDate: null
     };
     service.registerPurchase(request).subscribe();
     const req = httpTesting.expectOne('/api/purchases');

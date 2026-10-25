@@ -1,0 +1,56 @@
+.loading {
+  color: #64748b;
+}
+
+.payables-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+}
+
+.payables-total strong {
+  font-size: 1.25rem;
+  color: #b91c1c;
+}
+
+.supplier-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.supplier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.supplier-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.supplier-balance {
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.purchase-number {
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.pay-POR_PAGAR { background: #fee2e2; color: #b91c1c; }
+.pay-CONSIGNACION { background: #ede9fe; color: #6d28d9; }
+.pay-A_CUENTA { background: #fef3c7; color: #a16207; }

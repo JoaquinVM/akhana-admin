@@ -1,0 +1,22 @@
+<app-modal [isOpen]="isOpen()" [title]="title()" size="sm" (close)="onClose()">
+  <div class="void-body">
+    @if (message()) {
+      <p class="warning">{{ message() }}</p>
+    }
+    @if (errorMessage()) {
+      <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+    }
+    <div class="form-group">
+      <label class="form-label" for="void-reason">Motivo de anulación <span class="required-mark">*</span></label>
+      <textarea id="void-reason" rows="3" class="form-control" maxlength="500"
+                placeholder="Por qué se anula…"
+                [ngModel]="voidReason()" (ngModelChange)="voidReason.set($event)"></textarea>
+    </div>
+  </div>
+  <div modal-footer class="modal-footer-actions">
+    <button type="button" class="btn btn-secondary" [disabled]="isLoading()" (click)="onClose()">Cancelar</button>
+    <button type="button" class="btn btn-danger" [disabled]="!isValid || isLoading()" (click)="confirm()">
+      {{ isLoading() ? 'Anulando…' : 'Confirmar anulación' }}
+    </button>
+  </div>
+</app-modal>

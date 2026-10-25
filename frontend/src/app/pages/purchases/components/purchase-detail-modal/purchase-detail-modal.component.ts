@@ -2,18 +2,24 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import {
+  DELIVERY_STATUS_LABELS,
+  DELIVERY_TYPE_LABELS,
+  DeliveryStatus,
+  DeliveryType,
   PAYMENT_STATUS_LABELS,
   PaymentAccount,
   Purchase,
+  PurchasePayment,
   PurchasePaymentStatus
 } from '../../../../core/purchase/models/purchase.models';
 
 @Component({
   selector: 'app-purchase-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent],
   templateUrl: './purchase-detail-modal.component.html',
   styleUrls: ['./purchase-detail-modal.component.css']
 })
@@ -23,8 +29,8 @@ export class PurchaseDetailModalComponent {
   purchaseId = input<string | null>(null);
   accounts = input<PaymentAccount[]>([]);
 
-  // Emite el pedido actualizado tras un pago, para refrescar el listado
-  paid = output<Purchase>();
+  // Emite el pedido actualizado tras un pago, un cambio de entrega o una anulación, para refrescar el listado
+  updated = output<Purchase>();
   close = output<void>();
 
   purchase = signal<Purchase | null>(null);
@@ -37,9 +43,47 @@ export class PurchaseDetailModalComponent {
   paymentError = signal<string | null>(null);
   isPaying = signal<boolean>(false);
 
+  // COM-07: entrega
+  readonly deliveryTypes = Object.entries(DELIVERY_TYPE_LABELS) as [DeliveryType, string][];
+  readonly deliveryStatuses = Object.entries(DELIVERY_STATUS_LABELS) as [DeliveryStatus, string][];
+  readonly today = todayIso();
+  isEditingDelivery = signal<boolean>(false);
+  deliveryType = signal<DeliveryType>('EN_TIENDA');
+  deliveryStatus = signal<DeliveryStatus>('PENDIENTE');
+  deliveryDate = signal<string>('');
+  deliveryError = signal<string | null>(null);
+  isSavingDelivery = signal<boolean>(false);
+
+  // COM-09: anulación del pedido (voidTarget = 'PURCHASE') o de un pago
+  voidTarget = signal<'PURCHASE' | PurchasePayment | null>(null);
+  voidError = signal<string | null>(null);
+  isVoiding = signal<boolean>(false);
+
+  isActive = computed(() => this.purchase()?.status === 'REGISTRADO');
+
   canPay = computed(() => {
     const purchase = this.purchase();
     return !!purchase && purchase.status === 'REGISTRADO' && purchase.balance > 0;
+  });
+
+  voidTitle = computed(() => {
+    const target = this.voidTarget();
+    if (!target) {
+      return '';
+    }
+    return target === 'PURCHASE' ? 'Anular pedido ' + this.purchase()?.purchaseNumber : 'Anular pago';
+  });
+
+  voidMessage = computed(() => {
+    const target = this.voidTarget();
+    if (target === 'PURCHASE') {
+      return 'Se anulan todos los pagos y el envío del pedido y cada cuenta recupera su monto. '
+        + 'El costo y precio de los productos no cambian.';
+    }
+    if (target) {
+      return `Se anula el pago de Bs ${target.amount.toFixed(2)} desde ${target.accountName} y la cuenta recupera el monto.`;
+    }
+    return '';
   });
 
   constructor() {
@@ -57,6 +101,14 @@ export class PurchaseDetailModalComponent {
     return PAYMENT_STATUS_LABELS[status];
   }
 
+  deliveryTypeLabel(type: DeliveryType): string {
+    return DELIVERY_TYPE_LABELS[type];
+  }
+
+  deliveryStatusLabel(status: DeliveryStatus): string {
+    return DELIVERY_STATUS_LABELS[status];
+  }
+
   private load(id: string): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -65,6 +117,7 @@ export class PurchaseDetailModalComponent {
       next: purchase => {
         this.purchase.set(purchase);
         this.resetPaymentForm(purchase);
+        this.isEditingDelivery.set(false);
         this.isLoading.set(false);
       },
       error: err => {
@@ -111,7 +164,7 @@ export class PurchaseDetailModalComponent {
         this.purchase.set(updated);
         this.resetPaymentForm(updated);
         this.isPaying.set(false);
-        this.paid.emit(updated);
+        this.updated.emit(updated);
       },
       error: err => {
         this.paymentError.set(err.error?.message || 'No se pudo registrar el pago.');
@@ -120,9 +173,89 @@ export class PurchaseDetailModalComponent {
     });
   }
 
+  startDeliveryEdit(): void {
+    const purchase = this.purchase();
+    if (!purchase) {
+      return;
+    }
+    this.deliveryType.set(purchase.deliveryType);
+    this.deliveryStatus.set(purchase.deliveryStatus);
+    this.deliveryDate.set(purchase.deliveryDate ?? '');
+    this.deliveryError.set(null);
+    this.isEditingDelivery.set(true);
+  }
+
+  saveDelivery(): void {
+    const purchase = this.purchase();
+    if (!purchase) {
+      return;
+    }
+    this.isSavingDelivery.set(true);
+    this.deliveryError.set(null);
+    this.purchaseService.updateDelivery(purchase.id, {
+      deliveryType: this.deliveryType(),
+      deliveryStatus: this.deliveryStatus(),
+      deliveryDate: this.deliveryDate() || null
+    }).subscribe({
+      next: updated => {
+        this.purchase.set(updated);
+        this.isEditingDelivery.set(false);
+        this.isSavingDelivery.set(false);
+        this.updated.emit(updated);
+      },
+      error: err => {
+        this.deliveryError.set(err.error?.message || 'No se pudo guardar la entrega.');
+        this.isSavingDelivery.set(false);
+      }
+    });
+  }
+
+  openVoid(target: 'PURCHASE' | PurchasePayment): void {
+    this.voidError.set(null);
+    this.voidTarget.set(target);
+  }
+
+  closeVoid(): void {
+    if (!this.isVoiding()) {
+      this.voidTarget.set(null);
+    }
+  }
+
+  confirmVoid(voidReason: string): void {
+    const purchase = this.purchase();
+    const target = this.voidTarget();
+    if (!purchase || !target) {
+      return;
+    }
+    this.isVoiding.set(true);
+    this.voidError.set(null);
+    const request = target === 'PURCHASE'
+      ? this.purchaseService.voidPurchase(purchase.id, { voidReason })
+      : this.purchaseService.voidPayment(purchase.id, target.id, { voidReason });
+    request.subscribe({
+      next: updated => {
+        this.purchase.set(updated);
+        this.resetPaymentForm(updated);
+        this.isVoiding.set(false);
+        this.voidTarget.set(null);
+        this.updated.emit(updated);
+      },
+      error: err => {
+        this.voidError.set(err.error?.message || 'No se pudo anular.');
+        this.isVoiding.set(false);
+      }
+    });
+  }
+
   onClose(): void {
-    if (!this.isPaying()) {
+    if (!this.isPaying() && !this.isVoiding() && !this.isSavingDelivery()) {
       this.close.emit();
     }
   }
+}
+
+function todayIso(): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }

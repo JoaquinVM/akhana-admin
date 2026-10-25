@@ -9,6 +9,10 @@ import { Product, SaleUnit } from '../../../../core/product/models/product.model
 import { Category } from '../../../../core/category/models/category.models';
 import { Supplier } from '../../../../core/supplier/models/supplier.models';
 import {
+  DELIVERY_STATUS_LABELS,
+  DELIVERY_TYPE_LABELS,
+  DeliveryStatus,
+  DeliveryType,
   PaymentAccount,
   PriceSuggestion,
   Purchase,
@@ -77,6 +81,12 @@ export class PurchaseFormModalComponent {
   comment = signal<string>('');
   shippingCost = signal<number>(0);
   shippingAccountId = signal<string>('');
+  // COM-07: entrega
+  readonly deliveryTypes = Object.entries(DELIVERY_TYPE_LABELS) as [DeliveryType, string][];
+  readonly deliveryStatuses = Object.entries(DELIVERY_STATUS_LABELS) as [DeliveryStatus, string][];
+  deliveryType = signal<DeliveryType>('EN_TIENDA');
+  deliveryStatus = signal<DeliveryStatus>('PENDIENTE');
+  deliveryDate = signal<string>('');
   lines = signal<PurchaseLineDraft[]>([]);
 
   products = signal<Product[]>([]);
@@ -133,6 +143,9 @@ export class PurchaseFormModalComponent {
     this.comment.set('');
     this.shippingCost.set(0);
     this.shippingAccountId.set('');
+    this.deliveryType.set('EN_TIENDA');
+    this.deliveryStatus.set('PENDIENTE');
+    this.deliveryDate.set('');
     this.lines.set([]);
     this.productSearch.set('');
     this.showNewProduct.set(false);
@@ -312,7 +325,10 @@ export class PurchaseFormModalComponent {
       shippingCost: shipping,
       shippingAccountId: shipping > 0 ? this.shippingAccountId() || null : null,
       consignment: this.consignment(),
-      comment: comment.length > 0 ? comment : null
+      comment: comment.length > 0 ? comment : null,
+      deliveryType: this.deliveryType(),
+      deliveryStatus: this.deliveryStatus(),
+      deliveryDate: this.deliveryDate() || null
     };
   }
 

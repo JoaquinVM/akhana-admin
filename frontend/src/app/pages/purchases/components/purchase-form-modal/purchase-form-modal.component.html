@@ -230,6 +230,38 @@
       </div>
     </div>
 
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="purchase-delivery-type">Entrega</label>
+        <select id="purchase-delivery-type" class="form-control" name="deliveryType"
+                [ngModel]="deliveryType()" (ngModelChange)="deliveryType.set($event)">
+          @for (option of deliveryTypes; track option[0]) {
+            <option [value]="option[0]">{{ option[1] }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="purchase-delivery-status">Estado de entrega</label>
+        <select id="purchase-delivery-status" class="form-control" name="deliveryStatus"
+                [ngModel]="deliveryStatus()" (ngModelChange)="deliveryStatus.set($event)">
+          @for (option of deliveryStatuses; track option[0]) {
+            <option [value]="option[0]">{{ option[1] }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="purchase-delivery-date">
+          {{ deliveryStatus() === 'ENTREGADO' ? 'Fecha de entrega' : 'Fecha estimada' }}
+        </label>
+        <input id="purchase-delivery-date" type="date" class="form-control" name="deliveryDate"
+               [max]="deliveryStatus() === 'ENTREGADO' ? maxDate : null"
+               [ngModel]="deliveryDate()" (ngModelChange)="deliveryDate.set($event)" />
+        @if (deliveryStatus() === 'ENTREGADO') {
+          <span class="form-hint">Sin fecha se toma hoy.</span>
+        }
+      </div>
+    </div>
+
     <div class="totals">
       <div><span>Total líneas</span><strong>Bs {{ itemsTotal() | number:'1.2-2' }}</strong></div>
       <div><span>Envío</span><strong>Bs {{ (shippingCost() || 0) | number:'1.2-2' }}</strong></div>

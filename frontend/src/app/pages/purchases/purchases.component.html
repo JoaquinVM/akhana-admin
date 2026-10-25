@@ -24,7 +24,15 @@
     <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
   }
 
+  <div class="view-tabs" role="tablist" aria-label="Vista de compras">
+    <button type="button" role="tab" class="view-tab" [class.active]="activeTab() === 'ORDERS'"
+            [attr.aria-selected]="activeTab() === 'ORDERS'" (click)="setTab('ORDERS')">Pedidos</button>
+    <button type="button" role="tab" class="view-tab" [class.active]="activeTab() === 'PAYABLES'"
+            [attr.aria-selected]="activeTab() === 'PAYABLES'" (click)="setTab('PAYABLES')">Por pagar</button>
+  </div>
+
   <div class="filters-card">
+    @if (activeTab() === 'ORDERS') {
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado de pago">
       @for (filter of statusFilters; track filter.value) {
         <button type="button" role="tab" class="filter-pill"
@@ -35,6 +43,7 @@
         </button>
       }
     </div>
+    }
     <div class="filters-right">
       <select class="form-control supplier-filter" aria-label="Filtrar por proveedor"
               [ngModel]="supplierFilter()" (ngModelChange)="onSupplierFilter($event)">
@@ -43,11 +52,23 @@
           <option [value]="supplier.id">{{ supplier.name }}</option>
         }
       </select>
-      <input type="text" class="form-control search-input" placeholder="Buscar por número o comentario…"
-             aria-label="Buscar pedidos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+      @if (activeTab() === 'ORDERS') {
+        <select class="form-control delivery-filter" aria-label="Filtrar por entrega"
+                [ngModel]="deliveryFilter()" (ngModelChange)="onDeliveryFilter($event)">
+          <option value="">Toda entrega</option>
+          @for (option of deliveryStatuses; track option[0]) {
+            <option [value]="option[0]">{{ option[1] }}</option>
+          }
+        </select>
+        <input type="text" class="form-control search-input" placeholder="Buscar por número o comentario…"
+               aria-label="Buscar pedidos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+      }
     </div>
   </div>
 
+  @if (activeTab() === 'PAYABLES') {
+    <app-payables-view [supplierId]="supplierFilter()" [refreshKey]="payablesRefresh()" (open)="openDetail($event)" />
+  } @else {
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -61,15 +82,16 @@
             <th scope="col" class="text-right">Pagado</th>
             <th scope="col" class="text-right">Saldo</th>
             <th scope="col">Estado</th>
+            <th scope="col">Entrega</th>
             <th scope="col" class="text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @if (isLoading()) {
-            <tr><td colspan="9" class="text-center">Cargando pedidos…</td></tr>
+            <tr><td colspan="10" class="text-center">Cargando pedidos…</td></tr>
           } @else {
             @for (purchase of purchases(); track purchase.id) {
-              <tr>
+              <tr [class.voided-row]="purchase.status === 'ANULADO'">
                 <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
                 <td>{{ purchase.purchaseDate | date:'dd/MM/yyyy' }}</td>
                 <td>{{ purchase.supplierName }}</td>
@@ -77,7 +99,17 @@
                 <td class="text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.balance | number:'1.2-2' }}</td>
-                <td><span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span></td>
+                <td>
+                  @if (purchase.status === 'ANULADO') {
+                    <span class="status-badge pay-ANULADO">Anulado</span>
+                  } @else {
+                    <span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span>
+                  }
+                </td>
+                <td>
+                  <span class="delivery-cell">{{ deliveryTypeLabel(purchase.deliveryType) }}</span>
+                  <span class="status-badge" [ngClass]="'delivery-' + purchase.deliveryStatus">{{ deliveryStatusLabel(purchase.deliveryStatus) }}</span>
+                </td>
                 <td class="text-right">
                   <div class="table-actions" style="justify-content: flex-end">
                     <button type="button" class="btn-icon" (click)="openDetail(purchase)"
@@ -92,7 +124,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="9">
+                <td colspan="10">
                   <div class="table-empty">
                     <div class="table-empty-icon">📦</div>
                     <h4 class="table-empty-title">No hay pedidos</h4>
@@ -106,6 +138,7 @@
       </table>
     </div>
   </div>
+  }
 
   <app-purchase-form-modal
     [isOpen]="isFormOpen()"
@@ -117,6 +150,6 @@
   <app-purchase-detail-modal
     [purchaseId]="detailPurchaseId()"
     [accounts]="accounts()"
-    (paid)="onPaid($event)"
+    (updated)="onUpdated($event)"
     (close)="detailPurchaseId.set(null)" />
 </div>

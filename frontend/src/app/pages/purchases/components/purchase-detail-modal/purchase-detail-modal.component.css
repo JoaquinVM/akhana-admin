@@ -68,3 +68,42 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.pay-ANULADO { background: #e2e8f0; color: #475569; }
+.delivery-PENDIENTE { background: #fef3c7; color: #a16207; }
+.delivery-ENTREGADO { background: #dcfce7; color: #15803d; }
+
+.delivery-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.delivery-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.voided-row td {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.voided-row td .cost-note {
+  text-decoration: none;
+  display: block;
+}
+
+.btn-void {
+  color: #b91c1c;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

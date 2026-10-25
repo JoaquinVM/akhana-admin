@@ -2,13 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { PurchaseDetailModalComponent } from './purchase-detail-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
-import { Purchase } from '../../../../core/purchase/models/purchase.models';
+import { Purchase, PurchasePayment } from '../../../../core/purchase/models/purchase.models';
 
 const basePurchase: Purchase = {
   id: 'pur-1', purchaseNumber: 'PED-000001', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
   status: 'REGISTRADO', itemsTotal: 300, shippingCost: 25, totalAmount: 325, paidAmount: 0, balance: 300,
-  paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountName: 'Bisa', createdBy: 'operator',
-  createdAt: '2026-10-25T12:00:00Z',
+  paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountName: 'Bisa',
+  deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE', deliveryDate: null, createdBy: 'operator',
+  createdAt: '2026-10-25T12:00:00Z', voidedBy: null, voidedAt: null, voidReason: null,
   items: [{
     id: 'it-1', productId: 'p-1', productName: 'Té verde', productCode: 'TE-1', saleUnit: 'UNIT', quantity: 30,
     unitCost: 10, subtotal: 300, previousUnitCost: 9, costUpdated: true
@@ -24,7 +25,10 @@ describe('PurchaseDetailModalComponent', () => {
   beforeEach(async () => {
     purchaseService = {
       getPurchaseById: vi.fn().mockReturnValue(of(basePurchase)),
-      registerPayment: vi.fn().mockReturnValue(of({ ...basePurchase, paidAmount: 100, balance: 200, paymentStatus: 'A_CUENTA' }))
+      registerPayment: vi.fn().mockReturnValue(of({ ...basePurchase, paidAmount: 100, balance: 200, paymentStatus: 'A_CUENTA' })),
+      updateDelivery: vi.fn().mockReturnValue(of({ ...basePurchase, deliveryType: 'TERMINAL', deliveryStatus: 'ENTREGADO', deliveryDate: '2026-10-25' })),
+      voidPurchase: vi.fn().mockReturnValue(of({ ...basePurchase, status: 'ANULADO', voidReason: 'Error de carga' })),
+      voidPayment: vi.fn().mockReturnValue(of(basePurchase))
     };
     await TestBed.configureTestingModule({
       imports: [PurchaseDetailModalComponent],
@@ -53,7 +57,7 @@ describe('PurchaseDetailModalComponent', () => {
 
   it('COM-05: registra el pago y emite el pedido actualizado', () => {
     const paid = vi.fn();
-    component.paid.subscribe(paid);
+    component.updated.subscribe(paid);
     component.paymentAccountId.set('acc-1');
     component.paymentAmount.set(100);
     component.registerPayment();
@@ -75,5 +79,45 @@ describe('PurchaseDetailModalComponent', () => {
   it('COM-04: un pedido pagado no ofrece registrar pagos', () => {
     component.purchase.set({ ...basePurchase, paidAmount: 300, balance: 0, paymentStatus: 'PAGADO' });
     expect(component.canPay()).toBe(false);
+  });
+
+  it('COM-07: cambia la entrega y emite el pedido actualizado', () => {
+    const updated = vi.fn();
+    component.updated.subscribe(updated);
+    component.startDeliveryEdit();
+    expect(component.deliveryType()).toBe('EN_TIENDA');
+    component.deliveryType.set('TERMINAL');
+    component.deliveryStatus.set('ENTREGADO');
+    component.saveDelivery();
+
+    expect(purchaseService.updateDelivery).toHaveBeenCalledWith('pur-1',
+      { deliveryType: 'TERMINAL', deliveryStatus: 'ENTREGADO', deliveryDate: null });
+    expect(component.purchase()?.deliveryStatus).toBe('ENTREGADO');
+    expect(component.isEditingDelivery()).toBe(false);
+    expect(updated).toHaveBeenCalled();
+  });
+
+  it('COM-09: anula el pedido con motivo', () => {
+    component.openVoid('PURCHASE');
+    expect(component.voidTitle()).toBe('Anular pedido PED-000001');
+    component.confirmVoid('Error de carga');
+
+    expect(purchaseService.voidPurchase).toHaveBeenCalledWith('pur-1', { voidReason: 'Error de carga' });
+    expect(component.purchase()?.status).toBe('ANULADO');
+    expect(component.voidTarget()).toBeNull();
+    expect(component.isActive()).toBe(false);
+    expect(component.canPay()).toBe(false);
+  });
+
+  it('COM-09: anula un pago y muestra el error del servidor si falla', () => {
+    const payment = { id: 'pay-1', amount: 100, accountName: 'Caja', status: 'ACTIVO' } as PurchasePayment;
+    purchaseService.voidPayment.mockReturnValue(throwError(() => ({ error: { message: 'El pago se hizo en una caja cerrada; no se puede anular.' } })));
+    component.openVoid(payment);
+    expect(component.voidMessage()).toContain('Bs 100.00 desde Caja');
+    component.confirmVoid('Duplicado');
+
+    expect(purchaseService.voidPayment).toHaveBeenCalledWith('pur-1', 'pay-1', { voidReason: 'Duplicado' });
+    expect(component.voidError()).toBe('El pago se hizo en una caja cerrada; no se puede anular.');
+    expect(component.voidTarget()).toBe(payment);
   });
 });

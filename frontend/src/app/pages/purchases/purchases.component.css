@@ -105,3 +105,43 @@
     width: 100%;
   }
 }
+
+.pay-ANULADO { background: #e2e8f0; color: #475569; }
+.delivery-PENDIENTE { background: #fef3c7; color: #a16207; }
+.delivery-ENTREGADO { background: #dcfce7; color: #15803d; }
+
+.delivery-cell {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.delivery-filter {
+  min-width: 150px;
+}
+
+.voided-row td {
+  color: #94a3b8;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.view-tab {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.view-tab.active {
+  color: #1e5631;
+  border-bottom-color: #1e5631;
+}

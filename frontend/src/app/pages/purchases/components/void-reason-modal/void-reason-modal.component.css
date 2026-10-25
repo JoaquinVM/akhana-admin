@@ -1,0 +1,28 @@
+.void-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.warning {
+  margin: 0;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  color: #b45309;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

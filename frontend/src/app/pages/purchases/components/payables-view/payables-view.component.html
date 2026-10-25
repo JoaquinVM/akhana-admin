@@ -1,0 +1,54 @@
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+@if (isLoading()) {
+  <p class="loading">Cargando pedidos por pagar…</p>
+} @else if (payables(); as data) {
+  <div class="payables-total">
+    <span>Total por pagar</span>
+    <strong>Bs {{ data.totalBalance | number:'1.2-2' }}</strong>
+  </div>
+  @for (group of data.suppliers; track group.supplierId) {
+    <section class="supplier-card">
+      <header class="supplier-header">
+        <h3>{{ group.supplierName }}</h3>
+        <span class="supplier-balance">Saldo Bs {{ group.balance | number:'1.2-2' }}</span>
+      </header>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">N.º</th>
+              <th scope="col">Fecha</th>
+              <th scope="col" class="text-right">Total líneas</th>
+              <th scope="col" class="text-right">Pagado</th>
+              <th scope="col" class="text-right">Saldo</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (purchase of group.purchases; track purchase.id) {
+              <tr>
+                <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
+                <td>{{ purchase.purchaseDate | date:'dd/MM/yyyy' }}</td>
+                <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
+                <td class="text-right"><strong>Bs {{ purchase.balance | number:'1.2-2' }}</strong></td>
+                <td><span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span></td>
+                <td class="text-right">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="open.emit(purchase)">Pagar</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @empty {
+    <div class="table-empty">
+      <div class="table-empty-icon">✅</div>
+      <h4 class="table-empty-title">No hay pedidos por pagar</h4>
+    </div>
+  }
+}

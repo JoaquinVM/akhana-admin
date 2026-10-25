@@ -5,6 +5,10 @@ import { PurchaseService } from '../../core/purchase/purchase.service';
 import { SupplierService } from '../../core/supplier/supplier.service';
 import { Supplier } from '../../core/supplier/models/supplier.models';
 import {
+  DELIVERY_STATUS_LABELS,
+  DELIVERY_TYPE_LABELS,
+  DeliveryStatus,
+  DeliveryType,
   PAYMENT_STATUS_LABELS,
   PaymentAccount,
   Purchase,
@@ -12,13 +16,17 @@ import {
 } from '../../core/purchase/models/purchase.models';
 import { PurchaseFormModalComponent } from './components/purchase-form-modal/purchase-form-modal.component';
 import { PurchaseDetailModalComponent } from './components/purchase-detail-modal/purchase-detail-modal.component';
+import { PayablesViewComponent } from './components/payables-view/payables-view.component';
 
-export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus;
+// 'ANULADO' filtra por estado del pedido (COM-09); el resto, por estado de pago de los registrados
+export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus | 'ANULADO';
+
+export type PurchasesTab = 'ORDERS' | 'PAYABLES';
 
 @Component({
   selector: 'app-purchases',
   standalone: true,
-  imports: [CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent],
+  imports: [CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent, PayablesViewComponent],
   templateUrl: './purchases.component.html',
   styleUrls: ['./purchases.component.css']
 })
@@ -31,8 +39,15 @@ export class PurchasesComponent implements OnInit {
     { value: 'POR_PAGAR', label: PAYMENT_STATUS_LABELS.POR_PAGAR },
     { value: 'A_CUENTA', label: PAYMENT_STATUS_LABELS.A_CUENTA },
     { value: 'CONSIGNACION', label: PAYMENT_STATUS_LABELS.CONSIGNACION },
-    { value: 'PAGADO', label: PAYMENT_STATUS_LABELS.PAGADO }
+    { value: 'PAGADO', label: PAYMENT_STATUS_LABELS.PAGADO },
+    { value: 'ANULADO', label: 'Anulado' }
   ];
+  readonly deliveryStatuses = Object.entries(DELIVERY_STATUS_LABELS) as [DeliveryStatus, string][];
+
+  activeTab = signal<PurchasesTab>('ORDERS');
+  deliveryFilter = signal<DeliveryStatus | ''>('');
+  // Cambia para que la vista por pagar vuelva a cargar (COM-08)
+  payablesRefresh = signal<number>(0);
 
   purchases = signal<Purchase[]>([]);
   suppliers = signal<Supplier[]>([]);
@@ -64,7 +79,9 @@ export class PurchasesComponent implements OnInit {
     const status = this.statusFilter();
     this.purchaseService.getPurchases({
       supplierId: this.supplierFilter() || null,
-      paymentStatus: status === 'ALL' ? null : status,
+      status: status === 'ANULADO' ? 'ANULADO' : null,
+      paymentStatus: status === 'ALL' || status === 'ANULADO' ? null : status,
+      deliveryStatus: this.deliveryFilter() || null,
       search: this.searchTerm()
     }).subscribe({
       next: purchases => {
@@ -90,6 +107,15 @@ export class PurchasesComponent implements OnInit {
     this.loadPurchases();
   }
 
+  onDeliveryFilter(status: DeliveryStatus | ''): void {
+    this.deliveryFilter.set(status);
+    this.loadPurchases();
+  }
+
+  setTab(tab: PurchasesTab): void {
+    this.activeTab.set(tab);
+  }
+
   onSearch(term: string): void {
     this.searchTerm.set(term);
     this.loadPurchases();
@@ -97,6 +123,14 @@ export class PurchasesComponent implements OnInit {
 
   statusLabel(status: PurchasePaymentStatus): string {
     return PAYMENT_STATUS_LABELS[status];
+  }
+
+  deliveryTypeLabel(type: DeliveryType): string {
+    return DELIVERY_TYPE_LABELS[type];
+  }
+
+  deliveryStatusLabel(status: DeliveryStatus): string {
+    return DELIVERY_STATUS_LABELS[status];
   }
 
   openForm(): void {
@@ -113,7 +147,8 @@ export class PurchasesComponent implements OnInit {
     this.detailPurchaseId.set(purchase.id);
   }
 
-  onPaid(updated: Purchase): void {
+  onUpdated(updated: Purchase): void {
     this.purchases.update(list => list.map(p => (p.id === updated.id ? { ...updated, items: [], payments: [] } : p)));
+    this.payablesRefresh.update(n => n + 1);
   }
 }

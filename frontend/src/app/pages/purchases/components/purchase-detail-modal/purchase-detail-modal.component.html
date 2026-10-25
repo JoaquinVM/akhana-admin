@@ -11,9 +11,18 @@
     <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
   } @else if (purchase(); as p) {
     <div class="detail">
+      @if (p.status === 'ANULADO') {
+        <div class="alert alert-danger voided-banner" role="alert">
+          <span>Pedido anulado por {{ p.voidedBy }} el {{ p.voidedAt | date:'dd/MM/yyyy HH:mm' }}: {{ p.voidReason }}</span>
+        </div>
+      }
       <div class="summary-grid">
         <div><span class="label">Estado de pago</span>
-          <span class="status-badge" [ngClass]="'pay-' + p.paymentStatus">{{ statusLabel(p.paymentStatus) }}</span>
+          @if (p.status === 'ANULADO') {
+            <span class="status-badge pay-ANULADO">Anulado</span>
+          } @else {
+            <span class="status-badge" [ngClass]="'pay-' + p.paymentStatus">{{ statusLabel(p.paymentStatus) }}</span>
+          }
         </div>
         <div><span class="label">Total líneas</span><strong>Bs {{ p.itemsTotal | number:'1.2-2' }}</strong></div>
         <div><span class="label">Envío</span><strong>Bs {{ p.shippingCost | number:'1.2-2' }}</strong>
@@ -28,6 +37,60 @@
       }
       @if (p.comment) {
         <p class="comment">{{ p.comment }}</p>
+      }
+
+      <h4 class="section-title">Entrega</h4>
+      @if (isEditingDelivery()) {
+        <form class="delivery-form" (ngSubmit)="saveDelivery()">
+          @if (deliveryError()) {
+            <div class="alert alert-danger" role="alert"><span>{{ deliveryError() }}</span></div>
+          }
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="delivery-type">Entrega</label>
+              <select id="delivery-type" class="form-control" name="deliveryType"
+                      [ngModel]="deliveryType()" (ngModelChange)="deliveryType.set($event)">
+                @for (option of deliveryTypes; track option[0]) {
+                  <option [value]="option[0]">{{ option[1] }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="delivery-status">Estado</label>
+              <select id="delivery-status" class="form-control" name="deliveryStatus"
+                      [ngModel]="deliveryStatus()" (ngModelChange)="deliveryStatus.set($event)">
+                @for (option of deliveryStatuses; track option[0]) {
+                  <option [value]="option[0]">{{ option[1] }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="delivery-date">
+                {{ deliveryStatus() === 'ENTREGADO' ? 'Fecha de entrega' : 'Fecha estimada' }}
+              </label>
+              <input id="delivery-date" type="date" class="form-control" name="deliveryDate"
+                     [min]="p.purchaseDate" [max]="deliveryStatus() === 'ENTREGADO' ? today : null"
+                     [ngModel]="deliveryDate()" (ngModelChange)="deliveryDate.set($event)" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" [disabled]="isSavingDelivery()" (click)="isEditingDelivery.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isSavingDelivery()">
+              {{ isSavingDelivery() ? 'Guardando…' : 'Guardar entrega' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <div class="delivery-summary">
+          <span>{{ deliveryTypeLabel(p.deliveryType) }}</span>
+          <span class="status-badge" [ngClass]="'delivery-' + p.deliveryStatus">{{ deliveryStatusLabel(p.deliveryStatus) }}</span>
+          @if (p.deliveryDate) {
+            <span class="hint">{{ p.deliveryStatus === 'ENTREGADO' ? 'entregado el' : 'estimado para el' }} {{ p.deliveryDate | date:'dd/MM/yyyy' }}</span>
+          }
+          @if (isActive()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="startDeliveryEdit()">Cambiar entrega</button>
+          }
+        </div>
       }
 
       <h4 class="section-title">Líneas</h4>
@@ -73,15 +136,26 @@
                 <th>Origen</th>
                 <th>Registró</th>
                 <th class="text-right">Monto</th>
+                <th class="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               @for (payment of p.payments; track payment.id) {
-                <tr>
+                <tr [class.voided-row]="payment.status === 'ANULADO'">
                   <td>{{ payment.paymentDate | date:'dd/MM/yyyy HH:mm' }}</td>
                   <td>{{ payment.accountName }}</td>
-                  <td>{{ payment.createdBy }}</td>
+                  <td>
+                    {{ payment.createdBy }}
+                    @if (payment.status === 'ANULADO') {
+                      <span class="cost-note">anulado por {{ payment.voidedBy }}: {{ payment.voidReason }}</span>
+                    }
+                  </td>
                   <td class="text-right">Bs {{ payment.amount | number:'1.2-2' }}</td>
+                  <td class="text-right">
+                    @if (isActive() && payment.status === 'ACTIVO') {
+                      <button type="button" class="btn btn-ghost btn-sm btn-void" (click)="openVoid(payment)">Anular</button>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -126,7 +200,21 @@
         </form>
       }
 
-      <p class="audit">Registrado por {{ p.createdBy }} el {{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+      <div class="detail-footer">
+        <p class="audit">Registrado por {{ p.createdBy }} el {{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+        @if (isActive()) {
+          <button type="button" class="btn btn-danger btn-sm" (click)="openVoid('PURCHASE')">Anular pedido</button>
+        }
+      </div>
     </div>
   }
 </app-modal>
+
+<app-void-reason-modal
+  [isOpen]="!!voidTarget()"
+  [title]="voidTitle()"
+  [message]="voidMessage()"
+  [isLoading]="isVoiding()"
+  [errorMessage]="voidError()"
+  (confirmed)="confirmVoid($event)"
+  (close)="closeVoid()" />
