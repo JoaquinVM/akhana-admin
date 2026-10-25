@@ -70,6 +70,8 @@ public class SaleServiceImpl implements SaleService {
 
             int qty = itemReq.quantity() != null && itemReq.quantity() > 0 ? itemReq.quantity() : 1;
             BigDecimal unitPrice = product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
+            // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
+            BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
             BigDecimal discountPerUnit = itemReq.discountPerUnit() != null 
                 ? itemReq.discountPerUnit().setScale(2, RoundingMode.HALF_UP) 
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -91,6 +93,7 @@ public class SaleServiceImpl implements SaleService {
                 .productName(product.getName())
                 .productCode(product.getCode())
                 .unitPrice(unitPrice)
+                .unitCost(unitCost)
                 .discountPerUnit(discountPerUnit)
                 .finalUnitPrice(finalUnitPrice)
                 .quantity(qty)

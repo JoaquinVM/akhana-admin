@@ -70,6 +70,19 @@ El sistema SHALL numerar cada venta con una secuencia de la base de datos, únic
 
 ---
 
+### Requirement: Costo por línea de venta (POS-05, T-07)
+El sistema SHALL guardar en cada línea de venta (`sale_items.unit_cost`) el costo unitario del producto al momento de vender, con escala 2, para que la utilidad histórica no cambie. El costo no se modifica después de registrada la venta y no se muestra en el detalle de venta; lo usarán los reportes de utilidad (FIN-10). Las líneas que existían antes de la migración tomaron el costo actual del producto (no había datos de producción); las ventas históricas importadas (FIN-11) traen su propio costo.
+
+#### Scenario: Cambio de costo del producto después de vender
+- **WHEN** se vende un producto con costo Bs 12,50 y luego su costo cambia a Bs 14,00
+- **THEN** la línea de esa venta conserva Bs 12,50 y las ventas nuevas usan Bs 14,00
+
+#### Scenario: Anulación de una venta
+- **WHEN** se anula una venta
+- **THEN** el costo guardado en sus líneas no cambia
+
+---
+
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
 El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
 

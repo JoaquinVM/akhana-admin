@@ -78,6 +78,7 @@ class SaleServiceTest {
             .id(UUID.randomUUID())
             .code("PRD-001")
             .name("Café Premium")
+            .buyPrice(new BigDecimal("12.50"))
             .sellPrice(new BigDecimal("20.00"))
             .status(ProductStatus.ACTIVO)
             .build();
@@ -86,6 +87,7 @@ class SaleServiceTest {
             .id(UUID.randomUUID())
             .code("PRD-002")
             .name("Té Verde")
+            .buyPrice(new BigDecimal("9.00"))
             .sellPrice(new BigDecimal("15.00"))
             .status(ProductStatus.ACTIVO)
             .build();
@@ -452,5 +454,47 @@ class SaleServiceTest {
             .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(saleRepository, cashSessionRepository);
+    }
+
+    @Test
+    @DisplayName("Debe guardar el costo del producto en cada línea y no cambiarlo si luego cambia el producto o se anula la venta (POS-05)")
+    void shouldSnapshotProductCostOnSaleItems() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(productRepository.findById(product2.getId())).thenReturn(Optional.of(product2));
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
+        List<Sale> saved = new ArrayList<>();
+        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
+            Sale s = invocation.getArgument(0);
+            if (s.getId() == null) {
+                s.setId(UUID.randomUUID());
+            }
+            saved.add(s);
+            return s;
+        });
+
+        SaleDetailRequest req = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO),
+                    new SaleItemRequest(product2.getId(), 1, BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, new BigDecimal("55.00"), BigDecimal.ZERO, new BigDecimal("55.00"), null);
+        saleService.registerSale(req, "cajero");
+
+        Sale sale = saved.get(0);
+        assertThat(sale.getItems()).extracting(SaleItem::getUnitCost)
+            .usingElementComparator(BigDecimal::compareTo)
+            .containsExactly(new BigDecimal("12.50"), new BigDecimal("9.00"));
+        assertThat(sale.getItems().get(0).getUnitCost().scale()).isEqualTo(2);
+
+        product1.setBuyPrice(new BigDecimal("14.00"));
+        product2.setBuyPrice(new BigDecimal("7.25"));
+
+        when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
+        saleService.voidSale(sale.getId(), new VoidSaleRequest("Cliente devolvió los productos"), "supervisor");
+
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.ANULADA);
+        assertThat(sale.getItems()).extracting(SaleItem::getUnitCost)
+            .usingElementComparator(BigDecimal::compareTo)
+            .containsExactly(new BigDecimal("12.50"), new BigDecimal("9.00"));
     }
 }

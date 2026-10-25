@@ -36,6 +36,10 @@ public class SaleItem {
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
 
+    // Product cost at the moment of the sale (POS-05); never updated afterwards
+    @Column(name = "unit_cost", nullable = false, updatable = false, precision = 12, scale = 2)
+    private BigDecimal unitCost;
+
     @Column(name = "discount_per_unit", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal discountPerUnit = BigDecimal.ZERO;
