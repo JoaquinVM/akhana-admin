@@ -86,6 +86,10 @@ class EndpointAuthorizationTest {
             {"supplierId":"%s","items":[{"productId":"%s","quantity":1,"unitCost":5.00}]}""".formatted(ID, ID);
     private static final String PURCHASE_PAYMENT = """
             {"accountId":"%s","amount":50.00}""".formatted(ID);
+    private static final String PURCHASE_DELIVERY = """
+            {"deliveryType":"TERMINAL","deliveryStatus":"PENDIENTE"}""";
+    private static final String VOID_PURCHASE = """
+            {"voidReason":"Error de carga"}""";
     private static final String QUICK_GROUP = """
             {"name":"Bebidas"}""";
     private static final String REORDER_GROUPS = """
@@ -191,13 +195,17 @@ class EndpointAuthorizationTest {
                 both(post, "/api/suppliers", SUPPLIER),
                 both(put, "/api/suppliers/" + ID, SUPPLIER),
                 both(delete, "/api/suppliers/" + ID, null),
-                // Compras: pedidos, pagos, cuentas para pagar y precio sugerido (COM-02 a COM-06)
+                // Compras: pedidos, pagos, cuentas para pagar, precio sugerido, entrega, por pagar y anulación (COM-02 a COM-09)
                 both(get, "/api/purchases", null),
                 both(get, "/api/purchases/" + ID, null),
                 both(post, "/api/purchases", PURCHASE),
                 both(post, "/api/purchases/" + ID + "/payments", PURCHASE_PAYMENT),
                 both(get, "/api/purchases/payment-accounts", null),
                 both(get, "/api/purchases/price-suggestion?productId=" + ID + "&newCost=12.30", null),
+                both(get, "/api/purchases/payables", null),
+                both(put, "/api/purchases/" + ID + "/delivery", PURCHASE_DELIVERY),
+                both(post, "/api/purchases/" + ID + "/void", VOID_PURCHASE),
+                both(post, "/api/purchases/" + ID + "/payments/" + ID + "/void", VOID_PURCHASE),
                 // Gastos de caja desde el POS: registrar y anular
                 both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
                 both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),

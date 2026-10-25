@@ -1,5 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.DeliveryStatus;
+import com.akhana.akhana_admin.model.DeliveryType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
@@ -30,5 +32,12 @@ public record PurchaseRequest(
     Boolean consignment,
 
     @Size(max = 500, message = "El comentario no puede exceder 500 caracteres.")
-    String comment
+    String comment,
+
+    // COM-07: null type means in store, null status means pending
+    DeliveryType deliveryType,
+
+    DeliveryStatus deliveryStatus,
+
+    LocalDate deliveryDate
 ) {}

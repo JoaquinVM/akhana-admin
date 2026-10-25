@@ -1,7 +1,9 @@
 package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.*;
+import com.akhana.akhana_admin.model.DeliveryStatus;
 import com.akhana.akhana_admin.model.PurchasePaymentStatus;
+import com.akhana.akhana_admin.model.PurchaseStatus;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.PurchaseService;
 import jakarta.validation.Valid;
@@ -27,9 +29,16 @@ public class PurchaseController {
     @GetMapping
     public ResponseEntity<List<PurchaseResponse>> getPurchases(
             @RequestParam(required = false) UUID supplierId,
+            @RequestParam(required = false) PurchaseStatus status,
             @RequestParam(required = false) PurchasePaymentStatus paymentStatus,
+            @RequestParam(required = false) DeliveryStatus deliveryStatus,
             @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(purchaseService.getPurchases(supplierId, paymentStatus, search));
+        return ResponseEntity.ok(purchaseService.getPurchases(supplierId, status, paymentStatus, deliveryStatus, search));
+    }
+
+    @GetMapping("/payables")
+    public ResponseEntity<PayablesResponse> getPayables(@RequestParam(required = false) UUID supplierId) {
+        return ResponseEntity.ok(purchaseService.getPayables(supplierId));
     }
 
     @GetMapping("/payment-accounts")
@@ -64,6 +73,31 @@ public class PurchaseController {
             Authentication authentication) {
         PurchaseResponse updated = purchaseService.registerPayment(id, request, extractUsername(authentication));
         return ResponseEntity.status(HttpStatus.CREATED).body(updated);
+    }
+
+    @PutMapping("/{id}/delivery")
+    public ResponseEntity<PurchaseResponse> updateDelivery(
+            @PathVariable UUID id,
+            @Valid @RequestBody PurchaseDeliveryRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(purchaseService.updateDelivery(id, request, extractUsername(authentication)));
+    }
+
+    @PostMapping("/{id}/void")
+    public ResponseEntity<PurchaseResponse> voidPurchase(
+            @PathVariable UUID id,
+            @Valid @RequestBody VoidPurchaseRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(purchaseService.voidPurchase(id, request, extractUsername(authentication)));
+    }
+
+    @PostMapping("/{id}/payments/{paymentId}/void")
+    public ResponseEntity<PurchaseResponse> voidPayment(
+            @PathVariable UUID id,
+            @PathVariable UUID paymentId,
+            @Valid @RequestBody VoidPurchaseRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(purchaseService.voidPayment(id, paymentId, request, extractUsername(authentication)));
     }
 
     private String extractUsername(Authentication authentication) {

@@ -30,6 +30,13 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar el pago.";
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String VOIDED_PURCHASE = "El pedido está anulado.";
+    static final String ALREADY_VOIDED_PURCHASE = "El pedido ya está anulado.";
+    static final String ALREADY_VOIDED_PAYMENT = "El pago ya está anulado.";
+    static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
+    static final String CLOSED_SESSION_PAYMENT = "El pago se hizo en una caja cerrada; no se puede anular.";
+    static final String CLOSED_SESSION_PURCHASE = "El pedido tiene movimientos de una caja cerrada; no se puede anular.";
+    static final String FUTURE_DELIVERY_DATE = "La fecha de entrega no puede ser futura.";
+    static final String DELIVERY_BEFORE_PURCHASE = "La fecha de entrega no puede ser anterior a la fecha del pedido.";
 
     private final PurchaseRepository purchaseRepository;
     private final SupplierRepository supplierRepository;
@@ -47,14 +54,43 @@ public class PurchaseServiceImpl implements PurchaseService {
     /** Locked cash session (only for Caja) and account that pay a movement. */
     private record Payer(FinancialAccount account, CashSession session) {}
 
+    /** Validated delivery of a purchase (COM-07). */
+    private record Delivery(DeliveryType type, DeliveryStatus status, LocalDate date) {}
+
     @Override
     @Transactional(readOnly = true)
-    public List<PurchaseResponse> getPurchases(UUID supplierId, PurchasePaymentStatus paymentStatus, String search) {
+    public List<PurchaseResponse> getPurchases(UUID supplierId, PurchaseStatus status, PurchasePaymentStatus paymentStatus,
+                                               DeliveryStatus deliveryStatus, String search) {
         String term = search != null && !search.isBlank() ? search.trim() : null;
         return purchaseRepository.search(supplierId, term).stream()
-            .filter(p -> paymentStatus == null || p.getPaymentStatus() == paymentStatus)
+            .filter(p -> status == null || p.getStatus() == status)
+            // A voided purchase has no payment status to filter by
+            .filter(p -> paymentStatus == null
+                || (p.getStatus() == PurchaseStatus.REGISTRADO && p.getPaymentStatus() == paymentStatus))
+            .filter(p -> deliveryStatus == null || p.getDeliveryStatus() == deliveryStatus)
             .map(PurchaseResponse::summary)
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PayablesResponse getPayables(UUID supplierId) {
+        Map<UUID, List<Purchase>> bySupplier = new LinkedHashMap<>();
+        for (Purchase purchase : purchaseRepository.findPayables(supplierId)) {
+            bySupplier.computeIfAbsent(purchase.getSupplier().getId(), id -> new ArrayList<>()).add(purchase);
+        }
+        BigDecimal total = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        List<PayablesResponse.SupplierPayables> suppliers = new ArrayList<>();
+        for (List<Purchase> purchases : bySupplier.values()) {
+            BigDecimal balance = purchases.stream()
+                .map(Purchase::getBalance)
+                .reduce(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), BigDecimal::add);
+            Supplier supplier = purchases.get(0).getSupplier();
+            suppliers.add(new PayablesResponse.SupplierPayables(supplier.getId(), supplier.getName(), balance,
+                purchases.stream().map(PurchaseResponse::summary).toList()));
+            total = total.add(balance);
+        }
+        return new PayablesResponse(total, suppliers);
     }
 
     @Override
@@ -89,6 +125,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (purchaseDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);
         }
+        Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
+            purchaseDate, today);
 
         List<PurchaseItem> items = new ArrayList<>();
         List<CostUpdate> costUpdates = new ArrayList<>();
@@ -160,6 +198,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             .paidAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .consignment(Boolean.TRUE.equals(request.consignment()))
             .comment(request.comment() != null && !request.comment().isBlank() ? request.comment().trim() : null)
+            .deliveryType(delivery.type())
+            .deliveryStatus(delivery.status())
+            .deliveryDate(delivery.date())
             .createdBy(username)
             .createdAt(now)
             .build();
@@ -220,6 +261,84 @@ public class PurchaseServiceImpl implements PurchaseService {
         Purchase saved = purchaseRepository.save(purchase);
 
         return getPurchaseById(saved.getId());
+    }
+
+    @Override
+    public PurchaseResponse updateDelivery(UUID purchaseId, PurchaseDeliveryRequest request, String username) {
+        Purchase purchase = lockPurchase(purchaseId);
+        if (purchase.getStatus() == PurchaseStatus.ANULADO) {
+            throw new IllegalStateException(VOIDED_PURCHASE);
+        }
+        Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
+            purchase.getPurchaseDate(), LocalDate.now(STORE_ZONE));
+        purchase.setDeliveryType(delivery.type());
+        purchase.setDeliveryStatus(delivery.status());
+        purchase.setDeliveryDate(delivery.date());
+        purchase.setUpdatedBy(username);
+        purchase.setUpdatedAt(Instant.now());
+        purchaseRepository.save(purchase);
+        return getPurchaseById(purchaseId);
+    }
+
+    @Override
+    public PurchaseResponse voidPayment(UUID purchaseId, UUID paymentId, VoidPurchaseRequest request, String username) {
+        String voidReason = requireVoidReason(request);
+
+        // Lock order: purchase, then cash session, then accounts (T-14)
+        Purchase purchase = lockPurchase(purchaseId);
+        if (purchase.getStatus() == PurchaseStatus.ANULADO) {
+            throw new IllegalStateException(VOIDED_PURCHASE);
+        }
+        PurchasePayment payment = purchase.getPayments().stream()
+            .filter(p -> p.getId().equals(paymentId))
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con ID: " + paymentId));
+        if (payment.getStatus() == PurchasePaymentRecordStatus.ANULADO) {
+            throw new IllegalStateException(ALREADY_VOIDED_PAYMENT);
+        }
+        FinancialTransaction tx = financialTransactionRepository.findById(payment.getFinancialTransactionId())
+            .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del pago."));
+
+        Instant now = Instant.now();
+        voidExpenses(List.of(tx), CLOSED_SESSION_PAYMENT, voidReason, username, now);
+        markVoided(payment, voidReason, username, now);
+        purchase.setPaidAmount(purchase.getPaidAmount().subtract(payment.getAmount()));
+        purchase.setUpdatedBy(username);
+        purchase.setUpdatedAt(now);
+        purchaseRepository.save(purchase);
+
+        return getPurchaseById(purchaseId);
+    }
+
+    @Override
+    public PurchaseResponse voidPurchase(UUID purchaseId, VoidPurchaseRequest request, String username) {
+        String voidReason = requireVoidReason(request);
+
+        // Lock order: purchase, then cash session, then accounts (T-14)
+        Purchase purchase = lockPurchase(purchaseId);
+        if (purchase.getStatus() == PurchaseStatus.ANULADO) {
+            throw new IllegalStateException(ALREADY_VOIDED_PURCHASE);
+        }
+
+        // Payments and shipping: every movement linked to the purchase (P-24, COM-06)
+        Instant now = Instant.now();
+        voidExpenses(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchaseId),
+            CLOSED_SESSION_PURCHASE, voidReason, username, now);
+        purchase.getPayments().stream()
+            .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
+            .forEach(p -> markVoided(p, voidReason, username, now));
+
+        // Product cost and price changes (COM-03) stay: they are corrected from the catalog
+        purchase.setPaidAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        purchase.setStatus(PurchaseStatus.ANULADO);
+        purchase.setVoidedBy(username);
+        purchase.setVoidedAt(now);
+        purchase.setVoidReason(voidReason);
+        purchase.setUpdatedBy(username);
+        purchase.setUpdatedAt(now);
+        purchaseRepository.save(purchase);
+
+        return getPurchaseById(purchaseId);
     }
 
     @Override
@@ -306,6 +425,95 @@ public class PurchaseServiceImpl implements PurchaseService {
         product.setUpdatedBy(username);
         product.setUpdatedAt(now);
         productRepository.save(product);
+    }
+
+    private Purchase lockPurchase(UUID purchaseId) {
+        return purchaseRepository.findByIdForUpdate(purchaseId)
+            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + purchaseId));
+    }
+
+    // Every void needs a reason (RG-03), also when the service is called without bean validation
+    private static String requireVoidReason(VoidPurchaseRequest request) {
+        if (request == null || request.voidReason() == null || request.voidReason().isBlank()) {
+            throw new IllegalArgumentException(VOID_REASON_REQUIRED);
+        }
+        return request.voidReason().trim();
+    }
+
+    /**
+     * COM-07: no type means in store and no status means pending. While pending the date is the expected one (it
+     * may be future); once delivered it defaults to today and must fall between the purchase date and today.
+     */
+    private static Delivery resolveDelivery(DeliveryType type, DeliveryStatus status, LocalDate date,
+                                    LocalDate purchaseDate, LocalDate today) {
+        DeliveryType deliveryType = type != null ? type : DeliveryType.EN_TIENDA;
+        DeliveryStatus deliveryStatus = status != null ? status : DeliveryStatus.PENDIENTE;
+        LocalDate deliveryDate = date;
+        if (deliveryStatus == DeliveryStatus.ENTREGADO) {
+            if (deliveryDate == null) {
+                deliveryDate = today;
+            }
+            if (deliveryDate.isAfter(today)) {
+                throw new IllegalArgumentException(FUTURE_DELIVERY_DATE);
+            }
+        }
+        if (deliveryDate != null && deliveryDate.isBefore(purchaseDate)) {
+            throw new IllegalArgumentException(DELIVERY_BEFORE_PURCHASE);
+        }
+        return new Delivery(deliveryType, deliveryStatus, deliveryDate);
+    }
+
+    // COM-09: voids the active expenses and gives each account its amount back. A Caja movement needs its own
+    // session still open (CAJ-06, T-16); since only one session is open, at most one is locked. The purchase is
+    // already locked, then the session, then the accounts in one query (T-14).
+    private void voidExpenses(List<FinancialTransaction> txs, String closedSessionMessage, String voidReason,
+                              String username, Instant now) {
+        List<FinancialTransaction> active = txs.stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO)
+            .toList();
+        if (active.isEmpty()) {
+            return;
+        }
+
+        CashSession session = null;
+        Set<UUID> sessionIds = new HashSet<>();
+        active.stream().map(FinancialTransaction::getCashSessionId).filter(Objects::nonNull).forEach(sessionIds::add);
+        for (UUID sessionId : sessionIds) {
+            session = cashSessionRepository.findByIdForUpdate(sessionId)
+                .filter(s -> s.getStatus() == CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(closedSessionMessage));
+        }
+
+        Set<UUID> accountIds = new HashSet<>();
+        active.forEach(tx -> accountIds.add(tx.getSourceAccount().getId()));
+        Map<UUID, FinancialAccount> accounts = new HashMap<>();
+        financialAccountRepository.findAllByIdForUpdate(accountIds).forEach(a -> accounts.put(a.getId(), a));
+
+        for (FinancialTransaction tx : active) {
+            FinancialAccount account = accounts.getOrDefault(tx.getSourceAccount().getId(), tx.getSourceAccount());
+            account.setCurrentBalance(account.getCurrentBalance().add(tx.getAmount()));
+            financialAccountRepository.save(account);
+
+            tx.setStatus(FinancialTransactionStatus.ANULADO);
+            tx.setVoidedBy(username);
+            tx.setVoidedAt(now);
+            tx.setVoidReason(voidReason);
+            financialTransactionRepository.save(tx);
+        }
+
+        if (session != null) {
+            // Flushes first so the repository sums see the voided movements
+            financialTransactionRepository.flush();
+            expectedCashCalculator.refresh(session);
+            cashSessionRepository.save(session);
+        }
+    }
+
+    private static void markVoided(PurchasePayment payment, String voidReason, String username, Instant now) {
+        payment.setStatus(PurchasePaymentRecordStatus.ANULADO);
+        payment.setVoidedBy(username);
+        payment.setVoidedAt(now);
+        payment.setVoidReason(voidReason);
     }
 
     private Payer lockPayer(UUID accountId) {

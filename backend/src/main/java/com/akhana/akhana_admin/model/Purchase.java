@@ -62,6 +62,20 @@ public class Purchase {
     @Column(length = 500)
     private String comment;
 
+    // COM-07: while pending the date is the expected one; once delivered, the delivery date
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_type", nullable = false, length = 20)
+    @Builder.Default
+    private DeliveryType deliveryType = DeliveryType.EN_TIENDA;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_status", nullable = false, length = 20)
+    @Builder.Default
+    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDIENTE;
+
+    @Column(name = "delivery_date")
+    private LocalDate deliveryDate;
+
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 

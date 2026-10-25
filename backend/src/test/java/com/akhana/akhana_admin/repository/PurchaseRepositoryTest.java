@@ -17,7 +17,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** COM-02 to COM-06 against PostgreSQL: V8 schema, sequence, system categories and checks. */
+/** COM-02 to COM-08 against PostgreSQL: V8 and V9 schema, sequence, system categories and checks. */
 @SpringBootTest
 class PurchaseRepositoryTest {
 
@@ -115,6 +115,31 @@ class PurchaseRepositoryTest {
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
                 "INSERT INTO purchase_items (purchase_id, product_id, product_name, quantity, unit_cost, subtotal, previous_unit_cost) "
                         + "VALUES (?, ?, 'IT', 0, 1.00, 0, 1.00)", purchase, ids[1]));
+    }
+
+    @Test
+    @Transactional
+    void deliveryDefaultsAndPayablesQuery() {
+        UUID[] ids = insertSupplierAndProduct();
+        String insert = "INSERT INTO purchases (purchase_number, supplier_id, purchase_date, items_total, total_amount, paid_amount, status, created_by) "
+                + "VALUES (?, ?, CURRENT_DATE - ?, ?, ?, ?, ?, 'it-repo') RETURNING id";
+        String prefix = "IT-PAY-" + ids[0].toString().substring(0, 8);
+        UUID older = jdbc.queryForObject(insert, UUID.class, prefix + "-1", ids[0], 5, 300, 300, 100, "REGISTRADO");
+        UUID newer = jdbc.queryForObject(insert, UUID.class, prefix + "-2", ids[0], 1, 50, 50, 0, "REGISTRADO");
+        jdbc.queryForObject(insert, UUID.class, prefix + "-3", ids[0], 1, 50, 50, 50, "REGISTRADO");
+        jdbc.queryForObject(insert, UUID.class, prefix + "-4", ids[0], 1, 80, 80, 0, "ANULADO");
+
+        assertEquals(List.of(older, newer),
+                purchaseRepository.findPayables(ids[0]).stream().map(Purchase::getId).toList());
+
+        Purchase stored = purchaseRepository.findById(older).orElseThrow();
+        assertEquals(DeliveryType.EN_TIENDA, stored.getDeliveryType());
+        assertEquals(DeliveryStatus.PENDIENTE, stored.getDeliveryStatus());
+        assertNull(stored.getDeliveryDate());
+
+        // A delivered purchase needs its delivery date (COM-07)
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+                "UPDATE purchases SET delivery_status = 'ENTREGADO' WHERE id = ?", newer));
     }
 
     // Supplier and product rolled back at the end of each test; returns {supplier, product}

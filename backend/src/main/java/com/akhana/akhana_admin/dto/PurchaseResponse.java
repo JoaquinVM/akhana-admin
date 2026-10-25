@@ -1,5 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.DeliveryStatus;
+import com.akhana.akhana_admin.model.DeliveryType;
 import com.akhana.akhana_admin.model.Purchase;
 import com.akhana.akhana_admin.model.PurchasePaymentStatus;
 import com.akhana.akhana_admin.model.PurchaseStatus;
@@ -30,8 +32,14 @@ public record PurchaseResponse(
     boolean consignment,
     String comment,
     String shippingAccountName,
+    DeliveryType deliveryType,
+    DeliveryStatus deliveryStatus,
+    LocalDate deliveryDate,
     String createdBy,
     Instant createdAt,
+    String voidedBy,
+    Instant voidedAt,
+    String voidReason,
     List<PurchaseItemResponse> items,
     List<PurchasePaymentResponse> payments
 ) {
@@ -66,8 +74,14 @@ public record PurchaseResponse(
             Boolean.TRUE.equals(purchase.getConsignment()),
             purchase.getComment(),
             shippingAccountName,
+            purchase.getDeliveryType(),
+            purchase.getDeliveryStatus(),
+            purchase.getDeliveryDate(),
             purchase.getCreatedBy(),
             purchase.getCreatedAt(),
+            purchase.getVoidedBy(),
+            purchase.getVoidedAt(),
+            purchase.getVoidReason(),
             items,
             payments
         );

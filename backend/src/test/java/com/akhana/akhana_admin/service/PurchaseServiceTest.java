@@ -1,10 +1,13 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.PayablesResponse;
 import com.akhana.akhana_admin.dto.PriceSuggestionResponse;
+import com.akhana.akhana_admin.dto.PurchaseDeliveryRequest;
 import com.akhana.akhana_admin.dto.PurchaseItemRequest;
 import com.akhana.akhana_admin.dto.PurchasePaymentRequest;
 import com.akhana.akhana_admin.dto.PurchaseRequest;
 import com.akhana.akhana_admin.dto.PurchaseResponse;
+import com.akhana.akhana_admin.dto.VoidPurchaseRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
@@ -20,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -117,7 +121,7 @@ class PurchaseServiceTest {
 
     private PurchaseRequest request(List<PurchaseItemRequest> items, String shipping, UUID shippingAccountId, boolean consignment) {
         return new PurchaseRequest(supplier.getId(), null, items, shipping != null ? new BigDecimal(shipping) : null,
-            shippingAccountId, consignment, "  Pedido semanal  ");
+            shippingAccountId, consignment, "  Pedido semanal  ", null, null, null);
     }
 
     private Purchase existingPurchase(String itemsTotal, String paid) {
@@ -179,7 +183,7 @@ class PurchaseServiceTest {
             .hasMessage("El pedido debe tener al menos una línea.");
 
         PurchaseRequest future = new PurchaseRequest(supplier.getId(), LocalDate.now(ZoneId.of("America/La_Paz")).plusDays(1),
-            List.of(line(tea, "1", "10")), null, null, false, null);
+            List.of(line(tea, "1", "10")), null, null, false, null, null, null, null);
         assertThatThrownBy(() -> purchaseService.registerPurchase(future, "operator"))
             .hasMessage("La fecha del pedido no puede ser futura.");
 
@@ -388,9 +392,9 @@ class PurchaseServiceTest {
             .shippingCost(BigDecimal.ZERO).totalAmount(new BigDecimal("100.00")).build();
         when(purchaseRepository.search(null, "PED")).thenReturn(List.of(pending, paid));
 
-        List<PurchaseResponse> res = purchaseService.getPurchases(null, PurchasePaymentStatus.POR_PAGAR, "  PED ");
+        List<PurchaseResponse> res = purchaseService.getPurchases(null, null, PurchasePaymentStatus.POR_PAGAR, null, "  PED ");
         assertThat(res).extracting(PurchaseResponse::purchaseNumber).containsExactly("PED-000001");
-        assertThat(purchaseService.getPurchases(null, null, "PED")).hasSize(2);
+        assertThat(purchaseService.getPurchases(null, null, null, null, "PED")).hasSize(2);
     }
 
     // ---------------------------------------------------------------- COM-05 / COM-06
@@ -496,5 +500,286 @@ class PurchaseServiceTest {
         order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
         order.verify(cashSessionRepository).findByStatusForUpdate(CashSessionStatus.ABIERTA);
         order.verify(financialAccountRepository).findActiveByIdForUpdate(caja.getId());
+    }
+
+    // ---------------------------------------------------------------- COM-07
+
+    private static final LocalDate TODAY = LocalDate.now(ZoneId.of("America/La_Paz"));
+
+    private PurchaseRequest deliveryRequest(DeliveryType type, DeliveryStatus status, LocalDate date) {
+        return new PurchaseRequest(supplier.getId(), TODAY.minusDays(3), List.of(line(tea, "1", "10")), null, null,
+            false, null, type, status, date);
+    }
+
+    @Test
+    @DisplayName("COM-07: sin tipo ni estado el pedido queda en tienda y pendiente; pendiente acepta fecha estimada futura")
+    void registerPurchase_deliveryDefaults() {
+        PurchaseResponse res = purchaseService.registerPurchase(deliveryRequest(null, null, null), "operator");
+        assertThat(res.deliveryType()).isEqualTo(DeliveryType.EN_TIENDA);
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.PENDIENTE);
+        assertThat(res.deliveryDate()).isNull();
+
+        PurchaseResponse expected = purchaseService.registerPurchase(
+            deliveryRequest(DeliveryType.TERMINAL, DeliveryStatus.PENDIENTE, TODAY.plusDays(2)), "operator");
+        assertThat(expected.deliveryType()).isEqualTo(DeliveryType.TERMINAL);
+        assertThat(expected.deliveryDate()).isEqualTo(TODAY.plusDays(2));
+    }
+
+    @Test
+    @DisplayName("COM-07: entregado sin fecha toma hoy; fecha futura o anterior al pedido se rechaza")
+    void registerPurchase_deliveredDateRules() {
+        PurchaseResponse res = purchaseService.registerPurchase(
+            deliveryRequest(DeliveryType.EN_PUERTA, DeliveryStatus.ENTREGADO, null), "operator");
+        assertThat(res.deliveryDate()).isEqualTo(TODAY);
+
+        assertThatThrownBy(() -> purchaseService.registerPurchase(
+            deliveryRequest(DeliveryType.EN_PUERTA, DeliveryStatus.ENTREGADO, TODAY.plusDays(1)), "operator"))
+            .hasMessage("La fecha de entrega no puede ser futura.");
+        assertThatThrownBy(() -> purchaseService.registerPurchase(
+            deliveryRequest(DeliveryType.EN_PUERTA, DeliveryStatus.ENTREGADO, TODAY.minusDays(4)), "operator"))
+            .hasMessage("La fecha de entrega no puede ser anterior a la fecha del pedido.");
+    }
+
+    @Test
+    @DisplayName("COM-07: cambiar la entrega guarda tipo, estado, fecha y auditoría; un pedido anulado no cambia")
+    void updateDelivery() {
+        Purchase purchase = existingPurchase("300.00", "0.00");
+
+        PurchaseResponse res = purchaseService.updateDelivery(purchase.getId(),
+            new PurchaseDeliveryRequest(DeliveryType.TERMINAL, DeliveryStatus.ENTREGADO, TODAY), "operator");
+        assertThat(res.deliveryType()).isEqualTo(DeliveryType.TERMINAL);
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.ENTREGADO);
+        assertThat(res.deliveryDate()).isEqualTo(TODAY);
+        assertThat(purchase.getUpdatedBy()).isEqualTo("operator");
+        verify(financialTransactionRepository, never()).save(any());
+
+        PurchaseResponse back = purchaseService.updateDelivery(purchase.getId(),
+            new PurchaseDeliveryRequest(DeliveryType.TERMINAL, DeliveryStatus.PENDIENTE, TODAY.plusDays(1)), "operator");
+        assertThat(back.deliveryStatus()).isEqualTo(DeliveryStatus.PENDIENTE);
+        assertThat(back.deliveryDate()).isEqualTo(TODAY.plusDays(1));
+
+        purchase.setStatus(PurchaseStatus.ANULADO);
+        assertThatThrownBy(() -> purchaseService.updateDelivery(purchase.getId(),
+            new PurchaseDeliveryRequest(DeliveryType.EN_TIENDA, DeliveryStatus.PENDIENTE, null), "operator"))
+            .hasMessage("El pedido está anulado.");
+    }
+
+    @Test
+    @DisplayName("COM-07: el listado filtra por estado de entrega y por anulado; el estado de pago excluye anulados")
+    void getPurchases_filtersByDeliveryAndStatus() {
+        Purchase delivered = Purchase.builder().id(UUID.randomUUID()).purchaseNumber("PED-000001").supplier(supplier)
+            .itemsTotal(new BigDecimal("100.00")).paidAmount(new BigDecimal("0.00"))
+            .shippingCost(BigDecimal.ZERO).totalAmount(new BigDecimal("100.00"))
+            .deliveryStatus(DeliveryStatus.ENTREGADO).deliveryDate(TODAY).build();
+        Purchase voided = Purchase.builder().id(UUID.randomUUID()).purchaseNumber("PED-000002").supplier(supplier)
+            .itemsTotal(new BigDecimal("100.00")).paidAmount(new BigDecimal("0.00"))
+            .shippingCost(BigDecimal.ZERO).totalAmount(new BigDecimal("100.00"))
+            .status(PurchaseStatus.ANULADO).build();
+        when(purchaseRepository.search(null, null)).thenReturn(List.of(delivered, voided));
+
+        assertThat(purchaseService.getPurchases(null, null, null, DeliveryStatus.ENTREGADO, null))
+            .extracting(PurchaseResponse::purchaseNumber).containsExactly("PED-000001");
+        assertThat(purchaseService.getPurchases(null, PurchaseStatus.ANULADO, null, null, null))
+            .extracting(PurchaseResponse::purchaseNumber).containsExactly("PED-000002");
+        assertThat(purchaseService.getPurchases(null, null, PurchasePaymentStatus.POR_PAGAR, null, null))
+            .extracting(PurchaseResponse::purchaseNumber).containsExactly("PED-000001");
+    }
+
+    // ---------------------------------------------------------------- COM-08
+
+    @Test
+    @DisplayName("COM-08: los pedidos por pagar se agrupan por proveedor con su saldo y el total general")
+    void getPayables_groupsBySupplier() {
+        Supplier other = Supplier.builder().id(UUID.randomUUID()).name("Tés del Valle").status(SupplierStatus.ACTIVO).build();
+        Purchase onAccount = existingPurchase("300.00", "100.00");
+        Purchase unpaid = existingPurchase("50.00", "0.00");
+        Purchase consignment = existingPurchase("80.00", "0.00");
+        consignment.setSupplier(other);
+        consignment.setConsignment(true);
+        when(purchaseRepository.findPayables(null)).thenReturn(List.of(onAccount, unpaid, consignment));
+
+        PayablesResponse res = purchaseService.getPayables(null);
+
+        assertThat(res.totalBalance()).isEqualByComparingTo("330.00");
+        assertThat(res.suppliers()).hasSize(2);
+        PayablesResponse.SupplierPayables granel = res.suppliers().get(0);
+        assertThat(granel.supplierName()).isEqualTo("Granel");
+        assertThat(granel.balance()).isEqualByComparingTo("250.00");
+        assertThat(granel.purchases()).extracting(PurchaseResponse::balance)
+            .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+            .containsExactly(new BigDecimal("200.00"), new BigDecimal("50.00"));
+        assertThat(res.suppliers().get(1).purchases().get(0).paymentStatus()).isEqualTo(PurchasePaymentStatus.CONSIGNACION);
+    }
+
+    // ---------------------------------------------------------------- COM-09
+
+    private static final VoidPurchaseRequest REASON = new VoidPurchaseRequest("  Pago duplicado  ");
+
+    private FinancialTransaction purchaseExpense(Purchase purchase, FinancialAccount account, String amount, UUID sessionId) {
+        FinancialTransaction tx = FinancialTransaction.builder().id(UUID.randomUUID())
+            .type(FinancialTransactionType.GASTO_MANUAL).sourceAccount(account).amount(new BigDecimal(amount))
+            .status(FinancialTransactionStatus.ACTIVO).purchaseId(purchase.getId()).cashSessionId(sessionId)
+            .transactionDate(Instant.now()).build();
+        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        return tx;
+    }
+
+    private PurchasePayment addPayment(Purchase purchase, FinancialTransaction tx) {
+        PurchasePayment payment = PurchasePayment.builder().id(UUID.randomUUID()).purchase(purchase)
+            .account(tx.getSourceAccount()).amount(tx.getAmount()).paymentDate(tx.getTransactionDate())
+            .financialTransactionId(tx.getId()).status(PurchasePaymentRecordStatus.ACTIVO).build();
+        purchase.getPayments().add(payment);
+        return payment;
+    }
+
+    private void lockAccounts(FinancialAccount... accounts) {
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(accounts));
+    }
+
+    @Test
+    @DisplayName("COM-09: anular un pago desde Bisa anula su gasto, devuelve el monto y recalcula el estado")
+    void voidPayment_fromAccount() {
+        Purchase purchase = existingPurchase("300.00", "100.00");
+        FinancialTransaction tx = purchaseExpense(purchase, bisa, "100.00", null);
+        PurchasePayment payment = addPayment(purchase, tx);
+        lockAccounts(bisa);
+
+        PurchaseResponse res = purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator");
+
+        assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+        assertThat(tx.getVoidReason()).isEqualTo("Pago duplicado");
+        assertThat(tx.getVoidedBy()).isEqualTo("operator");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1100.00");
+        assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ANULADO);
+        assertThat(payment.getVoidReason()).isEqualTo("Pago duplicado");
+        assertThat(res.paidAmount()).isEqualByComparingTo("0.00");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.POR_PAGAR);
+        verifyNoInteractions(cashSessionRepository);
+    }
+
+    @Test
+    @DisplayName("COM-09: anular un pago de Caja con su caja abierta sube el efectivo esperado; con caja cerrada se rechaza")
+    void voidPayment_fromCaja() {
+        Purchase purchase = existingPurchase("300.00", "50.00");
+        FinancialTransaction tx = purchaseExpense(purchase, caja, "50.00", openSession.getId());
+        PurchasePayment payment = addPayment(purchase, tx);
+        lockAccounts(caja);
+
+        CashSession closed = CashSession.builder().id(openSession.getId()).status(CashSessionStatus.CERRADA).build();
+        when(cashSessionRepository.findByIdForUpdate(openSession.getId())).thenReturn(Optional.of(closed));
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
+            .hasMessage("El pago se hizo en una caja cerrada; no se puede anular.");
+        assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("500.00");
+
+        openSession.setExpectedCash(new BigDecimal("50.00"));
+        when(cashSessionRepository.findByIdForUpdate(openSession.getId())).thenReturn(Optional.of(openSession));
+        purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator");
+
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("550.00");
+        assertThat(openSession.getExpectedCash()).isEqualByComparingTo("100.00");
+        var order = inOrder(purchaseRepository, cashSessionRepository, financialAccountRepository);
+        order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
+        order.verify(cashSessionRepository).findByIdForUpdate(openSession.getId());
+        order.verify(financialAccountRepository).findAllByIdForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("COM-09: anular un pago exige motivo, rechaza uno ya anulado, ajeno o de un pedido anulado")
+    void voidPayment_rejections() {
+        Purchase purchase = existingPurchase("300.00", "100.00");
+        PurchasePayment payment = addPayment(purchase, purchaseExpense(purchase, bisa, "100.00", null));
+        lockAccounts(bisa);
+
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), new VoidPurchaseRequest("  "), "operator"))
+            .hasMessage("El motivo de anulación es obligatorio.");
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), null, "operator"))
+            .hasMessage("El motivo de anulación es obligatorio.");
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), UUID.randomUUID(), REASON, "operator"))
+            .isInstanceOf(com.akhana.akhana_admin.exception.ResourceNotFoundException.class);
+
+        purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator");
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
+            .hasMessage("El pago ya está anulado.");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1100.00");
+
+        purchase.setStatus(PurchaseStatus.ANULADO);
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
+            .hasMessage("El pedido está anulado.");
+    }
+
+    @Test
+    @DisplayName("COM-09: anular un pedido anula sus pagos activos y el envío, y devuelve cada monto a su cuenta")
+    void voidPurchase_revertsPaymentsAndShipping() {
+        Purchase purchase = existingPurchase("300.00", "150.00");
+        purchase.setShippingCost(new BigDecimal("25.00"));
+        FinancialTransaction shipping = purchaseExpense(purchase, bisa, "25.00", null);
+        FinancialTransaction bisaPayment = purchaseExpense(purchase, bisa, "100.00", null);
+        FinancialTransaction cajaPayment = purchaseExpense(purchase, caja, "50.00", openSession.getId());
+        FinancialTransaction alreadyVoided = purchaseExpense(purchase, bisa, "30.00", null);
+        alreadyVoided.setStatus(FinancialTransactionStatus.ANULADO);
+        addPayment(purchase, bisaPayment);
+        addPayment(purchase, cajaPayment);
+        PurchasePayment voidedPayment = addPayment(purchase, alreadyVoided);
+        voidedPayment.setStatus(PurchasePaymentRecordStatus.ANULADO);
+        voidedPayment.setVoidReason("Antes");
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId()))
+            .thenReturn(List.of(shipping, bisaPayment, cajaPayment, alreadyVoided));
+        when(cashSessionRepository.findByIdForUpdate(openSession.getId())).thenReturn(Optional.of(openSession));
+        lockAccounts(bisa, caja);
+
+        PurchaseResponse res = purchaseService.voidPurchase(purchase.getId(), REASON, "operator");
+
+        assertThat(res.status()).isEqualTo(PurchaseStatus.ANULADO);
+        assertThat(res.voidReason()).isEqualTo("Pago duplicado");
+        assertThat(res.voidedBy()).isEqualTo("operator");
+        assertThat(res.paidAmount()).isEqualByComparingTo("0.00");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1125.00");
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("550.00");
+        assertThat(List.of(shipping, bisaPayment, cajaPayment)).allMatch(tx -> tx.getStatus() == FinancialTransactionStatus.ANULADO);
+        assertThat(purchase.getPayments()).allMatch(p -> p.getStatus() == PurchasePaymentRecordStatus.ANULADO);
+        assertThat(voidedPayment.getVoidReason()).isEqualTo("Antes");
+        assertThat(openSession.getExpectedCash()).isEqualByComparingTo("100.00");
+
+        assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
+            .hasMessage("El pedido ya está anulado.");
+    }
+
+    @Test
+    @DisplayName("COM-09: un pedido con movimientos de una caja cerrada no se anula y nada cambia")
+    void voidPurchase_rejectsClosedSession() {
+        Purchase purchase = existingPurchase("300.00", "150.00");
+        FinancialTransaction bisaPayment = purchaseExpense(purchase, bisa, "100.00", null);
+        FinancialTransaction cajaPayment = purchaseExpense(purchase, caja, "50.00", UUID.randomUUID());
+        addPayment(purchase, bisaPayment);
+        addPayment(purchase, cajaPayment);
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId()))
+            .thenReturn(List.of(bisaPayment, cajaPayment));
+        when(cashSessionRepository.findByIdForUpdate(any())).thenReturn(Optional.empty());
+        lockAccounts(bisa, caja);
+
+        assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
+            .hasMessage("El pedido tiene movimientos de una caja cerrada; no se puede anular.");
+        assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.REGISTRADO);
+        assertThat(bisaPayment.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1000.00");
+    }
+
+    @Test
+    @DisplayName("COM-09: anular un pedido no revierte el costo ni el precio del producto")
+    void voidPurchase_keepsProductCost() {
+        Purchase purchase = existingPurchase("123.00", "0.00");
+        purchase.getItems().add(PurchaseItem.builder().id(UUID.randomUUID()).purchase(purchase).product(tea)
+            .productName(tea.getName()).quantity(BigDecimal.TEN).unitCost(new BigDecimal("12.30"))
+            .subtotal(new BigDecimal("123.00")).previousUnitCost(new BigDecimal("10.00")).costUpdated(true).build());
+        tea.setBuyPrice(new BigDecimal("12.30"));
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId())).thenReturn(List.of());
+
+        purchaseService.voidPurchase(purchase.getId(), REASON, "operator");
+
+        assertThat(tea.getBuyPrice()).isEqualByComparingTo("12.30");
+        verify(productRepository, never()).save(any());
+        verify(productPriceChangeRepository, never()).save(any());
+        verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
     }
 }

@@ -31,4 +31,12 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
            "OR (p.comment IS NOT NULL AND LOWER(p.comment) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))) " +
            "ORDER BY p.purchaseDate DESC, p.createdAt DESC")
     List<Purchase> search(@Param("supplierId") UUID supplierId, @Param("search") String search);
+
+    // Registered purchases with a balance, by supplier and oldest first (COM-08)
+    @Query("SELECT p FROM Purchase p JOIN FETCH p.supplier s " +
+           "WHERE p.status = com.akhana.akhana_admin.model.PurchaseStatus.REGISTRADO " +
+           "AND p.paidAmount < p.itemsTotal " +
+           "AND (:supplierId IS NULL OR s.id = :supplierId) " +
+           "ORDER BY LOWER(s.name), s.id, p.purchaseDate, p.createdAt")
+    List<Purchase> findPayables(@Param("supplierId") UUID supplierId);
 }
