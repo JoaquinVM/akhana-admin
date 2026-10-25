@@ -68,7 +68,7 @@ public class SaleServiceImpl implements SaleService {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' no se encuentra activo para la venta.");
             }
 
-            int qty = itemReq.quantity() != null && itemReq.quantity() > 0 ? itemReq.quantity() : 1;
+            BigDecimal qty = normalizeQuantity(itemReq.quantity(), product.getName());
             BigDecimal unitPrice = product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
             // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
             BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
@@ -81,9 +81,10 @@ public class SaleServiceImpl implements SaleService {
             }
 
             BigDecimal finalUnitPrice = unitPrice.subtract(discountPerUnit).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal lineSubtotal = finalUnitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal lineGross = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal lineDiscount = discountPerUnit.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal lineSubtotal = finalUnitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal lineGross = unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            // Derived from the rounded line amounts so gross - discount always equals the line subtotal
+            BigDecimal lineDiscount = lineGross.subtract(lineSubtotal);
 
             subtotalGross = subtotalGross.add(lineGross);
             discountItemsTotal = discountItemsTotal.add(lineDiscount);
@@ -293,6 +294,20 @@ public class SaleServiceImpl implements SaleService {
             .createdAt(Instant.now())
             .build();
         financialTransactionRepository.save(tx);
+    }
+
+    // Quantities may be decimal for products sold by weight (CAT-08): more than 0, up to 3 decimals
+    static BigDecimal normalizeQuantity(BigDecimal quantity, String productName) {
+        if (quantity == null) {
+            return BigDecimal.ONE.setScale(3);
+        }
+        if (quantity.signum() <= 0) {
+            throw new IllegalArgumentException("La cantidad de '" + productName + "' debe ser mayor a 0.");
+        }
+        if (quantity.stripTrailingZeros().scale() > 3) {
+            throw new IllegalArgumentException("La cantidad de '" + productName + "' admite hasta 3 decimales.");
+        }
+        return quantity.setScale(3);
     }
 
     static String formatSaleNumber(long sequenceValue) {

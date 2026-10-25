@@ -94,7 +94,7 @@ class MoneyConcurrencyIntegrationTest {
         cashSessionService.openSession(new OpenCashRequest(new BigDecimal("100.00"), null), USER);
 
         List<Outcome<SaleResponse>> outcomes = runConcurrently(THREADS, i -> () -> saleService.registerSale(
-            new SaleDetailRequest(List.of(new SaleItemRequest(productId, 1, null)), null, PaymentMethod.EFECTIVO,
+            new SaleDetailRequest(List.of(new SaleItemRequest(productId, new BigDecimal("1"), null)), null, PaymentMethod.EFECTIVO,
                 null, null, new BigDecimal("10.00"), null),
             USER));
 

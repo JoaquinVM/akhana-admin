@@ -47,8 +47,9 @@ public class SaleItem {
     @Column(name = "final_unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal finalUnitPrice;
 
-    @Column(nullable = false)
-    private Integer quantity;
+    // Up to 3 decimals for products sold by weight (CAT-08)
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;

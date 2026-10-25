@@ -1,7 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -12,8 +12,9 @@ public record SaleItemRequest(
     UUID productId,
 
     @NotNull(message = "La cantidad es obligatoria")
-    @Min(value = 1, message = "La cantidad mínima debe ser 1")
-    Integer quantity,
+    @DecimalMin(value = "0", inclusive = false, message = "La cantidad debe ser mayor a 0")
+    @Digits(integer = 9, fraction = 3, message = "La cantidad admite hasta 3 decimales")
+    BigDecimal quantity,
 
     @DecimalMin(value = "0.00", message = "El descuento unitario no puede ser negativo")
     BigDecimal discountPerUnit

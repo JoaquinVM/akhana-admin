@@ -26,6 +26,8 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.mockito.ArgumentCaptor;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -121,7 +123,7 @@ class SaleServiceTest {
 
     private SaleDetailRequest singleItemSale(PaymentMethod method) {
         return new SaleDetailRequest(
-            List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("1"), BigDecimal.ZERO)),
             BigDecimal.ZERO,
             method,
             method == PaymentMethod.EFECTIVO ? new BigDecimal("20.00") : BigDecimal.ZERO,
@@ -144,7 +146,7 @@ class SaleServiceTest {
             return s;
         });
 
-        SaleItemRequest itemReq = new SaleItemRequest(product1.getId(), 2, new BigDecimal("2.00")); // final 18 * 2 = 36
+        SaleItemRequest itemReq = new SaleItemRequest(product1.getId(), new BigDecimal("2"), new BigDecimal("2.00")); // final 18 * 2 = 36
         SaleDetailRequest req = new SaleDetailRequest(
             List.of(itemReq),
             new BigDecimal("6.00"), // total = 30.00
@@ -184,8 +186,8 @@ class SaleServiceTest {
             return s;
         });
 
-        SaleItemRequest item1 = new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO); // 40
-        SaleItemRequest item2 = new SaleItemRequest(product2.getId(), 4, BigDecimal.ZERO); // 60 -> total 100
+        SaleItemRequest item1 = new SaleItemRequest(product1.getId(), new BigDecimal("2"), BigDecimal.ZERO); // 40
+        SaleItemRequest item2 = new SaleItemRequest(product2.getId(), new BigDecimal("4"), BigDecimal.ZERO); // 60 -> total 100
         SaleDetailRequest req = new SaleDetailRequest(
             List.of(item1, item2),
             BigDecimal.ZERO,
@@ -214,7 +216,7 @@ class SaleServiceTest {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
 
         SaleDetailRequest req = new SaleDetailRequest(
-            List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("1"), BigDecimal.ZERO)),
             BigDecimal.ZERO,
             PaymentMethod.EFECTIVO,
             BigDecimal.TEN,
@@ -302,7 +304,7 @@ class SaleServiceTest {
         stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
 
         SaleDetailRequest req = new SaleDetailRequest(
-            List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO)),
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("2"), BigDecimal.ZERO)),
             BigDecimal.ZERO,
             PaymentMethod.MIXTO,
             new BigDecimal("20.00"),
@@ -414,7 +416,7 @@ class SaleServiceTest {
         stubSaleFinance(List.of(cashAcc), Optional.of(salesCat));
 
         SaleDetailRequest req = new SaleDetailRequest(
-            List.of(new SaleItemRequest(product1.getId(), 1, BigDecimal.ZERO)),
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("1"), BigDecimal.ZERO)),
             BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal("5.00"), new BigDecimal("15.00"), new BigDecimal("5.00"), null);
 
         assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
@@ -475,8 +477,8 @@ class SaleServiceTest {
         });
 
         SaleDetailRequest req = new SaleDetailRequest(
-            List.of(new SaleItemRequest(product1.getId(), 2, BigDecimal.ZERO),
-                    new SaleItemRequest(product2.getId(), 1, BigDecimal.ZERO)),
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("2"), BigDecimal.ZERO),
+                    new SaleItemRequest(product2.getId(), new BigDecimal("1"), BigDecimal.ZERO)),
             BigDecimal.ZERO, PaymentMethod.EFECTIVO, new BigDecimal("55.00"), BigDecimal.ZERO, new BigDecimal("55.00"), null);
         saleService.registerSale(req, "cajero");
 
@@ -496,5 +498,65 @@ class SaleServiceTest {
         assertThat(sale.getItems()).extracting(SaleItem::getUnitCost)
             .usingElementComparator(BigDecimal::compareTo)
             .containsExactly(new BigDecimal("12.50"), new BigDecimal("9.00"));
+    }
+
+    @Test
+    @DisplayName("CAT-08: registra cantidades decimales por peso con subtotales en escala 2 HALF_UP")
+    void shouldRegisterDecimalQuantityWithRoundedSubtotals() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.nextSaleNumber()).thenReturn(8L);
+        ArgumentCaptor<Sale> saleCaptor = ArgumentCaptor.forClass(Sale.class);
+        when(saleRepository.save(saleCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // 20.00 x 0.375 = 7.50 gross; (20.00 - 0.05) x 0.375 = 7.48125 -> 7.48; discount 7.50 - 7.48 = 0.02
+        SaleDetailRequest req = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("0.375"), new BigDecimal("0.05"))),
+            BigDecimal.ZERO,
+            PaymentMethod.EFECTIVO,
+            null,
+            null,
+            new BigDecimal("10.00"),
+            null
+        );
+
+        SaleResponse response = saleService.registerSale(req, "cajero");
+
+        assertThat(response.subtotalAmount()).isEqualByComparingTo("7.50");
+        assertThat(response.discountItemsTotal()).isEqualByComparingTo("0.02");
+        assertThat(response.totalAmount()).isEqualByComparingTo("7.48");
+        assertThat(response.changeGiven()).isEqualByComparingTo("2.52");
+        assertThat(response.items().get(0).quantity()).isEqualByComparingTo("0.375");
+        assertThat(response.items().get(0).subtotal()).isEqualByComparingTo("7.48");
+
+        SaleItem item = saleCaptor.getValue().getItems().get(0);
+        assertThat(item.getQuantity().scale()).isEqualTo(3);
+        assertThat(item.getSubtotal().scale()).isEqualTo(2);
+        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("107.48");
+    }
+
+    @Test
+    @DisplayName("CAT-08: rechaza cantidades en cero, negativas o con más de 3 decimales")
+    void shouldRejectInvalidDecimalQuantities() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        for (String qty : List.of("0", "0.000", "-1")) {
+            assertThatThrownBy(() -> saleService.registerSale(saleWithQuantity(qty), "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("debe ser mayor a 0");
+        }
+        assertThatThrownBy(() -> saleService.registerSale(saleWithQuantity("0.1255"), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("hasta 3 decimales");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    private SaleDetailRequest saleWithQuantity(String quantity) {
+        return new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal(quantity), BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null);
     }
 }

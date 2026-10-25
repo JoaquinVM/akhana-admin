@@ -83,6 +83,19 @@ El sistema SHALL guardar en cada línea de venta (`sale_items.unit_cost`) el cos
 
 ---
 
+### Requirement: Cantidades decimales para venta por peso (CAT-08, T-11)
+El sistema SHALL aceptar en cada línea de venta una cantidad mayor a 0 con hasta 3 decimales (`sale_items.quantity`, `NUMERIC(12,3)`), para productos vendidos por peso (100 g = 0,100; 1/2 libra). Los montos de la línea siguen en escala 2 con `HALF_UP`: subtotal = precio final × cantidad, bruto = precio × cantidad, y el descuento de la línea es bruto − subtotal, así las líneas siempre suman el total de la venta. La entrada de cantidades decimales y las presentaciones rápidas en el POS son POS-10.
+
+#### Scenario: Venta de una cantidad decimal
+- **WHEN** se venden 0,375 de un producto de Bs 20,00 con descuento por unidad de Bs 0,05
+- **THEN** el bruto es Bs 7,50, el subtotal Bs 7,48 (7,48125 redondeado) y el descuento de la línea Bs 0,02
+
+#### Scenario: Cantidad inválida
+- **WHEN** la cantidad es 0, negativa o tiene más de 3 decimales
+- **THEN** la venta se rechaza con «La cantidad de '<producto>' debe ser mayor a 0.» o «… admite hasta 3 decimales.» y no se guarda nada
+
+---
+
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
 El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
 

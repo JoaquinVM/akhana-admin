@@ -11,6 +11,6 @@ public record SaleItemResponse(
     BigDecimal unitPrice,
     BigDecimal discountPerUnit,
     BigDecimal finalUnitPrice,
-    Integer quantity,
+    BigDecimal quantity,
     BigDecimal subtotal
 ) {}
