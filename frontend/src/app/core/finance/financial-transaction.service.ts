@@ -111,6 +111,11 @@ export class FinancialTransactionService {
     );
   }
 
+  /** Anula un gasto de la caja abierta desde el POS (permiso de pantalla POS). */
+  voidCashExpense(id: string, request?: VoidFinancialTransactionRequest): Observable<FinancialTransaction> {
+    return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-expense/${id}/void`, request || {});
+  }
+
   voidTransaction(
     id: string,
     request?: VoidFinancialTransactionRequest

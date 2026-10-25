@@ -61,8 +61,8 @@
         </div>
         <div class="user-info">
           <span class="username">{{ user.username }}</span>
-          <span class="role-badge" [class.admin]="user.role === 'ADMIN'" [class.seller]="user.role === 'SELLER'">
-            {{ user.role }}
+          <span class="role-badge" [class.admin]="user.role === 'ADMINISTRATOR'" [class.operator]="user.role === 'OPERATOR'">
+            {{ roleLabel(user.role) }}
           </span>
         </div>
       </div>

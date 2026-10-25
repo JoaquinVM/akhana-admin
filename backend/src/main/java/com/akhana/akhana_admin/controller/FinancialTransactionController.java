@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('FINANCES_TRANSACTIONS')")
 @RequestMapping("/api/finances/transactions")
 @RequiredArgsConstructor
 public class FinancialTransactionController {
@@ -27,6 +29,7 @@ public class FinancialTransactionController {
     private final FinancialTransactionService financialTransactionService;
     private final com.akhana.akhana_admin.repository.FinancialAccountRepository financialAccountRepository;
 
+    @PreAuthorize("hasAnyAuthority('FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS')")
     @GetMapping
     public ResponseEntity<List<FinancialTransactionResponse>> getTransactions(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
@@ -58,6 +61,7 @@ public class FinancialTransactionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/cash-expense")
     public ResponseEntity<FinancialTransactionResponse> createCashExpense(
             @Valid @RequestBody com.akhana.akhana_admin.dto.CashExpenseRequest request,
@@ -82,6 +86,7 @@ public class FinancialTransactionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PreAuthorize("hasAnyAuthority('POS', 'CASH_HISTORY')")
     @GetMapping("/session/{cashSessionId}")
     public ResponseEntity<List<FinancialTransactionResponse>> getExpensesByCashSession(@PathVariable UUID cashSessionId) {
         return ResponseEntity.ok(financialTransactionService.getExpensesByCashSession(cashSessionId));
@@ -105,6 +110,17 @@ public class FinancialTransactionController {
     ) {
         String username = extractUsername(authentication);
         return ResponseEntity.ok(financialTransactionService.voidTransaction(id, request, username));
+    }
+
+    @PreAuthorize("hasAuthority('POS')")
+    @PostMapping("/cash-expense/{id}/void")
+    public ResponseEntity<FinancialTransactionResponse> voidCashExpense(
+            @PathVariable UUID id,
+            @RequestBody(required = false) VoidFinancialTransactionRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(financialTransactionService.voidCashExpense(id, request, username));
     }
 
     private String extractUsername(Authentication authentication) {

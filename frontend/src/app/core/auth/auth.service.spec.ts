@@ -45,8 +45,8 @@ describe('AuthService', () => {
       id: '123e4567-e89b-12d3-a456-426614174000',
       username: 'admin',
       fullName: 'Administrador General',
-      role: 'ADMIN',
-      permissions: ['SALES_POS', 'SECURITY_USERS'],
+      role: 'ADMINISTRATOR',
+      permissions: ['POS', 'USERS'],
       message: 'Authentication successful'
     };
 
@@ -61,24 +61,36 @@ describe('AuthService', () => {
 
     expect(service.isAuthenticated()).toBe(true);
     expect(service.getToken()).toBe('jwt.test.token');
-    expect(service.userRole()).toBe('ADMIN');
-    expect(service.permissions()).toEqual(['SALES_POS', 'SECURITY_USERS']);
-    expect(service.hasPermission('SALES_POS')).toBe(true);
+    expect(service.userRole()).toBe('ADMINISTRATOR');
+    expect(service.permissions()).toEqual(['POS', 'USERS']);
+    expect(service.hasPermission('POS')).toBe(true);
     expect(service.hasPermission('FINANCES_SUMMARY')).toBe(false);
     expect(service.getCurrentUser()).toEqual({
       id: '123e4567-e89b-12d3-a456-426614174000',
       username: 'admin',
       fullName: 'Administrador General',
-      role: 'ADMIN',
-      permissions: ['SALES_POS', 'SECURITY_USERS'],
+      role: 'ADMINISTRATOR',
+      permissions: ['POS', 'USERS'],
       mustChangePassword: false
     });
     expect(localStorage.getItem('akhana_token')).toBe('jwt.test.token');
   });
 
+  it('should discard a stored session with a role from before Operador/Administrador', () => {
+    localStorage.setItem('akhana_token', 'old.token');
+    localStorage.setItem('akhana_user', JSON.stringify({ id: '1', username: 'seller', role: 'SELLER', permissions: ['SALES_POS'] }));
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+    const restoredService = TestBed.inject(AuthService);
+
+    expect(restoredService.getCurrentUser()).toBeNull();
+    expect(restoredService.isAuthenticated()).toBe(false);
+  });
+
   it('should clear session, update signals to null, and navigate immediately to /login on logout', () => {
     localStorage.setItem('akhana_token', 'sample.token');
-    localStorage.setItem('akhana_user', JSON.stringify({ id: '1', username: 'seller', role: 'SELLER' }));
+    localStorage.setItem('akhana_user', JSON.stringify({ id: '1', username: 'operator', role: 'OPERATOR' }));
 
     const navigateSpy = vi.spyOn(router, 'navigate');
 
@@ -100,7 +112,7 @@ describe('AuthService', () => {
       token: 'jwt.first.login',
       id: 'uuid-admin',
       username: 'admin',
-      role: 'ADMIN',
+      role: 'ADMINISTRATOR',
       permissions: [],
       mustChangePassword: true,
       message: 'Password change required'

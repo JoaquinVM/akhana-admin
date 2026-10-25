@@ -5,7 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UserService } from '../../../core/user/user.service';
 import { User, CreateUserRequest, UpdateUserRequest } from '../../../core/user/models/user.models';
 import { AuthService } from '../../../core/auth/auth.service';
-import { PERMISSION_GROUPS_CONFIG, PermissionGroupConfig } from '../../../core/navigation/navigation.config';
+import { ROLE_OPTIONS, roleLabel } from '../../../core/navigation/navigation.config';
+import { Role } from '../../../core/auth/models/auth.models';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
@@ -30,10 +31,8 @@ export class UsersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly permissionGroups: PermissionGroupConfig[] = PERMISSION_GROUPS_CONFIG;
-
-  // Lista plana de todas las claves canónicas
-  readonly allPermissionKeys: string[] = PERMISSION_GROUPS_CONFIG.flatMap(g => g.permissions.map(p => p.key));
+  readonly roleOptions = ROLE_OPTIONS;
+  readonly roleLabel = roleLabel;
 
   // Estados Reactivos Principales
   users = signal<User[]>([]);
@@ -51,13 +50,13 @@ export class UsersComponent implements OnInit {
   isCreateModalOpen = signal<boolean>(false);
   isCreating = signal<boolean>(false);
   createFormError = signal<string | null>(null);
-  selectedCreatePermissions = signal<string[]>([]);
 
   createForm: FormGroup = this.fb.group({
     fullName: ['', [Validators.required, Validators.maxLength(150)]],
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
-    confirmPassword: ['', [Validators.required]]
+    confirmPassword: ['', [Validators.required]],
+    role: ['OPERATOR' as Role, [Validators.required]]
   });
 
   // Modal de Edición
@@ -65,12 +64,12 @@ export class UsersComponent implements OnInit {
   isUpdating = signal<boolean>(false);
   editFormError = signal<string | null>(null);
   userToEdit = signal<User | null>(null);
-  selectedEditPermissions = signal<string[]>([]);
-  originalFormValues = signal<{ fullName: string; permissions: string[] } | null>(null);
+  originalFormValues = signal<{ fullName: string; role: Role } | null>(null);
   formVersion = signal<number>(0);
 
   editForm: FormGroup = this.fb.group({
-    fullName: ['', [Validators.required, Validators.maxLength(150)]]
+    fullName: ['', [Validators.required, Validators.maxLength(150)]],
+    role: ['OPERATOR' as Role, [Validators.required]]
   });
 
   // Modal Confirmación de Descarte de Cambios
@@ -93,7 +92,7 @@ export class UsersComponent implements OnInit {
     const orig = this.originalFormValues();
     if (!orig) return false;
 
-    return this.isFieldModified('fullName') || this.isFieldModified('permissions');
+    return this.isFieldModified('fullName') || this.isFieldModified('role');
   });
 
   ngOnInit(): void {
@@ -149,9 +148,9 @@ export class UsersComponent implements OnInit {
       fullName: '',
       username: '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      role: 'OPERATOR'
     });
-    this.selectedCreatePermissions.set([...this.allPermissionKeys]); // Por defecto todos seleccionados para conveniencia
     this.createFormError.set(null);
     this.isCreating.set(false);
     this.isCreateModalOpen.set(true);
@@ -168,16 +167,10 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    const { fullName, username, password, confirmPassword } = this.createForm.value;
+    const { fullName, username, password, confirmPassword, role } = this.createForm.value;
 
     if (password !== confirmPassword) {
       this.createFormError.set('Las contraseñas no coinciden.');
-      return;
-    }
-
-    const permissions = this.selectedCreatePermissions();
-    if (permissions.length === 0) {
-      this.createFormError.set('Debe asignar al menos un permiso de acceso al usuario.');
       return;
     }
 
@@ -188,7 +181,7 @@ export class UsersComponent implements OnInit {
       fullName: fullName.trim(),
       username: username.trim(),
       password,
-      permissions
+      role
     };
 
     this.userService.createUser(request).subscribe({
@@ -211,16 +204,14 @@ export class UsersComponent implements OnInit {
     this.editFormError.set(null);
     this.isUpdating.set(false);
 
-    const userPerms = [...(user.permissions || [])];
-    this.selectedEditPermissions.set(userPerms);
-
     this.editForm.reset({
-      fullName: user.fullName
+      fullName: user.fullName,
+      role: user.role
     });
 
     this.originalFormValues.set({
       fullName: user.fullName,
-      permissions: userPerms
+      role: user.role
     });
 
     this.formVersion.update(v => v + 1);
@@ -251,7 +242,7 @@ export class UsersComponent implements OnInit {
     this.editFormError.set(null);
   }
 
-  isFieldModified(fieldName: 'fullName' | 'permissions'): boolean {
+  isFieldModified(fieldName: 'fullName' | 'role'): boolean {
     this.formVersion();
     const orig = this.originalFormValues();
     if (!orig) return false;
@@ -262,11 +253,8 @@ export class UsersComponent implements OnInit {
       return current !== original;
     }
 
-    if (fieldName === 'permissions') {
-      const current = this.selectedEditPermissions().slice().sort();
-      const original = orig.permissions.slice().sort();
-      if (current.length !== original.length) return true;
-      return current.some((val, idx) => val !== original[idx]);
+    if (fieldName === 'role') {
+      return this.editForm.get('role')?.value !== orig.role;
     }
 
     return false;
@@ -281,25 +269,19 @@ export class UsersComponent implements OnInit {
     const user = this.userToEdit();
     if (!user) return;
 
-    const permissions = this.selectedEditPermissions();
-    if (permissions.length === 0) {
-      this.editFormError.set('Debe asignar al menos un permiso de acceso al usuario.');
-      return;
-    }
-
     this.isUpdating.set(true);
     this.editFormError.set(null);
 
     const request: UpdateUserRequest = {
       fullName: this.editForm.value.fullName.trim(),
-      permissions
+      role: this.editForm.value.role
     };
 
     this.userService.updateUser(user.id, request).subscribe({
       next: (updatedUser) => {
         this.isUpdating.set(false);
         this.closeEditModal();
-        // Si el usuario editado es el usuario en sesión, refrescar perfil para sincronizar Navbar
+        // Si el usuario editado es el usuario en sesión, refrescar perfil (rol y permisos) para sincronizar Navbar
         if (this.authService.currentUser()?.id === user.id) {
           this.authService.fetchCurrentUserProfile().subscribe();
         }
@@ -372,91 +354,5 @@ export class UsersComponent implements OnInit {
   closeAuditModal(): void {
     this.isAuditModalOpen.set(false);
     this.selectedAuditData.set(null);
-  }
-
-  // --- Lógica de Matriz de Permisos (Checkboxes Globales, Grupales e Individuales) ---
-
-  isGlobalAllSelected(isCreate: boolean): boolean {
-    const selected = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-    return this.allPermissionKeys.length > 0 && selected.length === this.allPermissionKeys.length;
-  }
-
-  isGlobalIndeterminate(isCreate: boolean): boolean {
-    const selected = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-    return selected.length > 0 && selected.length < this.allPermissionKeys.length;
-  }
-
-  toggleGlobalAll(isCreate: boolean, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    const newPerms = checked ? [...this.allPermissionKeys] : [];
-
-    if (isCreate) {
-      this.selectedCreatePermissions.set(newPerms);
-    } else {
-      this.selectedEditPermissions.set(newPerms);
-      this.formVersion.update(v => v + 1);
-    }
-  }
-
-  isGroupAllSelected(groupId: string, isCreate: boolean): boolean {
-    const group = this.permissionGroups.find(g => g.id === groupId);
-    if (!group) return false;
-    const selected = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-    return group.permissions.every(p => selected.includes(p.key));
-  }
-
-  isGroupIndeterminate(groupId: string, isCreate: boolean): boolean {
-    const group = this.permissionGroups.find(g => g.id === groupId);
-    if (!group) return false;
-    const selected = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-    const count = group.permissions.filter(p => selected.includes(p.key)).length;
-    return count > 0 && count < group.permissions.length;
-  }
-
-  toggleGroupAll(groupId: string, isCreate: boolean, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    const group = this.permissionGroups.find(g => g.id === groupId);
-    if (!group) return;
-
-    const groupKeys = group.permissions.map(p => p.key);
-    const current = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-
-    let updated: string[];
-    if (checked) {
-      updated = Array.from(new Set([...current, ...groupKeys]));
-    } else {
-      updated = current.filter(k => !groupKeys.includes(k));
-    }
-
-    if (isCreate) {
-      this.selectedCreatePermissions.set(updated);
-    } else {
-      this.selectedEditPermissions.set(updated);
-      this.formVersion.update(v => v + 1);
-    }
-  }
-
-  isPermissionSelected(key: string, isCreate: boolean): boolean {
-    const selected = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-    return selected.includes(key);
-  }
-
-  togglePermission(key: string, isCreate: boolean, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    const current = isCreate ? this.selectedCreatePermissions() : this.selectedEditPermissions();
-
-    let updated: string[];
-    if (checked) {
-      updated = [...current, key];
-    } else {
-      updated = current.filter(k => k !== key);
-    }
-
-    if (isCreate) {
-      this.selectedCreatePermissions.set(updated);
-    } else {
-      this.selectedEditPermissions.set(updated);
-      this.formVersion.update(v => v + 1);
-    }
   }
 }

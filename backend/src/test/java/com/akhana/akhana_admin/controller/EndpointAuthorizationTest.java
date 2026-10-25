@@ -1,0 +1,290 @@
+package com.akhana.akhana_admin.controller;
+
+import com.akhana.akhana_admin.config.JwtAuthenticationEntryPoint;
+import com.akhana.akhana_admin.config.JwtAuthenticationFilter;
+import com.akhana.akhana_admin.config.SecurityConfig;
+import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
+import com.akhana.akhana_admin.model.FinancialAccount;
+import com.akhana.akhana_admin.model.Role;
+import com.akhana.akhana_admin.model.User;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.UserRepository;
+import com.akhana.akhana_admin.service.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * T-13 / USR-05: every endpoint requires the permission of the screen that uses it (table 2.2): whoever opens a
+ * screen can do everything in it. The administrator reaches every endpoint; the operator gets 403 on finances and users.
+ * Request bodies are valid so that bean validation (which runs before @PreAuthorize) does not mask the result.
+ */
+@WebMvcTest(controllers = {
+        CashSessionController.class,
+        CategoryController.class,
+        FinancialAccountController.class,
+        FinancialCategoryController.class,
+        FinancialSummaryController.class,
+        FinancialTransactionController.class,
+        ProductController.class,
+        QuickProductController.class,
+        SaleController.class,
+        SupplierController.class,
+        TagController.class,
+        UserController.class,
+        GlobalExceptionHandler.class
+})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
+class EndpointAuthorizationTest {
+
+    private static final String ADMIN_TOKEN = "valid.administrator.jwt";
+    private static final String OPERATOR_TOKEN = "valid.operator.jwt";
+    private static final String ID = "11111111-1111-1111-1111-111111111111";
+
+    private static final String SALE = """
+            {"items":[{"productId":"%s","quantity":1}],"paymentMethod":"EFECTIVO"}""".formatted(ID);
+    private static final String VOID_SALE = """
+            {"voidReason":"Error de cobro"}""";
+    private static final String OPEN_CASH = """
+            {"openingAmount":100.00}""";
+    private static final String CLOSE_CASH = """
+            {"closingAmount":100.00}""";
+    private static final String LEGACY_SALE = """
+            {"totalAmount":10.00,"paymentMethod":"EFECTIVO"}""";
+    private static final String NAME_COLOR = """
+            {"name":"Snacks","color":"#ffffff"}""";
+    private static final String PRODUCT = """
+            {"code":"P-1","name":"Mani","categoryId":"%s","supplierId":"%s","buyPrice":1.00,"sellPrice":2.00}"""
+            .formatted(ID, ID);
+    private static final String SUPPLIER = """
+            {"name":"Granel","code":"GR"}""";
+    private static final String QUICK_GROUP = """
+            {"name":"Bebidas"}""";
+    private static final String REORDER_GROUPS = """
+            {"groupIds":["%s"]}""".formatted(ID);
+    private static final String REORDER_ITEMS = """
+            {"productIds":["%s"]}""".formatted(ID);
+    private static final String CASH_EXPENSE = """
+            {"amount":5.00,"categoryId":"%s","description":"Almuerzo"}""".formatted(ID);
+    private static final String TRANSACTION = """
+            {"type":"GASTO_MANUAL","sourceAccountId":"%s","amount":5.00,"description":"Luz"}""".formatted(ID);
+    private static final String VOID_TRANSACTION = """
+            {"voidReason":"Registrado dos veces"}""";
+    private static final String ACCOUNT = """
+            {"name":"Bisa"}""";
+    private static final String FINANCIAL_CATEGORY = """
+            {"name":"Comida","type":"GASTO","color":"#ffffff"}""";
+    private static final String CREATE_USER = """
+            {"fullName":"Ana Rojas","username":"arojas","password":"password123","role":"OPERATOR"}""";
+    private static final String UPDATE_USER = """
+            {"fullName":"Ana Rojas","role":"OPERATOR"}""";
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private RequestMappingHandlerMapping handlerMapping;
+
+    @MockitoBean private CashSessionService cashSessionService;
+    @MockitoBean private CategoryService categoryService;
+    @MockitoBean private FinancialAccountService financialAccountService;
+    @MockitoBean private FinancialCategoryService financialCategoryService;
+    @MockitoBean private FinancialSummaryService financialSummaryService;
+    @MockitoBean private FinancialTransactionService financialTransactionService;
+    @MockitoBean private ProductService productService;
+    @MockitoBean private QuickProductService quickProductService;
+    @MockitoBean private SaleService saleService;
+    @MockitoBean private SupplierService supplierService;
+    @MockitoBean private TagService tagService;
+    @MockitoBean private UserService userService;
+    @MockitoBean private JwtService jwtService;
+    @MockitoBean private UserRepository userRepository;
+    @MockitoBean private FinancialAccountRepository financialAccountRepository;
+
+    record Endpoint(HttpMethod method, String url, String body, boolean operatorAllowed) {
+        @Override
+        public String toString() {
+            return method + " " + url + (operatorAllowed ? " (operador sí)" : " (operador no)");
+        }
+    }
+
+    private static Endpoint both(HttpMethod method, String url, String body) {
+        return new Endpoint(method, url, body, true);
+    }
+
+    private static Endpoint adminOnly(HttpMethod method, String url, String body) {
+        return new Endpoint(method, url, body, false);
+    }
+
+    static Stream<Endpoint> endpoints() {
+        HttpMethod get = HttpMethod.GET, post = HttpMethod.POST, put = HttpMethod.PUT,
+                patch = HttpMethod.PATCH, delete = HttpMethod.DELETE;
+        return Stream.of(
+                // Caja: abrir, ver y cerrar; historial
+                both(post, "/api/cash-sessions/open", OPEN_CASH),
+                both(get, "/api/cash-sessions/current", null),
+                both(post, "/api/cash-sessions/current/sales", LEGACY_SALE),
+                both(post, "/api/cash-sessions/current/close", CLOSE_CASH),
+                both(get, "/api/cash-sessions", null),
+                both(get, "/api/cash-sessions/" + ID, null),
+                // Ventas: registrar, anular (POS) e historial
+                both(post, "/api/sales", SALE),
+                both(get, "/api/sales", null),
+                both(get, "/api/sales/" + ID, null),
+                both(get, "/api/sales/session/" + ID, null),
+                both(post, "/api/sales/" + ID + "/void", VOID_SALE),
+                // Catálogo: productos (costo y precio), categorías, etiquetas, productos rápidos
+                both(get, "/api/products", null),
+                both(get, "/api/products/" + ID, null),
+                both(post, "/api/products", PRODUCT),
+                both(put, "/api/products/" + ID, PRODUCT),
+                both(patch, "/api/products/" + ID + "/status?status=INACTIVO", null),
+                both(delete, "/api/products/" + ID, null),
+                both(get, "/api/categories", null),
+                both(get, "/api/categories/" + ID, null),
+                both(post, "/api/categories", NAME_COLOR),
+                both(put, "/api/categories/" + ID, NAME_COLOR),
+                both(delete, "/api/categories/" + ID, null),
+                both(get, "/api/tags", null),
+                both(get, "/api/tags/" + ID, null),
+                both(post, "/api/tags", NAME_COLOR),
+                both(put, "/api/tags/" + ID, NAME_COLOR),
+                both(delete, "/api/tags/" + ID, null),
+                both(get, "/api/quick-products/groups", null),
+                both(get, "/api/quick-products/groups/" + ID, null),
+                both(post, "/api/quick-products/groups", QUICK_GROUP),
+                both(put, "/api/quick-products/groups/" + ID, QUICK_GROUP),
+                both(delete, "/api/quick-products/groups/" + ID, null),
+                both(put, "/api/quick-products/groups/reorder", REORDER_GROUPS),
+                both(put, "/api/quick-products/groups/" + ID + "/items/reorder", REORDER_ITEMS),
+                // Proveedores
+                both(get, "/api/suppliers", null),
+                both(get, "/api/suppliers/" + ID, null),
+                both(post, "/api/suppliers", SUPPLIER),
+                both(put, "/api/suppliers/" + ID, SUPPLIER),
+                both(delete, "/api/suppliers/" + ID, null),
+                // Gastos de caja desde el POS: registrar y anular
+                both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
+                both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),
+                both(get, "/api/finances/transactions/session/" + ID, null),
+                both(get, "/api/finances/categories", null),
+                adminOnly(post, "/api/finances/transactions/" + ID + "/void", VOID_TRANSACTION),
+                // Finanzas
+                adminOnly(get, "/api/finances/transactions", null),
+                adminOnly(get, "/api/finances/transactions/" + ID, null),
+                adminOnly(post, "/api/finances/transactions", TRANSACTION),
+                adminOnly(put, "/api/finances/transactions/" + ID, TRANSACTION),
+                adminOnly(get, "/api/finances/accounts", null),
+                adminOnly(get, "/api/finances/accounts/" + ID, null),
+                adminOnly(get, "/api/finances/accounts/" + ID + "/transactions", null),
+                adminOnly(post, "/api/finances/accounts", ACCOUNT),
+                adminOnly(put, "/api/finances/accounts/" + ID, ACCOUNT),
+                adminOnly(put, "/api/finances/accounts/" + ID + "/qr", null),
+                adminOnly(delete, "/api/finances/accounts/" + ID, null),
+                adminOnly(get, "/api/finances/categories/" + ID, null),
+                adminOnly(post, "/api/finances/categories", FINANCIAL_CATEGORY),
+                adminOnly(put, "/api/finances/categories/" + ID, FINANCIAL_CATEGORY),
+                adminOnly(put, "/api/finances/categories/" + ID + "/sales-default", null),
+                adminOnly(delete, "/api/finances/categories/" + ID, null),
+                adminOnly(get, "/api/finances/summary", null),
+                // Usuarios
+                adminOnly(get, "/api/users", null),
+                adminOnly(get, "/api/users/" + ID, null),
+                adminOnly(get, "/api/users/roles", null),
+                adminOnly(post, "/api/users", CREATE_USER),
+                adminOnly(put, "/api/users/" + ID, UPDATE_USER),
+                adminOnly(delete, "/api/users/" + ID, null)
+        );
+    }
+
+    @BeforeEach
+    void setUp() {
+        stubUser(ADMIN_TOKEN, "admin", Role.ADMINISTRATOR);
+        stubUser(OPERATOR_TOKEN, "operator", Role.OPERATOR);
+        when(userService.getUsers(any(), any())).thenReturn(Page.empty());
+        when(financialAccountRepository.findByIsCashAccountTrue())
+                .thenReturn(Optional.of(FinancialAccount.builder().id(UUID.randomUUID()).build()));
+    }
+
+    private void stubUser(String token, String username, Role role) {
+        User user = User.builder().id(UUID.randomUUID()).username(username).role(role).active(true).build();
+        when(jwtService.extractUsername(token)).thenReturn(username);
+        when(jwtService.isTokenValid(token, username)).thenReturn(true);
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
+    }
+
+    private MockHttpServletRequestBuilder call(Endpoint endpoint, String token) {
+        MockHttpServletRequestBuilder builder = request(endpoint.method(), endpoint.url())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        if (endpoint.body() != null) {
+            builder.contentType(MediaType.APPLICATION_JSON).content(endpoint.body());
+        }
+        return builder;
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("endpoints")
+    @DisplayName("El administrador accede a todos los endpoints")
+    void administrator_isAllowedEverywhere(Endpoint endpoint) throws Exception {
+        int status = mockMvc.perform(call(endpoint, ADMIN_TOKEN)).andReturn().getResponse().getStatus();
+        assertThat(status).as(endpoint.toString()).isBetween(200, 299);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("endpoints")
+    @DisplayName("El operador hace todo en sus pantallas y recibe 403 en finanzas y usuarios")
+    void operator_isAllowedOnlyForDayToDayActions(Endpoint endpoint) throws Exception {
+        var result = mockMvc.perform(call(endpoint, OPERATOR_TOKEN));
+        if (endpoint.operatorAllowed()) {
+            assertThat(result.andReturn().getResponse().getStatus()).as(endpoint.toString()).isBetween(200, 299);
+        } else {
+            result.andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value("No tiene permiso para realizar esta acción"));
+        }
+    }
+
+    @Test
+    @DisplayName("Sin token, un endpoint protegido responde 401")
+    void anonymous_isUnauthorized() throws Exception {
+        mockMvc.perform(request(HttpMethod.GET, "/api/products")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Cada endpoint tiene @PreAuthorize y está en la matriz")
+    void everyEndpoint_isProtectedAndCovered() {
+        var handlers = handlerMapping.getHandlerMethods().values().stream()
+                .filter(handler -> handler.getBeanType().getPackageName().equals(UserController.class.getPackageName()))
+                .toList();
+
+        assertThat(handlers).allSatisfy(handler -> assertThat(
+                handler.hasMethodAnnotation(PreAuthorize.class)
+                        || handler.getBeanType().isAnnotationPresent(PreAuthorize.class))
+                .as(handler.toString()).isTrue());
+        assertThat(endpoints().map(Endpoint::toString).distinct().count()).isEqualTo(handlers.size());
+    }
+}

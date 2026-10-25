@@ -1,60 +1,50 @@
 import { NavGroup } from './models/navigation.models';
+import { Role } from '../auth/models/auth.models';
 
-export interface PermissionItemConfig {
-  key: string;
+/**
+ * Permisos por pantalla (tabla 2.2 de specs/requirements.md): quien entra a una pantalla puede hacer todo en ella.
+ * Mismas claves que el enum Permission del backend, que las exige en cada endpoint con @PreAuthorize.
+ * Los roles agrupan permisos; el usuario no los elige uno a uno.
+ */
+export const PERMISSIONS = {
+  POS: 'POS',
+  SALES_HISTORY: 'SALES_HISTORY',
+  CASH_HISTORY: 'CASH_HISTORY',
+  PRODUCTS: 'PRODUCTS',
+  CATEGORIES: 'CATEGORIES',
+  TAGS: 'TAGS',
+  SUPPLIERS: 'SUPPLIERS',
+  FINANCES_SUMMARY: 'FINANCES_SUMMARY',
+  FINANCES_TRANSACTIONS: 'FINANCES_TRANSACTIONS',
+  FINANCES_ACCOUNTS: 'FINANCES_ACCOUNTS',
+  FINANCES_CATEGORIES: 'FINANCES_CATEGORIES',
+  USERS: 'USERS'
+} as const;
+
+export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export interface RoleOption {
+  value: Role;
   label: string;
+  description: string;
 }
 
-export interface PermissionGroupConfig {
-  id: string;
-  label: string;
-  permissions: PermissionItemConfig[];
-}
-
-export const PERMISSION_GROUPS_CONFIG: PermissionGroupConfig[] = [
+export const ROLE_OPTIONS: RoleOption[] = [
   {
-    id: 'sales',
-    label: 'Ventas',
-    permissions: [
-      { key: 'SALES_POS', label: 'POS' },
-      { key: 'SALES_HISTORY', label: 'Ventas' },
-      { key: 'SALES_CASH_HISTORY', label: 'Historial de cajas' }
-    ]
+    value: 'OPERATOR',
+    label: 'Operador',
+    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo y proveedores. No entra a finanzas ni usuarios.'
   },
   {
-    id: 'finances',
-    label: 'Finanzas',
-    permissions: [
-      { key: 'FINANCES_SUMMARY', label: 'Resumen' },
-      { key: 'FINANCES_TRANSACTIONS', label: 'Transacciones' },
-      { key: 'FINANCES_ACCOUNTS', label: 'Cuentas' },
-      { key: 'FINANCES_CATEGORIES', label: 'Categorías' }
-    ]
-  },
-  {
-    id: 'catalog',
-    label: 'Catálogo',
-    permissions: [
-      { key: 'CATALOG_PRODUCTS', label: 'Productos' },
-      { key: 'CATALOG_CATEGORIES', label: 'Categorías' },
-      { key: 'CATALOG_TAGS', label: 'Etiquetas' }
-    ]
-  },
-  {
-    id: 'purchases',
-    label: 'Compras',
-    permissions: [
-      { key: 'PURCHASES_SUPPLIERS', label: 'Proveedores' }
-    ]
-  },
-  {
-    id: 'security',
-    label: 'Seguridad',
-    permissions: [
-      { key: 'SECURITY_USERS', label: 'Usuarios' }
-    ]
+    value: 'ADMINISTRATOR',
+    label: 'Administrador',
+    description: 'Todas las pantallas: lo del operador más finanzas, reportes y usuarios.'
   }
 ];
+
+export function roleLabel(role: Role | null | undefined): string {
+  return ROLE_OPTIONS.find(option => option.value === role)?.label ?? '';
+}
 
 export const NAVIGATION_CONFIG: NavGroup[] = [
   {
@@ -65,19 +55,19 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         label: 'POS',
         route: '/pos',
         badge: 'Cerrada',
-        permissionKey: 'SALES_POS'
+        permissionKey: PERMISSIONS.POS
       },
       {
         label: 'Ventas',
         route: '/sales',
         caption: 'Historial',
-        permissionKey: 'SALES_HISTORY'
+        permissionKey: PERMISSIONS.SALES_HISTORY
       },
       {
         label: 'Historial de cajas',
         route: '/cash/history',
         caption: 'Cajas',
-        permissionKey: 'SALES_CASH_HISTORY'
+        permissionKey: PERMISSIONS.CASH_HISTORY
       }
     ]
   },
@@ -88,22 +78,22 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
       {
         label: 'Resumen',
         route: '/finances/summary',
-        permissionKey: 'FINANCES_SUMMARY'
+        permissionKey: PERMISSIONS.FINANCES_SUMMARY
       },
       {
         label: 'Transacciones',
         route: '/finances/transactions',
-        permissionKey: 'FINANCES_TRANSACTIONS'
+        permissionKey: PERMISSIONS.FINANCES_TRANSACTIONS
       },
       {
         label: 'Cuentas',
         route: '/finances/accounts',
-        permissionKey: 'FINANCES_ACCOUNTS'
+        permissionKey: PERMISSIONS.FINANCES_ACCOUNTS
       },
       {
         label: 'Categorías',
         route: '/finances/categories',
-        permissionKey: 'FINANCES_CATEGORIES'
+        permissionKey: PERMISSIONS.FINANCES_CATEGORIES
       }
     ]
   },
@@ -114,17 +104,17 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
       {
         label: 'Productos',
         route: '/products',
-        permissionKey: 'CATALOG_PRODUCTS'
+        permissionKey: PERMISSIONS.PRODUCTS
       },
       {
         label: 'Categorías',
         route: '/categories',
-        permissionKey: 'CATALOG_CATEGORIES'
+        permissionKey: PERMISSIONS.CATEGORIES
       },
       {
         label: 'Etiquetas',
         route: '/tags',
-        permissionKey: 'CATALOG_TAGS'
+        permissionKey: PERMISSIONS.TAGS
       }
     ]
   },
@@ -135,7 +125,7 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
       {
         label: 'Proveedores',
         route: '/suppliers',
-        permissionKey: 'PURCHASES_SUPPLIERS'
+        permissionKey: PERMISSIONS.SUPPLIERS
       }
     ]
   },
@@ -146,7 +136,7 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
       {
         label: 'Usuarios',
         route: '/users',
-        permissionKey: 'SECURITY_USERS'
+        permissionKey: PERMISSIONS.USERS
       }
     ]
   }

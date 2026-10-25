@@ -28,7 +28,7 @@ describe('permissionGuard', () => {
   it('debe redirigir a /login si el usuario no está autenticado', () => {
     authServiceSpy.isAuthenticated.mockReturnValue(false);
 
-    const route = { data: { permission: 'SECURITY_USERS' } } as unknown as ActivatedRouteSnapshot;
+    const route = { data: { permission: 'USERS' } } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/users' } as RouterStateSnapshot;
 
     const result = TestBed.runInInjectionContext(() => permissionGuard(route, state));
@@ -48,22 +48,22 @@ describe('permissionGuard', () => {
 
   it('debe permitir acceso si el usuario cuenta con el permiso requerido', () => {
     authServiceSpy.isAuthenticated.mockReturnValue(true);
-    authServiceSpy.hasPermission.mockImplementation((p: string) => p === 'SECURITY_USERS');
+    authServiceSpy.hasPermission.mockImplementation((p: string) => p === 'USERS');
 
-    const route = { data: { permission: 'SECURITY_USERS' } } as unknown as ActivatedRouteSnapshot;
+    const route = { data: { permission: 'USERS' } } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/users' } as RouterStateSnapshot;
 
     const result = TestBed.runInInjectionContext(() => permissionGuard(route, state));
     expect(result).toBe(true);
-    expect(authServiceSpy.hasPermission).toHaveBeenCalledWith('SECURITY_USERS');
+    expect(authServiceSpy.hasPermission).toHaveBeenCalledWith('USERS');
   });
 
   it('debe redirigir a la primera ruta permitida si no tiene el permiso de la ruta solicitada', () => {
     authServiceSpy.isAuthenticated.mockReturnValue(true);
-    // No tiene SECURITY_USERS, pero tiene CATALOG_PRODUCTS
-    authServiceSpy.hasPermission.mockImplementation((p: string) => p === 'CATALOG_PRODUCTS');
+    // No tiene USERS_MANAGE, pero tiene CATALOG_MANAGE
+    authServiceSpy.hasPermission.mockImplementation((p: string) => p === 'PRODUCTS');
 
-    const route = { data: { permission: 'SECURITY_USERS' } } as unknown as ActivatedRouteSnapshot;
+    const route = { data: { permission: 'USERS' } } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/users' } as RouterStateSnapshot;
 
     const result = TestBed.runInInjectionContext(() => permissionGuard(route, state));
@@ -75,7 +75,7 @@ describe('permissionGuard', () => {
     authServiceSpy.isAuthenticated.mockReturnValue(true);
     authServiceSpy.hasPermission.mockReturnValue(false);
 
-    const route = { data: { permission: 'SECURITY_USERS' } } as unknown as ActivatedRouteSnapshot;
+    const route = { data: { permission: 'USERS' } } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/users' } as RouterStateSnapshot;
 
     const result = TestBed.runInInjectionContext(() => permissionGuard(route, state));

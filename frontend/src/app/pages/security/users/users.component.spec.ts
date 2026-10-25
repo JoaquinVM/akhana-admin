@@ -18,9 +18,9 @@ describe('UsersComponent', () => {
       id: '11111111-1111-1111-1111-111111111111',
       fullName: 'Administrador General',
       username: 'admin',
-      role: 'ADMIN',
+      role: 'ADMINISTRATOR',
       active: true,
-      permissions: ['SALES_POS', 'SECURITY_USERS'],
+      permissions: ['POS', 'FINANCES_TRANSACTIONS', 'USERS'],
       createdAt: '2026-01-01T10:00:00Z',
       createdBy: 'SYSTEM',
       updatedAt: '2026-02-01T12:00:00Z',
@@ -30,11 +30,11 @@ describe('UsersComponent', () => {
     },
     {
       id: '22222222-2222-2222-2222-222222222222',
-      fullName: 'Vendedor Turno Mañana',
-      username: 'seller',
-      role: 'SELLER',
+      fullName: 'Operador Turno Mañana',
+      username: 'operador',
+      role: 'OPERATOR',
       active: true,
-      permissions: ['SALES_POS'],
+      permissions: ['POS', 'SALES_HISTORY'],
       createdAt: '2026-01-02T10:00:00Z',
       createdBy: 'admin',
       updatedAt: null,
@@ -56,7 +56,6 @@ describe('UsersComponent', () => {
     mockUserService = {
       getUsers: vi.fn().mockReturnValue(of(mockPageResponse)),
       getUserById: vi.fn().mockReturnValue(of(mockUsersList[0])),
-      getAllPermissions: vi.fn().mockReturnValue(of(['SALES_POS', 'SECURITY_USERS'])),
       createUser: vi.fn().mockReturnValue(of(mockUsersList[0])),
       updateUser: vi.fn().mockReturnValue(of(mockUsersList[0])),
       deleteUser: vi.fn().mockReturnValue(of(void 0))
@@ -67,8 +66,8 @@ describe('UsersComponent', () => {
         id: '11111111-1111-1111-1111-111111111111',
         username: 'admin',
         fullName: 'Administrador General',
-        role: 'ADMIN',
-        permissions: ['SECURITY_USERS']
+        role: 'ADMINISTRATOR',
+        permissions: ['USERS']
       }),
       fetchCurrentUserProfile: vi.fn().mockReturnValue(of({})),
       hasPermission: vi.fn().mockReturnValue(true)
@@ -98,9 +97,9 @@ describe('UsersComponent', () => {
   });
 
   it('debe filtrar usuarios al buscar y limpiar el buscador', () => {
-    component.onSearch({ target: { value: 'seller' } } as any);
-    expect(mockUserService.getUsers).toHaveBeenCalledWith('seller', 0, 10);
-    expect(component.searchTerm()).toBe('seller');
+    component.onSearch({ target: { value: 'operador' } } as any);
+    expect(mockUserService.getUsers).toHaveBeenCalledWith('operador', 0, 10);
+    expect(component.searchTerm()).toBe('operador');
 
     component.clearSearch();
     expect(component.searchTerm()).toBe('');
@@ -124,27 +123,22 @@ describe('UsersComponent', () => {
       expect(mockUserService.createUser).not.toHaveBeenCalled();
     });
 
-    it('debe requerir al menos un permiso de acceso para crear usuario', () => {
+    it('debe proponer el rol Operador por defecto y ofrecer ambos roles', () => {
       component.openCreateModal();
-      component.selectedCreatePermissions.set([]); // Sin permisos
+      fixture.detectChanges();
 
-      component.createForm.patchValue({
-        fullName: 'Nuevo Usuario',
-        username: 'nuevo_user',
-        password: 'password123',
-        confirmPassword: 'password123'
-      });
-
-      component.submitCreate();
-      expect(component.createFormError()).toBe('Debe asignar al menos un permiso de acceso al usuario.');
-      expect(mockUserService.createUser).not.toHaveBeenCalled();
+      expect(component.createForm.value.role).toBe('OPERATOR');
+      const labels = fixture.debugElement
+        .queryAll(By.css('.role-option-label'))
+        .map(el => el.nativeElement.textContent.trim());
+      expect(labels).toEqual(['Operador', 'Administrador']);
     });
 
-    it('debe crear usuario exitosamente cuando el formulario es válido', () => {
+    it('debe crear usuario exitosamente con el rol elegido', () => {
       component.openCreateModal();
-      component.selectedCreatePermissions.set(['SALES_POS']);
 
       component.createForm.patchValue({
+        role: 'ADMINISTRATOR',
         fullName: 'Nuevo Usuario',
         username: 'nuevo_user',
         password: 'password123',
@@ -156,7 +150,7 @@ describe('UsersComponent', () => {
         fullName: 'Nuevo Usuario',
         username: 'nuevo_user',
         password: 'password123',
-        permissions: ['SALES_POS']
+        role: 'ADMINISTRATOR'
       });
       expect(component.isCreateModalOpen()).toBe(false);
     });
@@ -170,10 +164,10 @@ describe('UsersComponent', () => {
       expect(component.isEditModalOpen()).toBe(true);
       expect(component.userToEdit()).toEqual(user);
       expect(component.editForm.value.fullName).toBe(user.fullName);
-      expect(component.selectedEditPermissions()).toEqual(user.permissions);
+      expect(component.editForm.value.role).toBe('ADMINISTRATOR');
       expect(component.hasFormChanges()).toBe(false);
       expect(component.isFieldModified('fullName')).toBe(false);
-      expect(component.isFieldModified('permissions')).toBe(false);
+      expect(component.isFieldModified('role')).toBe(false);
     });
 
     it('debe detectar cambios cuando se modifica fullName y revertirse si vuelve al original', () => {
@@ -191,20 +185,16 @@ describe('UsersComponent', () => {
       expect(component.hasFormChanges()).toBe(false);
     });
 
-    it('debe detectar cambios cuando se alteran los permisos y revertirse si vuelve al original', () => {
+    it('debe detectar cambios cuando se cambia el rol y revertirse si vuelve al original', () => {
       const user = mockUsersList[0];
       component.openEditModal(user);
 
-      // Añadir un permiso adicional
-      component.selectedEditPermissions.set([...user.permissions, 'FINANCES_SUMMARY']);
-      component.formVersion.update(v => v + 1);
-      expect(component.isFieldModified('permissions')).toBe(true);
+      component.editForm.patchValue({ role: 'OPERATOR' });
+      expect(component.isFieldModified('role')).toBe(true);
       expect(component.hasFormChanges()).toBe(true);
 
-      // Restaurar exactamente los permisos iniciales
-      component.selectedEditPermissions.set([...user.permissions]);
-      component.formVersion.update(v => v + 1);
-      expect(component.isFieldModified('permissions')).toBe(false);
+      component.editForm.patchValue({ role: 'ADMINISTRATOR' });
+      expect(component.isFieldModified('role')).toBe(false);
       expect(component.hasFormChanges()).toBe(false);
     });
 
@@ -227,15 +217,13 @@ describe('UsersComponent', () => {
       const user = mockUsersList[1];
       component.openEditModal(user);
 
-      component.editForm.patchValue({ fullName: 'Vendedor Turno Tarde' });
-      component.selectedEditPermissions.set(['SALES_POS', 'CATALOG_PRODUCTS']);
-      component.formVersion.update(v => v + 1);
+      component.editForm.patchValue({ fullName: 'Operador Turno Tarde', role: 'ADMINISTRATOR' });
 
       component.submitEdit();
 
       expect(mockUserService.updateUser).toHaveBeenCalledWith(user.id, {
-        fullName: 'Vendedor Turno Tarde',
-        permissions: ['SALES_POS', 'CATALOG_PRODUCTS']
+        fullName: 'Operador Turno Tarde',
+        role: 'ADMINISTRATOR'
       });
       expect(component.isEditModalOpen()).toBe(false);
     });
@@ -274,7 +262,7 @@ describe('UsersComponent', () => {
     });
 
     it('debe abrir confirmación y dar de baja a otro usuario', () => {
-      const otherUser = mockUsersList[1]; // username: 'seller'
+      const otherUser = mockUsersList[1]; // username: 'operador'
       component.openDeleteModal(otherUser);
 
       expect(component.isDeleteModalOpen()).toBe(true);
@@ -286,36 +274,10 @@ describe('UsersComponent', () => {
     });
   });
 
-  describe('Matriz de Permisos', () => {
-    it('debe permitir seleccionar y deseleccionar todos los permisos globalmente', () => {
-      component.openCreateModal();
-
-      // Desmarcar todos
-      component.toggleGlobalAll(true, { target: { checked: false } } as any);
-      expect(component.selectedCreatePermissions().length).toBe(0);
-      expect(component.isGlobalAllSelected(true)).toBe(false);
-
-      // Seleccionar todos
-      component.toggleGlobalAll(true, { target: { checked: true } } as any);
-      expect(component.selectedCreatePermissions().length).toBe(component.allPermissionKeys.length);
-      expect(component.isGlobalAllSelected(true)).toBe(true);
-    });
-
-    it('debe permitir seleccionar y deseleccionar un grupo completo de permisos', () => {
-      component.openCreateModal();
-      component.selectedCreatePermissions.set([]); // Partir de vacío
-
-      // Marcar grupo Ventas
-      component.toggleGroupAll('sales', true, { target: { checked: true } } as any);
-      expect(component.isGroupAllSelected('sales', true)).toBe(true);
-      expect(component.selectedCreatePermissions()).toContain('SALES_POS');
-      expect(component.selectedCreatePermissions()).toContain('SALES_HISTORY');
-      expect(component.selectedCreatePermissions()).toContain('SALES_CASH_HISTORY');
-
-      // Desmarcar grupo Ventas
-      component.toggleGroupAll('sales', true, { target: { checked: false } } as any);
-      expect(component.isGroupAllSelected('sales', true)).toBe(false);
-      expect(component.selectedCreatePermissions()).not.toContain('SALES_POS');
-    });
+  it('debe mostrar el rol con su nombre en español en la tabla', () => {
+    const badges = fixture.debugElement
+      .queryAll(By.css('.table-row .role-badge'))
+      .map(el => el.nativeElement.textContent.trim());
+    expect(badges).toEqual(['Administrador', 'Operador']);
   });
 });

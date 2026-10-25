@@ -2,7 +2,9 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { ChangePasswordRequest, LoginRequest, LoginResponse, UserSession } from './models/auth.models';
+import { ChangePasswordRequest, LoginRequest, LoginResponse, Role, UserSession } from './models/auth.models';
+
+const KNOWN_ROLES: Role[] = ['OPERATOR', 'ADMINISTRATOR'];
 
 @Injectable({
   providedIn: 'root'
@@ -119,7 +121,9 @@ export class AuthService {
       const token = localStorage.getItem(this.TOKEN_KEY);
       const userRaw = localStorage.getItem(this.USER_KEY);
       if (token && userRaw) {
-        return JSON.parse(userRaw) as UserSession;
+        const user = JSON.parse(userRaw) as UserSession;
+        // Sesiones guardadas antes de los roles Operador/Administrador traen claves viejas: se vuelve a ingresar
+        return KNOWN_ROLES.includes(user.role) ? user : null;
       }
     } catch {
       return null;

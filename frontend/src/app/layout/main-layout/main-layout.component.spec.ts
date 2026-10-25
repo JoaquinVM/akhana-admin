@@ -11,7 +11,7 @@ describe('MainLayoutComponent', () => {
 
   beforeEach(async () => {
     const mockAuthService = {
-      currentUser: signal({ id: '1', username: 'admin', role: 'ADMIN' }),
+      currentUser: signal({ id: '1', username: 'admin', role: 'ADMINISTRATOR' }),
       logout: vi.fn()
     };
 

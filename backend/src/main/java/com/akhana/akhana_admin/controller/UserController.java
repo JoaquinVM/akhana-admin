@@ -4,7 +4,7 @@ import com.akhana.akhana_admin.dto.CreateUserRequest;
 import com.akhana.akhana_admin.dto.UpdateUserRequest;
 import com.akhana.akhana_admin.dto.UserResponse;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
+import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,13 +17,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('USERS')")
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('PERMISSION_SECURITY_USERS') or hasRole('ADMIN')")
 public class UserController {
 
     private final UserService userService;
@@ -41,9 +43,14 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
-    @GetMapping("/permissions")
-    public ResponseEntity<Set<String>> getAllPermissions() {
-        return ResponseEntity.ok(UserPermission.allPermissionKeys());
+    /** Roles and the per-action permissions each one grants. */
+    @GetMapping("/roles")
+    public ResponseEntity<Map<Role, Set<String>>> getRoles() {
+        Map<Role, Set<String>> roles = new EnumMap<>(Role.class);
+        for (Role role : Role.values()) {
+            roles.put(role, role.permissionKeys());
+        }
+        return ResponseEntity.ok(roles);
     }
 
     @PostMapping

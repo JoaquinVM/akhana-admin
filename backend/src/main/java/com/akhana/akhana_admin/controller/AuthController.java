@@ -40,7 +40,7 @@ public class AuthController {
             user.getUsername(),
             user.getFullName(),
             user.getRole(),
-            user.getPermissions() != null ? new java.util.HashSet<>(user.getPermissions()) : java.util.Set.of(),
+            user.getPermissions(),
             user.isMustChangePassword()
         ));
     }

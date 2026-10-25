@@ -17,6 +17,7 @@ import { FinancialCategoriesComponent } from './pages/finances/categories/catego
 import { UsersComponent } from './pages/security/users/users.component';
 import { authGuard, guestGuard, sessionGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/auth/permission.guard';
+import { PERMISSIONS } from './core/navigation/navigation.config';
 
 export const routes: Routes = [
   {
@@ -38,26 +39,26 @@ export const routes: Routes = [
         path: 'pos',
         component: PosComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'SALES_POS' }
+        data: { permission: PERMISSIONS.POS }
       },
       {
         path: 'pos/sale',
         component: RegisterSaleComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'SALES_POS' }
+        data: { permission: PERMISSIONS.POS }
       },
       {
         path: 'cash/history',
         component: CashHistoryComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'SALES_CASH_HISTORY' }
+        data: { permission: PERMISSIONS.CASH_HISTORY }
       },
       {
         path: 'sales',
         component: SectionPageComponent,
         canActivate: [permissionGuard],
         data: {
-          permission: 'SALES_HISTORY',
+          permission: PERMISSIONS.SALES_HISTORY,
           title: 'Ventas',
           subtitle: 'Historial y Reporte de Transacciones'
         }
@@ -71,55 +72,55 @@ export const routes: Routes = [
         path: 'finances/summary',
         component: FinanceSummaryComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'FINANCES_SUMMARY' }
+        data: { permission: PERMISSIONS.FINANCES_SUMMARY }
       },
       {
         path: 'finances/transactions',
         component: TransactionsComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'FINANCES_TRANSACTIONS' }
+        data: { permission: PERMISSIONS.FINANCES_TRANSACTIONS }
       },
       {
         path: 'finances/accounts',
         component: AccountsComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'FINANCES_ACCOUNTS' }
+        data: { permission: PERMISSIONS.FINANCES_ACCOUNTS }
       },
       {
         path: 'finances/categories',
         component: FinancialCategoriesComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'FINANCES_CATEGORIES' }
+        data: { permission: PERMISSIONS.FINANCES_CATEGORIES }
       },
       {
         path: 'products',
         component: ProductsComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'CATALOG_PRODUCTS' }
+        data: { permission: PERMISSIONS.PRODUCTS }
       },
       {
         path: 'categories',
         component: CategoriesComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'CATALOG_CATEGORIES' }
+        data: { permission: PERMISSIONS.CATEGORIES }
       },
       {
         path: 'tags',
         component: TagsComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'CATALOG_TAGS' }
+        data: { permission: PERMISSIONS.TAGS }
       },
       {
         path: 'suppliers',
         component: SuppliersComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'PURCHASES_SUPPLIERS' }
+        data: { permission: PERMISSIONS.SUPPLIERS }
       },
       {
         path: 'users',
         component: UsersComponent,
         canActivate: [permissionGuard],
-        data: { permission: 'SECURITY_USERS' }
+        data: { permission: PERMISSIONS.USERS }
       },
       {
         path: 'unauthorized',

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class SaleController {
 
     private final SaleService saleService;
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping
     public ResponseEntity<SaleResponse> registerSale(
             @Valid @RequestBody SaleDetailRequest request,
@@ -31,6 +33,7 @@ public class SaleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/{id}/void")
     public ResponseEntity<SaleResponse> voidSale(
             @PathVariable UUID id,
@@ -41,16 +44,19 @@ public class SaleController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('SALES_HISTORY')")
     @GetMapping
     public ResponseEntity<List<SaleResponse>> getAllSales() {
         return ResponseEntity.ok(saleService.getAllSales());
     }
 
+    @PreAuthorize("hasAnyAuthority('POS', 'SALES_HISTORY', 'CASH_HISTORY')")
     @GetMapping("/{id}")
     public ResponseEntity<SaleResponse> getSaleById(@PathVariable UUID id) {
         return ResponseEntity.ok(saleService.getSaleById(id));
     }
 
+    @PreAuthorize("hasAnyAuthority('POS', 'CASH_HISTORY')")
     @GetMapping("/session/{cashSessionId}")
     public ResponseEntity<List<SaleResponse>> getSalesByCashSession(@PathVariable UUID cashSessionId) {
         return ResponseEntity.ok(saleService.getSalesByCashSession(cashSessionId));

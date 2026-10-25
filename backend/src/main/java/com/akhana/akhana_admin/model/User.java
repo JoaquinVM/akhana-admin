@@ -6,7 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,12 +43,6 @@ public class User {
     @Builder.Default
     private boolean mustChangePassword = false;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "permission_key", nullable = false, length = 100)
-    @Builder.Default
-    private Set<String> permissions = new HashSet<>();
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -69,4 +62,9 @@ public class User {
 
     @Column(name = "deleted_by", length = 100)
     private String deletedBy;
+
+    /** Per-action permission keys granted by the role. */
+    public Set<String> getPermissions() {
+        return role != null ? role.permissionKeys() : Set.of();
+    }
 }

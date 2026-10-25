@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,12 +16,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('TAGS')")
 @RequestMapping("/api/tags")
 @RequiredArgsConstructor
 public class TagController {
 
     private final TagService tagService;
 
+    @PreAuthorize("hasAnyAuthority('TAGS', 'PRODUCTS')")
     @GetMapping
     public ResponseEntity<List<TagResponse>> getAllTags(
             @RequestParam(required = false) String search,
@@ -29,6 +32,7 @@ public class TagController {
         return ResponseEntity.ok(tags);
     }
 
+    @PreAuthorize("hasAnyAuthority('TAGS', 'PRODUCTS')")
     @GetMapping("/{id}")
     public ResponseEntity<TagResponse> getTagById(@PathVariable UUID id) {
         TagResponse tag = tagService.getTagById(id);

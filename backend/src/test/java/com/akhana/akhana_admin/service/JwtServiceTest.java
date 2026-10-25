@@ -26,7 +26,7 @@ class JwtServiceTest {
         testUser = User.builder()
                 .id(UUID.randomUUID())
                 .username("admin")
-                .role(Role.ADMIN)
+                .role(Role.ADMINISTRATOR)
                 .active(true)
                 .build();
     }
@@ -39,7 +39,7 @@ class JwtServiceTest {
         assertThat(token).isNotBlank();
         assertThat(jwtService.isTokenValid(token, "admin")).isTrue();
         assertThat(jwtService.extractUsername(token)).isEqualTo("admin");
-        assertThat(jwtService.extractRole(token)).isEqualTo("ADMIN");
+        assertThat(jwtService.extractRole(token)).isEqualTo("ADMINISTRATOR");
         assertThat(jwtService.extractUserId(token)).isEqualTo(testUser.getId().toString());
 
         Claims claims = jwtService.extractAllClaims(token);

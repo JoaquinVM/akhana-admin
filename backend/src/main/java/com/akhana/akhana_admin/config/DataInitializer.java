@@ -2,7 +2,6 @@ package com.akhana.akhana_admin.config;
 
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
 import com.akhana.akhana_admin.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,8 +9,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashSet;
 
 /**
  * Creates the first admin only when there are no users at all, from ADMIN_USERNAME / ADMIN_PASSWORD.
@@ -59,11 +56,10 @@ public class DataInitializer implements CommandLineRunner {
             .username(adminUsername.trim())
             .fullName("Administrador")
             .password(passwordEncoder.encode(adminPassword))
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .active(true)
             .mustChangePassword(true)
             .createdBy("SYSTEM")
-            .permissions(new HashSet<>(UserPermission.allPermissionKeys()))
             .build();
 
         userRepository.save(admin);

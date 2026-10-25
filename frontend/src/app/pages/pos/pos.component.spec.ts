@@ -80,7 +80,7 @@ describe('PosComponent', () => {
     mockTransactionService = {
       createCashExpense: vi.fn().mockReturnValue(of({ id: 'tx-exp-1', amount: 35.5 })),
       getExpensesByCashSession: vi.fn().mockReturnValue(of([])),
-      voidTransaction: vi.fn().mockReturnValue(of({ id: 'tx-exp-1', amount: 35.5, status: 'ANULADO' }))
+      voidCashExpense: vi.fn().mockReturnValue(of({ id: 'tx-exp-1', amount: 35.5, status: 'ANULADO' }))
     };
 
     mockCategoryService = {
@@ -413,7 +413,7 @@ describe('PosComponent', () => {
     component.voidExpenseReason.set('Error en comprobante');
     component.handleConfirmVoidExpense();
 
-    expect(mockTransactionService.voidTransaction).toHaveBeenCalledWith('tx-exp-1', {
+    expect(mockTransactionService.voidCashExpense).toHaveBeenCalledWith('tx-exp-1', {
       voidReason: 'Error en comprobante'
     });
     expect(component.isVoidExpenseModalVisible()).toBe(false);

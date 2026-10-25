@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permite administrar integralmente los usuarios del sistema, configurar sus permisos de acceso granulares por submenú, proteger las rutas y endpoints del frontend y backend, auditar las operaciones de creación, edición y baja lógica mediante seis campos inmutables generados por el servidor, y garantizar la compatibilidad con los usuarios existentes.
+Permite administrar integralmente los usuarios del sistema, asignarles un rol (Operador o Administrador) que agrupa los permisos por pantalla de la tabla 2.2 de `requirements.md` (USR-05, P-33), proteger las rutas y endpoints del frontend y backend, auditar las operaciones de creación, edición y baja lógica mediante seis campos inmutables generados por el servidor, y garantizar la compatibilidad con los usuarios existentes.
 
 ## ADDED Requirements
 
@@ -28,16 +28,20 @@ El sistema SHALL proveer la acción «Ver auditoría» en cada fila de usuario p
 
 ---
 
-### Requirement: Creación de nuevos usuarios con permisos iniciales
-El sistema SHALL permitir el registro de nuevos usuarios requiriendo obligatoriamente nombre completo, nombre de usuario (único e inmutable), contraseña y confirmación de contraseña coincidente, y selección de permisos de acceso por submenú, almacenando la contraseña mediante hash seguro (BCrypt) y registrando automáticamente la auditoría de creación en el servidor.
+### Requirement: Creación de nuevos usuarios con rol
+El sistema SHALL permitir el registro de nuevos usuarios requiriendo obligatoriamente nombre completo, nombre de usuario (único e inmutable), contraseña y confirmación de contraseña coincidente, y un rol (Operador por defecto, o Administrador), almacenando la contraseña mediante hash seguro (BCrypt) y registrando automáticamente la auditoría de creación en el servidor.
 
 #### Scenario: Creación exitosa de nuevo usuario
-- **WHEN** se envía el formulario con datos válidos, contraseñas coincidentes y permisos seleccionados
-- **THEN** el sistema persiste el usuario en estado activo, hashea la contraseña, guarda exclusivamente los permisos elegidos, registra `created_at` con la fecha del servidor y `created_by` con el usuario autenticado, dejando vacíos los campos de modificación y eliminación
+- **WHEN** se envía el formulario con datos válidos, contraseñas coincidentes y un rol elegido
+- **THEN** el sistema persiste el usuario en estado activo con ese rol, hashea la contraseña, registra `created_at` con la fecha del servidor y `created_by` con el usuario autenticado, dejando vacíos los campos de modificación y eliminación
 
 #### Scenario: Rechazo por nombre de usuario duplicado
 - **WHEN** se intenta crear un usuario con un nombre de usuario que ya existe en la base de datos
 - **THEN** el sistema rechaza la solicitud e informa que el nombre de usuario ya se encuentra registrado
+
+#### Scenario: Rechazo por rol ausente
+- **WHEN** se intenta crear o editar un usuario sin indicar el rol
+- **THEN** el backend responde 400 y no guarda cambios
 
 #### Scenario: Rechazo por discrepancia en confirmación de contraseña
 - **WHEN** la confirmación de contraseña no coincide exactamente con la contraseña ingresada
@@ -59,19 +63,23 @@ El sistema SHALL garantizar que el nombre de usuario establecido durante la crea
 ---
 
 ### Requirement: Edición de usuario y detección ergonómica de cambios
-El sistema SHALL permitir editar el nombre completo y los permisos de acceso de un usuario existente sin requerir ni modificar su contraseña, implementando el patrón visual y funcional de detección de cambios de la pantalla de productos: botón Guardar deshabilitado inicialmente, habilitado solo ante cambios efectivos y válidos, identificación visual de campos modificados (`.is-modified` y badge de modificado), reversión si se restauran los valores originales, y omisión de auditoría si no hubo modificaciones reales.
+El sistema SHALL permitir editar el nombre completo y el rol de un usuario existente sin requerir ni modificar su contraseña, implementando el patrón visual y funcional de detección de cambios de la pantalla de productos: botón Guardar deshabilitado inicialmente, habilitado solo ante cambios efectivos y válidos, identificación visual de campos modificados (`.is-modified` y badge de modificado), reversión si se restauran los valores originales, y omisión de auditoría si no hubo modificaciones reales.
 
 #### Scenario: Estado inicial del formulario de edición
 - **WHEN** se abre el formulario de edición de un usuario
 - **THEN** los campos cargan los valores actuales, ningún campo se resalta como modificado y el botón Guardar permanece deshabilitado
 
 #### Scenario: Identificación de cambios efectivos y habilitación de Guardar
-- **WHEN** el usuario modifica el nombre completo o cambia algún permiso respecto a los valores iniciales
+- **WHEN** el usuario modifica el nombre completo o cambia el rol respecto a los valores iniciales
 - **THEN** el control modificado se resalta con el estilo visual correspondiente, se muestra el badge de modificado y el botón Guardar se habilita si el formulario es válido
 
 #### Scenario: Reversión total a los valores originales
 - **WHEN** el usuario regresa todos los campos modificados exactamente a su valor original de apertura
 - **THEN** los resaltes visuales se eliminan y el botón Guardar vuelve a deshabilitarse automáticamente
+
+#### Scenario: Rechazo al quitar el rol al último administrador
+- **WHEN** se cambia a Operador al único administrador activo
+- **THEN** el backend rechaza con 400 informando que no se puede quitar el rol de administrador al último administrador activo
 
 #### Scenario: Actualización de auditoría únicamente con cambios reales
 - **WHEN** se guardan cambios efectivos en un usuario
@@ -80,7 +88,7 @@ El sistema SHALL permitir editar el nombre completo y los permisos de acceso de 
 ---
 
 ### Requirement: Eliminación lógica y preservación histórica
-El sistema SHALL realizar la baja de usuarios mediante eliminación lógica (`deleted_at` y `deleted_by`), solicitando confirmación explícita con el nombre del usuario y advirtiendo las consecuencias, revocando inmediatamente el acceso y sesión del usuario eliminado, prohibiendo que un usuario se elimine a sí mismo y prohibiendo eliminar al último usuario con permisos de administración de usuarios.
+El sistema SHALL realizar la baja de usuarios mediante eliminación lógica (`deleted_at` y `deleted_by`), solicitando confirmación explícita con el nombre del usuario y advirtiendo las consecuencias, revocando inmediatamente el acceso y sesión del usuario eliminado, prohibiendo que un usuario se elimine a sí mismo y prohibiendo eliminar al último administrador activo.
 
 #### Scenario: Baja lógica exitosa de usuario
 - **WHEN** se confirma la eliminación de un usuario activo que no es el usuario en sesión ni el último administrador
@@ -91,25 +99,42 @@ El sistema SHALL realizar la baja de usuarios mediante eliminación lógica (`de
 - **THEN** el sistema bloquea la acción informando que no está permitido eliminarse a sí mismo
 
 #### Scenario: Rechazo de eliminación del último administrador
-- **WHEN** se intenta eliminar al único usuario activo que posee el permiso para administrar usuarios
+- **WHEN** se intenta eliminar al único administrador activo
 - **THEN** el sistema bloquea la operación advirtiendo que el sistema no puede quedar sin capacidad de administración
 
 ---
 
-### Requirement: Matriz de selección de permisos por submenú
-El sistema SHALL presentar la matriz de permisos estructurada según los menús y submenús reales de la aplicación (`Ventas`, `Finanzas`, `Catálogo`, `Compras`, `Seguridad`), permitiendo seleccionar o deseleccionar submenús individualmente, por menú completo o de forma global (todos los permisos), visualizando estados seleccionados, no seleccionados y parcialmente seleccionados (indeterminados).
+### Requirement: Roles con permisos por pantalla (USR-05, T-08, P-33)
+El sistema SHALL tener un único modelo de autorización: cada usuario tiene un rol, Operador o Administrador, y el rol agrupa permisos por pantalla. Quien entra a una pantalla puede hacer todo en ella, incluidas sus anulaciones. Los permisos no se eligen por usuario. Las claves son las mismas en el backend (`Permission`, `Role`) y en el frontend (`PERMISSIONS` en `navigation.config.ts`) y coinciden con las entradas del menú.
 
-#### Scenario: Selección individual de submenú
-- **WHEN** se marca un submenú específico dentro de un menú principal
-- **THEN** el permiso del submenú se añade a la selección y el menú principal adopta estado parcial si contiene otros submenús desmarcados
+| Permiso | Pantalla y lo que permite | Operador | Administrador |
+| --- | --- | --- | --- |
+| `POS` | POS: abrir y cerrar caja, registrar y anular ventas, registrar y anular gastos de caja, productos rápidos | Sí | Sí |
+| `SALES_HISTORY` | Historial de ventas | Sí | Sí |
+| `CASH_HISTORY` | Historial de cajas y su detalle | Sí | Sí |
+| `PRODUCTS` | Productos, con costo y precio de venta | Sí | Sí |
+| `CATEGORIES` | Categorías de productos | Sí | Sí |
+| `TAGS` | Etiquetas | Sí | Sí |
+| `SUPPLIERS` | Proveedores | Sí | Sí |
+| `FINANCES_SUMMARY` | Resumen de finanzas | No | Sí |
+| `FINANCES_TRANSACTIONS` | Ingresos, gastos y transferencias manuales, con su anulación | No | Sí |
+| `FINANCES_ACCOUNTS` | Cuentas | No | Sí |
+| `FINANCES_CATEGORIES` | Categorías financieras | No | Sí |
+| `USERS` | Usuarios y sus roles | No | Sí |
 
-#### Scenario: Toggle grupal por menú principal
-- **WHEN** se activa el selector del menú principal
-- **THEN** todos los submenús dependientes de dicho menú pasan a estado seleccionado
+Cada endpoint exige el permiso de la pantalla dueña; si otra pantalla solo lo lee, también acepta esa pantalla (por ejemplo, Productos lee proveedores, categorías y etiquetas; el POS lee productos y categorías de gasto). Las pantallas nuevas (compras, consumos, reportes) agregan su permiso a este cuadro.
 
-#### Scenario: Toggle global de todos los permisos
-- **WHEN** se utiliza la acción para seleccionar todos los permisos
-- **THEN** la totalidad de submenús del sistema quedan seleccionados
+#### Scenario: Selección de rol en el formulario
+- **WHEN** se abre el formulario de creación o edición de usuario
+- **THEN** se elige un único rol entre Operador y Administrador, cada uno con la descripción de lo que permite
+
+#### Scenario: Permisos derivados del rol
+- **WHEN** un usuario inicia sesión o consulta `/api/auth/me`
+- **THEN** la respuesta trae su rol y la lista de permisos por pantalla que ese rol otorga
+
+#### Scenario: Consulta de roles
+- **WHEN** un administrador consulta `GET /api/users/roles`
+- **THEN** recibe cada rol con sus permisos
 
 ---
 
@@ -117,8 +142,8 @@ El sistema SHALL presentar la matriz de permisos estructurada según los menús 
 El sistema SHALL filtrar reactivamente la navegación del usuario autenticado en el Navbar mostrando únicamente los submenús autorizados y ocultando los menús principales que carezcan de submenús permitidos. Ante intentos de acceso por URL directa no autorizada, el Angular Guard SHALL bloquear la vista y redirigir a la pantalla por defecto permitida, o a una vista de acceso no disponible si no posee permisos.
 
 #### Scenario: Ocultamiento de menús no autorizados
-- **WHEN** un usuario con permisos limitados (por ejemplo, solo POS) inicia sesión
-- **THEN** el Navbar muestra únicamente las opciones autorizadas y oculta los menús que no tienen ningún submenú permitido
+- **WHEN** un operador inicia sesión
+- **THEN** el Navbar muestra Ventas, Catálogo y Compras, y oculta Finanzas y Seguridad
 
 #### Scenario: Bloqueo de acceso por URL directa no autorizada
 - **WHEN** un usuario introduce directamente en el navegador una URL hacia una pantalla para la que no tiene permiso
@@ -131,11 +156,23 @@ El sistema SHALL filtrar reactivamente la navegación del usuario autenticado en
 ---
 
 ### Requirement: Protección de endpoints y seguridad en backend
-El sistema SHALL validar la autorización en cada endpoint del backend de forma independiente del frontend, verificando que el usuario autenticado cuente con el permiso correspondiente a la operación, rechazando solicitudes no autorizadas con código HTTP 403 Forbidden e invalidando inmediatamente los tokens de usuarios que hayan sido dados de baja.
+El sistema SHALL validar la autorización en cada endpoint del backend de forma independiente del frontend: cada endpoint lleva `@PreAuthorize` con el permiso de su pantalla (T-13), rechazando solicitudes no autorizadas con código HTTP 403 Forbidden y el mensaje «No tiene permiso para realizar esta acción», e invalidando inmediatamente los tokens de usuarios que hayan sido dados de baja.
 
 #### Scenario: Rechazo de solicitud sin permiso administrativo
-- **WHEN** un usuario sin permiso de administración de usuarios envía una petición HTTP a `/api/users`
+- **WHEN** un operador envía una petición HTTP a `/api/users` o a un endpoint de finanzas que el POS no usa
 - **THEN** el backend responde con código HTTP 403 Forbidden y mensaje de acceso denegado
+
+#### Scenario: Anulación de gasto desde el POS
+- **WHEN** desde el POS se anula un gasto con `POST /api/finances/transactions/cash-expense/{id}/void`
+- **THEN** se anula si es un gasto de caja de la caja abierta; si es otro movimiento o la caja está cerrada, el backend responde 400
+
+#### Scenario: Acceso del administrador
+- **WHEN** un administrador llama a cualquier endpoint
+- **THEN** el backend no lo rechaza por permisos
+
+#### Scenario: Endpoint sin permiso declarado
+- **WHEN** se agrega un endpoint sin `@PreAuthorize`
+- **THEN** la prueba `EndpointAuthorizationTest` falla, porque exige el permiso y la fila de la matriz para cada endpoint
 
 #### Scenario: Invalidación inmediata de usuario dado de baja
 - **WHEN** un usuario cuya cuenta fue dada de baja intenta realizar una petición con un token JWT emitido previamente
@@ -143,12 +180,16 @@ El sistema SHALL validar la autorización en cada endpoint del backend de forma 
 
 ---
 
-### Requirement: Migración de datos inicial y compatibilidad
-El sistema SHALL ejecutar una migración de base de datos idempotente que incorpore las columnas de auditoría a `app_users`, cree la tabla `user_permissions` y asigne automáticamente todos los permisos disponibles a los usuarios preexistentes al momento de la migración (incluyendo `admin` y `seller`), preservando sus contraseñas, nombres de usuario y registros de auditoría anteriores.
+### Requirement: Migración a roles (V3)
+El sistema SHALL pasar los usuarios existentes al modelo de roles con la migración `V3__operator_administrator_roles.sql`, sin tocar contraseñas, nombres de usuario ni auditoría.
 
-#### Scenario: Ejecución de migración sobre usuarios existentes
-- **WHEN** se aplica la migración V9 en la base de datos
-- **THEN** los usuarios existentes reciben acceso a todos los submenús del sistema, se conservan sus hashes de contraseña intactos y quedan habilitados para ingresar normalmente
+#### Scenario: Ejecución de la migración V3
+- **WHEN** se aplica `V3__operator_administrator_roles.sql`
+- **THEN** los usuarios con rol `ADMIN` o con el permiso `SECURITY_USERS` pasan a Administrador, el resto a Operador, la columna `role` solo admite `OPERATOR` y `ADMINISTRATOR`, y se elimina la tabla `user_permissions`
+
+#### Scenario: Sesión guardada con el modelo anterior
+- **WHEN** el navegador tiene guardada una sesión con rol `ADMIN` o `SELLER`
+- **THEN** el frontend la descarta y pide ingresar de nuevo
 
 ---
 
@@ -157,7 +198,7 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 
 #### Scenario: Primer arranque sin usuarios
 - **WHEN** el backend arranca con la tabla de usuarios vacía y `ADMIN_USERNAME`/`ADMIN_PASSWORD` definidas
-- **THEN** crea un único usuario administrador activo, con todos los permisos y `must_change_password = true`; no crea ningún vendedor
+- **THEN** crea un único usuario activo con rol Administrador y `must_change_password = true`; no crea ningún operador
 
 #### Scenario: Arranque sin usuarios y sin variables del admin
 - **WHEN** la tabla de usuarios está vacía y falta `ADMIN_USERNAME` o `ADMIN_PASSWORD`, o la contraseña tiene menos de 8 caracteres
@@ -181,3 +222,5 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 
 ### Tareas
 - [x] USR-06: migración `V2__user_must_change_password.sql`, `DataInitializer`, `POST /api/auth/change-password`, bloqueo en `JwtAuthenticationFilter`, pantalla `/change-password` (T-03, 25-10-2026).
+- [x] USR-05 / T-08 / T-13: roles Operador y Administrador con permisos por pantalla (`Permission`, `Role`), migración `V3__operator_administrator_roles.sql`, `@PreAuthorize` por pantalla en todos los controllers, 403 con mensaje en `GlobalExceptionHandler`, `EndpointAuthorizationTest` (matriz de todos los endpoints), selector de rol en `/users`, `PERMISSIONS` en `navigation.config.ts` (25-10-2026).
+- [x] P-33: permisos por pantalla; el POS anula gastos con `POST /api/finances/transactions/cash-expense/{id}/void` (25-10-2026).

@@ -22,16 +22,14 @@ describe('NavbarComponent', () => {
   const mockUser: UserSession = {
     id: 'user-1',
     username: 'admin',
-    role: 'ADMIN'
+    role: 'ADMINISTRATOR'
   };
 
   beforeEach(async () => {
     currentUserSignal = signal<UserSession | null>(mockUser);
     permissionsSignal = signal<string[]>([
-      'SALES_POS', 'SALES_HISTORY', 'SALES_CASH_HISTORY',
-      'FINANCES_SUMMARY', 'FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS', 'FINANCES_CATEGORIES',
-      'CATALOG_PRODUCTS', 'CATALOG_CATEGORIES', 'CATALOG_TAGS',
-      'PURCHASES_SUPPLIERS', 'SECURITY_USERS'
+      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS',
+      'FINANCES_SUMMARY', 'FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS', 'FINANCES_CATEGORIES', 'USERS'
     ]);
 
     mockAuthService = {
@@ -189,7 +187,7 @@ describe('NavbarComponent', () => {
     const roleBadgeEl = fixture.debugElement.query(By.css('.role-badge'));
 
     expect(usernameEl.nativeElement.textContent.trim()).toBe('admin');
-    expect(roleBadgeEl.nativeElement.textContent.trim()).toBe('ADMIN');
+    expect(roleBadgeEl.nativeElement.textContent.trim()).toBe('Administrador');
   });
 
   it('debe invocar authService.logout() al hacer clic en Cerrar Sesión', () => {
@@ -201,7 +199,7 @@ describe('NavbarComponent', () => {
   });
 
   it('debe filtrar reactivamente los submenús y ocultar grupos no autorizados según permisos', () => {
-    permissionsSignal.set(['SALES_POS', 'SECURITY_USERS']);
+    permissionsSignal.set(['POS', 'USERS']);
     fixture.detectChanges();
 
     const groupLabels = fixture.debugElement
@@ -220,5 +218,20 @@ describe('NavbarComponent', () => {
     const items = fixture.debugElement.queryAll(By.css('.dropdown-item'));
     expect(items.length).toBe(1);
     expect(items[0].nativeElement.textContent).toContain('POS');
+  });
+
+  it('el operador ve caja, ventas, catálogo y compras, pero no finanzas ni seguridad', () => {
+    permissionsSignal.set([
+      'POS', 'SALES_HISTORY', 'CASH_HISTORY', 'PRODUCTS', 'CATEGORIES', 'TAGS', 'SUPPLIERS'
+    ]);
+    fixture.detectChanges();
+
+    const groupLabels = fixture.debugElement
+      .queryAll(By.css('.group-label'))
+      .map(el => el.nativeElement.textContent.trim());
+
+    expect(groupLabels).toEqual(expect.arrayContaining(['Ventas', 'Catálogo', 'Compras']));
+    expect(groupLabels).not.toContain('Finanzas');
+    expect(groupLabels).not.toContain('Seguridad');
   });
 });

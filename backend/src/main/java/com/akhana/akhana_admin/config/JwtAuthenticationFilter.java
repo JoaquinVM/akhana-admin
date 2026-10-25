@@ -64,13 +64,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         writePasswordChangeRequired(response);
                         return;
                     }
-                    var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-                    if (user.getPermissions() != null) {
-                        for (String perm : user.getPermissions()) {
-                            authorities.add(new SimpleGrantedAuthority("PERMISSION_" + perm));
-                        }
-                    }
+                    // Authorities are the per-action permissions of the role; endpoints check them with hasAuthority.
+                    List<SimpleGrantedAuthority> authorities = user.getPermissions().stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
                     var authToken = UsernamePasswordAuthenticationToken.authenticated(user, null, authorities);
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
@@ -80,7 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     securityContextRepository.saveContext(context, request, response);
 
                     log.debug("Authenticated user '{}' with role '{}' and {} permissions via JWT",
-                            username, user.getRole(), user.getPermissions() != null ? user.getPermissions().size() : 0);
+                            username, user.getRole(), authorities.size());
                 } else {
                     log.debug("User '{}' is inactive, logically deleted, or token is invalid", username);
                 }

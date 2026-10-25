@@ -287,6 +287,26 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
     @Override
     @Transactional
+    public FinancialTransactionResponse voidCashExpense(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
+        FinancialTransaction tx = financialTransactionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
+
+        // The POS screen only voids its own cash expenses; any other movement is voided from Finanzas
+        if (tx.getType() != FinancialTransactionType.GASTO_MANUAL || tx.getCashSessionId() == null) {
+            throw new IllegalStateException("Solo se pueden anular desde el POS los gastos de caja.");
+        }
+        boolean sessionOpen = cashSessionRepository.findById(tx.getCashSessionId())
+                .map(session -> session.getStatus() == CashSessionStatus.ABIERTA)
+                .orElse(false);
+        if (!sessionOpen) {
+            throw new IllegalStateException("No se pueden anular gastos de una caja cerrada.");
+        }
+
+        return voidTransaction(id, request, currentUsername);
+    }
+
+    @Override
+    @Transactional
     public FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
         FinancialTransaction tx = financialTransactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));

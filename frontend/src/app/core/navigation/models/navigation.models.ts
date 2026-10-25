@@ -1,10 +1,12 @@
+import type { PermissionKey } from '../navigation.config';
+
 export interface NavItem {
   label: string;
   route: string;
   icon?: string;
   badge?: string;
   caption?: string;
-  permissionKey?: string;
+  permissionKey?: PermissionKey;
 }
 
 export interface NavGroup {

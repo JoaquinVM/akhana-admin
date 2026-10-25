@@ -11,6 +11,10 @@ public record ErrorResponse(
         return new ErrorResponse("Unauthorized", message, Instant.now());
     }
 
+    public static ErrorResponse forbidden(String message) {
+        return new ErrorResponse("Forbidden", message, Instant.now());
+    }
+
     public static ErrorResponse badRequest(String message) {
         return new ErrorResponse("Bad Request", message, Instant.now());
     }

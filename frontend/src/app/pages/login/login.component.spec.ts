@@ -50,7 +50,7 @@ describe('LoginComponent', () => {
       token: 'jwt.token',
       id: 'uuid-1',
       username: 'admin',
-      role: 'ADMIN',
+      role: 'ADMINISTRATOR',
       message: 'OK'
     };
     authServiceSpy.login.mockReturnValue(of(mockResponse));
@@ -113,7 +113,7 @@ describe('LoginComponent', () => {
       token: 'jwt.token',
       id: 'uuid-1',
       username: 'admin',
-      role: 'ADMIN',
+      role: 'ADMINISTRATOR',
       mustChangePassword: true,
       message: 'Password change required'
     } satisfies LoginResponse));

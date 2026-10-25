@@ -7,7 +7,6 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -55,16 +52,12 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateResourceException("El nombre de usuario '" + cleanUsername + "' ya está registrado");
         }
 
-        Set<String> perms = (request.permissions() != null) ? new HashSet<>(request.permissions()) : new HashSet<>();
-        Role role = perms.contains(UserPermission.SECURITY_USERS.name()) ? Role.ADMIN : Role.SELLER;
-
         User user = User.builder()
                 .username(cleanUsername)
                 .fullName(request.fullName().trim())
                 .password(passwordEncoder.encode(request.password()))
-                .role(role)
+                .role(request.role())
                 .active(true)
-                .permissions(perms)
                 .createdBy(currentUsername)
                 .build();
 
@@ -81,24 +74,23 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
 
         String newFullName = request.fullName().trim();
-        Set<String> newPermissions = (request.permissions() != null) ? new HashSet<>(request.permissions()) : new HashSet<>();
+        Role newRole = request.role();
 
         boolean isFullNameChanged = !newFullName.equals(user.getFullName());
-        boolean arePermissionsChanged = !newPermissions.equals(user.getPermissions());
+        boolean isRoleChanged = newRole != user.getRole();
 
         // Si no existen cambios efectivos, no modificar campos de auditoría ni actualizar
-        if (!isFullNameChanged && !arePermissionsChanged) {
+        if (!isFullNameChanged && !isRoleChanged) {
             log.debug("No effective changes detected for user '{}'. Skipping update.", user.getUsername());
             return mapToResponse(user);
         }
 
-        user.setFullName(newFullName);
-        user.setPermissions(newPermissions);
-        if (newPermissions.contains(UserPermission.SECURITY_USERS.name())) {
-            user.setRole(Role.ADMIN);
-        } else {
-            user.setRole(Role.SELLER);
+        if (isRoleChanged && user.getRole() == Role.ADMINISTRATOR) {
+            ensureNotLastAdministrator("No se puede quitar el rol de administrador al último administrador activo");
         }
+
+        user.setFullName(newFullName);
+        user.setRole(newRole);
 
         user.setUpdatedAt(Instant.now());
         user.setUpdatedBy(currentUsername);
@@ -121,11 +113,8 @@ public class UserServiceImpl implements UserService {
         }
 
         // 2. Prohibir eliminación si es el último administrador
-        if (user.getPermissions().contains(UserPermission.SECURITY_USERS.name()) || user.getRole() == Role.ADMIN) {
-            long activeAdmins = userRepository.countActiveUsersWithPermission(UserPermission.SECURITY_USERS.name());
-            if (activeAdmins <= 1) {
-                throw new IllegalStateException("No se puede eliminar al último usuario con permisos de administración");
-            }
+        if (user.getRole() == Role.ADMINISTRATOR) {
+            ensureNotLastAdministrator("No se puede eliminar al último administrador activo");
         }
 
         // 3. Baja lógica
@@ -137,6 +126,12 @@ public class UserServiceImpl implements UserService {
         log.info("User '{}' logically deleted by '{}'", user.getUsername(), currentUsername);
     }
 
+    private void ensureNotLastAdministrator(String message) {
+        if (userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR) <= 1) {
+            throw new IllegalStateException(message);
+        }
+    }
+
     private UserResponse mapToResponse(User user) {
         return new UserResponse(
                 user.getId(),
@@ -144,7 +139,7 @@ public class UserServiceImpl implements UserService {
                 user.getUsername(),
                 user.getRole(),
                 user.isActive(),
-                user.getPermissions() != null ? new HashSet<>(user.getPermissions()) : Set.of(),
+                user.getPermissions(),
                 user.getCreatedAt(),
                 user.getCreatedBy(),
                 user.getUpdatedAt(),

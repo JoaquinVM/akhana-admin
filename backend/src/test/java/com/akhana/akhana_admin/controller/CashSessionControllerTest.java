@@ -85,7 +85,7 @@ class CashSessionControllerTest {
         User mockUser = User.builder()
             .id(UUID.randomUUID())
             .username("admin")
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .build();
 
         when(jwtService.extractUsername(AUTH_TOKEN)).thenReturn("admin");

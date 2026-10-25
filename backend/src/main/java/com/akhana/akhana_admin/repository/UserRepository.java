@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.repository;
 
+import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +27,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
            "LOWER(u.username) LIKE LOWER(CONCAT('%', :term, '%')))")
     Page<User> searchUsers(@Param("term") String term, Pageable pageable);
 
-    @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.permissions p " +
-           "WHERE u.deletedAt IS NULL AND u.active = true AND p = :permissionKey")
-    long countActiveUsersWithPermission(@Param("permissionKey") String permissionKey);
+    long countByRoleAndActiveTrueAndDeletedAtIsNull(Role role);
 }

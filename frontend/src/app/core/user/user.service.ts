@@ -31,10 +31,6 @@ export class UserService {
     return this.http.get<User>(`${this.apiUrl}/${id}`);
   }
 
-  getAllPermissions(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/permissions`);
-  }
-
   createUser(request: CreateUserRequest): Observable<User> {
     return this.http.post<User>(this.apiUrl, request);
   }

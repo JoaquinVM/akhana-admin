@@ -19,12 +19,12 @@ export interface CreateUserRequest {
   fullName: string;
   username: string;
   password: string;
-  permissions: string[];
+  role: Role;
 }
 
 export interface UpdateUserRequest {
   fullName: string;
-  permissions: string[];
+  role: Role;
 }
 
 export interface PageResponse<T> {
@@ -33,13 +33,4 @@ export interface PageResponse<T> {
   totalPages: number;
   size: number;
   number: number;
-}
-
-export interface PermissionGroup {
-  id: string;
-  label: string;
-  permissions: {
-    key: string;
-    label: string;
-  }[];
 }

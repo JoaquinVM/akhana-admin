@@ -396,7 +396,7 @@ export class PosComponent implements OnInit {
       voidReason: this.voidExpenseReason().trim() || undefined
     };
 
-    this.transactionService.voidTransaction(tx.id, req).subscribe({
+    this.transactionService.voidCashExpense(tx.id, req).subscribe({
       next: (updatedTx) => {
         this.isActionLoading.set(false);
         this.closeVoidExpenseModal();

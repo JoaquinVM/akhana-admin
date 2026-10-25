@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { AuthService } from './auth.service';
-import { NAVIGATION_CONFIG } from '../navigation/navigation.config';
+import { NAVIGATION_CONFIG, PermissionKey } from '../navigation/navigation.config';
 
 export const permissionGuard: CanActivateFn = (
   route: ActivatedRouteSnapshot,
@@ -14,7 +14,8 @@ export const permissionGuard: CanActivateFn = (
     return router.createUrlTree(['/login']);
   }
 
-  const requiredPermission = route.data['permission'] as string | undefined;
+  // Clave de permiso de la pantalla definida en app.routes.ts (PERMISSIONS); el backend exige la misma en sus endpoints
+  const requiredPermission = route.data['permission'] as PermissionKey | undefined;
 
   // Si la ruta no especifica permiso requerido o si el usuario cuenta con él
   if (!requiredPermission || authService.hasPermission(requiredPermission)) {

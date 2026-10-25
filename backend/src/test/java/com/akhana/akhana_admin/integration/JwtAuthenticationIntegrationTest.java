@@ -2,7 +2,6 @@ package com.akhana.akhana_admin.integration;
 
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.JwtService;
 import com.jayway.jsonpath.JsonPath;
@@ -18,7 +17,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +57,6 @@ class JwtAuthenticationIntegrationTest {
             .active(true)
             .mustChangePassword(mustChangePassword)
             .createdBy("TEST")
-            .permissions(new HashSet<>(UserPermission.allPermissionKeys()))
             .build());
     }
 
@@ -78,43 +75,49 @@ class JwtAuthenticationIntegrationTest {
     @Test
     @DisplayName("End-to-End: Admin login generates valid JWT, which allows accessing /api/auth/me")
     void fullAuthFlow_AdminUser() throws Exception {
-        User admin = createUser(Role.ADMIN, false);
+        User admin = createUser(Role.ADMINISTRATOR, false);
 
         String token = login(admin.getUsername(), PASSWORD, false);
 
         assertThat(token).isNotBlank();
         assertThat(jwtService.isTokenValid(token, admin.getUsername())).isTrue();
-        assertThat(jwtService.extractRole(token)).isEqualTo("ADMIN");
+        assertThat(jwtService.extractRole(token)).isEqualTo("ADMINISTRATOR");
 
         mockMvc.perform(get("/api/auth/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value(admin.getUsername()))
-            .andExpect(jsonPath("$.role").value("ADMIN"))
+            .andExpect(jsonPath("$.role").value("ADMINISTRATOR"))
             .andExpect(jsonPath("$.mustChangePassword").value(false))
             .andExpect(jsonPath("$.id").isNotEmpty());
     }
 
     @Test
-    @DisplayName("End-to-End: Seller login generates valid JWT with SELLER role")
-    void fullAuthFlow_SellerUser() throws Exception {
-        User seller = createUser(Role.SELLER, false);
+    @DisplayName("End-to-End: Operator login gets the OPERATOR role, its permissions, and 403 on admin-only endpoints")
+    void fullAuthFlow_OperatorUser() throws Exception {
+        User operator = createUser(Role.OPERATOR, false);
 
-        String token = login(seller.getUsername(), PASSWORD, false);
+        String token = login(operator.getUsername(), PASSWORD, false);
 
-        assertThat(jwtService.extractRole(token)).isEqualTo("SELLER");
+        assertThat(jwtService.extractRole(token)).isEqualTo("OPERATOR");
 
         mockMvc.perform(get("/api/auth/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.username").value(seller.getUsername()))
-            .andExpect(jsonPath("$.role").value("SELLER"));
+            .andExpect(jsonPath("$.username").value(operator.getUsername()))
+            .andExpect(jsonPath("$.role").value("OPERATOR"))
+            .andExpect(jsonPath("$.permissions", org.hamcrest.Matchers.hasItem("POS")))
+            .andExpect(jsonPath("$.permissions", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("USERS"))));
+
+        mockMvc.perform(get("/api/finances/accounts")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("End-to-End: a user that must change the password is blocked until changing it")
     void mustChangePassword_BlocksUntilChanged() throws Exception {
-        User admin = createUser(Role.ADMIN, true);
+        User admin = createUser(Role.ADMINISTRATOR, true);
         String token = login(admin.getUsername(), PASSWORD, true);
 
         mockMvc.perform(get("/api/users")

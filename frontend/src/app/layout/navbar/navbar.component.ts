@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { CashService } from '../../core/cash/cash.service';
-import { NAVIGATION_CONFIG } from '../../core/navigation/navigation.config';
+import { NAVIGATION_CONFIG, roleLabel } from '../../core/navigation/navigation.config';
 import { NavGroup, NavItem } from '../../core/navigation/models/navigation.models';
 
 @Component({
@@ -16,6 +16,7 @@ export class NavbarComponent implements OnInit {
   private router = inject(Router);
   authService = inject(AuthService);
   readonly cashService = inject(CashService);
+  readonly roleLabel = roleLabel;
 
   // Navegación filtrada reactivamente según los permisos del usuario activo
   readonly visibleNavGroups = computed<NavGroup[]>(() => {

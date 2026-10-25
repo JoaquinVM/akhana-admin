@@ -63,7 +63,7 @@ class QuickProductControllerTest {
         authUser = User.builder()
             .id(UUID.randomUUID())
             .username("admin")
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .active(true)
             .build();
 

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +17,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('FINANCES_CATEGORIES')")
 @RequestMapping("/api/finances/categories")
 @RequiredArgsConstructor
 public class FinancialCategoryController {
 
     private final FinancialCategoryService financialCategoryService;
 
+    @PreAuthorize("hasAnyAuthority('FINANCES_CATEGORIES', 'FINANCES_TRANSACTIONS', 'POS')")
     @GetMapping
     public ResponseEntity<List<FinancialCategoryResponse>> getAllCategories(
             @RequestParam(required = false) FinancialCategoryType type

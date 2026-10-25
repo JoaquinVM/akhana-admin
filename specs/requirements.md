@@ -11,7 +11,7 @@ Stack: Spring Boot 4.1 (Java 21), Angular 21, PostgreSQL 17.
 
 | Módulo | Qué hace hoy | Estado | Qué falta |
 | --- | --- | --- | --- |
-| Login y usuarios | JWT, BCrypt, baja lógica, 12 permisos por submenú, protección del último admin | Completo | Roles Operador/Administrador y permisos por acción |
+| Login y usuarios | JWT, BCrypt, baja lógica, roles Operador/Administrador con permisos por pantalla, protección del último admin | Completo | Permisos de las pantallas de compras, consumos y reportes cuando se construyan |
 | Catálogo | Productos (código, nombre, categoría, proveedor, etiquetas, precio compra/venta, utilidad), categorías, etiquetas | Completo | Venta por peso; importación |
 | Proveedores | ABM con baja lógica | Completo | Base para compras |
 | Caja | Una sola caja abierta global, apertura, cierre con arqueo por cortes en Bs (caja + reserva), diferencia | Completo | Ingresos/retiros de caja, ajuste por sobrante |
@@ -59,7 +59,7 @@ No entra en la V1: stock y kardex, conteo físico, variantes de producto, lector
 
 ### 2.2 Roles
 
-Dos usuarios iniciales. El administrador puede hacer todo; el operador, lo del día a día de la tienda.
+Dos usuarios iniciales. El administrador puede hacer todo; el operador, lo del día a día de la tienda. Los permisos son por pantalla: quien entra a una pantalla puede hacer todo en ella, incluidas sus anulaciones (P-33).
 
 | Acción | Operador | Administrador |
 | --- | --- | --- |
@@ -71,7 +71,8 @@ Dos usuarios iniciales. El administrador puede hacer todo; el operador, lo del d
 | Cambiar el precio de venta (catálogo o compra) | Sí | Sí |
 | Registrar consumos y ventas al costo | Sí | Sí |
 | Otros gastos de caja (comida, transporte…) | Sí | Sí |
-| Anular ventas, pedidos o pagos | No | Sí |
+| Anular ventas y gastos de caja (en el POS) | Sí | Sí |
+| Anular pedidos o pagos (en Compras) | Sí | Sí |
 | Finanzas, reportes, usuarios | No | Sí |
 
 ### 2.3 Criterio para dejar las planillas
@@ -156,7 +157,7 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto.
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.
 - **POS-06** Numeración de venta única y correlativa.
-- **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (administrador).
+- **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33).
 - **POS-08** Detalle de venta de solo lectura (ítems, descuentos, pagos, auditoría de anulación), reutilizable en POS e historial.
 - **POS-09** Historial de ventas con filtros por fecha, estado, tipo de venta, método de pago y usuario.
 - **POS-10** Venta por peso: el POS acepta cantidades decimales y ofrece las presentaciones rápidas del producto (100 g, 1/2 libra).
@@ -181,7 +182,7 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 - **USR-02** Permisos controlados en el frontend (menú, rutas) y en el backend (cada endpoint).
 - **USR-03** Un usuario dado de baja pierde el acceso de inmediato, aunque tenga una sesión abierta.
 - **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador.
-- **USR-05** Dos roles iniciales, Operador y Administrador, con permisos por acción según la tabla 2.2.
+- **USR-05** Dos roles iniciales, Operador y Administrador, con los permisos de la tabla 2.2. Hecha el 25-10-2026: el rol se elige al crear o editar el usuario (ya no hay matriz por submenú) y agrupa permisos por pantalla definidos en código (`Permission`, `Role`; detalle en `specs/users.md`). Quien entra a una pantalla puede hacer todo en ella (P-33). El operador entra a POS, historial de ventas, historial de cajas, productos, categorías, etiquetas y proveedores; el administrador, además, a finanzas y usuarios. No se puede quitar el rol ni dar de baja al último administrador activo.
 - **USR-06** · V1 — El primer administrador se crea desde variables de entorno solo si no hay usuarios, y debe cambiar la contraseña en su primer ingreso: el login lo informa (`mustChangePassword`), el backend rechaza con 403 toda otra llamada hasta el cambio y el frontend lo lleva a la pantalla de cambio. Cualquier usuario puede cambiar su contraseña (`POST /api/auth/change-password`) indicando la actual; la nueva tiene entre 8 y 100 caracteres y no puede ser igual a la actual ni al nombre de usuario (T-03).
 
 ### 3.10 Inventario · V2
@@ -205,10 +206,10 @@ Decisión: la V1 se construye sobre el proyecto actual, con el mismo stack, y es
 | T-05 | Los ingresos y gastos manuales se editan cambiando el monto y la cuenta (`updateTransaction`), lo que reescribe saldos sin rastro. | Movimientos de dinero inmutables: se corrigen con anulación + nuevo registro. | V1 |
 | T-06 | `sale_number` sin restricción de unicidad y calculado como cantidad de ventas de la caja + 1 (dos ventas simultáneas reciben el mismo número); estados como texto libre sin `CHECK`; nada impide en la base dos cajas abiertas. Desde T-01, `V1__init.sql` ya tiene los `CHECK` de estados y el índice único parcial de caja ABIERTA; falta lo de `sale_number`. | Unicidad y dominios de estado garantizados en la base: número de venta por secuencia, índice único de `sale_number` e índice único parcial de caja con estado ABIERTA. | V1 |
 | T-07 | `sale_items` no guarda el costo del producto al vender. | Snapshot de costo por línea (POS-05). | V1 |
-| T-08 | Rol `ADMIN/SELLER` convive con la matriz de permisos; `UserController` acepta `hasRole('ADMIN')` como atajo. | Un solo modelo: roles Operador y Administrador que agrupan permisos por acción. | V1 |
+| T-08 | Rol `ADMIN/SELLER` convive con la matriz de permisos; `UserController` acepta `hasRole('ADMIN')` como atajo. | Un solo modelo: roles Operador y Administrador que agrupan permisos. Hecha el 25-10-2026: `Role` (`OPERATOR`, `ADMINISTRATOR`) agrupa el enum `Permission`, con un permiso por pantalla (P-33); las autoridades de Spring son los permisos del rol y se quitó `hasRole('ADMIN')`. Migración `V3__operator_administrator_roles.sql`: `ADMIN` o quien tenía `SECURITY_USERS` pasa a Administrador, el resto a Operador, y se elimina `user_permissions`. Las bases de desarrollo con el `seller` heredado (tenía todos los permisos) lo dejan como Administrador: pasarlo a Operador o darlo de baja a mano. | V1 |
 | T-10 | Cuentas "BISA" y "Cuenta Joaco" sembradas dentro de una migración. | Las cuentas Caja, Bisa y Efectivo se cargan en la migración de datos, no en el esquema. Desde T-01 el esquema ya no siembra BISA ni Joaco. La cuenta Caja y la categoría Ventas siguen en `V1__init.sql` como filas de sistema, porque `SaleServiceImpl` omite sin aviso el movimiento financiero de la venta si no existen. | V1 |
 | T-11 | Cantidades enteras (`quantity INT`). | Cantidades decimales para venta por peso (P-03, CAT-08). | V1 |
-| T-13 | Solo `UserController` tiene `@PreAuthorize`. Cualquier usuario autenticado puede llamar por API a finanzas, anulación de ventas, catálogo y caja, aunque el menú se lo oculte. | Cada endpoint exige el permiso por acción de la tabla 2.2 (USR-02, USR-05), con pruebas de acceso denegado para el operador. | V1 |
+| T-13 | Solo `UserController` tiene `@PreAuthorize`. Cualquier usuario autenticado puede llamar por API a finanzas, anulación de ventas, catálogo y caja, aunque el menú se lo oculte. | Cada endpoint exige el permiso de la tabla 2.2 (USR-02, USR-05), con pruebas de acceso denegado para el operador. Hecha el 25-10-2026: `@PreAuthorize` en todos los controllers con el permiso de la pantalla dueña del endpoint; los endpoints que otra pantalla solo lee también aceptan esa pantalla (Productos lee proveedores, categorías y etiquetas; el POS lee productos y categorías de gasto). Un 403 responde «No tiene permiso para realizar esta acción». El POS anula gastos con `POST /api/finances/transactions/cash-expense/{id}/void`, que solo acepta gastos de caja de la caja abierta; la anulación general de movimientos sigue siendo de Finanzas. `EndpointAuthorizationTest` recorre todos los endpoints: 2xx para el administrador, 403 para el operador en finanzas y usuarios, y falla si un endpoint no tiene `@PreAuthorize` o falta en la matriz. Frontend con las mismas claves (`PERMISSIONS` en `navigation.config.ts`, rutas y `permission.guard.ts`). | V1 |
 | T-14 | Saldos de cuenta (`current_balance`) y totales de caja se actualizan leyendo y reescribiendo la entidad, sin bloqueo ni `@Version`. Dos ventas o movimientos simultáneos pueden perder una actualización y desalinear el saldo. La apertura de caja verifica "no hay otra abierta" sin bloqueo. | Toda operación de dinero bloquea la cuenta y la caja que toca (`SELECT … FOR UPDATE` o versión optimista con reintento) dentro de su transacción, con prueba concurrente. | V1 |
 | T-15 | El efectivo esperado se calcula como inicial + ventas en efectivo − gastos manuales de Caja. Las transferencias desde Caja se vinculan a la caja pero la consulta las excluye, y las transferencias hacia Caja ni se vinculan: el saldo de la cuenta Caja y el efectivo esperado divergen. La fórmula está copiada en cinco lugares (caja, ventas, finanzas ×3). | Un único cálculo de efectivo esperado según CAJ-03, que incluye transferencias desde y hacia Caja (CAJ-08) y pagos de pedidos (COM-06), usado por todos los servicios y cubierto con pruebas. | V1 |
 | T-16 | Un gasto o transferencia desde Caja sin caja abierta se registra igual, sin caja. El cliente puede enviar `cashSessionId` de una caja cerrada o de otra cuenta. Editar o anular un gasto de una caja cerrada recalcula el efectivo esperado de esa caja (rompe CAJ-06). | Los movimientos de la cuenta Caja exigen caja abierta y el servidor los vincula a ella; los movimientos de una caja cerrada no se editan ni anulan, se corrigen en la caja actual. | V1 |
@@ -272,12 +273,13 @@ No quedan preguntas que bloqueen la V1. Antes de migrar falta revisar la unidad 
 | P-30 | ¿El operador puede cambiar el precio de venta desde el catálogo? | Sí. |
 | P-31 | ¿Qué productos se venden por peso? | Frutos secos y productos del proveedor Granel. La unidad de precio de cada uno se revisa antes de migrar. |
 | P-32 | ¿Cómo se importan las ventas históricas? | Una venta histórica por día con sus líneas por producto, costo y utilidad, sin caja ni pagos. |
+| P-33 | ¿Los permisos son por acción o por pantalla? | Por pantalla: quien entra a una pantalla puede hacer todo en ella, incluidas las anulaciones (25-10-2026). El operador anula ventas y gastos de caja en el POS, y pedidos y pagos en Compras. |
 
 ## 6. Hoja de ruta
 
 Las planillas se dejan al terminar la fase 2, después de dos semanas en paralelo; el inventario (V2) y las extensiones (V3) llegan después sin frenar la operación. Ninguna fase avanza sin pasar su compuerta, probada con datos reales de la tienda.
 
-1. **Fase 0 · Decisiones y base técnica** — Revisión del código (T-00). Flyway, secretos por entorno, VPS con HTTPS y respaldo diario. Roles Operador y Administrador con permisos por acción (USR-05; T-01 a T-19 marcados V1).
+1. **Fase 0 · Decisiones y base técnica** — Revisión del código (T-00). Flyway, secretos por entorno, VPS con HTTPS y respaldo diario. Roles Operador y Administrador con permisos por pantalla (USR-05; T-01 a T-19 marcados V1).
    - Compuerta: revisión del código hecha y servidor de producción listo.
 2. **Fase 1 · V1: lo que falta para reemplazar las planillas** — Compras, deudas y cuentas por cobrar, consumos y ventas al costo, venta por peso, ajustes de caja, costo por línea, historial de ventas, reportes e importación (COM, DEU, CON, CAT-08, CAJ-08 a 10, FIN-10 y 11).
    - Compuerta: productos (con unidad de peso revisada), saldos, pedidos e históricos desde julio migrados.

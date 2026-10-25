@@ -57,7 +57,7 @@ class AuthControllerTest {
     void login_Success() throws Exception {
         UUID userId = UUID.randomUUID();
         String fakeToken = "eyJhbGciOiJIUzI1NiJ9.fake.jwt.token";
-        LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMIN, "Authentication successful");
+        LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMINISTRATOR, "Authentication successful");
 
         when(authService.login(any(LoginRequest.class))).thenReturn(response);
 
@@ -75,7 +75,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.token").value(fakeToken))
             .andExpect(jsonPath("$.id").value(userId.toString()))
             .andExpect(jsonPath("$.username").value("admin"))
-            .andExpect(jsonPath("$.role").value("ADMIN"))
+            .andExpect(jsonPath("$.role").value("ADMINISTRATOR"))
             .andExpect(jsonPath("$.message").value("Authentication successful"));
     }
 
@@ -124,7 +124,7 @@ class AuthControllerTest {
         User user = User.builder()
             .id(userId)
             .username("admin")
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .active(true)
             .build();
 
@@ -138,7 +138,7 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(userId.toString()))
             .andExpect(jsonPath("$.username").value("admin"))
-            .andExpect(jsonPath("$.role").value("ADMIN"));
+            .andExpect(jsonPath("$.role").value("ADMINISTRATOR"));
     }
 
     @Test
@@ -168,7 +168,7 @@ class AuthControllerTest {
         User user = User.builder()
             .id(UUID.randomUUID())
             .username("admin")
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .active(true)
             .mustChangePassword(mustChangePassword)
             .build();

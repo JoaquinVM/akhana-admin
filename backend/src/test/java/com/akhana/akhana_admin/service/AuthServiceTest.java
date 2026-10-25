@@ -47,7 +47,7 @@ class AuthServiceTest {
             .id(UUID.randomUUID())
             .username("admin")
             .password("$2a$10$hashedPassword")
-            .role(Role.ADMIN)
+            .role(Role.ADMINISTRATOR)
             .active(true)
             .build();
     }
@@ -68,7 +68,7 @@ class AuthServiceTest {
         assertThat(response.token()).isEqualTo(expectedToken);
         assertThat(response.id()).isEqualTo(activeUser.getId());
         assertThat(response.username()).isEqualTo("admin");
-        assertThat(response.role()).isEqualTo(Role.ADMIN);
+        assertThat(response.role()).isEqualTo(Role.ADMINISTRATOR);
         assertThat(response.message()).isEqualTo("Authentication successful");
 
         verify(userRepository, times(1)).findByUsername("admin");
@@ -116,7 +116,7 @@ class AuthServiceTest {
             .id(UUID.randomUUID())
             .username("seller")
             .password("$2a$10$hashedPassword")
-            .role(Role.SELLER)
+            .role(Role.OPERATOR)
             .active(false)
             .build();
 

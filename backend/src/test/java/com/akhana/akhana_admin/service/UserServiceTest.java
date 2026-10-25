@@ -6,7 +6,6 @@ import com.akhana.akhana_admin.dto.UserResponse;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,10 +47,9 @@ class UserServiceTest {
                 .username("testuser")
                 .fullName("Test User")
                 .password("encoded_pass")
-                .role(Role.ADMIN)
+                .role(Role.ADMINISTRATOR)
                 .active(true)
                 .createdBy("admin")
-                .permissions(Set.of(UserPermission.SECURITY_USERS.name()))
                 .createdAt(Instant.now().minusSeconds(3600))
                 .build();
     }
@@ -63,7 +60,7 @@ class UserServiceTest {
                 "New User",
                 "newuser",
                 "raw_password",
-                Set.of(UserPermission.SALES_POS.name())
+                Role.OPERATOR
         );
 
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
@@ -81,6 +78,8 @@ class UserServiceTest {
         assertEquals("newuser", response.username());
         assertEquals("admin", response.createdBy());
         assertTrue(response.active());
+        assertEquals(Role.OPERATOR, response.role());
+        assertEquals(Role.OPERATOR.permissionKeys(), response.permissions());
         verify(userRepository).save(any(User.class));
     }
 
@@ -90,7 +89,7 @@ class UserServiceTest {
                 "New User",
                 "testuser",
                 "raw_password",
-                Set.of(UserPermission.SALES_POS.name())
+                Role.OPERATOR
         );
 
         when(userRepository.existsByUsername("testuser")).thenReturn(true);
@@ -106,7 +105,7 @@ class UserServiceTest {
 
         UpdateUserRequest request = new UpdateUserRequest(
                 "Updated Name",
-                Set.of(UserPermission.SECURITY_USERS.name(), UserPermission.CATALOG_PRODUCTS.name())
+                Role.ADMINISTRATOR
         );
 
         UserResponse response = userService.updateUser(userId, request, "editor_user");
@@ -124,7 +123,7 @@ class UserServiceTest {
 
         UpdateUserRequest request = new UpdateUserRequest(
                 "Test User",
-                Set.of(UserPermission.SECURITY_USERS.name())
+                Role.ADMINISTRATOR
         );
 
         UserResponse response = userService.updateUser(userId, request, "editor_user");
@@ -146,7 +145,7 @@ class UserServiceTest {
     @Test
     void deleteUser_lastAdmin_throwsException() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countActiveUsersWithPermission(UserPermission.SECURITY_USERS.name())).thenReturn(1L);
+        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(1L);
 
         assertThrows(IllegalStateException.class, () -> userService.deleteUser(userId, "other_admin"));
         verify(userRepository, never()).save(any());
@@ -155,7 +154,7 @@ class UserServiceTest {
     @Test
     void deleteUser_success_softDeletes() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countActiveUsersWithPermission(UserPermission.SECURITY_USERS.name())).thenReturn(2L);
+        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(2L);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         userService.deleteUser(userId, "other_admin");
@@ -163,6 +162,42 @@ class UserServiceTest {
         assertFalse(sampleUser.isActive());
         assertNotNull(sampleUser.getDeletedAt());
         assertEquals("other_admin", sampleUser.getDeletedBy());
+        verify(userRepository).save(sampleUser);
+    }
+
+    @Test
+    void updateUser_demoteLastAdministrator_throwsException() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(1L);
+
+        UpdateUserRequest request = new UpdateUserRequest("Test User", Role.OPERATOR);
+
+        assertThrows(IllegalStateException.class, () -> userService.updateUser(userId, request, "editor_user"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUser_demoteAdministratorWhenOthersRemain_changesRole() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(2L);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.updateUser(userId, new UpdateUserRequest("Test User", Role.OPERATOR), "editor_user");
+
+        assertEquals(Role.OPERATOR, response.role());
+        assertFalse(response.permissions().contains("USERS"));
+        verify(userRepository).save(sampleUser);
+    }
+
+    @Test
+    void deleteUser_operator_doesNotCountAdministrators() {
+        sampleUser.setRole(Role.OPERATOR);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.deleteUser(userId, "other_admin");
+
+        verify(userRepository, never()).countByRoleAndActiveTrueAndDeletedAtIsNull(any());
         verify(userRepository).save(sampleUser);
     }
 }

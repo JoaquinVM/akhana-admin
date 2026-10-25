@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +17,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('PRODUCTS')")
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService productService;
 
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS')")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts(
             @RequestParam(required = false) String search,
@@ -30,6 +33,7 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS')")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable UUID id) {
         ProductResponse product = productService.getProductById(id);

@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Usuarios</span>
       </nav>
       <h1 class="page-title">Gestión de Usuarios</h1>
-      <p class="page-subtitle">Administración de cuentas, credenciales y permisos de acceso</p>
+      <p class="page-subtitle">Administración de cuentas, credenciales y roles</p>
     </div>
     <div class="header-right">
       <button
@@ -77,7 +77,6 @@
             <th scope="col" style="min-width: 170px">Nombre completo</th>
             <th scope="col" style="width: 130px">Usuario</th>
             <th scope="col" style="width: 90px; text-align: center">Rol</th>
-            <th scope="col" style="width: 120px; text-align: center">Permisos</th>
             <th scope="col" style="width: 140px">Creación</th>
             <th scope="col" style="width: 140px">Última Modificación</th>
             <th scope="col" style="width: 120px; text-align: right">Acciones</th>
@@ -86,7 +85,7 @@
         <tbody>
           @if (isLoading()) {
             <tr>
-              <td colspan="7">
+              <td colspan="6">
                 <div class="table-state-container">
                   <div class="spinner-large"></div>
                   <p>Cargando lista de usuarios...</p>
@@ -95,7 +94,7 @@
             </tr>
           } @else if (users().length === 0) {
             <tr>
-              <td colspan="7">
+              <td colspan="6">
                 <div class="table-empty">
                   <div class="table-empty-icon">👥</div>
                   <p class="table-empty-title">No se encontraron usuarios</p>
@@ -117,13 +116,9 @@
                   <span class="user-username-badge">&#64;{{ user.username }}</span>
                 </td>
                 <td style="text-align: center">
-                  <span class="role-badge" [class.admin]="user.role === 'ADMIN'" [class.seller]="user.role === 'SELLER'">
-                    {{ user.role }}
-                  </span>
-                </td>
-                <td style="text-align: center">
-                  <span class="permissions-count-badge" [title]="user.permissions.join(', ')">
-                    {{ user.permissions.length }} de {{ allPermissionKeys.length }}
+                  <span class="role-badge" [class.admin]="user.role === 'ADMINISTRATOR'" [class.operator]="user.role === 'OPERATOR'"
+                        [title]="user.permissions.join(', ')">
+                    {{ roleLabel(user.role) }}
                   </span>
                 </td>
                 <td>
@@ -301,51 +296,26 @@
         </div>
       </div>
 
-      <!-- Matriz de Permisos en Creación -->
+      <!-- Rol: agrupa los permisos por acción -->
       <div class="permissions-section">
         <div class="permissions-header">
           <div>
-            <h4 class="permissions-title">Permisos de Acceso por Módulo</h4>
-            <p class="permissions-subtitle">Seleccione los submenús y módulos a los que tendrá acceso este usuario</p>
+            <div class="d-flex align-items-center gap-2">
+              <h4 class="permissions-title">Rol <span class="required-mark">*</span></h4>
+            </div>
+            <p class="permissions-subtitle">El rol define qué acciones puede realizar el usuario</p>
           </div>
-          <label class="checkbox-container global-checkbox">
-            <input
-              type="checkbox"
-              [checked]="isGlobalAllSelected(true)"
-              [indeterminate]="isGlobalIndeterminate(true)"
-              (change)="toggleGlobalAll(true, $event)"
-            />
-            <span class="checkbox-label font-bold">Seleccionar Todos</span>
-          </label>
         </div>
 
-        <div class="permissions-grid">
-          @for (group of permissionGroups; track group.id) {
-            <div class="permission-card">
-              <div class="permission-card-header">
-                <label class="checkbox-container">
-                  <input
-                    type="checkbox"
-                    [checked]="isGroupAllSelected(group.id, true)"
-                    [indeterminate]="isGroupIndeterminate(group.id, true)"
-                    (change)="toggleGroupAll(group.id, true, $event)"
-                  />
-                  <span class="permission-group-name">{{ group.label }}</span>
-                </label>
-              </div>
-              <div class="permission-card-body">
-                @for (perm of group.permissions; track perm.key) {
-                  <label class="checkbox-container permission-item">
-                    <input
-                      type="checkbox"
-                      [checked]="isPermissionSelected(perm.key, true)"
-                      (change)="togglePermission(perm.key, true, $event)"
-                    />
-                    <span class="permission-item-label">{{ perm.label }}</span>
-                  </label>
-                }
-              </div>
-            </div>
+        <div class="role-options" role="radiogroup" aria-label="Rol del usuario">
+          @for (option of roleOptions; track option.value) {
+            <label class="role-option" [class.selected]="createForm.value.role === option.value">
+              <input type="radio" name="role" formControlName="role" [value]="option.value" />
+              <span class="role-option-text">
+                <span class="role-option-label">{{ option.label }}</span>
+                <span class="role-option-description">{{ option.description }}</span>
+              </span>
+            </label>
           }
         </div>
       </div>
@@ -425,56 +395,29 @@
         </div>
       </div>
 
-      <!-- Matriz de Permisos en Edición con Detección de Cambios -->
-      <div class="permissions-section" [class.is-modified]="isFieldModified('permissions')">
+      <!-- Rol: agrupa los permisos por acción -->
+      <div class="permissions-section" [class.is-modified]="isFieldModified('role')">
         <div class="permissions-header">
           <div>
             <div class="d-flex align-items-center gap-2">
-              <h4 class="permissions-title">Permisos de Acceso por Módulo</h4>
-              @if (isFieldModified('permissions')) {
+              <h4 class="permissions-title">Rol <span class="required-mark">*</span></h4>
+              @if (isFieldModified('role')) {
                 <span class="field-modified-badge">Modificado</span>
               }
             </div>
-            <p class="permissions-subtitle">Ajuste los submenús y módulos autorizados para este usuario</p>
+            <p class="permissions-subtitle">El rol define qué acciones puede realizar el usuario</p>
           </div>
-          <label class="checkbox-container global-checkbox">
-            <input
-              type="checkbox"
-              [checked]="isGlobalAllSelected(false)"
-              [indeterminate]="isGlobalIndeterminate(false)"
-              (change)="toggleGlobalAll(false, $event)"
-            />
-            <span class="checkbox-label font-bold">Seleccionar Todos</span>
-          </label>
         </div>
 
-        <div class="permissions-grid">
-          @for (group of permissionGroups; track group.id) {
-            <div class="permission-card">
-              <div class="permission-card-header">
-                <label class="checkbox-container">
-                  <input
-                    type="checkbox"
-                    [checked]="isGroupAllSelected(group.id, false)"
-                    [indeterminate]="isGroupIndeterminate(group.id, false)"
-                    (change)="toggleGroupAll(group.id, false, $event)"
-                  />
-                  <span class="permission-group-name">{{ group.label }}</span>
-                </label>
-              </div>
-              <div class="permission-card-body">
-                @for (perm of group.permissions; track perm.key) {
-                  <label class="checkbox-container permission-item">
-                    <input
-                      type="checkbox"
-                      [checked]="isPermissionSelected(perm.key, false)"
-                      (change)="togglePermission(perm.key, false, $event)"
-                    />
-                    <span class="permission-item-label">{{ perm.label }}</span>
-                  </label>
-                }
-              </div>
-            </div>
+        <div class="role-options" role="radiogroup" aria-label="Rol del usuario">
+          @for (option of roleOptions; track option.value) {
+            <label class="role-option" [class.selected]="editForm.value.role === option.value">
+              <input type="radio" name="role" formControlName="role" [value]="option.value" />
+              <span class="role-option-text">
+                <span class="role-option-label">{{ option.label }}</span>
+                <span class="role-option-description">{{ option.description }}</span>
+              </span>
+            </label>
           }
         </div>
       </div>

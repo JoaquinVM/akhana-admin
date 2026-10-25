@@ -270,4 +270,61 @@ class FinancialTransactionServiceTest {
         assertEquals(sessionId, responses.get(0).getCashSessionId());
         assertEquals(new BigDecimal("35.00"), responses.get(0).getAmount());
     }
+
+    private FinancialTransaction cashExpense(UUID sessionId) {
+        return FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccount(bisaAccount)
+                .amount(new BigDecimal("100.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(sessionId)
+                .build();
+    }
+
+    @Test
+    @DisplayName("POS: anula un gasto de la caja abierta restituyendo el saldo")
+    void testVoidCashExpenseOpenSession() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialTransaction tx = cashExpense(sessionId);
+        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        CashSession session = CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA)
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(financialTransactionRepository.sumActiveCashExpensesBySessionId(sessionId)).thenReturn(BigDecimal.ZERO);
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        FinancialTransactionResponse res = financialTransactionService.voidCashExpense(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Gasto duplicado").build(), "operador");
+
+        assertEquals(FinancialTransactionStatus.ANULADO, res.getStatus());
+        assertEquals("operador", res.getVoidedBy());
+        assertEquals(new BigDecimal("1100.00"), bisaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("250.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("POS: rechaza anular un gasto de una caja cerrada")
+    void testVoidCashExpenseClosedSession() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialTransaction tx = cashExpense(sessionId);
+        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(cashSessionRepository.findById(sessionId))
+                .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.CERRADA).build()));
+
+        assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidCashExpense(tx.getId(), new VoidFinancialTransactionRequest(), "operador"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("POS: rechaza anular un movimiento que no es gasto de caja")
+    void testVoidCashExpenseRejectsOtherMovements() {
+        FinancialTransaction tx = cashExpense(null);
+        when(financialTransactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidCashExpense(tx.getId(), new VoidFinancialTransactionRequest(), "operador"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
 }

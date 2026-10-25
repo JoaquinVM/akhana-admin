@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@PreAuthorize("hasAuthority('FINANCES_ACCOUNTS')")
 @RequestMapping("/api/finances/accounts")
 @RequiredArgsConstructor
 public class FinancialAccountController {
@@ -26,6 +28,7 @@ public class FinancialAccountController {
     private final FinancialAccountService financialAccountService;
     private final FinancialTransactionService financialTransactionService;
 
+    @PreAuthorize("hasAnyAuthority('FINANCES_ACCOUNTS', 'FINANCES_TRANSACTIONS')")
     @GetMapping
     public ResponseEntity<List<FinancialAccountResponse>> getAllAccounts() {
         return ResponseEntity.ok(financialAccountService.getAllAccounts());

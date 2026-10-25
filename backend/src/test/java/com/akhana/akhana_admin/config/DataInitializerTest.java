@@ -2,7 +2,6 @@ package com.akhana.akhana_admin.config;
 
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
-import com.akhana.akhana_admin.model.UserPermission;
 import com.akhana.akhana_admin.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,10 +42,10 @@ class DataInitializerTest {
         User admin = captor.getValue();
         assertThat(admin.getUsername()).isEqualTo("owner");
         assertThat(admin.getPassword()).isEqualTo("$2a$10$encoded");
-        assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
+        assertThat(admin.getRole()).isEqualTo(Role.ADMINISTRATOR);
         assertThat(admin.isActive()).isTrue();
         assertThat(admin.isMustChangePassword()).isTrue();
-        assertThat(admin.getPermissions()).containsExactlyInAnyOrderElementsOf(UserPermission.allPermissionKeys());
+        assertThat(admin.getPermissions()).containsExactlyInAnyOrderElementsOf(Role.allPermissionKeys());
     }
 
     @Test

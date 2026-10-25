@@ -37,4 +37,7 @@ public interface FinancialTransactionService {
     FinancialTransactionResponse updateTransaction(UUID id, FinancialTransactionRequest request, String currentUsername);
 
     FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername);
+
+    /** Voids a cash expense of the open cash session (POS screen). */
+    FinancialTransactionResponse voidCashExpense(UUID id, VoidFinancialTransactionRequest request, String currentUsername);
 }

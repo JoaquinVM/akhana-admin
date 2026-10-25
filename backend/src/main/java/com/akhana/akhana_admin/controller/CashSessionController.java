@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ public class CashSessionController {
 
     private final CashSessionService cashSessionService;
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/open")
     public ResponseEntity<CashSessionSummaryResponse> openSession(
             @Valid @RequestBody OpenCashRequest request,
@@ -29,12 +31,14 @@ public class CashSessionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize("hasAuthority('POS')")
     @GetMapping("/current")
     public ResponseEntity<CashSessionSummaryResponse> getCurrentSession() {
         CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/current/sales")
     public ResponseEntity<SaleResponse> registerSale(
             @Valid @RequestBody SaleRequest request,
@@ -44,6 +48,7 @@ public class CashSessionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize("hasAuthority('POS')")
     @PostMapping("/current/close")
     public ResponseEntity<CashSessionSummaryResponse> closeSession(
             @Valid @RequestBody CloseCashRequest request,
@@ -53,12 +58,14 @@ public class CashSessionController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('CASH_HISTORY')")
     @GetMapping
     public ResponseEntity<List<CashSessionSummaryResponse>> getAllSessions() {
         List<CashSessionSummaryResponse> sessions = cashSessionService.getAllSessions();
         return ResponseEntity.ok(sessions);
     }
 
+    @PreAuthorize("hasAuthority('CASH_HISTORY')")
     @GetMapping("/{id}")
     public ResponseEntity<CashSessionDetailResponse> getSessionDetail(@PathVariable UUID id) {
         CashSessionDetailResponse response = cashSessionService.getSessionDetail(id);
