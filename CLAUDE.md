@@ -5,12 +5,13 @@ Objetivo actual: la V1, que reemplaza las planillas de Google Sheets (sin invent
 
 ## Documentacion valida (solo esta)
 
-- Requerimientos, alcance, roles y decisiones: https://claude.ai/artifact/JMxhKCN4EgTNd28dhjg3BK
-- Detalle por modulo: `specs/<modulo>.md` (usa los mismos IDs del documento: COM-02, CAJ-09...).
+- `specs/requirements.md`: fuente de verdad. Alcance por version, roles, requerimientos con ID, preguntas y hoja de ruta.
+  Cuando se decida o descubra algo nuevo (respuesta a una pregunta, hallazgo tecnico, requerimiento nuevo),
+  actualizar este archivo en el mismo commit.
+- `specs/<modulo>.md`: detalle por modulo (escenarios cuando/entonces + tareas), con los mismos IDs.
 - Todo lo demas es del flujo anterior y se va a eliminar: `requirements/`, `project/`, `.agents/`,
   `.antigravity/`, `openspec/changes/`, los `_context.md`. No leerlos ni actualizarlos.
-- No crear otros documentos (planes, informes, logs, user stories). Si una decision cambia, avisar
-  para actualizar el documento de requerimientos.
+- No crear otros documentos (planes, informes, logs, user stories).
 
 ## Stack y comandos
 
