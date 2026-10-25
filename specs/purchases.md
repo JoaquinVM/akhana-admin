@@ -1,9 +1,8 @@
 # Compras (pedidos)
 
 Detalle del módulo Compras de la V1 (sección 3.3 de `specs/requirements.md`), con los mismos IDs.
-Alcance de esta etapa: COM-01 a COM-06. La entrega (COM-07), la vista de pedidos por pagar (COM-08), la
-anulación de pedidos y pagos (COM-09) y el pago hecho por una persona (origen «persona» de COM-05, que nace con
-DEU-01/DEU-02) quedan para las siguientes etapas.
+Alcance: COM-01 a COM-09. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
+queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
 Toda operación que mueve dinero es atómica (RG-05) y bloquea en orden: pedido, caja, cuentas (T-14).
@@ -126,8 +125,74 @@ cuenta de origen (Caja con la caja abierta, Bisa u otra cuenta activa).
 - **Cuando** no hay caja abierta **entonces** se rechaza: «Los movimientos de la cuenta Caja requieren una caja
   abierta.»
 - **Cuando** se mira el POS **entonces** el pago aparece entre los gastos de la caja, pero no se anula desde
-  allí ni desde Finanzas: «Los movimientos de un pedido se gestionan desde Compras.» (la anulación llega con
-  COM-09). Lo mismo para el gasto de envío.
+  allí ni desde Finanzas: «Los movimientos de un pedido se gestionan desde Compras.» (se anulan con COM-09). Lo
+  mismo para el gasto de envío.
+
+## COM-07 · Entrega
+
+Cada pedido tiene tipo de entrega (`EN_PUERTA` en puerta, `TERMINAL` en terminal, `EN_TIENDA` en tienda), estado
+de entrega (`PENDIENTE`, `ENTREGADO`) y fecha de entrega (migración `V9__purchase_delivery.sql`).
+
+- **Cuando** se registra un pedido sin tipo de entrega **entonces** queda En tienda; sin estado, Pendiente.
+- **Cuando** el pedido queda Pendiente **entonces** la fecha es opcional y es la fecha estimada: puede ser
+  futura.
+- **Cuando** el pedido queda Entregado **entonces** la fecha es la de la entrega: sin fecha se toma hoy (hora de
+  Bolivia) y si es futura se rechaza: «La fecha de entrega no puede ser futura.»; tampoco puede ser anterior a la
+  fecha del pedido: «La fecha de entrega no puede ser anterior a la fecha del pedido.»
+- **Cuando** se cambia la entrega de un pedido registrado (`PUT /api/purchases/{id}/delivery`) **entonces** se
+  guardan tipo, estado y fecha con la auditoría de modificación (`updated_by`, `updated_at`); no mueve dinero.
+- **Cuando** se vuelve un pedido Entregado a Pendiente **entonces** se acepta (corrección) y la fecha pasa a ser
+  la estimada.
+- **Cuando** el pedido está anulado **entonces** la entrega no se cambia: «El pedido está anulado.»
+- El listado filtra también por estado de entrega.
+
+## COM-08 · Pedidos por pagar
+
+Vista con los pedidos registrados (no anulados) con saldo mayor a 0 (Por pagar, Consignación, A cuenta),
+agrupados por proveedor (`GET /api/purchases/payables`).
+
+- **Cuando** el proveedor Granel tiene un pedido de Bs 300,00 con Bs 100,00 pagados y otro de Bs 50,00 sin pagos
+  **entonces** la vista muestra Granel con saldo Bs 250,00 y dos pedidos (saldo Bs 200,00 y Bs 50,00).
+- **Cuando** un pedido está Pagado o anulado **entonces** no aparece.
+- **Cuando** un pedido está en Consignación **entonces** aparece con su saldo (queda por pagar, P-21).
+- **Cuando** se mira la vista **entonces** el total general es la suma de los saldos de todos los proveedores;
+  los proveedores van por nombre y sus pedidos del más antiguo al más reciente.
+- **Cuando** se filtra por proveedor **entonces** solo aparece ese proveedor.
+- Desde la vista se abre el detalle del pedido para pagarlo (COM-05).
+
+## COM-09 · Anulación de pedidos y pagos
+
+Un pedido o un pago registrado no se edita: se corrige anulándolo con motivo (RG-03). Lo hace quien entra a
+Compras, operador o administrador (tabla 2.2, P-33). La anulación revierte el dinero: los gastos vinculados al
+pedido (`financial_transactions.purchase_id`) quedan `ANULADO` con el mismo motivo, usuario y fecha, la cuenta
+recupera el monto y, si eran de Caja, el efectivo esperado se recalcula. Bloqueo en orden: pedido, caja, cuentas
+(T-14).
+
+### Anular un pago (`POST /api/purchases/{id}/payments/{paymentId}/void`)
+
+- **Cuando** se anula un pago de Bs 100,00 desde Bisa con motivo **entonces** el pago queda `ANULADO` (quién,
+  cuándo, motivo), su gasto Pedido queda anulado, Bisa sube Bs 100,00 y el pedido baja lo pagado a Bs 0,00: el
+  estado se recalcula (Por pagar, Consignación o A cuenta).
+- **Cuando** el pago era desde Caja y su caja sigue abierta **entonces** el efectivo esperado sube en el monto.
+- **Cuando** el pago era desde Caja y su caja ya está cerrada **entonces** se rechaza: «El pago se hizo en una
+  caja cerrada; no se puede anular.» (CAJ-06, T-16: una caja cerrada no cambia).
+- **Cuando** el motivo falta o está en blanco **entonces** se rechaza: «El motivo de anulación es obligatorio.»
+- **Cuando** el pago ya está anulado **entonces** se rechaza: «El pago ya está anulado.»
+- **Cuando** el pago no es de ese pedido **entonces** se rechaza (404).
+- **Cuando** el pedido está anulado **entonces** se rechaza: «El pedido está anulado.»
+
+### Anular un pedido (`POST /api/purchases/{id}/void`)
+
+- **Cuando** se anula un pedido con motivo **entonces** queda `ANULADO` (quién, cuándo, motivo), se anulan todos
+  sus pagos activos y todos sus gastos activos (pagos y envío), y cada cuenta recupera lo suyo. Lo pagado queda
+  en Bs 0,00 y sale de la vista por pagar.
+- **Cuando** alguno de sus gastos de Caja es de una caja cerrada **entonces** no se anula nada: «El pedido tiene
+  movimientos de una caja cerrada; no se puede anular.»
+- **Cuando** el pedido ya está anulado **entonces** se rechaza: «El pedido ya está anulado.»
+- **Cuando** el pedido había actualizado el costo o precio de un producto (COM-03) **entonces** el producto no
+  vuelve atrás: el cambio sigue auditado y se corrige desde el catálogo.
+- Un pedido anulado se sigue viendo en el listado (filtro Anulado) y en su detalle, con el motivo; no admite
+  pagos ni cambios de entrega.
 
 ## Categorías de sistema
 
@@ -139,10 +204,14 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| GET | `/api/purchases?supplierId=&paymentStatus=&search=` | Listado (sin líneas) |
+| GET | `/api/purchases?supplierId=&paymentStatus=&deliveryStatus=&status=&search=` | Listado (sin líneas) |
+| GET | `/api/purchases/payables?supplierId=` | Pedidos por pagar por proveedor (COM-08) |
 | GET | `/api/purchases/{id}` | Detalle con líneas y pagos |
 | POST | `/api/purchases` | Registrar pedido (COM-02, COM-03) |
 | POST | `/api/purchases/{id}/payments` | Registrar pago (COM-05, COM-06) |
+| PUT | `/api/purchases/{id}/delivery` | Cambiar entrega (COM-07) |
+| POST | `/api/purchases/{id}/void` | Anular pedido (COM-09) |
+| POST | `/api/purchases/{id}/payments/{paymentId}/void` | Anular pago (COM-09) |
 | GET | `/api/purchases/payment-accounts` | Cuentas activas para pagar |
 | GET | `/api/purchases/price-suggestion?productId=&newCost=` | Precio sugerido (COM-03) |
 
@@ -157,4 +226,9 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] Pruebas: `PurchaseServiceTest`, `PurchaseRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: `core/purchase`, `pages/purchases` (listado, formulario con alerta de costo y producto nuevo,
   detalle con pagos), menú Compras → Pedidos.
-- [ ] COM-07 entrega, COM-08 vista por pagar, COM-09 anulación, pago por persona (DEU-02).
+- [ ] Migración `V9__purchase_delivery.sql`: tipo, estado y fecha de entrega (COM-07).
+- [ ] `PurchaseService`: cambio de entrega, vista por pagar, anulación de pago y de pedido (COM-07 a COM-09).
+- [ ] Pruebas: `PurchaseServiceTest`, `PurchaseRepositoryTest`, `EndpointAuthorizationTest`.
+- [ ] Frontend: entrega en el formulario y el detalle, filtro de entrega y de anulados, pestaña Por pagar,
+  anulación de pedido y de pago con motivo.
+- [ ] Pago por persona (DEU-02), con el módulo Deudas.
