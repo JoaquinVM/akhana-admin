@@ -226,9 +226,9 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] Pruebas: `PurchaseServiceTest`, `PurchaseRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: `core/purchase`, `pages/purchases` (listado, formulario con alerta de costo y producto nuevo,
   detalle con pagos), menú Compras → Pedidos.
-- [ ] Migración `V9__purchase_delivery.sql`: tipo, estado y fecha de entrega (COM-07).
-- [ ] `PurchaseService`: cambio de entrega, vista por pagar, anulación de pago y de pedido (COM-07 a COM-09).
-- [ ] Pruebas: `PurchaseServiceTest`, `PurchaseRepositoryTest`, `EndpointAuthorizationTest`.
-- [ ] Frontend: entrega en el formulario y el detalle, filtro de entrega y de anulados, pestaña Por pagar,
+- [x] Migración `V9__purchase_delivery.sql`: tipo, estado y fecha de entrega (COM-07).
+- [x] `PurchaseService`: cambio de entrega, vista por pagar, anulación de pago y de pedido (COM-07 a COM-09).
+- [x] Pruebas: `PurchaseServiceTest`, `PurchaseRepositoryTest`, `EndpointAuthorizationTest`.
+- [x] Frontend: entrega en el formulario y el detalle, filtro de entrega y de anulados, pestaña Por pagar,
   anulación de pedido y de pago con motivo.
 - [ ] Pago por persona (DEU-02), con el módulo Deudas.
