@@ -63,5 +63,6 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 - Correr solo las pruebas de lo que se toco; la suite completa al cerrar el modulo.
 - `pos.component.html` y `transactions.component.html` son muy grandes: si hay que cambiarlos, proponer
   dividirlos en componentes antes.
-- Git: una rama por modulo (`feat/<modulo>`), commits convencionales (`feat(purchases): ...`). No hacer push
-  ni merge sin pedirlo.
+- Git: una rama por modulo (`feat/<modulo>`) creada desde `main`, commits convencionales (`feat(purchases): ...`).
+  Cada sesion se cierra con el merge de su rama a `main` (fast-forward si se puede), solo si pasan las pruebas;
+  si fallan, no se hace merge y se reporta. No hacer push sin pedirlo.
