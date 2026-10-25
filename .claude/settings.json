@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./frontend/node_modules/**)",
+      "Read(./frontend/.angular/**)",
+      "Read(./frontend/dist/**)",
+      "Read(./frontend/package-lock.json)",
+      "Read(./backend/build/**)",
+      "Read(./backend/bin/**)",
+      "Read(./backend/.gradle/**)",
+      "Read(./.agents/**)",
+      "Read(./.antigravity/**)",
+      "Read(./requirements/**)",
+      "Read(./project/**)",
+      "Read(./openspec/changes/**)",
+      "Read(./**/_context.md)"
+    ]
+  }
+}
