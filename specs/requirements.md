@@ -197,17 +197,24 @@ Decisión: la V1 se construye sobre el proyecto actual, con el mismo stack, y es
 
 | ID | Hallazgo en el sistema actual | Requerimiento | Versión |
 | --- | --- | --- | --- |
-| T-00 | La revisión inicial cubrió documentación, esquema, specs y estructura, pero no la lógica de los servicios Java ni la ejecución de las pruebas. | Revisión del código antes de construir: correr las pruebas de backend y frontend, revisar cómo los servicios calculan los saldos de caja y cuentas, y listar las correcciones en esta tabla. | V1 |
+| T-00 | La revisión inicial cubrió documentación, esquema, specs y estructura, pero no la lógica de los servicios Java ni la ejecución de las pruebas. | Hecha el 25-10-2026: backend 181 pruebas y frontend 277 pruebas, todas pasan. Se revisaron caja, ventas, finanzas y seguridad; las correcciones son T-13 a T-19. | V1 |
 | T-01 | No hay Flyway en `build.gradle` y `ddl-auto=update`: Hibernate altera la base solo y los scripts V1–V9 no son la fuente real. | Migraciones versionadas (Flyway) como única forma de cambiar el esquema; `ddl-auto=validate`. Como no hay datos de producción, las migraciones actuales pueden consolidarse en una migración inicial limpia. | V1 |
 | T-02 | `schema.sql` dice "actualizado tras V1" y le faltan finanzas y permisos. | El esquema se genera desde las migraciones; no se mantiene a mano. | V1 |
-| T-03 | Secreto JWT por defecto y contraseña de base escritos en `application.properties`; usuarios semilla `admin`/`12345admin` documentados en el README. | Secretos solo por variables de entorno; el primer admin se crea con contraseña obligatoria de cambiar. | V1 |
-| T-05 | Los ingresos manuales se editan cambiando el monto. | Movimientos de dinero inmutables: se corrigen con anulación + nuevo registro. | V1 |
-| T-06 | `sale_number` sin restricción de unicidad; estados como texto libre sin `CHECK`. | Unicidad y dominios de estado garantizados en la base. | V1 |
+| T-03 | Secreto JWT por defecto y contraseña de base escritos en `application.properties`; usuarios semilla `admin`/`12345admin` documentados en el README. `DataInitializer` crea en cada arranque `admin`/`12345admin` y `seller`/`12345seller` si no existen, y el vendedor recibe todos los permisos. | Secretos solo por variables de entorno; el primer admin se crea con contraseña obligatoria de cambiar. | V1 |
+| T-05 | Los ingresos y gastos manuales se editan cambiando el monto y la cuenta (`updateTransaction`), lo que reescribe saldos sin rastro. | Movimientos de dinero inmutables: se corrigen con anulación + nuevo registro. | V1 |
+| T-06 | `sale_number` sin restricción de unicidad y calculado como cantidad de ventas de la caja + 1 (dos ventas simultáneas reciben el mismo número); estados como texto libre sin `CHECK`; nada impide en la base dos cajas abiertas. | Unicidad y dominios de estado garantizados en la base: número de venta por secuencia, índice único de `sale_number` e índice único parcial de caja con estado ABIERTA. | V1 |
 | T-07 | `sale_items` no guarda el costo del producto al vender. | Snapshot de costo por línea (POS-05). | V1 |
-| T-08 | Rol `ADMIN/SELLER` convive con la matriz de permisos. | Un solo modelo: roles Operador y Administrador que agrupan permisos por acción. | V1 |
+| T-08 | Rol `ADMIN/SELLER` convive con la matriz de permisos; `UserController` acepta `hasRole('ADMIN')` como atajo. | Un solo modelo: roles Operador y Administrador que agrupan permisos por acción. | V1 |
 | T-10 | Cuentas "BISA" y "Cuenta Joaco" sembradas dentro de una migración. | Las cuentas Caja, Bisa y Efectivo se cargan en la migración de datos, no en el esquema. | V1 |
 | T-11 | Cantidades enteras (`quantity INT`). | Cantidades decimales para venta por peso (P-03, CAT-08). | V1 |
-| T-04 | `current_balance` y totales de caja se guardan aparte de los movimientos y pueden desalinearse. | Saldos derivados del libro de movimientos, o caché con reporte de conciliación. | V2 |
+| T-13 | Solo `UserController` tiene `@PreAuthorize`. Cualquier usuario autenticado puede llamar por API a finanzas, anulación de ventas, catálogo y caja, aunque el menú se lo oculte. | Cada endpoint exige el permiso por acción de la tabla 2.2 (USR-02, USR-05), con pruebas de acceso denegado para el operador. | V1 |
+| T-14 | Saldos de cuenta (`current_balance`) y totales de caja se actualizan leyendo y reescribiendo la entidad, sin bloqueo ni `@Version`. Dos ventas o movimientos simultáneos pueden perder una actualización y desalinear el saldo. La apertura de caja verifica "no hay otra abierta" sin bloqueo. | Toda operación de dinero bloquea la cuenta y la caja que toca (`SELECT … FOR UPDATE` o versión optimista con reintento) dentro de su transacción, con prueba concurrente. | V1 |
+| T-15 | El efectivo esperado se calcula como inicial + ventas en efectivo − gastos manuales de Caja. Las transferencias desde Caja se vinculan a la caja pero la consulta las excluye, y las transferencias hacia Caja ni se vinculan: el saldo de la cuenta Caja y el efectivo esperado divergen. La fórmula está copiada en cinco lugares (caja, ventas, finanzas ×3). | Un único cálculo de efectivo esperado según CAJ-03, que incluye transferencias desde y hacia Caja (CAJ-08) y pagos de pedidos (COM-06), usado por todos los servicios y cubierto con pruebas. | V1 |
+| T-16 | Un gasto o transferencia desde Caja sin caja abierta se registra igual, sin caja. El cliente puede enviar `cashSessionId` de una caja cerrada o de otra cuenta. Editar o anular un gasto de una caja cerrada recalcula el efectivo esperado de esa caja (rompe CAJ-06). | Los movimientos de la cuenta Caja exigen caja abierta y el servidor los vincula a ella; los movimientos de una caja cerrada no se editan ni anulan, se corrigen en la caja actual. | V1 |
+| T-17 | Si no existe la cuenta Caja, la cuenta QR o la categoría Venta, la venta se guarda sin su movimiento financiero, sin error. El endpoint heredado `POST /api/cash-sessions/current/sales` registra ventas sin ítems ni movimientos financieros. | La venta falla si falta su cuenta o categoría (RG-05); se elimina el endpoint heredado. | V1 |
+| T-18 | Finanzas no normaliza montos a escala 2 HALF_UP (alta, edición y saldo inicial de cuenta). La anulación de movimientos acepta motivo vacío y permite anular el saldo inicial. La fecha del movimiento la envía el cliente. | Montos con escala 2 en el servidor, motivo obligatorio en toda anulación (RG-03), saldo inicial no anulable y fecha puesta por el servidor (salvo la importación histórica, FIN-11). | V1 |
+| T-19 | El login no limita intentos fallidos y el token dura 24 h. La baja de usuario sí corta el acceso al instante (el filtro consulta el usuario en cada pedido). | Límite de intentos de login por usuario e IP antes de exponer el VPS (NF-02, NF-05). | V1 |
+| T-04 | `current_balance` y totales de caja se guardan aparte de los movimientos y pueden desalinearse (confirmado en T-00: ver T-14 a T-17). Mientras tanto, las pruebas de dinero comparan el saldo guardado con la suma de movimientos. | Saldos derivados del libro de movimientos, o caché con reporte de conciliación. | V2 |
 | T-09 | Auditoría guarda el nombre de usuario como texto. | Auditoría con referencia al id del usuario. | V2 |
 | T-12 | Una sola caja abierta en todo el sistema. | Caja por punto de venta si hay más de uno (P-01). | V3 |
 
@@ -269,7 +276,7 @@ No quedan preguntas que bloqueen la V1. Antes de migrar falta revisar la unidad 
 
 Las planillas se dejan al terminar la fase 2, después de dos semanas en paralelo; el inventario (V2) y las extensiones (V3) llegan después sin frenar la operación. Ninguna fase avanza sin pasar su compuerta, probada con datos reales de la tienda.
 
-1. **Fase 0 · Decisiones y base técnica** — Revisión del código (T-00). Flyway, secretos por entorno, VPS con HTTPS y respaldo diario. Roles Operador y Administrador con permisos por acción (USR-05; T-01 a T-11).
+1. **Fase 0 · Decisiones y base técnica** — Revisión del código (T-00). Flyway, secretos por entorno, VPS con HTTPS y respaldo diario. Roles Operador y Administrador con permisos por acción (USR-05; T-01 a T-19 marcados V1).
    - Compuerta: revisión del código hecha y servidor de producción listo.
 2. **Fase 1 · V1: lo que falta para reemplazar las planillas** — Compras, deudas y cuentas por cobrar, consumos y ventas al costo, venta por peso, ajustes de caja, costo por línea, historial de ventas, reportes e importación (COM, DEU, CON, CAT-08, CAJ-08 a 10, FIN-10 y 11).
    - Compuerta: productos (con unidad de peso revisada), saldos, pedidos e históricos desde julio migrados.
@@ -289,7 +296,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 
 ### Próximos pasos
 
-- [ ] Revisar el código actual (T-00) y anotar las correcciones en la sección 4.
+- [x] Revisar el código actual (T-00) y anotar las correcciones en la sección 4.
 - [ ] Antes de migrar: revisar la unidad de precio de frutos secos y productos Granel, y ajustar la planilla.
 - [ ] Contratar el VPS y preparar HTTPS y el respaldo diario.
 - [ ] Escribir las specs de Compras, Deudas y cuentas por cobrar, Consumos y venta por peso, los módulos nuevos de la V1.
