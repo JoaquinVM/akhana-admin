@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   SUPPLIERS: 'SUPPLIERS',
   PURCHASES: 'PURCHASES',
   DEBTS: 'DEBTS',
+  CONSUMPTIONS: 'CONSUMPTIONS',
   FINANCES_SUMMARY: 'FINANCES_SUMMARY',
   FINANCES_TRANSACTIONS: 'FINANCES_TRANSACTIONS',
   FINANCES_ACCOUNTS: 'FINANCES_ACCOUNTS',
@@ -35,7 +36,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'OPERATOR',
     label: 'Operador',
-    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo, proveedores, pedidos con sus pagos y deudas con personas. No entra a finanzas ni usuarios.'
+    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo, proveedores, pedidos con sus pagos, deudas con personas y consumos internos. No entra a finanzas ni usuarios.'
   },
   {
     value: 'ADMINISTRATOR',
@@ -64,6 +65,12 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         route: '/sales',
         caption: 'Historial',
         permissionKey: PERMISSIONS.SALES_HISTORY
+      },
+      {
+        label: 'Consumos',
+        route: '/consumptions',
+        caption: 'Al costo',
+        permissionKey: PERMISSIONS.CONSUMPTIONS
       },
       {
         label: 'Historial de cajas',

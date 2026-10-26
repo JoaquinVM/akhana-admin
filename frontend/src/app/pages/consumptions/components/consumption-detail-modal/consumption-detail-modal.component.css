@@ -1,0 +1,42 @@
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hint,
+.audit {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.hint {
+  display: block;
+  margin: 0;
+}
+
+.audit {
+  margin: 0;
+}
+
+.line-name {
+  display: block;
+  font-weight: 600;
+}
+
+.comment {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.loading {
+  color: #64748b;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

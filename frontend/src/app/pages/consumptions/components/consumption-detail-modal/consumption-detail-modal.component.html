@@ -1,0 +1,76 @@
+<app-modal
+  [isOpen]="!!consumptionId()"
+  [title]="consumption() ? 'Consumo ' + consumption()!.consumptionNumber : 'Consumo'"
+  [subtitle]="consumption() ? (consumption()!.consumptionDate | date:'dd/MM/yyyy') + (consumption()!.consumedFor ? ' · para ' + consumption()!.consumedFor : '') : ''"
+  size="lg"
+  (close)="onClose()">
+
+  @if (isLoading()) {
+    <p class="loading">Cargando consumo…</p>
+  } @else if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  } @else if (consumption(); as c) {
+    <div class="detail">
+      @if (c.status === 'ANULADO') {
+        <div class="alert alert-danger" role="alert">
+          <span>Consumo anulado por {{ c.voidedBy }} el {{ c.voidedAt | date:'dd/MM/yyyy HH:mm' }}: {{ c.voidReason }}</span>
+        </div>
+      }
+      @if (c.comment) {
+        <p class="comment">{{ c.comment }}</p>
+      }
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="text-right">Cantidad</th>
+              <th class="text-right">Costo unitario</th>
+              <th class="text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of c.items; track item.id) {
+              <tr>
+                <td>
+                  <span class="line-name">{{ item.productName }}</span>
+                  @if (item.productCode) { <span class="hint">{{ item.productCode }}</span> }
+                </td>
+                <td class="text-right">
+                  {{ item.quantity | number:(item.saleUnit === 'KILOGRAM' ? '1.3-3' : '1.0-0') }}
+                  {{ item.saleUnit === 'KILOGRAM' ? 'kg' : 'u' }}
+                </td>
+                <td class="text-right">Bs {{ item.unitCost | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ item.subtotal | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-right"><strong>Total al costo</strong></td>
+              <td class="text-right"><strong>Bs {{ c.totalAmount | number:'1.2-2' }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="hint">Sin movimiento de dinero: no cambia la caja ni el saldo de ninguna cuenta.</p>
+
+      <div class="detail-footer">
+        <p class="audit">Registrado por {{ c.createdBy }} el {{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+        @if (isActive()) {
+          <button type="button" class="btn btn-danger btn-sm" (click)="openVoid()">Anular consumo</button>
+        }
+      </div>
+    </div>
+  }
+</app-modal>
+
+<app-void-reason-modal
+  [isOpen]="isVoidOpen()"
+  [title]="'Anular consumo ' + (consumption()?.consumptionNumber ?? '')"
+  message="El consumo deja de contar en los reportes. No hay dinero que revertir."
+  [isLoading]="isVoiding()"
+  [errorMessage]="voidError()"
+  (confirmed)="confirmVoid($event)"
+  (close)="closeVoid()" />

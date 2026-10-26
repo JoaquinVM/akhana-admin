@@ -20,7 +20,8 @@ public enum Role {
         Permission.TAGS,
         Permission.SUPPLIERS,
         Permission.PURCHASES,
-        Permission.DEBTS
+        Permission.DEBTS,
+        Permission.CONSUMPTIONS
     )),
     ADMINISTRATOR(EnumSet.allOf(Permission.class));
 

@@ -176,16 +176,20 @@ Se construyen con los reportes (FIN-10); aquí solo se fija qué separan.
 
 Consumos (se puede construir ya):
 
-- [ ] Migración: `consumptions` (número por secuencia `consumption_number_seq`, fecha, para quién, comentario,
+- [x] Migración: `consumptions` (número por secuencia `consumption_number_seq`, fecha, para quién, comentario,
   total, estado, auditoría de alta y de anulación) y `consumption_items` (cantidad `NUMERIC(12,3)`, copia de
   nombre, código y costo, subtotal); `CHECK` de estado y de cantidad > 0.
-- [ ] Permiso `CONSUMPTIONS` (Operador y Administrador) y lectura de productos con ese permiso.
-- [ ] `ConsumptionService`: alta con costo del producto y reglas de CAT-08, listado con filtros, detalle y
+- [x] Permiso `CONSUMPTIONS` (Operador y Administrador) y lectura de productos con ese permiso.
+- [x] `ConsumptionService`: alta con costo del producto y reglas de CAT-08, listado con filtros, detalle y
   anulación.
-- [ ] Pruebas: `ConsumptionServiceTest` (costo copiado, cantidades, fecha futura, anulación, no mueve dinero),
+- [x] Pruebas: `ConsumptionServiceTest` (costo copiado, cantidades, fecha futura, anulación, no mueve dinero),
   `ConsumptionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
-- [ ] Frontend: `core/consumption`, `pages/consumptions` (listado, formulario con buscador de productos y
+- [x] Frontend: `core/consumption`, `pages/consumptions` (listado, formulario con buscador de productos y
   presentaciones por peso, detalle, anulación), menú POS → Consumos.
+
+Hecho el 25-10-2026: migración `V11__consumptions.sql` (estados `REGISTRADO` y `ANULADO`; «Para quién» en
+`consumed_for`). El texto del listado busca en número, para quién, comentario y nombre de producto de las líneas.
+La ruta `/consumptions` se carga en diferido porque el bundle inicial del frontend está en el límite de 1 MB.
 
 Venta al costo y crédito (junto con las cuentas por cobrar de `specs/debts.md`):
 

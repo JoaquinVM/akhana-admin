@@ -20,7 +20,7 @@ Avance de la V1, actualizado al 25-10-2026. Esta tabla es el tablero del proyect
 | Compras | Pedidos con líneas, envío, pagos desde Caja, cuentas o personas, estado de pago, costo y precio sugerido, entrega, por pagar, anulación (COM-01 a COM-09) | ✅ Completo | — | `purchases.md` |
 | Deudas con personas | Personas, pagos de pedidos por una persona, devoluciones, saldo e historial (DEU-01 a DEU-04) | ✅ Completo | — | `debts.md` |
 | Cuentas por cobrar | Nada | 📝 Spec lista | DEU-05 a DEU-07, junto con CON-02 | `debts.md`, `consumptions.md` |
-| Consumos y ventas al costo | Nada | 📝 Spec lista | CON-01; CON-02 (antes, responder P-38 y P-39); CON-03 con los reportes | `consumptions.md` |
+| Consumos y ventas al costo | Consumos internos al costo con número `CON-000001`, para quién, comentario, filtros y anulación, sin movimiento de dinero (CON-01) | 🟡 Parcial | CON-02 venta al costo (antes, responder P-38 y P-39); CON-03 con los reportes | `consumptions.md` |
 | Caja | Una caja abierta, apertura, cierre con arqueo por cortes, diferencia (CAJ-01 a CAJ-07). Las transferencias desde y hacia Caja ya existen en Finanzas | 🟡 Parcial | CAJ-08 ingresos y retiros desde la caja; CAJ-09 ajuste por sobrante o faltante; CAJ-10 caja inicial propuesta | `cash.md` |
 | POS / ventas | Carrito, productos rápidos, descuentos, efectivo, QR o mixto, costo por línea, venta por peso, anulación (POS-01 a POS-08, POS-10) | 🟡 Parcial | POS-09 historial de ventas (la ruta `/sales` está vacía) | `sales.md` |
 | Finanzas | Cuentas, cuenta QR única, categorías, ingresos y gastos, transferencias, anulación, resumen (FIN-02 a FIN-09) | 🟡 Parcial | FIN-01 cuentas Caja, Bisa y Efectivo con saldo al corte | `finance.md` |
@@ -329,5 +329,5 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 - [x] Spec de Deudas y cuentas por cobrar (`specs/debts.md`), incluido el pago de pedidos por una persona (DEU-02) (25-10-2026).
 - [x] Construir Deudas con personas (DEU-01 a DEU-04) (25-10-2026).
 - [x] Spec de Consumos y ventas al costo (`specs/consumptions.md`), validada con la planilla; preguntas P-35 a P-40 (25-10-2026).
-- [ ] Construir los consumos (CON-01).
+- [x] Construir los consumos (CON-01) (25-10-2026).
 - [ ] Responder P-35 a P-40 y construir la venta al costo con las cuentas por cobrar (CON-02, DEU-05 a DEU-07).

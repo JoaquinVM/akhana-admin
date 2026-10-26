@@ -1,0 +1,129 @@
+<div class="consumptions-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Ventas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Consumos</span>
+      </nav>
+      <h1 class="page-title">Consumos</h1>
+      <p class="page-subtitle">Productos usados o consumidos en la tienda, al costo y sin movimiento de dinero</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-add" (click)="openForm()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Nuevo consumo</span>
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+  }
+
+  <div class="filters-card">
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
+      @for (filter of statusFilters; track filter.value) {
+        <button type="button" role="tab" class="filter-pill"
+                [class.active]="statusFilter() === filter.value"
+                [attr.aria-selected]="statusFilter() === filter.value"
+                (click)="setStatusFilter(filter.value)">
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+    <div class="filters-right">
+      <input type="date" class="form-control date-filter" aria-label="Desde"
+             [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+      <input type="date" class="form-control date-filter" aria-label="Hasta"
+             [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+      <select class="form-control product-filter" aria-label="Filtrar por producto"
+              [ngModel]="productFilter()" (ngModelChange)="onProductFilter($event)">
+        <option value="">Todos los productos</option>
+        @for (product of availableProducts(); track product.id) {
+          <option [value]="product.id">{{ product.name }}</option>
+        }
+      </select>
+      <input type="text" class="form-control search-input" placeholder="Buscar por número, para quién o comentario…"
+             aria-label="Buscar consumos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">N.º</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Para quién</th>
+            <th scope="col">Comentario</th>
+            <th scope="col" class="text-right">Total al costo</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr><td colspan="7" class="text-center">Cargando consumos…</td></tr>
+          } @else {
+            @for (consumption of consumptions(); track consumption.id) {
+              <tr [class.voided-row]="consumption.status === 'ANULADO'">
+                <td><span class="consumption-number">{{ consumption.consumptionNumber }}</span></td>
+                <td>{{ consumption.consumptionDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ consumption.consumedFor || '—' }}</td>
+                <td class="comment-cell">{{ consumption.comment || '' }}</td>
+                <td class="text-right">Bs {{ consumption.totalAmount | number:'1.2-2' }}</td>
+                <td><span class="status-badge" [ngClass]="'status-' + consumption.status">{{ statusLabel(consumption.status) }}</span></td>
+                <td class="text-right">
+                  <div class="table-actions" style="justify-content: flex-end">
+                    <button type="button" class="btn-icon" (click)="openDetail(consumption)"
+                            title="Ver detalle" aria-label="Ver detalle">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <div class="table-empty">
+                    <div class="table-empty-icon">🍫</div>
+                    <h4 class="table-empty-title">No hay consumos</h4>
+                    <p class="table-empty-desc">Pulse «Nuevo consumo» para registrar productos usados en la tienda.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+        @if (!isLoading() && consumptions().length > 0) {
+          <tfoot>
+            <tr>
+              <td colspan="4" class="text-right">Total registrado (sin anulados)</td>
+              <td class="text-right"><strong>Bs {{ visibleTotal() | number:'1.2-2' }}</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        }
+      </table>
+    </div>
+  </div>
+
+  <app-consumption-form-modal
+    [isOpen]="isFormOpen()"
+    [products]="availableProducts()"
+    (saved)="onSaved($event)"
+    (close)="isFormOpen.set(false)" />
+
+  <app-consumption-detail-modal
+    [consumptionId]="detailId()"
+    (updated)="onUpdated($event)"
+    (close)="detailId.set(null)" />
+</div>

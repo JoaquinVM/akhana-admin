@@ -47,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {
         CashSessionController.class,
         CategoryController.class,
+        ConsumptionController.class,
         CreditorController.class,
         DebtController.class,
         FinancialAccountController.class,
@@ -98,6 +99,10 @@ class EndpointAuthorizationTest {
             {"voidReason":"Error de carga"}""";
     private static final String VOID_PURCHASE = """
             {"voidReason":"Error de carga"}""";
+    private static final String CONSUMPTION = """
+            {"items":[{"productId":"%s","quantity":1}]}""".formatted(ID);
+    private static final String VOID_CONSUMPTION = """
+            {"voidReason":"Error de carga"}""";
     private static final String QUICK_GROUP = """
             {"name":"Bebidas"}""";
     private static final String REORDER_GROUPS = """
@@ -127,6 +132,7 @@ class EndpointAuthorizationTest {
 
     @MockitoBean private CashSessionService cashSessionService;
     @MockitoBean private CategoryService categoryService;
+    @MockitoBean private ConsumptionService consumptionService;
     @MockitoBean private CreditorService creditorService;
     @MockitoBean private FinancialAccountService financialAccountService;
     @MockitoBean private FinancialCategoryService financialCategoryService;
@@ -225,6 +231,11 @@ class EndpointAuthorizationTest {
                 both(post, "/api/creditors/" + ID + "/repayments", REPAYMENT),
                 both(post, "/api/creditors/" + ID + "/repayments/" + ID + "/void", VOID_DEBT),
                 both(get, "/api/debts/accounts", null),
+                // Consumos internos: listar, detalle, registrar y anular (CON-01)
+                both(get, "/api/consumptions", null),
+                both(get, "/api/consumptions/" + ID, null),
+                both(post, "/api/consumptions", CONSUMPTION),
+                both(post, "/api/consumptions/" + ID + "/void", VOID_CONSUMPTION),
                 // Gastos de caja desde el POS: registrar y anular
                 both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
                 both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),
