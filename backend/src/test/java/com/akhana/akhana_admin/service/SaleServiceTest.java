@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CustomerRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
@@ -52,6 +53,9 @@ class SaleServiceTest {
     @Mock
     private FinancialTransactionRepository financialTransactionRepository;
 
+    @Mock
+    private CustomerRepository customerRepository;
+
     private SaleServiceImpl saleService;
 
     private CashSession activeSession;
@@ -64,7 +68,8 @@ class SaleServiceTest {
     @BeforeEach
     void setUp() {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
-            financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository));
+            financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
+            customerRepository);
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)
@@ -573,5 +578,280 @@ class SaleServiceTest {
         return new SaleDetailRequest(
             List.of(new SaleItemRequest(product1.getId(), new BigDecimal(quantity), BigDecimal.ZERO)),
             BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // CON-02 at-cost sales and DEU-05 credit
+    // ---------------------------------------------------------------------------------------------
+
+    private Customer tiaNeida() {
+        return Customer.builder().id(UUID.randomUUID()).name("Tía Neida").status(CustomerStatus.ACTIVO).build();
+    }
+
+    private SaleDetailRequest atCostSale(PaymentMethod method, BigDecimal amountCash, BigDecimal amountReceived,
+                                         UUID customerId, BigDecimal creditAmount, BigDecimal quantity) {
+        return new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), quantity, BigDecimal.ZERO)),
+            BigDecimal.ZERO, method, amountCash, null, amountReceived, null, SaleType.AL_COSTO, customerId, creditAmount);
+    }
+
+    private List<Sale> captureSavedSales() {
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
+        List<Sale> saved = new ArrayList<>();
+        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
+            Sale s = invocation.getArgument(0);
+            if (s.getId() == null) {
+                s.setId(UUID.randomUUID());
+            }
+            saved.add(s);
+            return s;
+        });
+        return saved;
+    }
+
+    @Test
+    @DisplayName("CON-02: la venta al costo cobra el costo del producto, sin utilidad, e ingresa a Caja como Venta")
+    void atCostSaleChargesTheProductCost() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        List<Sale> saved = captureSavedSales();
+
+        SaleResponse response = saleService.registerSale(
+            atCostSale(PaymentMethod.EFECTIVO, null, new BigDecimal("30.00"), null, null, new BigDecimal("2")), "cajero");
+
+        Sale sale = saved.get(0);
+        assertThat(sale.getSaleType()).isEqualTo(SaleType.AL_COSTO);
+        assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("12.50");
+        assertThat(sale.getItems().get(0).getUnitCost()).isEqualByComparingTo("12.50");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("25.00");
+        assertThat(sale.getChangeGiven()).isEqualByComparingTo("5.00");
+        assertThat(sale.getCreditAmount()).isEqualByComparingTo("0.00");
+        assertThat(sale.getCustomer()).isNull();
+        assertThat(response.saleType()).isEqualTo(SaleType.AL_COSTO);
+        assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("125.00");
+        assertThat(activeSession.getTotalSalesCash()).isEqualByComparingTo("25.00");
+    }
+
+    @Test
+    @DisplayName("CON-02: la venta al costo rechaza descuentos por unidad y generales")
+    void atCostSaleRejectsDiscounts() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        SaleDetailRequest unitDiscount = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), BigDecimal.ONE, new BigDecimal("1.00"))),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null, SaleType.AL_COSTO, null, null);
+        SaleDetailRequest globalDiscount = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), BigDecimal.ONE, BigDecimal.ZERO)),
+            new BigDecimal("2.00"), PaymentMethod.EFECTIVO, null, null, null, null, SaleType.AL_COSTO, null, null);
+
+        for (SaleDetailRequest req : List.of(unitDiscount, globalDiscount)) {
+            assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Una venta al costo no admite descuentos.");
+        }
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("CON-02: un producto con costo 0 no se vende al costo")
+    void atCostSaleRejectsZeroCost() {
+        product1.setBuyPrice(BigDecimal.ZERO);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        assertThatThrownBy(() -> saleService.registerSale(
+                atCostSale(PaymentMethod.EFECTIVO, null, null, null, null, BigDecimal.ONE), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("'Café Premium' no tiene costo registrado; no se puede vender al costo.");
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("CON-02: sin caja abierta la venta al costo se rechaza como toda venta")
+    void atCostSaleNeedsOpenSession() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> saleService.registerSale(
+                atCostSale(PaymentMethod.EFECTIVO, null, null, null, null, BigDecimal.ONE), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("caja abierta");
+    }
+
+    @Test
+    @DisplayName("DEU-05: toda a crédito queda con método CREDITO, sin movimiento financiero ni efectivo esperado")
+    void fullCreditSaleHasNoMovement() {
+        Customer neida = tiaNeida();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
+        when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(activeSession.getId())).thenReturn(BigDecimal.ZERO);
+        when(financialTransactionRepository.sumActiveCashInflowsBySessionId(activeSession.getId())).thenReturn(BigDecimal.ZERO);
+        List<Sale> saved = captureSavedSales();
+
+        saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, null, neida.getId(),
+            new BigDecimal("37.50"), new BigDecimal("3")), "cajero");
+
+        Sale sale = saved.get(0);
+        assertThat(sale.getPaymentMethod()).isEqualTo(PaymentMethod.CREDITO);
+        assertThat(sale.getCreditAmount()).isEqualByComparingTo("37.50");
+        assertThat(sale.getCustomer()).isSameAs(neida);
+        assertThat(sale.getAmountCash()).isEqualByComparingTo("0.00");
+        assertThat(sale.getAmountQr()).isEqualByComparingTo("0.00");
+        verify(financialTransactionRepository, never()).save(any(FinancialTransaction.class));
+        assertThat(activeSession.getTotalSalesCash()).isEqualByComparingTo("0.00");
+        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("100.00");
+        assertThat(cashAcc.getCurrentBalance()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    @DisplayName("DEU-05: parte por QR y parte a crédito; solo lo cobrado entra a la cuenta QR")
+    void partialCreditSalePaysTheRestByQr() {
+        product1.setBuyPrice(new BigDecimal("120.00"));
+        Customer neida = tiaNeida();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
+        List<Sale> saved = captureSavedSales();
+
+        saleService.registerSale(atCostSale(PaymentMethod.QR, null, null, neida.getId(),
+            new BigDecimal("80.00"), BigDecimal.ONE), "cajero");
+
+        Sale sale = saved.get(0);
+        assertThat(sale.getPaymentMethod()).isEqualTo(PaymentMethod.QR);
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("120.00");
+        assertThat(sale.getAmountQr()).isEqualByComparingTo("40.00");
+        assertThat(sale.getCreditAmount()).isEqualByComparingTo("80.00");
+        ArgumentCaptor<FinancialTransaction> txCaptor = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository).save(txCaptor.capture());
+        assertThat(txCaptor.getValue().getAmount()).isEqualByComparingTo("40.00");
+        assertThat(txCaptor.getValue().getSourceAccount()).isSameAs(qrAcc);
+        assertThat(qrAcc.getCurrentBalance()).isEqualByComparingTo("240.00");
+    }
+
+    @Test
+    @DisplayName("DEU-05: parte en efectivo con cambio y parte a crédito")
+    void partialCreditSalePaysTheRestInCash() {
+        Customer neida = tiaNeida();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
+        List<Sale> saved = captureSavedSales();
+
+        // Total 50.00: 20.00 now (paid with 50.00), 30.00 on credit
+        saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, new BigDecimal("50.00"), neida.getId(),
+            new BigDecimal("30.00"), new BigDecimal("4")), "cajero");
+
+        Sale sale = saved.get(0);
+        assertThat(sale.getAmountCash()).isEqualByComparingTo("20.00");
+        assertThat(sale.getChangeGiven()).isEqualByComparingTo("30.00");
+        assertThat(activeSession.getTotalSalesCash()).isEqualByComparingTo("20.00");
+        assertThat(activeSession.getTotalSales()).isEqualByComparingTo("50.00");
+    }
+
+    @Test
+    @DisplayName("DEU-05: una venta normal no puede quedar a crédito")
+    void normalSaleRejectsCredit() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        SaleDetailRequest req = new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), BigDecimal.ONE, BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null, SaleType.NORMAL, UUID.randomUUID(),
+            new BigDecimal("5.00"));
+
+        assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Solo una venta al costo puede quedar a crédito.");
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("DEU-05: el crédito exige un cliente activo")
+    void creditNeedsAnActiveCustomer() {
+        Customer inactive = tiaNeida();
+        inactive.setStatus(CustomerStatus.INACTIVO);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(customerRepository.findByIdForUpdate(inactive.getId())).thenReturn(Optional.of(inactive));
+
+        for (UUID customerId : Arrays.asList(null, inactive.getId())) {
+            assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, null, customerId,
+                    new BigDecimal("5.00"), BigDecimal.ONE), "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Elija un cliente activo para la venta a crédito.");
+        }
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("DEU-05: el crédito no puede ser negativo ni superar el total; método Crédito exige todo a crédito")
+    void creditMustBeWithinTheTotal() {
+        Customer neida = tiaNeida();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        for (String credit : List.of("-1.00", "12.51")) {
+            assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, null, neida.getId(),
+                    new BigDecimal(credit), BigDecimal.ONE), "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("El crédito debe estar entre Bs 0,00 y el total de la venta.");
+        }
+        assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.CREDITO, null, null, neida.getId(),
+                new BigDecimal("5.00"), BigDecimal.ONE), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("lo cobrado más el crédito debe ser igual al total");
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    private Sale completedCreditSale(Customer customer, String credit) {
+        return Sale.builder()
+            .id(UUID.randomUUID())
+            .saleNumber("VTA-000010")
+            .cashSession(activeSession)
+            .status(SaleStatus.COMPLETADA)
+            .saleType(SaleType.AL_COSTO)
+            .customer(customer)
+            .creditAmount(new BigDecimal(credit))
+            .totalAmount(new BigDecimal(credit))
+            .paymentMethod(PaymentMethod.CREDITO)
+            .build();
+    }
+
+    @Test
+    @DisplayName("DEU-05: no se anula una venta a crédito ya cobrada; primero se anula el cobro")
+    void voidCreditSaleAlreadyCollectedIsRejected() {
+        Customer neida = tiaNeida();
+        Sale sale = completedCreditSale(neida, "80.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
+        when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
+        // 80.00 on credit, 50.00 already collected
+        when(customerRepository.computeBalance(neida.getId())).thenReturn(new BigDecimal("30.00"));
+
+        assertThatThrownBy(() -> saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Ya se cobró parte de esta venta a Tía Neida; anule primero el cobro.");
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
+    }
+
+    @Test
+    @DisplayName("DEU-05: una venta a crédito sin cobros se anula con su caja abierta")
+    void voidCreditSaleWithoutCollections() {
+        Customer neida = tiaNeida();
+        Sale sale = completedCreditSale(neida, "80.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
+        when(saleRepository.save(any(Sale.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
+        when(customerRepository.computeBalance(neida.getId())).thenReturn(new BigDecimal("80.00"));
+        when(financialTransactionRepository.findBySaleId(sale.getId())).thenReturn(List.of());
+
+        saleService.voidSale(sale.getId(), new VoidSaleRequest("Error de carga"), "cajero");
+
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.ANULADA);
     }
 }

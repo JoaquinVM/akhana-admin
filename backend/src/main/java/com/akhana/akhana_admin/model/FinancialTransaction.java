@@ -67,6 +67,10 @@ public class FinancialTransaction {
     @Column(name = "creditor_repayment_id", updatable = false)
     private UUID creditorRepaymentId;
 
+    // Collection from a customer (DEU-06): managed only from Deudas
+    @Column(name = "customer_collection_id", updatable = false)
+    private UUID customerCollectionId;
+
     // Auditoría de registro (independiente de transactionDate)
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;

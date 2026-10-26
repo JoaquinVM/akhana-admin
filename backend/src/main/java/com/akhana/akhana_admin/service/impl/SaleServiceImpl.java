@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CustomerRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
@@ -40,21 +41,32 @@ public class SaleServiceImpl implements SaleService {
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    private final CustomerRepository customerRepository;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
     static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
     static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
+    static final String AT_COST_NO_DISCOUNTS = "Una venta al costo no admite descuentos.";
+    static final String CREDIT_ONLY_AT_COST = "Solo una venta al costo puede quedar a crédito.";
+    static final String CREDIT_CUSTOMER_REQUIRED = "Elija un cliente activo para la venta a crédito.";
+    static final String CREDIT_OUT_OF_RANGE = "El crédito debe estar entre Bs 0,00 y el total de la venta.";
+    static final String CREDIT_METHOD_INCOMPLETE = "El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.";
+
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     @Override
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
-        // Lock order for every money operation: cash session first, then accounts by id (T-14)
+        // Lock order for every money operation: cash session, then customer, then accounts by id (T-14)
         CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
             .orElseThrow(() -> new IllegalStateException("Para registrar una venta debe existir una caja abierta."));
 
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException("La venta debe contener al menos un producto.");
         }
+
+        SaleType saleType = request.saleType() != null ? request.saleType() : SaleType.NORMAL;
+        boolean atCost = saleType == SaleType.AL_COSTO;
 
         BigDecimal subtotalGross = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal discountItemsTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -69,12 +81,23 @@ public class SaleServiceImpl implements SaleService {
             }
 
             BigDecimal qty = normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
-            BigDecimal unitPrice = product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
             // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
-            BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal unitCost = product.getBuyPrice() != null
+                ? product.getBuyPrice().setScale(2, RoundingMode.HALF_UP)
+                : ZERO;
             BigDecimal discountPerUnit = itemReq.discountPerUnit() != null 
                 ? itemReq.discountPerUnit().setScale(2, RoundingMode.HALF_UP) 
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            // At cost the server sets price = cost, whatever the client sent (CON-02)
+            if (atCost) {
+                if (unitCost.signum() <= 0) {
+                    throw new IllegalArgumentException("'" + product.getName() + "' no tiene costo registrado; no se puede vender al costo.");
+                }
+                if (discountPerUnit.signum() != 0) {
+                    throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
+                }
+            }
+            BigDecimal unitPrice = atCost ? unitCost : product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
 
             if (discountPerUnit.compareTo(BigDecimal.ZERO) < 0 || discountPerUnit.compareTo(unitPrice) > 0) {
                 throw new IllegalArgumentException("El descuento por unidad para '" + product.getName() + "' no puede ser negativo ni superar su precio.");
@@ -109,6 +132,9 @@ public class SaleServiceImpl implements SaleService {
             ? request.globalDiscountAmount().setScale(2, RoundingMode.HALF_UP) 
             : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
+        if (atCost && globalDiscount.signum() != 0) {
+            throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
+        }
         if (globalDiscount.compareTo(BigDecimal.ZERO) < 0 || globalDiscount.compareTo(subtotalPostItems) > 0) {
             throw new IllegalArgumentException("El descuento general no puede ser negativo ni superar el total de la venta.");
         }
@@ -116,34 +142,64 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal discountTotal = discountItemsTotal.add(globalDiscount).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalAmount = subtotalPostItems.subtract(globalDiscount).setScale(2, RoundingMode.HALF_UP);
 
+        // Credit only on at-cost sales (DEU-05, P-12); the payment method covers the part paid now
+        BigDecimal creditAmount = request.creditAmount() != null
+            ? request.creditAmount().setScale(2, RoundingMode.HALF_UP)
+            : ZERO;
+        if (creditAmount.signum() > 0 && !atCost) {
+            throw new IllegalArgumentException(CREDIT_ONLY_AT_COST);
+        }
+        if (creditAmount.signum() < 0 || creditAmount.compareTo(totalAmount) > 0) {
+            throw new IllegalArgumentException(CREDIT_OUT_OF_RANGE);
+        }
+        BigDecimal paidNow = totalAmount.subtract(creditAmount).setScale(2, RoundingMode.HALF_UP);
+        PaymentMethod paymentMethod = request.paymentMethod();
+        if (creditAmount.signum() > 0 && paidNow.signum() == 0) {
+            // Nothing paid now: the whole sale is on credit
+            paymentMethod = PaymentMethod.CREDITO;
+        } else if (paymentMethod == PaymentMethod.CREDITO) {
+            throw new IllegalArgumentException(CREDIT_METHOD_INCOMPLETE);
+        }
+
         BigDecimal amountCash = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal amountQr = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal amountReceived = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal changeGiven = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-        if (request.paymentMethod() == PaymentMethod.EFECTIVO) {
-            amountCash = totalAmount;
-            amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : totalAmount;
-            if (amountReceived.compareTo(totalAmount) < 0) {
+        if (paymentMethod == PaymentMethod.EFECTIVO) {
+            amountCash = paidNow;
+            amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : paidNow;
+            if (amountReceived.compareTo(paidNow) < 0) {
                 throw new IllegalArgumentException("El monto recibido en efectivo no puede ser menor al total.");
             }
-            changeGiven = amountReceived.subtract(totalAmount).setScale(2, RoundingMode.HALF_UP);
-        } else if (request.paymentMethod() == PaymentMethod.QR) {
-            amountQr = totalAmount;
+            changeGiven = amountReceived.subtract(paidNow).setScale(2, RoundingMode.HALF_UP);
+        } else if (paymentMethod == PaymentMethod.QR) {
+            amountQr = paidNow;
             amountReceived = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             changeGiven = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        } else if (request.paymentMethod() == PaymentMethod.MIXTO) {
+        } else if (paymentMethod == PaymentMethod.MIXTO) {
             BigDecimal cashPortion = request.amountCash() != null ? request.amountCash().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            if (cashPortion.compareTo(BigDecimal.ZERO) < 0 || cashPortion.compareTo(totalAmount) > 0) {
+            if (cashPortion.compareTo(BigDecimal.ZERO) < 0 || cashPortion.compareTo(paidNow) > 0) {
                 throw new IllegalArgumentException("En pago mixto, la porción en efectivo debe estar entre 0 y el total.");
             }
             amountCash = cashPortion;
-            amountQr = totalAmount.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
+            amountQr = paidNow.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
             amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : cashPortion;
             if (amountReceived.compareTo(cashPortion) < 0) {
                 throw new IllegalArgumentException("El monto recibido en efectivo no puede ser menor a la porción pactada en efectivo.");
             }
             changeGiven = amountReceived.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // The customer is locked after the session so its receivable does not change meanwhile (T-14)
+        Customer customer = null;
+        if (atCost && (request.customerId() != null || creditAmount.signum() > 0)) {
+            if (request.customerId() == null) {
+                throw new IllegalArgumentException(CREDIT_CUSTOMER_REQUIRED);
+            }
+            customer = customerRepository.findByIdForUpdate(request.customerId())
+                .filter(c -> c.getStatus() == CustomerStatus.ACTIVO)
+                .orElseThrow(() -> new IllegalArgumentException(CREDIT_CUSTOMER_REQUIRED));
         }
 
         // The sale fails if its category or accounts are missing (RG-05); accounts are locked after the session (T-14)
@@ -171,12 +227,15 @@ public class SaleServiceImpl implements SaleService {
             .saleNumber(saleNumber)
             .cashSession(session)
             .status(SaleStatus.COMPLETADA)
+            .saleType(saleType)
+            .customer(customer)
+            .creditAmount(creditAmount)
             .subtotalAmount(subtotalGross)
             .discountItemsTotal(discountItemsTotal)
             .globalDiscountAmount(globalDiscount)
             .discountTotal(discountTotal)
             .totalAmount(totalAmount)
-            .paymentMethod(request.paymentMethod())
+            .paymentMethod(paymentMethod)
             .amountCash(amountCash)
             .amountQr(amountQr)
             .amountReceived(amountReceived)
@@ -233,6 +292,17 @@ public class SaleServiceImpl implements SaleService {
         CashSession session = openSession
             .filter(open -> open.getId().equals(sale.getCashSession().getId()))
             .orElseThrow(() -> new IllegalStateException("Solo se pueden anular ventas pertenecientes a una caja abierta."));
+
+        // Voiding a credit sale lowers the receivable, which cannot go below 0 (DEU-05); customer after session (T-14)
+        if (sale.getCreditAmount() != null && sale.getCreditAmount().signum() > 0 && sale.getCustomer() != null) {
+            Customer customer = customerRepository.findByIdForUpdate(sale.getCustomer().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con ID: " + sale.getCustomer().getId()));
+            BigDecimal balance = Optional.ofNullable(customerRepository.computeBalance(customer.getId())).orElse(BigDecimal.ZERO);
+            if (balance.subtract(sale.getCreditAmount()).signum() < 0) {
+                throw new IllegalStateException("Ya se cobró parte de esta venta a " + customer.getName()
+                    + "; anule primero el cobro.");
+            }
+        }
 
         sale.setStatus(SaleStatus.ANULADA);
         sale.setVoidedAt(Instant.now());

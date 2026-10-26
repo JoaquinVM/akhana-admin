@@ -236,12 +236,14 @@ Deudas con personas (se puede construir ya):
 
 Cuentas por cobrar (junto con o después de CON-02):
 
-- [ ] Migración: `customers`, `customer_collections`, `sales.customer_id`, `sales.credit_amount`,
-  `CREDITO` en el `CHECK` de `sales.payment_method` y `financial_transactions.customer_collection_id`.
-- [ ] `SaleService`: crédito en la venta al costo y regla de anulación; `ExpectedCashCalculator` suma los cobros
-  a Caja.
-- [ ] `CustomerService`: ABM, saldo calculado, historial, cobro y su anulación.
-- [ ] Pruebas: `CustomerServiceTest`, `SaleServiceTest` (crédito), `ExpectedCashCalculatorTest`,
-  `EndpointAuthorizationTest`.
+- [x] Migración `V12__at_cost_sales_receivables.sql`: `customers`, `customer_collections`, `sales.customer_id`,
+  `sales.credit_amount`, `CREDITO` en el `CHECK` de `sales.payment_method` y
+  `financial_transactions.customer_collection_id`.
+- [x] `SaleService`: crédito en la venta al costo y regla de anulación; `ExpectedCashCalculator` suma los cobros
+  a Caja (ingresos de Caja, que solo vienen de cobros).
+- [x] `CustomerService`: ABM, saldo calculado, historial, cobro y su anulación; Finanzas y POS rechazan editar o
+  anular el ingreso de un cobro.
+- [x] Pruebas: `CustomerServiceTest`, `SaleServiceTest` (crédito), `CustomerRepositoryTest` y
+  `FinancialTransactionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [ ] Frontend: pestaña Clientes con detalle e historial, cobro y anulación; crédito y cliente en el pago de la
   venta al costo del POS.

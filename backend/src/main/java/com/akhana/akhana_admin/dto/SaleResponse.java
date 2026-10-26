@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.dto;
 import com.akhana.akhana_admin.model.PaymentMethod;
 import com.akhana.akhana_admin.model.Sale;
 import com.akhana.akhana_admin.model.SaleStatus;
+import com.akhana.akhana_admin.model.SaleType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -33,7 +34,11 @@ public record SaleResponse(
     Instant voidedAt,
     String voidedBy,
     String voidReason,
-    List<SaleItemResponse> items
+    List<SaleItemResponse> items,
+    SaleType saleType,
+    UUID customerId,
+    String customerName,
+    BigDecimal creditAmount
 ) {
     public SaleResponse(
         UUID id,
@@ -67,7 +72,11 @@ public record SaleResponse(
             null,
             null,
             null,
-            Collections.emptyList()
+            Collections.emptyList(),
+            SaleType.NORMAL,
+            null,
+            null,
+            BigDecimal.ZERO
         );
     }
 
@@ -112,7 +121,11 @@ public record SaleResponse(
             sale.getVoidedAt(),
             sale.getVoidedBy(),
             sale.getVoidReason(),
-            itemResponses
+            itemResponses,
+            sale.getSaleType(),
+            sale.getCustomer() != null ? sale.getCustomer().getId() : null,
+            sale.getCustomer() != null ? sale.getCustomer().getName() : null,
+            sale.getCreditAmount()
         );
     }
 }

@@ -79,9 +79,14 @@ class FinancialTransactionRepositoryTest {
         insert("TRANSFERENCIA", other, caja, "9.00", "ANULADO", session);
         insert("GASTO_MANUAL", other, null, "33.00", "ACTIVO", session);
         insert("GASTO_MANUAL", caja, null, "11.00", "ACTIVO", otherSession);
+        // Collections into Caja (DEU-06) add; sale incomes are counted through the session totals, not here
+        insert("INGRESO_MANUAL", caja, null, "30.00", "ACTIVO", session);
+        insert("INGRESO_MANUAL", caja, null, "5.00", "ANULADO", session);
+        insert("INGRESO_MANUAL", other, null, "12.00", "ACTIVO", session);
+        insert("VENTA_INGRESO", caja, null, "50.00", "ACTIVO", session);
 
         assertEquals(0, new BigDecimal("100.00").compareTo(financialTransactionRepository.sumActiveCashOutflowsBySessionId(session)));
-        assertEquals(0, new BigDecimal("25.00").compareTo(financialTransactionRepository.sumActiveCashInflowsBySessionId(session)));
+        assertEquals(0, new BigDecimal("55.00").compareTo(financialTransactionRepository.sumActiveCashInflowsBySessionId(session)));
     }
 
     private void insert(String type, UUID source, UUID destination, String amount, String status, UUID session) {

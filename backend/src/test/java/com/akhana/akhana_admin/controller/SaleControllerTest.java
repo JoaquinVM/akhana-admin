@@ -11,6 +11,7 @@ import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
 import com.akhana.akhana_admin.model.PaymentMethod;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.SaleStatus;
+import com.akhana.akhana_admin.model.SaleType;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.JwtService;
@@ -95,7 +96,11 @@ class SaleControllerTest {
             null,
             null,
             null,
-            Collections.emptyList()
+            Collections.emptyList(),
+            SaleType.NORMAL,
+            null,
+            null,
+            BigDecimal.ZERO
         );
 
         when(jwtService.isTokenValid(AUTH_TOKEN, "admin")).thenReturn(true);
@@ -161,7 +166,11 @@ class SaleControllerTest {
             Instant.now(),
             "admin",
             "Error en producto cobrado",
-            Collections.emptyList()
+            Collections.emptyList(),
+            SaleType.NORMAL,
+            null,
+            null,
+            BigDecimal.ZERO
         );
 
         when(saleService.voidSale(eq(saleId), any(VoidSaleRequest.class), eq("admin"))).thenReturn(voidedResponse);

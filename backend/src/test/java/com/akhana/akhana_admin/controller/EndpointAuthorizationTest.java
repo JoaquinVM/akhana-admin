@@ -49,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CategoryController.class,
         ConsumptionController.class,
         CreditorController.class,
+        CustomerController.class,
         DebtController.class,
         FinancialAccountController.class,
         FinancialCategoryController.class,
@@ -95,6 +96,10 @@ class EndpointAuthorizationTest {
             {"name":"Mami"}""";
     private static final String REPAYMENT = """
             {"accountId":"%s","amount":50.00}""".formatted(ID);
+    private static final String CUSTOMER = """
+            {"name":"Tía Neida"}""";
+    private static final String COLLECTION = """
+            {"accountId":"%s","amount":50.00}""".formatted(ID);
     private static final String VOID_DEBT = """
             {"voidReason":"Error de carga"}""";
     private static final String VOID_PURCHASE = """
@@ -134,6 +139,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private CategoryService categoryService;
     @MockitoBean private ConsumptionService consumptionService;
     @MockitoBean private CreditorService creditorService;
+    @MockitoBean private CustomerService customerService;
     @MockitoBean private FinancialAccountService financialAccountService;
     @MockitoBean private FinancialCategoryService financialCategoryService;
     @MockitoBean private FinancialSummaryService financialSummaryService;
@@ -231,6 +237,15 @@ class EndpointAuthorizationTest {
                 both(post, "/api/creditors/" + ID + "/repayments", REPAYMENT),
                 both(post, "/api/creditors/" + ID + "/repayments/" + ID + "/void", VOID_DEBT),
                 both(get, "/api/debts/accounts", null),
+                // Cuentas por cobrar: clientes, historial, cobros y su anulación (DEU-05 a DEU-07)
+                both(get, "/api/customers", null),
+                both(get, "/api/customers/" + ID, null),
+                both(post, "/api/customers", CUSTOMER),
+                both(put, "/api/customers/" + ID, CUSTOMER),
+                both(delete, "/api/customers/" + ID, null),
+                both(get, "/api/customers/" + ID + "/history", null),
+                both(post, "/api/customers/" + ID + "/collections", COLLECTION),
+                both(post, "/api/customers/" + ID + "/collections/" + ID + "/void", VOID_DEBT),
                 // Consumos internos: listar, detalle, registrar y anular (CON-01)
                 both(get, "/api/consumptions", null),
                 both(get, "/api/consumptions/" + ID, null),

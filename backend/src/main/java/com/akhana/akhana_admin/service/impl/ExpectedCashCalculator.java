@@ -10,7 +10,8 @@ import java.math.RoundingMode;
 
 /**
  * Single place for the expected cash of a session (CAJ-03, T-15):
- * opening + cash sales − Caja expenses − transfers out of Caja + transfers into Caja.
+ * opening + cash sales + collections into Caja − Caja expenses − transfers out of Caja + transfers into Caja.
+ * An at-cost sale on credit only adds its cash part (DEU-05).
  * Voided movements are excluded by the repository sums.
  */
 @Component

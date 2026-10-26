@@ -193,17 +193,24 @@ La ruta `/consumptions` se carga en diferido porque el bundle inicial del fronte
 
 Venta al costo y crédito (junto con las cuentas por cobrar de `specs/debts.md`):
 
-- [ ] Migración: `sales.sale_type` (`NORMAL`, `AL_COSTO`, por defecto `NORMAL`), más lo de cuentas por cobrar de
+- [x] Migración: `sales.sale_type` (`NORMAL`, `AL_COSTO`, por defecto `NORMAL`), más lo de cuentas por cobrar de
   `specs/debts.md` (`customers`, `customer_collections`, `sales.customer_id`, `sales.credit_amount`, `CREDITO`,
   `financial_transactions.customer_collection_id`).
-- [ ] `SaleService`: precio = costo en la venta al costo, sin descuentos, costo 0 rechazado, crédito con cliente
+- [x] `SaleService`: precio = costo en la venta al costo, sin descuentos, costo 0 rechazado, crédito con cliente
   activo, bloqueo caja → cliente → cuentas y regla de anulación con cobros.
-- [ ] `CustomerService` y cobros (DEU-05 a DEU-07, tareas de `specs/debts.md`).
-- [ ] Pruebas: `SaleServiceTest` (al costo, crédito total y parcial, rechazos, anulación), `CustomerServiceTest`,
-  `ExpectedCashCalculatorTest` (cobros a Caja; la venta a crédito no suma), `EndpointAuthorizationTest`.
+- [x] `CustomerService` y cobros (DEU-05 a DEU-07, tareas de `specs/debts.md`).
+- [x] Pruebas: `SaleServiceTest` (al costo, crédito total y parcial, rechazos, anulación), `CustomerServiceTest`,
+  `CustomerRepositoryTest` y `FinancialTransactionRepositoryTest` (contra PostgreSQL: cobros a Caja suman al
+  esperado; la venta a crédito no, porque solo cuenta lo cobrado), `EndpointAuthorizationTest`.
+
+Backend hecho el 25-10-2026: migración `V12__at_cost_sales_receivables.sql`. Si toda la venta queda a crédito el
+servidor guarda el método `CREDITO` aunque el cliente envíe otro; enviar `CREDITO` con una parte pagada se rechaza
+(«El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.»). En una venta normal
+se ignora `customerId`. El filtro `GET /api/sales?saleType=` queda con el historial (POS-09).
 - [ ] Frontend: interruptor «Venta al costo» en el POS con cliente y crédito en el pago; marca «Al costo» en el
-  detalle y filtro por tipo en el historial; pestaña Clientes en Deudas. `pos.component.html` es grande:
-  proponer antes dividir el pago en un componente propio.
+  detalle y filtro por tipo en el historial; pestaña Clientes en Deudas. El cobro vive en el modal de
+  `pages/pos/register-sale` (no en `pos.component.html`): antes, dividirlo en un componente propio
+  (`pages/pos/components/checkout-modal`).
 
 Reportes (con FIN-10):
 

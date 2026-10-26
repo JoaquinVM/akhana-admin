@@ -34,6 +34,21 @@ public class Sale {
     @Builder.Default
     private SaleStatus status = SaleStatus.COMPLETADA;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sale_type", nullable = false, length = 20)
+    @Builder.Default
+    private SaleType saleType = SaleType.NORMAL;
+
+    // Customer of an at-cost sale; required only when part of it is on credit (DEU-05)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    // Part of the total left as a receivable; paid now + credit = total (DEU-05)
+    @Column(name = "credit_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal creditAmount = BigDecimal.ZERO;
+
     @Column(name = "subtotal_amount", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal subtotalAmount = BigDecimal.ZERO;

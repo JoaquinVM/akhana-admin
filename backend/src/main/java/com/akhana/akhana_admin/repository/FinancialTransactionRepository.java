@@ -26,6 +26,8 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     // The expense of a repayment to a person (DEU-03)
     Optional<FinancialTransaction> findByCreditorRepaymentId(UUID creditorRepaymentId);
 
+    Optional<FinancialTransaction> findByCustomerCollectionId(UUID customerCollectionId);
+
     // Locked first so two voids or edits of the same movement cannot both revert it (T-14)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM FinancialTransaction t WHERE t.id = :id")
@@ -42,12 +44,14 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
            "AND t.sourceAccount.isCashAccount = true")
     BigDecimal sumActiveCashOutflowsBySessionId(@Param("cashSessionId") UUID cashSessionId);
 
-    // Cash entering the drawer during the session other than sales: transfers into Caja (CAJ-08, T-15)
+    // Cash entering the drawer during the session other than sales: transfers into Caja (CAJ-08, T-15) and
+    // Caja incomes, which only come from customer collections (DEU-06)
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
+           "LEFT JOIN t.destinationAccount d " +
            "WHERE t.cashSessionId = :cashSessionId " +
            "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
-           "AND t.type = com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA " +
-           "AND t.destinationAccount.isCashAccount = true")
+           "AND ((t.type = com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA AND d.isCashAccount = true) " +
+           "OR (t.type = com.akhana.akhana_admin.model.FinancialTransactionType.INGRESO_MANUAL AND t.sourceAccount.isCashAccount = true))")
     BigDecimal sumActiveCashInflowsBySessionId(@Param("cashSessionId") UUID cashSessionId);
 
     List<FinancialTransaction> findTop10ByOrderByTransactionDateDesc();

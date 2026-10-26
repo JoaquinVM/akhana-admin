@@ -219,7 +219,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
-        if (tx.getCreditorRepaymentId() != null) {
+        if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
             throw new IllegalStateException(DEBT_MOVEMENT);
         }
 
@@ -289,7 +289,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
-        if (tx.getCreditorRepaymentId() != null) {
+        if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
             throw new IllegalStateException(DEBT_MOVEMENT);
         }
         lockSessionIfOpen(tx.getCashSessionId(), "No se pueden anular gastos de una caja cerrada.");
@@ -316,7 +316,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
-        if (tx.getCreditorRepaymentId() != null) {
+        if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
             throw new IllegalStateException(DEBT_MOVEMENT);
         }
 
@@ -463,6 +463,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .saleId(tx.getSaleId())
                 .purchaseId(tx.getPurchaseId())
                 .creditorRepaymentId(tx.getCreditorRepaymentId())
+                .customerCollectionId(tx.getCustomerCollectionId())
                 .cashSessionId(tx.getCashSessionId())
                 .sourceAccount(sourceSummary)
                 .destinationAccount(destSummary)
