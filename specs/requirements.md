@@ -15,7 +15,7 @@ Avance de la V1, actualizado al 26-10-2026. Esta tabla es el tablero del proyect
 | --- | --- | --- | --- | --- |
 | Base técnica | Flyway, secretos por entorno, permisos en cada endpoint, bloqueos de dinero, efectivo esperado único, movimientos inmutables, límite de login (T-00 a T-19) | ✅ Completo | — | `requirements.md` §4 |
 | Login y usuarios | JWT, BCrypt, baja lógica, roles Operador y Administrador por pantalla, primer admin por entorno con cambio de contraseña, protección del último admin (USR-01 a USR-07) | ✅ Completo | — | `users.md` |
-| Catálogo | Productos, categorías, etiquetas, venta por peso con precio por kilo (CAT-01 a CAT-04, CAT-08) | 🟡 Parcial | CAT-06 importación; CAT-07 registrar cambios de costo y precio desde el catálogo en `product_price_changes` | — |
+| Catálogo | Productos, categorías, etiquetas, venta por peso con precio por kilo (CAT-01 a CAT-04, CAT-08) | 🟡 Parcial | CAT-11 presentaciones de productos por peso (spec lista, por construir); luego CAT-06 importación (spec en borrador en la rama `feat/product-import`, en pausa hasta CAT-11); CAT-07 registrar cambios de costo y precio desde el catálogo en `product_price_changes` | `product-presentations.md` |
 | Proveedores | ABM con baja lógica (COM-01) | ✅ Completo | — | `purchases.md` |
 | Compras | Pedidos con líneas, envío, pagos desde Caja, cuentas o personas, estado de pago, costo y precio sugerido, entrega, por pagar, anulación (COM-01 a COM-09) | ✅ Completo | — | `purchases.md` |
 | Deudas con personas | Personas, pagos de pedidos por una persona, devoluciones, saldo e historial (DEU-01 a DEU-04) | ✅ Completo | — | `debts.md` |
@@ -112,7 +112,8 @@ Cada requerimiento indica en qué versión entra; los marcados **V1** son los ne
 - **CAT-04** · V1 — Categorías y etiquetas con color, nombre único y baja lógica.
 - **CAT-06** · V1 — Importación de productos desde la planilla (Grupo → categoría, Proveedor, Etiqueta, Código, Costo, Precio), con listado de filas rechazadas y por qué.
 - **CAT-07** · V1 — El operador puede crear productos y cambiar el costo (precio de compra) de un producto existente. También puede cambiar el precio de venta, desde el catálogo o al aceptar el precio sugerido en una compra (COM-03). Todo cambio de costo o precio queda auditado. Desde el 25-10-2026 los cambios desde una compra se registran en `product_price_changes` (origen `PURCHASE`); falta que la edición desde el catálogo registre los suyos (origen `CATALOG`, ya previsto en la tabla).
-- **CAT-08** · V1 — Productos vendidos por peso: precio por kilo, para frutos secos y productos del proveedor Granel (P-31), y presentaciones rápidas (100 g = 0,100 kg; 1/2 libra = 0,227 kg); cantidades con hasta 3 decimales en ventas, compras y consumos. Cada producto indica cómo se vende en `products.sale_unit` (`UNIT` o `KILOGRAM`, por defecto `UNIT`; migración `V7__product_sale_unit.sql`), editable en el formulario de Productos («Se vende por»). Si es `KILOGRAM`, el precio de venta es Bs por kilo y la cantidad son kilos; un producto por unidad solo acepta cantidades enteras (el servidor rechaza los decimales con «La cantidad de '<producto>' debe ser entera: se vende por unidad.»).
+- **CAT-08** · V1 — Productos vendidos por peso: precio por kilo, para frutos secos y productos del proveedor Granel (P-31), y presentaciones rápidas (100 g = 0,100 kg; 1/2 libra = 0,227 kg); cantidades con hasta 3 decimales en ventas, compras y consumos. Cada producto indica cómo se vende en `products.sale_unit` (`UNIT` o `KILOGRAM`, por defecto `UNIT`; migración `V7__product_sale_unit.sql`), editable en el formulario de Productos («Se vende por»). Si es `KILOGRAM`, el precio de venta es Bs por kilo y la cantidad son kilos; un producto por unidad solo acepta cantidades enteras (el servidor rechaza los decimales con «La cantidad de '<producto>' debe ser entera: se vende por unidad.»). Las presentaciones rápidas fijas pasan a ser presentaciones configurables por producto (CAT-11).
+- **CAT-11** · V1 — Presentaciones de productos por peso (decidido el 26-10-2026 al revisar CAT-06). Un producto por kilo tiene hasta 6 presentaciones activas con nombre y peso fijo (1/2 libra = 0,227 kg) y precio fijo opcional: sin él, el precio es peso × precio por kilo; con él, se cobra el fijo (Nuez pelada 1/2 libra a Bs 45 aunque 0,227 × 210 = 47,67). El costo siempre es peso × costo por kilo. En el POS y en Consumos, al elegir un producto por kilo se abre un selector con sus presentaciones y «Otro peso»; la línea guarda la presentación, la cantidad de bolsitas, los kilos y el costo por kilo, y los reportes suman kilos. Compras siguen en kilos; la venta al costo ignora el precio fijo. Reemplaza los botones fijos 100 g y 1/2 libra de POS-10 (se crean como presentaciones de los productos por kilo existentes). Los cambios de precio fijo quedan en `product_price_changes`. Detalle en `specs/product-presentations.md`.
 - **CAT-09** · V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33).
 - **CAT-10** · V2 — Código de barras por producto y lectura con lector en el POS; impresión de ticket (P-11).
 - **CAT-05** · V2 — Cada producto indica si controla stock (sí/no), para admitir servicios o ítems sin inventario.
@@ -270,7 +271,7 @@ Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de v
 
 | ID | Pregunta | Respuesta |
 | --- | --- | --- |
-| P-02 | ¿Cuántos productos hay? | ~1.200 en la planilla Productos. |
+| P-02 | ¿Cuántos productos hay? | 879 filas en la hoja Productos (contadas el 26-10-2026; antes se estimaban ~1.200). |
 | P-03 | ¿Se vende por peso? | Sí (100 g, 1/2 libra, etc.): pasa a la V1 (CAT-08, POS-10). |
 | P-04 | ¿Hay variantes? | Sí; se agrupan en la V2 (CAT-09). |
 | P-05 | ¿Se controla lote o vencimiento? | No. |
@@ -341,3 +342,6 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 - [x] Reportes: consumos al costo por día, mes y proveedor (CON-03) (26-10-2026).
 - [x] Reportes: exportar a Excel; cierra el módulo Reportes (FIN-10) (26-10-2026).
 - [ ] Responder P-35 a P-40.
+- [x] Spec de Presentaciones de productos por peso (`specs/product-presentations.md`, CAT-11), definida con el dueño al revisar la importación (26-10-2026).
+- [ ] Construir CAT-11 (rama `feat/product-presentations`).
+- [ ] Retomar la importación de productos (CAT-06, rama `feat/product-import`): las libras de frutos secos pasan a ser presentaciones. Hallazgos del 26-10-2026 en la hoja Productos: 879 filas (no ~1.200), se importa el `.xlsx` con el valor real de cada celda y se rechaza un costo o precio con más de 2 decimales; corregido en la planilla el costo de 4 filas de Brisol que tenían ruido de cálculo (18,900000000000002).
