@@ -98,7 +98,8 @@ frena a las demás.
 
 La planilla no se modifica: se sigue usando en paralelo en la fase 2 y sus columnas de libras calculan desde el
 precio por gramo (decidido el 26-10-2026). El dueño solo agrega la columna «Se vende por», que dice cómo se vende
-el producto y en qué unidad están Costo y Precio Venta; la importación convierte a Bs por kilo.
+el producto y en qué unidad están Costo y Precio Venta; la importación convierte a Bs por kilo. Va en cualquier lugar
+a la derecha, con el título «Se vende por» en la fila 1 (se busca por nombre, no por posición).
 
 | Se vende por | Producto | Costo y Precio Venta de la planilla | Arandano (0,095 / 0,14) se importa como |
 | --- | --- | --- | --- |
