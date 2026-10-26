@@ -392,7 +392,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Transactional(readOnly = true)
     public List<PaymentAccountResponse> getPaymentAccounts() {
         return financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc().stream()
-            .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), Boolean.TRUE.equals(a.getIsCashAccount())))
+            .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), Boolean.TRUE.equals(a.getIsCashAccount()),
+                Boolean.TRUE.equals(a.getIsQrAccount())))
             .toList();
     }
 

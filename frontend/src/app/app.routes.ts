@@ -9,7 +9,6 @@ import { CategoriesComponent } from './pages/categories/categories.component';
 import { TagsComponent } from './pages/tags/tags.component';
 import { ProductsComponent } from './pages/products/products.component';
 import { PosComponent } from './pages/pos/pos.component';
-import { RegisterSaleComponent } from './pages/pos/register-sale/register-sale.component';
 import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
 import { FinanceSummaryComponent } from './pages/finances/summary/finance-summary.component';
 import { TransactionsComponent } from './pages/finances/transactions/transactions.component';
@@ -44,7 +43,9 @@ export const routes: Routes = [
       },
       {
         path: 'pos/sale',
-        component: RegisterSaleComponent,
+        // Diferida: con el cobro al costo y a crédito el bundle inicial pasaba el límite de 1 MB
+        loadComponent: () =>
+          import('./pages/pos/register-sale/register-sale.component').then(m => m.RegisterSaleComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.POS }
       },

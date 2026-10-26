@@ -167,7 +167,7 @@
                           class="method-pill"
                           [class.cash]="s.paymentMethod === 'EFECTIVO'"
                           [class.qr]="s.paymentMethod === 'QR'">
-                          {{ s.paymentMethod === 'EFECTIVO' ? '💵 Efectivo' : '📱 QR' }}
+                          {{ s.paymentMethod === 'EFECTIVO' ? '💵 Efectivo' : s.paymentMethod === 'CREDITO' ? '🧾 Crédito' : s.paymentMethod === 'MIXTO' ? '💵📱 Mixto' : '📱 QR' }}
                         </span>
                       </td>
                       <td>{{ s.description || '—' }}</td>

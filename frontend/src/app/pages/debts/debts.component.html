@@ -7,7 +7,7 @@
         <span class="breadcrumb-item active">Deudas</span>
       </nav>
       <h1 class="page-title">Deudas</h1>
-      <p class="page-subtitle">Lo que el negocio debe a personas que pagaron pedidos, y sus devoluciones</p>
+      <p class="page-subtitle">Lo que el negocio debe a personas que pagaron pedidos, y lo que la tienda amiga debe por ventas al costo</p>
     </div>
   </header>
 
@@ -21,12 +21,6 @@
   @if (activeTab() === 'CREDITORS') {
     <app-creditors-view />
   } @else {
-    <div class="table-container">
-      <div class="table-empty">
-        <div class="table-empty-icon">🧾</div>
-        <h4 class="table-empty-title">Cuentas por cobrar</h4>
-        <p class="table-empty-desc">Los saldos por cobrar a la tienda amiga llegan junto con la venta al costo.</p>
-      </div>
-    </div>
+    <app-customers-view />
   }
 </div>

@@ -6,6 +6,8 @@ import { CashService } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
 import { QuickProductService } from '../../../core/quick-product/quick-product.service';
 import { SaleService } from '../../../core/sale/sale.service';
+import { CustomerService } from '../../../core/debt/customer.service';
+import { Customer } from '../../../core/debt/models/debt.models';
 import { Product } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
 import {
@@ -49,6 +51,7 @@ export class RegisterSaleComponent implements OnInit {
   private readonly productService = inject(ProductService);
   readonly quickProductService = inject(QuickProductService);
   private readonly saleService = inject(SaleService);
+  private readonly customerService = inject(CustomerService);
   readonly weightPresets = WEIGHT_PRESETS;
 
   // Estados de catálogo y búsqueda
@@ -63,6 +66,10 @@ export class RegisterSaleComponent implements OnInit {
   // Carrito de ventas
   cartItems = signal<CartItem[]>([]);
   globalDiscount = signal<number>(0);
+
+  // CON-02: toda la venta al costo; clientes activos para el crédito (DEU-05)
+  atCost = signal<boolean>(false);
+  customers = signal<Customer[]>([]);
 
   // Modal de Cobro (el pago vive en CheckoutModalComponent)
   isCheckoutModalOpen = signal<boolean>(false);
@@ -166,14 +173,20 @@ export class RegisterSaleComponent implements OnInit {
     if (existing) {
       this.incrementQuantity(product.id);
     } else {
+      if (this.atCost() && !this.hasCost(product)) {
+        this.errorMessage.set(this.zeroCostMessage(product));
+        this.productSearchTerm.set('');
+        return;
+      }
       const quantity = this.quantityStep(product);
+      const price = this.priceFor(product);
       const newItem: CartItem = {
         product,
         quantity,
-        unitPrice: product.sellPrice,
+        unitPrice: price,
         unitDiscount: 0,
-        unitFinalPrice: product.sellPrice,
-        subtotal: Math.round(quantity * product.sellPrice * 100) / 100
+        unitFinalPrice: price,
+        subtotal: Math.round(quantity * price * 100) / 100
       };
       this.cartItems.update((items) => [...items, newItem]);
     }
@@ -280,6 +293,57 @@ export class RegisterSaleComponent implements OnInit {
     this.errorMessage.set(null);
   }
 
+  // CON-02: venta al costo. El servidor pone precio = costo; aquí solo se muestra igual
+  onAtCostToggle(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.setAtCost(input.checked);
+    input.checked = this.atCost();
+  }
+
+  setAtCost(enabled: boolean): void {
+    if (enabled) {
+      const withoutCost = this.cartItems().find((it) => !this.hasCost(it.product));
+      if (withoutCost) {
+        this.errorMessage.set(this.zeroCostMessage(withoutCost.product));
+        return;
+      }
+      if (this.customers().length === 0) {
+        this.customerService.getCustomers('ACTIVO').subscribe({
+          next: (customers) => this.customers.set(customers),
+          error: () => this.customers.set([])
+        });
+      }
+    }
+    this.atCost.set(enabled);
+    this.errorMessage.set(null);
+    // Sin descuentos en la venta al costo; al volver a normal se parte de cero también
+    this.globalDiscount.set(0);
+    this.cartItems.update((items) =>
+      items.map((it) => {
+        const price = this.priceFor(it.product);
+        return {
+          ...it,
+          unitPrice: price,
+          unitDiscount: 0,
+          unitFinalPrice: price,
+          subtotal: Math.round(it.quantity * price * 100) / 100
+        };
+      })
+    );
+  }
+
+  private priceFor(product: Product): number {
+    return this.atCost() ? product.buyPrice : product.sellPrice;
+  }
+
+  private hasCost(product: Product): boolean {
+    return (product.buyPrice ?? 0) > 0;
+  }
+
+  private zeroCostMessage(product: Product): string {
+    return `'${product.name}' no tiene costo registrado; no se puede vender al costo.`;
+  }
+
   // Grupos y Configuración de Productos Rápidos
   selectGroup(groupId: string): void {
     this.activeGroupId.set(groupId);
@@ -326,7 +390,12 @@ export class RegisterSaleComponent implements OnInit {
       amountCash: payment.amountCash,
       amountQr: payment.amountQr,
       amountReceived: payment.amountReceived,
-      description: `Venta POS (${payment.paymentMethod})`
+      description: this.atCost()
+        ? `Venta al costo POS (${payment.paymentMethod})`
+        : `Venta POS (${payment.paymentMethod})`,
+      saleType: this.atCost() ? 'AL_COSTO' : 'NORMAL',
+      customerId: this.atCost() ? payment.customerId : null,
+      creditAmount: this.atCost() ? payment.creditAmount : 0
     };
 
     this.saleService.registerSale(payload).subscribe({

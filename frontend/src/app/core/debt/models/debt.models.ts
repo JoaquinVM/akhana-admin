@@ -64,3 +64,63 @@ export interface VoidDebtRequest {
 }
 
 export type DebtAccount = PaymentAccount;
+
+export type CustomerStatus = 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
+
+// DEU-05 / DEU-07: cliente que compra al costo a crédito; el saldo por cobrar lo calcula el servidor
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string | null;
+  description: string | null;
+  status: CustomerStatus;
+  balance: number;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+  deletedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface CustomerRequest {
+  name: string;
+  phone: string | null;
+  description: string | null;
+  status?: CustomerStatus;
+}
+
+// DEU-07: ventas con parte a crédito (SALE) y cobros (COLLECTION)
+export type CustomerHistoryEntryType = 'SALE' | 'COLLECTION';
+
+export interface CustomerHistoryEntry {
+  type: CustomerHistoryEntryType;
+  id: string;
+  date: string;
+  // SALE: la parte a crédito; COLLECTION: lo cobrado
+  amount: number;
+  saleId: string | null;
+  saleNumber: string | null;
+  saleTotal: number | null;
+  accountId: string | null;
+  accountName: string | null;
+  comment: string | null;
+  voided: boolean;
+  voidedBy: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  // Saldo por cobrar después del registro; un anulado no lo cambia
+  balanceAfter: number;
+}
+
+export interface CustomerHistory {
+  customer: Customer;
+  entries: CustomerHistoryEntry[];
+}
+
+// DEU-06: cobro a Caja (con caja abierta) o a la cuenta QR
+export interface CustomerCollectionRequest {
+  accountId: string;
+  amount: number;
+  comment: string | null;
+}

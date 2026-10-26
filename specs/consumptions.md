@@ -207,10 +207,11 @@ Backend hecho el 25-10-2026: migración `V12__at_cost_sales_receivables.sql`. Si
 servidor guarda el método `CREDITO` aunque el cliente envíe otro; enviar `CREDITO` con una parte pagada se rechaza
 («El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.»). En una venta normal
 se ignora `customerId`. El filtro `GET /api/sales?saleType=` queda con el historial (POS-09).
-- [ ] Frontend: interruptor «Venta al costo» en el POS con cliente y crédito en el pago; marca «Al costo» en el
-  detalle y filtro por tipo en el historial; pestaña Clientes en Deudas. El cobro vive en el modal de
-  `pages/pos/register-sale` (no en `pos.component.html`): antes, dividirlo en un componente propio
-  (`pages/pos/components/checkout-modal`).
+- [x] Frontend: cobro separado en `pages/pos/components/checkout-modal`; interruptor «Venta al costo» en el
+  carrito (precio = costo, sin descuentos, rechaza costo 0) con cliente y crédito en el pago; marca «Al costo»,
+  cliente y Crédito en el detalle; pestaña Clientes en Deudas (26-10-2026).
+- [ ] Filtro por tipo de venta en el historial (con POS-09) y método Crédito en el listado de ventas del POS
+  (`pos.component.html`, proponer antes dividirlo).
 
 Reportes (con FIN-10):
 

@@ -869,3 +869,31 @@
   width: 18px;
   height: 18px;
 }
+
+/* CON-02: interruptor de venta al costo */
+.at-cost-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  padding: 0.6rem 1.15rem;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.at-cost-toggle.active {
+  background-color: #fff7ed;
+  color: #9a3412;
+}
+
+.at-cost-label {
+  font-weight: 600;
+}
+
+.at-cost-hint {
+  flex-basis: 100%;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}

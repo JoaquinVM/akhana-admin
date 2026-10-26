@@ -203,6 +203,18 @@
           }
         </div>
 
+        <!-- CON-02: toda la venta al costo (precio = costo, sin descuentos) -->
+        <label class="at-cost-toggle" [class.active]="atCost()">
+          <input
+            type="checkbox"
+            [checked]="atCost()"
+            (change)="onAtCostToggle($event)" />
+          <span class="at-cost-label">Venta al costo</span>
+          <span class="at-cost-hint">
+            {{ atCost() ? 'Se cobra el costo, sin utilidad ni descuentos. Puede quedar a crédito.' : 'Para la tienda amiga o una venta a precio de costo.' }}
+          </span>
+        </label>
+
         <!-- Líneas de ítems -->
         <div class="cart-items-container">
           @for (item of cartItems(); track item.product.id) {
@@ -261,21 +273,23 @@
                 </button>
               </div>
 
-              <!-- Descuento por unidad -->
-              <div class="item-discount-group">
-                <label class="discount-lbl">Desc/u:</label>
-                <div class="discount-input-wrap">
-                  <span class="currency-prefix">Bs</span>
-                  <input
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    [max]="item.unitPrice"
-                    class="form-control form-control-sm text-right"
-                    [ngModel]="item.unitDiscount"
-                    (ngModelChange)="updateUnitDiscount(item.product.id, $event)" />
+              @if (!atCost()) {
+                <!-- Descuento por unidad -->
+                <div class="item-discount-group">
+                  <label class="discount-lbl">Desc/u:</label>
+                  <div class="discount-input-wrap">
+                    <span class="currency-prefix">Bs</span>
+                    <input
+                      type="number"
+                      step="0.50"
+                      min="0"
+                      [max]="item.unitPrice"
+                      class="form-control form-control-sm text-right"
+                      [ngModel]="item.unitDiscount"
+                      (ngModelChange)="updateUnitDiscount(item.product.id, $event)" />
+                  </div>
                 </div>
-              </div>
+              }
 
               <!-- Precios y Subtotal -->
               <div class="item-price-summary">
@@ -334,21 +348,23 @@
             <span class="sum-value">Bs {{ subtotalPostItems() | number:'1.2-2' }}</span>
           </div>
 
-          <div class="summary-line discount-global-row">
-            <label class="sum-label" for="globalDiscount">Descuento General:</label>
-            <div class="global-discount-input-wrap">
-              <span class="currency-prefix">Bs</span>
-              <input
-                id="globalDiscount"
-                type="number"
-                step="0.50"
-                min="0"
-                [max]="subtotalPostItems()"
-                class="form-control form-control-sm text-right"
-                [ngModel]="globalDiscount()"
-                (ngModelChange)="updateGlobalDiscount($event)" />
+          @if (!atCost()) {
+            <div class="summary-line discount-global-row">
+              <label class="sum-label" for="globalDiscount">Descuento General:</label>
+              <div class="global-discount-input-wrap">
+                <span class="currency-prefix">Bs</span>
+                <input
+                  id="globalDiscount"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  [max]="subtotalPostItems()"
+                  class="form-control form-control-sm text-right"
+                  [ngModel]="globalDiscount()"
+                  (ngModelChange)="updateGlobalDiscount($event)" />
+              </div>
             </div>
-          </div>
+          }
 
           @if (discountTotal() > 0) {
             <div class="summary-line text-discount font-bold">
@@ -358,7 +374,7 @@
           }
 
           <div class="total-charge-line">
-            <div class="total-title">Total a Cobrar</div>
+            <div class="total-title">{{ atCost() ? 'Total al costo' : 'Total a Cobrar' }}</div>
             <div class="total-amount-display">Bs {{ totalAmount() | number:'1.2-2' }}</div>
           </div>
         </div>
@@ -388,6 +404,8 @@
     [cartCount]="cartCount()"
     [isSubmitting]="isSubmitting()"
     [errorMessage]="errorMessage()"
+    [atCost]="atCost()"
+    [customers]="customers()"
     (close)="closeCheckoutModal()"
     (confirmed)="submitSale($event)" />
 

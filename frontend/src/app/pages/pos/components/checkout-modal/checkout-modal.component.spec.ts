@@ -110,7 +110,9 @@ describe('CheckoutModalComponent', () => {
     component.setPaymentMethod('MIXTO');
     component.onCashPortionChange(8);
     component.handleConfirm();
-    expect(emitted).toHaveBeenCalledWith({ paymentMethod: 'MIXTO', amountCash: 8, amountQr: 12, amountReceived: 8 });
+    expect(emitted).toHaveBeenCalledWith({
+      paymentMethod: 'MIXTO', amountCash: 8, amountQr: 12, amountReceived: 8, customerId: null, creditAmount: 0
+    });
 
     emitted.mockClear();
     component.onAmountReceivedChange(5);
@@ -119,5 +121,85 @@ describe('CheckoutModalComponent', () => {
     component.onAmountReceivedChange(8);
     component.handleConfirm();
     expect(emitted).not.toHaveBeenCalled();
+  });
+
+  describe('CON-02 / DEU-05: venta al costo con cliente y crédito', () => {
+    const neida = { id: 'cus-1', name: 'Tía Neida', balance: 0 } as any;
+
+    function openAtCost(total: number, customers: any[] = [neida]): void {
+      component.atCostInput = true;
+      component.customers = customers;
+      open(total);
+    }
+
+    it('propone el único cliente activo y empieza sin crédito', () => {
+      openAtCost(120);
+      expect(component.customerId()).toBe('cus-1');
+      expect(component.creditAmount()).toBe(0);
+      expect(component.amountDue()).toBe(120);
+    });
+
+    it('parte por QR y parte a crédito: el pago cubre solo lo que se paga ahora', () => {
+      openAtCost(120);
+      component.setPaymentMethod('QR');
+      component.onCreditChange(80);
+
+      expect(component.amountDue()).toBe(40);
+      expect(component.amountQr()).toBe(40);
+      expect(component.isPaymentValid()).toBe(true);
+
+      const emitted = vi.fn();
+      component.confirmed.subscribe(emitted);
+      component.handleConfirm();
+      expect(emitted).toHaveBeenCalledWith({
+        paymentMethod: 'QR', amountCash: 0, amountQr: 40, amountReceived: 0, customerId: 'cus-1', creditAmount: 80
+      });
+    });
+
+    it('toda a crédito se envía con método CREDITO y sin montos', () => {
+      openAtCost(579);
+      component.setFullCredit();
+      expect(component.isFullCredit()).toBe(true);
+
+      const emitted = vi.fn();
+      component.confirmed.subscribe(emitted);
+      component.handleConfirm();
+      expect(emitted).toHaveBeenCalledWith({
+        paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 579
+      });
+    });
+
+    it('el crédito exige cliente y se limita al total', () => {
+      openAtCost(50, []);
+      component.onCreditChange(70);
+      expect(component.creditAmount()).toBe(50);
+      expect(component.isPaymentValid()).toBe(false);
+
+      component.onCustomerChange('cus-1');
+      expect(component.isPaymentValid()).toBe(true);
+    });
+
+    it('en efectivo con crédito, el monto recibido y el cambio son sobre lo que se paga ahora', () => {
+      openAtCost(50);
+      component.setPaymentMethod('EFECTIVO');
+      component.onCreditChange(30);
+      expect(component.amountReceived()).toBe(20);
+
+      component.onAmountReceivedChange(50);
+      expect(component.changeGiven()).toBe(30);
+    });
+
+    it('una venta normal ignora cliente y crédito', () => {
+      openAtCost(50);
+      component.onCreditChange(20);
+      component.atCostInput = false;
+
+      expect(component.amountDue()).toBe(50);
+      const emitted = vi.fn();
+      component.confirmed.subscribe(emitted);
+      component.setPaymentMethod('EFECTIVO');
+      component.handleConfirm();
+      expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: null, creditAmount: 0, amountCash: 50 }));
+    });
   });
 });

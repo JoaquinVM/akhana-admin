@@ -1,0 +1,113 @@
+<app-modal [isOpen]="!!customerId()" [title]="history()?.customer?.name || 'Cliente'"
+           subtitle="Ventas al costo a crédito y cobros" size="lg" (close)="onClose()">
+  @if (isLoading() && !history()) {
+    <p class="hint">Cargando historial…</p>
+  }
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  @if (history(); as h) {
+    <div class="summary">
+      <span>Saldo por cobrar</span>
+      <strong [class.has-debt]="h.customer.balance > 0">Bs {{ h.customer.balance | number:'1.2-2' }}</strong>
+    </div>
+
+    <h4 class="section-title">Historial</h4>
+    @if (h.entries.length === 0) {
+      <p class="hint">Todavía no tiene ventas a crédito.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Movimiento</th>
+              <th class="text-right">Monto</th>
+              <th class="text-right">Saldo</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of h.entries; track entry.id) {
+              <tr [class.voided-row]="entry.voided">
+                <td>{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  @if (entry.type === 'SALE') {
+                    <span class="entry-title">Venta al costo {{ entry.saleNumber }}</span>
+                    <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · a crédito Bs {{ entry.amount | number:'1.2-2' }}</span>
+                  } @else {
+                    <span class="entry-title">Cobro a {{ entry.accountName }}</span>
+                    @if (entry.comment) {
+                      <span class="entry-note">{{ entry.comment }}</span>
+                    }
+                  }
+                  @if (entry.voided) {
+                    <span class="entry-note">Anulado por {{ entry.voidedBy }}: {{ entry.voidReason }}</span>
+                  }
+                </td>
+                <td class="text-right">
+                  {{ entry.type === 'SALE' ? '+' : '−' }} Bs {{ entry.amount | number:'1.2-2' }}
+                </td>
+                <td class="text-right">Bs {{ entry.balanceAfter | number:'1.2-2' }}</td>
+                <td class="text-right">
+                  @if (entry.type === 'SALE' && entry.saleId) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openSale.emit(entry.saleId)">Ver venta</button>
+                  } @else if (entry.type === 'COLLECTION' && !entry.voided) {
+                    <button type="button" class="btn btn-ghost btn-sm btn-void" (click)="openVoid(entry)">Anular</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (canCollect()) {
+      <form class="repayment-form" (ngSubmit)="registerCollection()">
+        <h4 class="section-title">Registrar cobro</h4>
+        @if (collectionError()) {
+          <div class="alert alert-danger" role="alert"><span>{{ collectionError() }}</span></div>
+        }
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label class="form-label" for="collection-account">Cobrado a <span class="required-mark">*</span></label>
+            <select id="collection-account" class="form-control" name="accountId"
+                    [ngModel]="collectionAccountId()" (ngModelChange)="collectionAccountId.set($event)">
+              <option value="">Seleccione…</option>
+              @for (account of collectionAccounts(); track account.id) {
+                <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : ' (QR)' }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="collection-amount">Monto (Bs) <span class="required-mark">*</span></label>
+            <input id="collection-amount" type="number" min="0.01" step="0.01" class="form-control" name="amount"
+                   [ngModel]="collectionAmount()" (ngModelChange)="collectionAmount.set($event)" />
+            <span class="form-hint">Por cobrar Bs {{ h.customer.balance | number:'1.2-2' }}</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="collection-comment">Comentario</label>
+            <input id="collection-comment" class="form-control" name="comment" maxlength="500"
+                   [ngModel]="collectionComment()" (ngModelChange)="collectionComment.set($event)" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="isCollecting()">
+            {{ isCollecting() ? 'Registrando…' : 'Registrar cobro' }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+</app-modal>
+
+<app-void-reason-modal
+  [isOpen]="!!voidTarget()"
+  title="Anular cobro"
+  [message]="voidMessage()"
+  [isLoading]="isVoiding()"
+  [errorMessage]="voidError()"
+  (confirmed)="confirmVoid($event)"
+  (close)="closeVoid()" />

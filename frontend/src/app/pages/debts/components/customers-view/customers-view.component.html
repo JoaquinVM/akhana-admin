@@ -1,0 +1,184 @@
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="filters-card">
+  <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
+    @for (filter of statusFilters; track filter.value) {
+      <button type="button" role="tab" class="filter-pill"
+              [class.filter-pill-deleted]="filter.value === 'ELIMINADO'"
+              [class.active]="statusFilter() === filter.value"
+              [attr.aria-selected]="statusFilter() === filter.value"
+              (click)="setStatusFilter(filter.value)">
+        {{ filter.label }}
+      </button>
+    }
+  </div>
+  <div class="filters-right">
+    <input type="text" class="form-control search-input" placeholder="Buscar por nombre…"
+           aria-label="Buscar clientes" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+    <button type="button" class="btn btn-primary" (click)="openCreate()">Nuevo cliente</button>
+  </div>
+</div>
+
+<div class="total-card">
+  <span>Total por cobrar</span>
+  <strong>Bs {{ totalBalance() | number:'1.2-2' }}</strong>
+</div>
+
+<div class="table-container">
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Teléfono</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="text-right">Por cobrar</th>
+          <th scope="col" class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr><td colspan="5" class="text-center">Cargando clientes…</td></tr>
+        } @else {
+          @for (customer of customers(); track customer.id) {
+            <tr>
+              <td>
+                <span class="customer-name">{{ customer.name }}</span>
+                @if (customer.description) {
+                  <span class="customer-description">{{ customer.description }}</span>
+                }
+              </td>
+              <td>{{ customer.phone || '—' }}</td>
+              <td>
+                <span class="status-badge"
+                      [class.badge-active]="customer.status === 'ACTIVO'"
+                      [class.badge-inactive]="customer.status === 'INACTIVO'"
+                      [class.badge-deleted]="customer.status === 'ELIMINADO'">{{ statusLabel(customer.status) }}</span>
+              </td>
+              <td class="text-right" [class.has-debt]="customer.balance > 0">Bs {{ customer.balance | number:'1.2-2' }}</td>
+              <td class="text-right">
+                <div class="table-actions" style="justify-content: flex-end">
+                  <button type="button" class="btn-icon" (click)="openDetail(customer)"
+                          title="Ver historial y cobrar" aria-label="Ver historial y cobrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-icon btn-audit" (click)="auditCustomer.set(customer)"
+                          title="Consultar auditoría" aria-label="Consultar auditoría">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </button>
+                  @if (customer.status !== 'ELIMINADO') {
+                    <button type="button" class="btn-icon btn-edit" (click)="openEdit(customer)"
+                            title="Editar cliente" aria-label="Editar cliente">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    <button type="button" class="btn-icon btn-delete" (click)="openDelete(customer)"
+                            title="Eliminar cliente" aria-label="Eliminar cliente">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="table-empty">
+                  <div class="table-empty-icon">🧾</div>
+                  <h4 class="table-empty-title">No hay clientes</h4>
+                  <p class="table-empty-desc">Registre a la tienda amiga con «Nuevo cliente» para venderle al costo a crédito.</p>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<app-modal [isOpen]="isFormOpen()" [title]="editing() ? 'Editar cliente' : 'Nuevo cliente'"
+           subtitle="Cliente que compra al costo y puede quedar debiendo" size="md"
+           [closeOnBackdrop]="false" (close)="closeForm()">
+  <form (ngSubmit)="save()">
+    @if (formError()) {
+      <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
+    }
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="customer-name">Nombre <span class="required-mark">*</span></label>
+        <input id="customer-name" class="form-control" name="name" maxlength="150" placeholder="Ej. Tía Neida"
+               [ngModel]="draft().name" (ngModelChange)="updateDraft('name', $event)" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="customer-phone">Teléfono</label>
+        <input id="customer-phone" class="form-control" name="phone" maxlength="30"
+               [ngModel]="draft().phone" (ngModelChange)="updateDraft('phone', $event)" />
+      </div>
+    </div>
+    @if (editing()) {
+      <div class="form-group">
+        <label class="form-label" for="customer-status">Estado</label>
+        <select id="customer-status" class="form-control" name="status"
+                [ngModel]="draft().status" (ngModelChange)="updateDraft('status', $event)">
+          <option value="ACTIVO">Activo</option>
+          <option value="INACTIVO">Inactivo</option>
+        </select>
+      </div>
+    }
+    <div class="form-group">
+      <label class="form-label" for="customer-description">Descripción</label>
+      <textarea id="customer-description" class="form-control" name="description" rows="3" maxlength="500"
+                [ngModel]="draft().description" (ngModelChange)="updateDraft('description', $event)"></textarea>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-outline" (click)="closeForm()" [disabled]="isSubmitting()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando…' : (editing() ? 'Guardar cambios' : 'Crear cliente') }}
+      </button>
+    </div>
+  </form>
+</app-modal>
+
+<app-confirm-modal
+  [isOpen]="!!toDelete()"
+  title="¿Eliminar cliente?"
+  [message]="'Se da de baja a ' + (toDelete()?.name || '') + '. Su historial se sigue viendo con el filtro Eliminados. Solo se puede si no tiene saldo por cobrar.'"
+  confirmText="Eliminar"
+  variant="danger"
+  [isLoading]="isDeleting()"
+  (confirm)="confirmDelete()"
+  (cancel)="toDelete.set(null)" />
+
+<app-audit-modal
+  [isOpen]="!!auditCustomer()"
+  title="Auditoría del cliente"
+  [subtitle]="auditCustomer()?.name || ''"
+  [data]="auditData()"
+  (close)="auditCustomer.set(null)" />
+
+<app-customer-detail-modal
+  [customerId]="saleId() ? null : detailCustomerId()"
+  [accounts]="accounts()"
+  [refreshKey]="detailRefresh()"
+  (changed)="loadCustomers()"
+  (openSale)="openSale($event)"
+  (close)="closeDetail()" />
+
+<app-sale-detail-modal
+  [isOpen]="!!saleId()"
+  [saleId]="saleId()"
+  (close)="closeSale()" />

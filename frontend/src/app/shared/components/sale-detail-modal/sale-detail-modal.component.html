@@ -44,6 +44,20 @@
           <span class="field-value session-badge">Sesión #{{ sale.sessionNumber != null ? sale.sessionNumber : '—' }}</span>
         </div>
 
+        @if (sale.saleType === 'AL_COSTO') {
+          <div class="info-field">
+            <span class="field-label">Tipo</span>
+            <span class="field-value"><span class="status-badge badge-at-cost">Al costo</span></span>
+          </div>
+        }
+
+        @if (sale.customerName) {
+          <div class="info-field">
+            <span class="field-label">Cliente</span>
+            <span class="field-value">{{ sale.customerName }}</span>
+          </div>
+        }
+
         <div class="info-field">
           <span class="field-label">Estado</span>
           <span class="field-value">

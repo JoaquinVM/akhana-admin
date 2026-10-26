@@ -5,6 +5,7 @@ import { CashService } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
 import { QuickProductService } from '../../../core/quick-product/quick-product.service';
 import { SaleService } from '../../../core/sale/sale.service';
+import { CustomerService } from '../../../core/debt/customer.service';
 import { CashSessionSummary, Sale } from '../../../core/cash/models/cash.models';
 import { Product } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
@@ -20,6 +21,7 @@ describe('RegisterSaleComponent', () => {
   let mockProductService: any;
   let mockQuickProductService: any;
   let mockSaleService: any;
+  let mockCustomerService: any;
 
   const mockProduct1: Product = {
     id: 'prod-1',
@@ -115,6 +117,10 @@ describe('RegisterSaleComponent', () => {
       registerSale: vi.fn().mockReturnValue(of(mockCreatedSale))
     };
 
+    mockCustomerService = {
+      getCustomers: vi.fn().mockReturnValue(of([{ id: 'cus-1', name: 'Tía Neida', status: 'ACTIVO', balance: 0 }]))
+    };
+
     await TestBed.configureTestingModule({
       imports: [RegisterSaleComponent],
       providers: [
@@ -122,7 +128,8 @@ describe('RegisterSaleComponent', () => {
         { provide: CashService, useValue: mockCashService },
         { provide: ProductService, useValue: mockProductService },
         { provide: QuickProductService, useValue: mockQuickProductService },
-        { provide: SaleService, useValue: mockSaleService }
+        { provide: SaleService, useValue: mockSaleService },
+        { provide: CustomerService, useValue: mockCustomerService }
       ]
     }).compileComponents();
 
@@ -284,7 +291,7 @@ describe('RegisterSaleComponent', () => {
     component.openCheckoutModal();
     expect(component.isCheckoutModalOpen()).toBe(true);
 
-    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20 });
+    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0 });
 
     expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
       paymentMethod: 'EFECTIVO',
@@ -302,5 +309,57 @@ describe('RegisterSaleComponent', () => {
   it('debe permitir cancelar la venta y regresar al POS', () => {
     component.cancelAndReturn();
     expect(router.navigate).toHaveBeenCalledWith(['/pos']);
+  });
+
+  describe('CON-02: venta al costo', () => {
+    it('cobra el costo, quita los descuentos y carga los clientes activos', () => {
+      component.addToCart(mockProduct1); // precio 20, costo 10
+      component.updateUnitDiscount('prod-1', 2);
+      component.updateGlobalDiscount(3);
+
+      component.setAtCost(true);
+
+      expect(component.atCost()).toBe(true);
+      expect(component.cartItems()[0].unitPrice).toBe(10);
+      expect(component.cartItems()[0].unitDiscount).toBe(0);
+      expect(component.globalDiscount()).toBe(0);
+      expect(component.totalAmount()).toBe(10);
+      expect(mockCustomerService.getCustomers).toHaveBeenCalledWith('ACTIVO');
+      expect(component.customers().length).toBe(1);
+
+      component.addToCart(mockProduct2); // costo 8
+      expect(component.totalAmount()).toBe(18);
+
+      component.setAtCost(false);
+      expect(component.totalAmount()).toBe(35);
+    });
+
+    it('no admite productos sin costo', () => {
+      const sinCosto: Product = { ...mockProduct2, id: 'prod-3', name: 'Muestra', buyPrice: 0 };
+      component.addToCart(sinCosto);
+      component.setAtCost(true);
+      expect(component.atCost()).toBe(false);
+      expect(component.errorMessage()).toBe("'Muestra' no tiene costo registrado; no se puede vender al costo.");
+
+      component.clearCart();
+      component.setAtCost(true);
+      component.addToCart(sinCosto);
+      expect(component.cartItems().length).toBe(0);
+      expect(component.errorMessage()).toContain('no tiene costo registrado');
+    });
+
+    it('envía tipo, cliente y crédito al registrar', () => {
+      component.addToCart(mockProduct1);
+      component.setAtCost(true);
+      component.submitSale({ paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 10 });
+
+      expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
+        saleType: 'AL_COSTO',
+        paymentMethod: 'CREDITO',
+        customerId: 'cus-1',
+        creditAmount: 10,
+        description: 'Venta al costo POS (CREDITO)'
+      }));
+    });
   });
 });

@@ -450,3 +450,27 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Venta al costo: cliente y crédito (CON-02, DEU-05) */
+.checkout-credit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed #d6d3d1;
+  border-radius: 10px;
+  background: #fafaf9;
+}
+
+.credit-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #44403c;
+}
+
+.credit-full-panel {
+  text-align: center;
+}

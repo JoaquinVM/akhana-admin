@@ -274,7 +274,8 @@ public class CreditorServiceImpl implements CreditorService {
     @Transactional(readOnly = true)
     public List<PaymentAccountResponse> getAccounts() {
         return financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc().stream()
-            .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), Boolean.TRUE.equals(a.getIsCashAccount())))
+            .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), Boolean.TRUE.equals(a.getIsCashAccount()),
+                Boolean.TRUE.equals(a.getIsQrAccount())))
             .toList();
     }
 

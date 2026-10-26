@@ -153,6 +153,18 @@ describe('SaleDetailModalComponent', () => {
     expect(compiled.textContent).toContain('Bs 20.00');
   });
 
+  it('DEU-05: desglosa lo pagado y la parte a crédito; toda a crédito muestra solo Crédito', () => {
+    const partial: Sale = { ...mockCompletedSale, saleType: 'AL_COSTO', paymentMethod: 'QR', totalAmount: 120,
+      amountQr: 40, amountCash: 0, creditAmount: 80, customerName: 'Tía Neida' };
+    expect(component.getPaymentMethodsList(partial)).toEqual([
+      { label: 'QR', amount: 40 },
+      { label: 'Crédito', amount: 80 }
+    ]);
+
+    const full: Sale = { ...partial, paymentMethod: 'CREDITO', amountQr: 0, creditAmount: 120 };
+    expect(component.getPaymentMethodsList(full)).toEqual([{ label: 'Crédito', amount: 120 }]);
+  });
+
   it('debe mostrar la sección de información de anulación para ventas con estado ANULADA', async () => {
     saleServiceMock.getSaleById.mockReturnValue(of(mockVoidedSale));
     fixture.componentRef.setInput('isOpen', true);

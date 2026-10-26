@@ -1,0 +1,59 @@
+.summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  color: #545f73;
+}
+
+.summary strong {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: #111f0f;
+}
+
+.summary strong.has-debt {
+  color: #b91c1c;
+}
+
+.section-title {
+  margin: 1.25rem 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.entry-title {
+  display: block;
+}
+
+.entry-note {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.voided-row td {
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.btn-void {
+  color: #b91c1c;
+}
+
+.repayment-form {
+  margin-top: 0.5rem;
+}

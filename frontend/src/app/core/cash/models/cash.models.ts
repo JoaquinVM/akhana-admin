@@ -1,5 +1,8 @@
 export type CashSessionStatus = 'ABIERTA' | 'CERRADA';
-export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO';
+// CREDITO: venta al costo toda a crédito, sin pago en el momento (DEU-05)
+export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO' | 'CREDITO';
+// CON-02: toda la venta es normal o al costo (precio = costo, sin utilidad)
+export type SaleType = 'NORMAL' | 'AL_COSTO';
 export type SaleStatus = 'COMPLETADA' | 'ANULADA';
 
 export interface CashCutItem {
@@ -55,6 +58,11 @@ export interface Sale {
   voidedBy?: string | null;
   voidReason?: string | null;
   items?: SaleItem[];
+  saleType?: SaleType;
+  customerId?: string | null;
+  customerName?: string | null;
+  // Parte de la venta que queda por cobrar al cliente (DEU-05)
+  creditAmount?: number;
 }
 
 export interface CashSessionSummary {

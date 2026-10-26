@@ -450,3 +450,9 @@
   gap: 0.75rem;
   padding-top: 0.75rem;
 }
+
+/* CON-02: venta al costo */
+.badge-at-cost {
+  background-color: #ffedd5;
+  color: #9a3412;
+}

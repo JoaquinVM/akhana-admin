@@ -19,193 +19,262 @@
       </div>
     </div>
 
-    <!-- Pestañas de Método de Pago -->
-    <div class="checkout-method-tabs" role="tablist">
-      <button
-        type="button"
-        class="checkout-tab-btn"
-        [class.active]="paymentMethod() === 'EFECTIVO'"
-        (click)="setPaymentMethod('EFECTIVO')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <rect x="2" y="6" width="20" height="12" rx="2" />
-          <circle cx="12" cy="12" r="2" />
-          <path d="M6 12h.01M18 12h.01" />
-        </svg>
-        <span>Efectivo</span>
-      </button>
-
-      <button
-        type="button"
-        class="checkout-tab-btn"
-        [class.active]="paymentMethod() === 'QR'"
-        (click)="setPaymentMethod('QR')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>
-        <span>QR</span>
-      </button>
-
-      <button
-        type="button"
-        class="checkout-tab-btn"
-        [class.active]="paymentMethod() === 'MIXTO'"
-        (click)="setPaymentMethod('MIXTO')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
-          <rect x="2" y="5" width="13" height="9" rx="1.5" />
-          <rect x="11" y="10" width="11" height="9" rx="1.5" />
-        </svg>
-        <span>Mixto (Efe + QR)</span>
-      </button>
-    </div>
-
-    <!-- Paneles según Método de Pago -->
-
-    <!-- Panel EFECTIVO -->
-    @if (paymentMethod() === 'EFECTIVO') {
-      <div class="checkout-panel">
+    <!-- Venta al costo: cliente y parte a crédito (CON-02, DEU-05) -->
+    @if (atCost()) {
+      <div class="checkout-credit-panel">
         <div class="checkout-field-row">
-          <label class="checkout-field-label" for="amountReceived">Monto recibido:</label>
+          <label class="checkout-field-label" for="checkoutCustomer">Cliente:</label>
+          <select
+            id="checkoutCustomer"
+            class="form-control"
+            [ngModel]="customerId()"
+            (ngModelChange)="onCustomerChange($event)">
+            <option [ngValue]="null">Sin cliente (paga en el momento)</option>
+            @for (c of customers; track c.id) {
+              <option [ngValue]="c.id">{{ c.name }} · por cobrar Bs {{ c.balance | number:'1.2-2' }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="checkout-field-row">
+          <label class="checkout-field-label" for="creditAmount">A crédito:</label>
           <div class="checkout-field-controls">
             <div class="money-input-box">
               <span class="currency-tag">Bs</span>
               <input
-                id="amountReceived"
-                type="number"
-                step="0.50"
-                min="0"
-                class="form-control money-input-field"
-                [ngModel]="amountReceived()"
-                (ngModelChange)="onAmountReceivedChange($event)" />
-            </div>
-
-            <div class="quick-amounts-bar">
-              <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Monto exacto">Exacto</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
-            </div>
-          </div>
-        </div>
-
-        @if ((amountReceived() || 0) < totalAmount()) {
-          <div class="checkout-alert-error">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>El monto recibido en efectivo es menor al total de la venta (faltan Bs {{ (totalAmount() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
-          </div>
-        }
-
-        <div class="checkout-change-panel" [class.highlight]="changeGiven() > 0">
-          <div class="change-panel-text">
-            <span class="change-panel-label">Cambio a devolver:</span>
-            <span class="change-panel-sub">Calculado automáticamente</span>
-          </div>
-          <span class="change-panel-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
-        </div>
-      </div>
-    }
-
-    <!-- Panel QR -->
-    @else if (paymentMethod() === 'QR') {
-      <div class="checkout-panel qr-panel-wrapper">
-        <div class="qr-panel-content">
-          <div class="qr-icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="qr-big-svg">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-            </svg>
-          </div>
-          <h4 class="qr-title">Cobro Digital con QR</h4>
-          <p class="qr-desc">
-            Solicita al cliente el escaneo del código QR por el importe de <strong>Bs {{ totalAmount() | number:'1.2-2' }}</strong>.
-          </p>
-          <span class="qr-tag">Sin cálculo de cambio</span>
-        </div>
-      </div>
-    }
-
-    <!-- Panel MIXTO -->
-    @else if (paymentMethod() === 'MIXTO') {
-      <div class="checkout-panel">
-        <div class="mixed-portions-split">
-          <div class="mixed-portion-item">
-            <label class="checkout-field-label" for="cashPortion">Efectivo:</label>
-            <div class="money-input-box">
-              <span class="currency-tag">Bs</span>
-              <input
-                id="cashPortion"
+                id="creditAmount"
                 type="number"
                 step="0.50"
                 min="0"
                 [max]="totalAmount()"
                 class="form-control money-input-field"
-                [ngModel]="amountCash()"
-                (ngModelChange)="onCashPortionChange($event)" />
+                [ngModel]="creditAmount()"
+                (ngModelChange)="onCreditChange($event)" />
             </div>
-          </div>
-
-          <div class="mixed-portion-item">
-            <label class="checkout-field-label" for="qrPortion">QR:</label>
-            <div class="calculated-qr-pill" id="qrPortion" title="Monto restante a cobrar por QR (automático)">
-              <span class="qr-pill-prefix">Bs</span>
-              <span class="qr-pill-val">{{ amountQr() | number:'1.2-2' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="checkout-field-row">
-          <label class="checkout-field-label" for="cashReceived">Monto recibido:</label>
-          <div class="checkout-field-controls">
-            <div class="money-input-box">
-              <span class="currency-tag">Bs</span>
-              <input
-                id="cashReceived"
-                type="number"
-                step="0.50"
-                min="0"
-                class="form-control money-input-field"
-                [ngModel]="amountReceived()"
-                (ngModelChange)="onAmountReceivedChange($event)" />
-            </div>
-
             <div class="quick-amounts-bar">
-              <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Cobro exacto del efectivo">Exacto</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
-              <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
+              <button type="button" class="btn btn-quick" (click)="onCreditChange(0)">Sin crédito</button>
+              <button type="button" class="btn btn-quick" (click)="setFullCredit()">Todo a crédito</button>
             </div>
           </div>
         </div>
 
-        @if ((amountReceived() || 0) < amountCash()) {
+        @if (hasCredit() && !customerId()) {
           <div class="checkout-alert-error">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <span>El efectivo recibido es menor a la porción pactada en efectivo (faltan Bs {{ (amountCash() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
+            <span>Elija un cliente activo para la venta a crédito.</span>
           </div>
         }
 
-        <div class="checkout-change-panel" [class.highlight]="changeGiven() > 0">
-          <div class="change-panel-text">
-            <span class="change-panel-label">Cambio del efectivo:</span>
-            <span class="change-panel-sub">Calculado automáticamente</span>
+        @if (hasCredit()) {
+          <div class="credit-summary">
+            <span>Paga ahora: <strong>Bs {{ amountDue() | number:'1.2-2' }}</strong></span>
+            <span>Queda por cobrar: <strong>Bs {{ creditAmount() | number:'1.2-2' }}</strong></span>
           </div>
-          <span class="change-panel-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
-        </div>
+        }
       </div>
+    }
+
+    @if (isFullCredit()) {
+      <div class="checkout-panel credit-full-panel">
+        <h4 class="qr-title">Toda la venta queda a crédito</h4>
+        <p class="qr-desc">
+          No entra dinero ahora: el saldo por cobrar del cliente sube <strong>Bs {{ creditAmount() | number:'1.2-2' }}</strong>
+          y el cobro se registra después en Deudas.
+        </p>
+      </div>
+    } @else {
+      <!-- Pestañas de Método de Pago -->
+      <div class="checkout-method-tabs" role="tablist">
+        <button
+          type="button"
+          class="checkout-tab-btn"
+          [class.active]="paymentMethod() === 'EFECTIVO'"
+          (click)="setPaymentMethod('EFECTIVO')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
+            <rect x="2" y="6" width="20" height="12" rx="2" />
+            <circle cx="12" cy="12" r="2" />
+            <path d="M6 12h.01M18 12h.01" />
+          </svg>
+          <span>Efectivo</span>
+        </button>
+
+        <button
+          type="button"
+          class="checkout-tab-btn"
+          [class.active]="paymentMethod() === 'QR'"
+          (click)="setPaymentMethod('QR')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span>QR</span>
+        </button>
+
+        <button
+          type="button"
+          class="checkout-tab-btn"
+          [class.active]="paymentMethod() === 'MIXTO'"
+          (click)="setPaymentMethod('MIXTO')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon">
+            <rect x="2" y="5" width="13" height="9" rx="1.5" />
+            <rect x="11" y="10" width="11" height="9" rx="1.5" />
+          </svg>
+          <span>Mixto (Efe + QR)</span>
+        </button>
+      </div>
+
+      <!-- Paneles según Método de Pago -->
+
+      <!-- Panel EFECTIVO -->
+      @if (paymentMethod() === 'EFECTIVO') {
+        <div class="checkout-panel">
+          <div class="checkout-field-row">
+            <label class="checkout-field-label" for="amountReceived">Monto recibido:</label>
+            <div class="checkout-field-controls">
+              <div class="money-input-box">
+                <span class="currency-tag">Bs</span>
+                <input
+                  id="amountReceived"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  class="form-control money-input-field"
+                  [ngModel]="amountReceived()"
+                  (ngModelChange)="onAmountReceivedChange($event)" />
+              </div>
+
+              <div class="quick-amounts-bar">
+                <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Monto exacto">Exacto</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
+              </div>
+            </div>
+          </div>
+
+          @if ((amountReceived() || 0) < amountDue()) {
+            <div class="checkout-alert-error">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>El monto recibido en efectivo es menor al total de la venta (faltan Bs {{ (amountDue() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
+            </div>
+          }
+
+          <div class="checkout-change-panel" [class.highlight]="changeGiven() > 0">
+            <div class="change-panel-text">
+              <span class="change-panel-label">Cambio a devolver:</span>
+              <span class="change-panel-sub">Calculado automáticamente</span>
+            </div>
+            <span class="change-panel-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Panel QR -->
+      @else if (paymentMethod() === 'QR') {
+        <div class="checkout-panel qr-panel-wrapper">
+          <div class="qr-panel-content">
+            <div class="qr-icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="qr-big-svg">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+            </div>
+            <h4 class="qr-title">Cobro Digital con QR</h4>
+            <p class="qr-desc">
+              Solicita al cliente el escaneo del código QR por el importe de <strong>Bs {{ amountDue() | number:'1.2-2' }}</strong>.
+            </p>
+            <span class="qr-tag">Sin cálculo de cambio</span>
+          </div>
+        </div>
+      }
+
+      <!-- Panel MIXTO -->
+      @else if (paymentMethod() === 'MIXTO') {
+        <div class="checkout-panel">
+          <div class="mixed-portions-split">
+            <div class="mixed-portion-item">
+              <label class="checkout-field-label" for="cashPortion">Efectivo:</label>
+              <div class="money-input-box">
+                <span class="currency-tag">Bs</span>
+                <input
+                  id="cashPortion"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  [max]="amountDue()"
+                  class="form-control money-input-field"
+                  [ngModel]="amountCash()"
+                  (ngModelChange)="onCashPortionChange($event)" />
+              </div>
+            </div>
+
+            <div class="mixed-portion-item">
+              <label class="checkout-field-label" for="qrPortion">QR:</label>
+              <div class="calculated-qr-pill" id="qrPortion" title="Monto restante a cobrar por QR (automático)">
+                <span class="qr-pill-prefix">Bs</span>
+                <span class="qr-pill-val">{{ amountQr() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-field-row">
+            <label class="checkout-field-label" for="cashReceived">Monto recibido:</label>
+            <div class="checkout-field-controls">
+              <div class="money-input-box">
+                <span class="currency-tag">Bs</span>
+                <input
+                  id="cashReceived"
+                  type="number"
+                  step="0.50"
+                  min="0"
+                  class="form-control money-input-field"
+                  [ngModel]="amountReceived()"
+                  (ngModelChange)="onAmountReceivedChange($event)" />
+              </div>
+
+              <div class="quick-amounts-bar">
+                <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Cobro exacto del efectivo">Exacto</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
+                <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
+              </div>
+            </div>
+          </div>
+
+          @if ((amountReceived() || 0) < amountCash()) {
+            <div class="checkout-alert-error">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>El efectivo recibido es menor a la porción pactada en efectivo (faltan Bs {{ (amountCash() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
+            </div>
+          }
+
+          <div class="checkout-change-panel" [class.highlight]="changeGiven() > 0">
+            <div class="change-panel-text">
+              <span class="change-panel-label">Cambio del efectivo:</span>
+              <span class="change-panel-sub">Calculado automáticamente</span>
+            </div>
+            <span class="change-panel-val">Bs {{ changeGiven() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      }
     }
 
     @if (errorMessage) {

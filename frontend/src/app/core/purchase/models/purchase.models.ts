@@ -161,6 +161,8 @@ export interface PaymentAccount {
   name: string;
   color: string;
   cashAccount: boolean;
+  // Cuenta de cobros QR (FIN-03): junto con Caja, la única que recibe cobros a clientes (DEU-06)
+  qrAccount: boolean;
 }
 
 export interface PriceSuggestion {

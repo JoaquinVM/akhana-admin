@@ -245,5 +245,5 @@ Cuentas por cobrar (junto con o después de CON-02):
   anular el ingreso de un cobro.
 - [x] Pruebas: `CustomerServiceTest`, `SaleServiceTest` (crédito), `CustomerRepositoryTest` y
   `FinancialTransactionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
-- [ ] Frontend: pestaña Clientes con detalle e historial, cobro y anulación; crédito y cliente en el pago de la
-  venta al costo del POS.
+- [x] Frontend: pestaña Clientes con detalle e historial, cobro (solo Caja o la cuenta QR) y anulación; crédito y
+  cliente en el pago de la venta al costo del POS (26-10-2026). `PaymentAccountResponse` suma `qrAccount`.

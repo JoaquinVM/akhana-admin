@@ -1,6 +1,6 @@
-import type { PaymentMethod, SaleStatus, SaleItem, Sale } from '../../cash/models/cash.models';
+import type { PaymentMethod, SaleStatus, SaleItem, Sale, SaleType } from '../../cash/models/cash.models';
 
-export type { PaymentMethod, SaleStatus, SaleItem, Sale };
+export type { PaymentMethod, SaleStatus, SaleItem, Sale, SaleType };
 
 export interface SaleItemRequest {
   productId: string;
@@ -16,6 +16,10 @@ export interface SaleDetailRequest {
   amountQr?: number;
   amountReceived?: number;
   description?: string;
+  // CON-02 / DEU-05: sin saleType la venta es NORMAL; el crédito exige cliente activo
+  saleType?: SaleType;
+  customerId?: string | null;
+  creditAmount?: number;
 }
 
 export interface VoidSaleRequest {

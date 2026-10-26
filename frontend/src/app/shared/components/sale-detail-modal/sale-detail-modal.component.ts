@@ -120,10 +120,17 @@ export class SaleDetailModalComponent {
         label: 'QR',
         amount: sale.amountQr ?? 0
       });
-    } else {
+    } else if (sale.paymentMethod !== 'CREDITO') {
       list.push({
         label: sale.paymentMethod || 'Otro',
         amount: sale.totalAmount
+      });
+    }
+    // DEU-05: la parte que quedó por cobrar al cliente
+    if ((sale.creditAmount ?? 0) > 0) {
+      list.push({
+        label: 'Crédito',
+        amount: sale.creditAmount ?? 0
       });
     }
     return list;
