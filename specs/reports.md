@@ -195,7 +195,7 @@ transferencias y el consumo.
 
 ## Históricos (FIN-11)
 
-- **Cuando** se importen las ventas y movimientos desde julio **entonces** alimentan estos mismos reportes: cada día
+- **Cuando** se importen las ventas y movimientos históricos **entonces** alimentan estos mismos reportes: cada día
   de la hoja Ventas es una venta histórica con sus líneas y costo (P-32), y cada fila de Transacc. un movimiento
   histórico con su categoría. Así el reporte de julio a octubre se puede comparar entero con las tablas
   dinámicas. Se define con FIN-11.

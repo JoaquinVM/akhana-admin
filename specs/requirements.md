@@ -25,11 +25,11 @@ Avance de la V1, actualizado al 26-10-2026. Esta tabla es el tablero del proyect
 | POS / ventas | Carrito, productos rápidos, descuentos, efectivo, QR o mixto, costo por línea, venta por peso, anulación, historial `/sales` con filtros y paginación (POS-01 a POS-10) | ✅ Completo | — | `sales.md` |
 | Finanzas | Cuentas Caja, Bisa (QR) y Efectivo con saldo al corte, cuenta QR única, categorías, ingresos y gastos, transferencias, anulación, resumen (FIN-01 a FIN-09) | ✅ Completo | — (cargar los saldos al corte el día de la salida) | `finance.md` |
 | Reportes | Pantalla Reportes (`/reports`, permiso `REPORTS`, solo Administrador) con ventas por día (normales y al costo aparte, costo, utilidad y margen, subtotal por mes) ventas por proveedor y mes (proveedor actual, descuento general repartido por línea) y movimientos por categoría y mes (ingresos y gastos con neto, transferencias aparte, línea Consumo) y totales por mes (ventas normales y al costo, utilidad, consumos al costo y utilidad menos consumos) y consumos al costo por día, mes y proveedor (FIN-10, CON-03), cada uno exportable a Excel | ✅ Completo | — (fase 2: comparar dos semanas con las tablas dinámicas) | `reports.md` |
-| Migración | Nada | ❌ Pendiente | Productos (CAT-06), saldos, pedidos por pagar e históricos desde julio (FIN-11); P-40 | — |
+| Migración | Nada | ❌ Pendiente | Productos (CAT-06), saldos y todo el historial de las dos planillas: ventas, movimientos, cierres de caja, todos los pedidos y consumos (FIN-11); P-40 a P-42 | — |
 | Producción | Nada | ❌ Pendiente | VPS con HTTPS y respaldo diario con restauración probada (NF-01, NF-02, NF-05) | — |
 | Inventario | Nada | V2 | — | — |
 
-Fuera del código: cargar el saldo al corte de Caja, Bisa y Efectivo el día de la salida, marcar en la planilla los productos por peso (columna «Se vende por») con su precio en Bs por kilo, corregir el precio de venta de las 4 cajas de Natuser, contratar el VPS y responder P-35 a P-40.
+Fuera del código: cargar el saldo al corte de Caja, Bisa y Efectivo el día de la salida, marcar en la planilla los productos por peso (columna «Se vende por») con su precio en Bs por kilo, corregir el precio de venta de las 4 cajas de Natuser, contratar el VPS y responder P-35 a P-42.
 
 ### 1.1 Las planillas que hay que reemplazar
 
@@ -62,7 +62,7 @@ Entra en la V1:
 - Finanzas con las cuentas Caja, Bisa y Efectivo.
 - Historial de ventas y los reportes que hoy dan las tablas dinámicas.
 - Dos roles: operador y administrador.
-- Migración de productos, saldos, pedidos por pagar, y ventas y movimientos desde julio para los reportes.
+- Migración de productos, saldos y todos los datos de las dos planillas (ventas, movimientos, cierres de caja, pedidos y consumos) desde su primer registro.
 
 No entra en la V1: stock y kardex, conteo físico, variantes de producto, lector de códigos e impresora de tickets, facturación y varias tiendas.
 
@@ -87,7 +87,7 @@ Dos usuarios iniciales. El administrador puede hacer todo; el operador, lo del d
 
 ### 2.3 Criterio para dejar las planillas
 
-- Datos migrados: productos, saldos de cuentas al día del corte, pedidos por pagar, y ventas y movimientos desde julio. No hay deudas iniciales con personas. Referencia al 23 de octubre: Caja Bs 7.637,90; Bisa Bs 31.562,58; Efectivo Bs 11.352,04.
+- Datos migrados: productos, saldos de cuentas al día del corte y todo el historial de las dos planillas (FIN-11). No hay deudas iniciales con personas. Referencia al 23 de octubre: Caja Bs 7.637,90; Bisa Bs 31.562,58; Efectivo Bs 11.352,04.
 - Dos semanas en paralelo con las planillas: cada cierre diario da la misma caja final en ambos.
 - Los reportes de esas dos semanas coinciden con las tablas dinámicas (ventas por día y por proveedor, movimientos por categoría).
 - Respaldo diario de la base funcionando y con una restauración probada.
@@ -190,7 +190,7 @@ Detalle en `specs/consumptions.md` (escenarios del 25-10-2026, validados con la 
 - **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04).
 - **FIN-09** Resumen con saldo por cuenta y saldo consolidado.
 - **FIN-10** Reportes: ventas por día; ventas, cantidad y utilidad por proveedor y mes; movimientos por categoría y mes; totales de ventas y utilidad. Exportables a Excel. Spec en `specs/reports.md`, validada el 26-10-2026 con las tablas dinámicas Resumen Ventas Diario, Resumen Ventas y Resumen Transacc. Pantalla `/reports` (carga diferida, menú Finanzas → Reportes), permiso nuevo `REPORTS` solo para Administrador. Ventas por día hecho el 26-10-2026: `GET /api/reports/sales-by-day?from=&to=` (días de la tienda, `to` incluido; sin fechas, el mes en curso hasta hoy; rango de hasta 366 días) agrupa las ventas `COMPLETADA` por día y tipo; costo = suma de cantidad × `sale_items.unit_cost` redondeada por día, utilidad = total − costo, margen sobre las normales; subtotales por mes y total del rango suman los días. Solo días con ventas, como la tabla dinámica. Hallazgos al comparar en la fase 2: la planilla suma gramos como cantidad (se comparan total y utilidad), anota regalos y roturas como ventas (aquí son consumos), y una transferencia es una sola fila en positivo con categoría (Retiro caja, Deposito). Pruebas en `ReportServiceTest`, `SaleRepositoryTest`, `EndpointAuthorizationTest`, `report.service.spec.ts` y `sales-by-day-report.component.spec.ts`. Ventas por proveedor y mes hecho el 26-10-2026: `GET /api/reports/sales-by-supplier?from=&to=` asigna cada línea al proveedor actual del producto, reparte el descuento general en proporción al subtotal de la línea (el resto por redondeo a la de mayor subtotal) y calcula margen solo de las normales; validado con Bohemia jul–sep contra Resumen Ventas. Hallazgo: esa tabla dinámica no incluye la venta de Bohemia del 16-10 (fila 5474), revisar su rango antes de comparar octubre. Movimientos por categoría y mes hecho el 26-10-2026: `GET /api/reports/transactions-by-category?from=&to=` suma por mes y categoría los ingresos (+) y gastos (−) activos con su neto; transferencias aparte por origen → destino, sin `SALDO_INICIAL`, y la línea Consumo al costo. Validado con las filas de agosto de la hoja Transacc.: Venta 67.031,50, Pedido −67.097,56, Comida −2.530 y el Total agosto 23.942,39 con las transferencias. Hallazgos: Otro de la planilla son préstamos entre cuentas (transferencias) y su Ajuste es la suma de los Ajustes de ingreso y de gasto. Totales hecho el 26-10-2026: `GET /api/reports/totals?from=&to=` reutiliza los subtotales por mes de ventas por día (mismo total, costo y utilidad) y la consulta de consumos por mes; agrega la utilidad menos consumos. Validado con julio de Resumen Ventas Diario (utilidad 8.505,78; con consumos por 300, 8.205,78) en `ReportServiceTest`. Exportar a Excel hecho el 26-10-2026: `GET /api/reports/<reporte>/export?from=&to=` genera con Apache POI un `.xlsx` desde la misma respuesta del reporte (mismo rango, columnas, filas, subtotales y total; montos con 2 decimales, cantidades con 3, margen en porcentaje) llamado `akhana-<reporte>-<desde>-<hasta>.xlsx`, con botón en cada pestaña.
-- **FIN-11** Migración histórica: las ventas (hoja Ventas) y los movimientos (hoja Transacc.) desde julio se importan como registros históricos marcados, que alimentan los reportes sin alterar saldos ni cajas. Cada día de la hoja Ventas se importa como una venta histórica con sus líneas por producto, costo y utilidad, sin caja ni pagos (P-32).
+- **FIN-11** Migración histórica de todos los datos de las dos planillas (decidido el 26-10-2026; antes eran solo las ventas y movimientos desde julio y los pedidos por pagar): ventas (hoja Ventas), movimientos (Transacc.), cierres de caja con su conteo, todos los pedidos de *Akhana Pedidos* desde abril (~420) con líneas, envío, pagos y entrega, y consumos, desde el primer registro de cada hoja. Entran como registros históricos marcados que alimentan los reportes sin alterar saldos ni cajas; los saldos de hoy entran como saldo al corte y los pedidos con saldo quedan por pagar (COM-08). Cada día de la hoja Ventas se importa como una venta histórica con sus líneas por producto, costo y utilidad, sin caja ni pagos (P-32). Las líneas con códigos de libras de frutos secos (`FSE-NUE-MLI`) se cargan con su presentación (CAT-11). Las tablas dinámicas (Resumen Ventas, Diario, Resumen Transacc.) no se migran: las calcula el sistema (FIN-10). Pendientes: P-40 a P-42.
 
 ### 3.9 Usuarios y permisos · V1
 
@@ -247,7 +247,7 @@ Requerimientos no funcionales, todos para la V1:
 
 ## 5. Preguntas
 
-Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de validar `specs/consumptions.md` con la planilla; tienen supuesto y no frenan la construcción. El backend de la venta al costo se construyó con los supuestos de P-38 y P-39; si la respuesta cambia, se ajusta antes de la migración. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
+Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de validar `specs/consumptions.md` con la planilla; tienen supuesto y no frenan la construcción. P-40 se reabrió y P-41 y P-42 se agregaron el 26-10-2026, al decidir migrar todos los datos de las dos planillas (FIN-11). El backend de la venta al costo se construyó con los supuestos de P-38 y P-39; si la respuesta cambia, se ajusta antes de la migración. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
 
 ### 5.1 Pendientes
 
@@ -258,7 +258,9 @@ Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de v
 | P-37 | El almuerzo aparece en la hoja Consumos y también como gasto Comida de Caja. ¿Es un consumo? | No: sigue como gasto de caja Comida; los consumos son solo productos del catálogo. | V1 |
 | P-38 | ¿La tienda amiga es Tía Neida? Hoy Akhana paga a un proveedor mercadería para ella (Otro gasto, ej. Fit Mit −579) y ella la devuelve (Otro Ingreso +579). ¿Se registra como pedido + venta al costo a crédito + cobro? | Sí a las dos; los reportes por categoría mostrarán Pedido y Venta donde la planilla muestra Otro gasto y Otro Ingreso. | V1 (venta al costo) |
 | P-39 | En la hoja Ventas hay ventas a precio de costo a Mami («Mami precio costo») y regalos o roturas a costo («Regalo Ali», «Mami rompió»). ¿La venta al costo es para cualquiera o solo para la tienda amiga, y regalos y roturas son consumos? | Venta al costo para cualquiera pagada en el momento; crédito solo a un cliente registrado. Regalos y roturas son consumos con comentario. | V1 (venta al costo) |
-| P-40 | La hoja Consumos (desde el 17-07, texto libre sin código ni costo) se superpone del 17 al 28-07 con los gastos Consumo de Transacc. ¿Se migra? | No: se migran solo los movimientos de Transacc. (FIN-11); los consumos del sistema empiezan con la salida a producción. | V1 (migración) |
+| P-40 | La hoja Consumos (desde el 17-07, texto libre sin código ni costo) se superpone del 17 al 28-07 con los gastos Consumo de Transacc. ¿Cómo se migra? | Se migra (26-10-2026, todos los datos). Falta decidir cómo leer el texto libre sin código ni costo y cómo no contar dos veces los días superpuestos. | V1 (migración) |
+| P-41 | HOJITA es un borrador diario de consumos, pedidos por pagar y otros gastos. ¿Se migra? | No: lo que anota termina en Consumos, Pedidos y Transacc., que sí se migran. | V1 (migración) |
+| P-42 | Un pedido o venta antigua puede tener un producto que ya no está en la hoja Productos. ¿Qué se hace? | Se crea el producto dado de baja con el código y nombre de la planilla, para que la línea lo tenga; no aparece en el POS. | V1 (migración) |
 | P-06 | ¿Se permite vender sin stock? | — | V2 |
 | P-07 | ¿Costo por último precio de compra o costo promedio? | Último precio de compra. | V2 |
 | P-09 | ¿Devoluciones de clientes después de cerrar la caja? | No. | V2 |
@@ -279,14 +281,14 @@ Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de v
 | P-11 | ¿Lector de código de barras o impresora de tickets? | No en la V1; sí en la V2 (CAT-10). |
 | P-14 | ¿El POS debe funcionar sin internet? | No. |
 | P-15 | ¿Qué roles hay? | Operador y Administrador (tabla 2.2). |
-| P-16 | ¿Se migran datos? | Sí: productos, saldos de cuentas, pedidos por pagar, y ventas y movimientos desde julio. Sin deudas iniciales. |
+| P-16 | ¿Se migran datos? | Sí: productos, saldos de cuentas y todos los datos de las dos planillas desde su primer registro (26-10-2026; antes: pedidos por pagar, y ventas y movimientos desde julio). Sin deudas iniciales. |
 | P-17 | ¿Se reescribe o se trabaja sobre el proyecto actual? | Se trabaja sobre el proyecto actual, con el mismo stack (Spring Boot + Angular + PostgreSQL), previa revisión del código (T-00). |
 | P-18 | ¿La tienda amiga paga en el momento? | A veces queda debiendo: hacen falta cuentas por cobrar en la V1 (DEU-05 a DEU-07). |
 | P-19 | ¿El operador registra consumos, ventas al costo y otros gastos de caja? | Sí, los tres. |
 | P-20 | ¿A quién se le debe hoy? | A nadie. La planilla puede ajustarse antes de migrar. |
 | P-21 | ¿Cómo se paga la consignación? | Queda por pagar hasta que se registre el pago. |
 | P-22 | ¿Dónde se aloja el sistema? | En la nube, en un VPS. |
-| P-23 | ¿Se migran ventas históricas? | Sí, desde julio, para tener los reportes (FIN-11). |
+| P-23 | ¿Se migran ventas históricas? | Sí, todas (26-10-2026; antes desde julio), para tener los reportes (FIN-11). |
 | P-24 | ¿Cómo se trata el envío de un pedido? | Gasto de Transporte aparte, siempre vinculado a su pedido para los reportes. |
 | P-25 | ¿El operador puede crear productos? | Sí. |
 | P-26 | Cuando una persona paga un pedido por el negocio, ¿qué es? | Una deuda del negocio con esa persona. |
@@ -306,7 +308,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 1. **Fase 0 · Decisiones y base técnica** — Revisión del código (T-00). Flyway, secretos por entorno, VPS con HTTPS y respaldo diario. Roles Operador y Administrador con permisos por pantalla (USR-05; T-01 a T-19 marcados V1).
    - Compuerta: revisión del código hecha y servidor de producción listo.
 2. **Fase 1 · V1: lo que falta para reemplazar las planillas** — Compras, deudas y cuentas por cobrar, consumos y ventas al costo, venta por peso, ajustes de caja, costo por línea, historial de ventas, reportes e importación (COM, DEU, CON, CAT-08, CAJ-08 a 10, FIN-10 y 11).
-   - Compuerta: productos (con unidad de venta y precio por kilo revisados), saldos, pedidos e históricos desde julio migrados.
+   - Compuerta: productos (con unidad de venta y precio por kilo revisados), saldos y todo el historial de las dos planillas migrados.
 3. **Fase 2 · Dos semanas en paralelo con las planillas — salida a producción** — Se registra todo en ambos lados; cada cierre diario y cada reporte deben dar lo mismo que la planilla. Al pasar la compuerta se dejan las planillas.
    - Compuerta: 14 cierres seguidos iguales y reportes que coinciden con las tablas dinámicas.
 4. **Fase 3 · V2: inventario** — Stock calculado desde compras, ventas y consumos; conteo físico, variantes, código de barras y tickets (INV-01 a INV-05, CAT-05, CAT-09, CAT-10, CON-04, T-04). Resolver P-06, P-07, P-09, P-13 y P-33.
@@ -342,7 +344,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 - [x] Reportes: totales de ventas y utilidad por mes, validado con julio de Resumen Ventas Diario (FIN-10, CON-03) (26-10-2026).
 - [x] Reportes: consumos al costo por día, mes y proveedor (CON-03) (26-10-2026).
 - [x] Reportes: exportar a Excel; cierra el módulo Reportes (FIN-10) (26-10-2026).
-- [ ] Responder P-35 a P-40.
+- [ ] Responder P-35 a P-42.
 - [x] Spec de Presentaciones de productos por peso (`specs/product-presentations.md`, CAT-11), definida con el dueño al revisar la importación (26-10-2026).
 - [x] Construir CAT-11 (rama `feat/product-presentations`) (26-10-2026). Falta probarlo en la app con un producto real.
 - [x] Revisar con el dueño los supuestos de la importación de productos (CAT-06, rama `feat/product-import`) y ajustar la spec: libras de frutos secos como presentaciones, costo 0 con aviso, permiso de pantalla (26-10-2026). Hallazgos en la hoja Productos: 879 filas (no ~1.200); corregidos en la planilla el costo de 4 filas de Brisol (18,900000000000002), Alfavitamins y el Grupo Sativa.
