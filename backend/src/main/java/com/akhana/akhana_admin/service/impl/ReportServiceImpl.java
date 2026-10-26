@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Month;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TotalsReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.CategoryRow;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.TransferRow;
@@ -29,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 
 @Service
@@ -166,6 +168,43 @@ public class ReportServiceImpl implements ReportService {
             rows.add(sums.toMonth(month));
         });
         return new TransactionsByCategoryReportResponse(range.from(), range.to(), rows, rangeSums.toMonth(null));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TotalsReportResponse getTotals(LocalDate from, LocalDate to) {
+        // The month subtotals of sales per day, so both reports always show the same sales, cost and profit
+        SalesByDayReportResponse sales = getSalesByDay(from, to);
+        Map<String, Row> salesByMonth = new HashMap<>();
+        sales.months().forEach(month -> salesByMonth.put(month.month(), month.totals()));
+        Map<String, Object[]> consumptionsByMonth = new HashMap<>();
+        consumptionRepository.sumByMonth(sales.from(), sales.to())
+            .forEach(row -> consumptionsByMonth.put((String) row[0], row));
+
+        TreeSet<String> monthKeys = new TreeSet<>(salesByMonth.keySet());
+        monthKeys.addAll(consumptionsByMonth.keySet());
+
+        List<TotalsReportResponse.Row> months = new ArrayList<>();
+        long rangeConsumptions = 0;
+        BigDecimal rangeConsumptionTotal = BigDecimal.ZERO;
+        for (String month : monthKeys) {
+            Object[] consumption = consumptionsByMonth.get(month);
+            long consumptions = consumption != null ? ((Number) consumption[1]).longValue() : 0;
+            BigDecimal consumptionTotal = money(consumption != null ? (BigDecimal) consumption[2] : BigDecimal.ZERO);
+            months.add(totalsRow(month, salesByMonth.get(month), consumptions, consumptionTotal));
+            rangeConsumptions += consumptions;
+            rangeConsumptionTotal = rangeConsumptionTotal.add(consumptionTotal);
+        }
+        return new TotalsReportResponse(sales.from(), sales.to(), months,
+            totalsRow(null, sales.totals(), rangeConsumptions, rangeConsumptionTotal));
+    }
+
+    private static TotalsReportResponse.Row totalsRow(String month, Row sales, long consumptions,
+                                                      BigDecimal consumptionTotal) {
+        Row s = sales != null ? sales : new Sums().toRow(null);
+        return new TotalsReportResponse.Row(month, s.normalSales(), s.normalTotal(), s.normalCost(), s.normalProfit(),
+            s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.total(), consumptions, consumptionTotal,
+            s.normalProfit().subtract(consumptionTotal));
     }
 
     /**

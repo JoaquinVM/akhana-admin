@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.service;
 
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TotalsReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
 
 import java.time.LocalDate;
@@ -15,4 +16,7 @@ public interface ReportService {
 
     /** Movements per store month and category, with transfers and consumptions at cost apart (FIN-10, CON-03). */
     TransactionsByCategoryReportResponse getTransactionsByCategory(LocalDate from, LocalDate to);
+
+    /** Sales, profit and consumptions at cost per store month, with the profit after consumptions (FIN-10, CON-03). */
+    TotalsReportResponse getTotals(LocalDate from, LocalDate to);
 }

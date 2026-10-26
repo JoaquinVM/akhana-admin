@@ -98,6 +98,33 @@ export interface TransactionsByCategoryReport {
   totals: TransactionsByCategoryMonth;
 }
 
+// FIN-10 / CON-03: totales por mes; las ventas son los subtotales de ventas por día y los consumos van aparte
+export interface TotalsRow {
+  /** Mes de la tienda (YYYY-MM); null en el total del rango */
+  month: string | null;
+  normalSales: number;
+  normalTotal: number;
+  normalCost: number;
+  normalProfit: number;
+  /** Utilidad ÷ total de las normales × 100; null si no hay ventas normales */
+  normalMargin: number | null;
+  atCostSales: number;
+  atCostTotal: number;
+  total: number;
+  consumptions: number;
+  /** Consumos al costo, sin movimiento de dinero */
+  consumptionTotal: number;
+  /** Utilidad de las ventas normales − consumos al costo */
+  profitAfterConsumptions: number;
+}
+
+export interface TotalsReport {
+  from: string;
+  to: string;
+  months: TotalsRow[];
+  totals: TotalsRow;
+}
+
 export interface ReportRange {
   from?: string | null;
   to?: string | null;

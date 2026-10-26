@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.service;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TotalsReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.CategoryRow;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
@@ -388,6 +389,76 @@ class ReportServiceTest {
         verify(financialTransactionRepository).sumTransfersByMonth(from, to);
         verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
         assertThrows(IllegalArgumentException.class, () -> reportService.getTransactionsByCategory(AUGUST_31, JULY_1));
+    }
+
+    @Test
+    @DisplayName("Julio: utilidad 8505.78 de Resumen Ventas Diario menos consumos 300 da 8205.78")
+    void julyProfitAfterConsumptions() {
+        // Two July days that add up to the pivot table's July: total 37688, profit 8505.78
+        stubRows(row("2026-07-17", "NORMAL", 30, "74.000", "2745.00", "2104.16"),
+                row("2026-07-18", "NORMAL", 400, "1000.000", "34839.00", "26974.06"),
+                row("2026-07-18", "AL_COSTO", 1, "1.000", "104.00", "104.00"));
+        stubConsumptions(consumption("2026-07", 3, "300.00"));
+
+        TotalsReportResponse report = reportService.getTotals(JULY_1, LocalDate.of(2026, 7, 31));
+
+        TotalsReportResponse.Row july = report.months().getFirst();
+        assertEquals("2026-07", july.month());
+        assertEquals(430, july.normalSales());
+        assertEquals(new BigDecimal("37584.00"), july.normalTotal());
+        assertEquals(new BigDecimal("29078.22"), july.normalCost());
+        assertEquals(new BigDecimal("8505.78"), july.normalProfit());
+        assertEquals(new BigDecimal("22.63"), july.normalMargin());
+        assertEquals(1, july.atCostSales());
+        assertEquals(new BigDecimal("104.00"), july.atCostTotal());
+        assertEquals(new BigDecimal("37688.00"), july.total());
+        assertEquals(3, july.consumptions());
+        assertEquals(new BigDecimal("300.00"), july.consumptionTotal());
+        assertEquals(new BigDecimal("8205.78"), july.profitAfterConsumptions());
+    }
+
+    @Test
+    @DisplayName("Totales: un mes solo con consumos aparece; el rango suma los meses igual que ventas por día")
+    void totalsByMonthAndRange() {
+        stubRows(row("2026-07-17", "NORMAL", 30, "74.000", "2745.00", "2104.16"),
+                row("2026-09-02", "NORMAL", 2, "2.000", "100.00", "70.00"));
+        stubConsumptions(consumption("2026-08", 1, "30.00"), consumption("2026-09", 2, "12.50"));
+
+        TotalsReportResponse report = reportService.getTotals(JULY_1, SEPTEMBER_30);
+
+        assertEquals(List.of("2026-07", "2026-08", "2026-09"),
+                report.months().stream().map(TotalsReportResponse.Row::month).toList());
+        TotalsReportResponse.Row august = report.months().get(1);
+        assertEquals(0, august.normalSales());
+        assertEquals(new BigDecimal("0.00"), august.normalProfit());
+        assertNull(august.normalMargin());
+        assertEquals(new BigDecimal("-30.00"), august.profitAfterConsumptions());
+        assertEquals(new BigDecimal("640.84"), report.months().getFirst().profitAfterConsumptions());
+
+        TotalsReportResponse.Row totals = report.totals();
+        assertNull(totals.month());
+        assertEquals(new BigDecimal("2845.00"), totals.normalTotal());
+        assertEquals(new BigDecimal("670.84"), totals.normalProfit());
+        assertEquals(3, totals.consumptions());
+        assertEquals(new BigDecimal("42.50"), totals.consumptionTotal());
+        assertEquals(new BigDecimal("628.34"), totals.profitAfterConsumptions());
+        assertEquals(totals.normalProfit(), reportService.getSalesByDay(JULY_1, SEPTEMBER_30).totals().normalProfit());
+    }
+
+    @Test
+    @DisplayName("Totales usa el mismo rango de días de la tienda y sus validaciones")
+    void totalsReportUsesTheSameRange() {
+        stubRows();
+        stubConsumptions();
+
+        TotalsReportResponse report = reportService.getTotals(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+
+        assertTrue(report.months().isEmpty());
+        assertEquals(new BigDecimal("0.00"), report.totals().profitAfterConsumptions());
+        verify(saleRepository).sumByDayAndType(Instant.parse("2026-07-17T04:00:00Z"),
+                Instant.parse("2026-07-18T04:00:00Z"));
+        verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+        assertThrows(IllegalArgumentException.class, () -> reportService.getTotals(AUGUST_31, JULY_1));
     }
 
     private void stubCategories(Object[]... rows) {

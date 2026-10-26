@@ -142,6 +142,17 @@ transferencias y el consumo.
   consumos del mes.
 - **Cuando** en julio la utilidad de las ventas es Bs 8.505,78 y los consumos al costo Bs 300,00 **entonces** la
   utilidad menos consumos es Bs 8.205,78.
+- **Cuando** un mes tiene consumos pero no ventas **entonces** aparece con ventas en 0, margen vacío y la utilidad
+  menos consumos en negativo.
+- Hecho el 26-10-2026: `GET /api/reports/totals?from=&to=` (mismo rango y validaciones que ventas por día) toma los
+  subtotales por mes y el total del rango de ventas por día, así ambos reportes muestran siempre el mismo total,
+  costo y utilidad, y les agrega los consumos `REGISTRADO` del mes (cantidad y total al costo, la misma consulta de
+  movimientos por categoría). Utilidad = utilidad de las normales (las ventas al costo no la cambian); utilidad menos
+  consumos = utilidad − consumos al costo. Un mes aparece si tiene ventas o consumos. Pestaña «Totales» con una fila
+  por mes y el total del rango. Validado con julio de Resumen Ventas Diario en `ReportServiceTest`: normales
+  Bs 37.584 con utilidad Bs 8.505,78, más una venta al costo de Bs 104 da el Total 37.688 de la planilla; con
+  consumos por Bs 300 la utilidad menos consumos es Bs 8.205,78. Falta compararlo con las ventas reales de julio
+  cuando se importen (FIN-11).
 
 ## CON-03 · Consumos al costo
 
@@ -193,6 +204,8 @@ hasta hoy.
 - [x] Movimientos por categoría y mes, con transferencias y la línea Consumo (26-10-2026). Pruebas en
   `ReportServiceTest`, `FinancialTransactionRepositoryTest` y `ConsumptionRepositoryTest` (contra PostgreSQL),
   `EndpointAuthorizationTest`, `report.service.spec.ts` y `transactions-by-category-report.component.spec.ts`.
-- [ ] Totales de ventas y utilidad, y consumos al costo.
+- [x] Totales de ventas y utilidad por mes (26-10-2026). Pruebas en `ReportServiceTest`,
+  `EndpointAuthorizationTest`, `report.service.spec.ts` y `totals-report.component.spec.ts`.
+- [ ] Consumos al costo.
 - [ ] Exportar a Excel los cinco reportes.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.

@@ -1,0 +1,88 @@
+<div class="report-filters">
+  <label class="filter-field">
+    <span>Desde</span>
+    <input type="date" class="form-control" aria-label="Desde"
+           [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Hasta</span>
+    <input type="date" class="form-control" aria-label="Hasta"
+           [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+  </label>
+  <p class="report-hint">
+    Las ventas coinciden con los subtotales de Ventas por día. Los consumos al costo no mueven dinero: solo se restan
+    en la utilidad menos consumos.
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="table-container">
+  @if (isLoading()) {
+    <div class="table-loading">Cargando reporte…</div>
+  } @else if (report(); as r) {
+    @if (r.months.length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">📊</div>
+        <h4 class="table-empty-title">No hay ventas ni consumos</h4>
+        <p class="table-empty-desc">No hay ventas ni consumos activos entre las fechas elegidas.</p>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr class="group-header">
+              <th rowspan="2">Mes</th>
+              <th colspan="5" class="group">Ventas normales</th>
+              <th colspan="2" class="group group-at-cost">Ventas al costo</th>
+              <th rowspan="2" class="num group-total">Total ventas</th>
+              <th colspan="2" class="group group-at-cost">Consumos al costo</th>
+              <th rowspan="2" class="num group-total">Utilidad menos consumos</th>
+            </tr>
+            <tr>
+              <th class="num">Ventas</th>
+              <th class="num">Total</th>
+              <th class="num">Costo</th>
+              <th class="num">Utilidad</th>
+              <th class="num">Margen</th>
+              <th class="num group-at-cost">Ventas</th>
+              <th class="num">Total</th>
+              <th class="num group-at-cost">Consumos</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (month of r.months; track month.month) {
+              <tr>
+                <td>{{ monthLabel(month.month!) }}</td>
+                <ng-container *ngTemplateOutlet="cells; context: { $implicit: month }" />
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Total del rango</td>
+              <ng-container *ngTemplateOutlet="cells; context: { $implicit: r.totals }" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #cells let-row>
+  <td class="num">{{ row.normalSales }}</td>
+  <td class="num">{{ row.normalTotal | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalCost | number:'1.2-2' }}</td>
+  <td class="num strong">{{ row.normalProfit | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalMargin === null ? '—' : (row.normalMargin | number:'1.2-2') + ' %' }}</td>
+  <td class="num group-at-cost">{{ row.atCostSales }}</td>
+  <td class="num">{{ row.atCostTotal | number:'1.2-2' }}</td>
+  <td class="num group-total strong">Bs {{ row.total | number:'1.2-2' }}</td>
+  <td class="num group-at-cost muted">{{ row.consumptions }}</td>
+  <td class="num muted">{{ row.consumptionTotal | number:'1.2-2' }}</td>
+  <td class="num group-total strong">Bs {{ row.profitAfterConsumptions | number:'1.2-2' }}</td>
+</ng-template>
