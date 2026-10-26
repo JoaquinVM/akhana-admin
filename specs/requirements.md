@@ -134,8 +134,10 @@ Detalle en `specs/debts.md` (escenarios del 25-10-2026). Pantalla Deudas, permis
 
 ### 3.5 Consumos y ventas al costo · V1
 
-- **CON-01** Consumo interno: productos y cantidades, valorados al costo del momento. No mueve dinero y se reporta como gasto de la categoría Consumo.
-- **CON-02** Venta al costo (tienda amiga): venta desde el POS con precio igual al costo y utilidad cero, marcada como tipo distinto. Se paga en el momento (Caja o QR) o queda total o parcialmente a crédito (DEU-05).
+Detalle en `specs/consumptions.md` (escenarios del 25-10-2026, validados con la planilla; preguntas P-35 a P-40). Pantalla Consumos, permiso `CONSUMPTIONS` para Operador y Administrador; la venta al costo se hace en el POS.
+
+- **CON-01** Consumo interno: productos y cantidades, valorados al costo del momento. No mueve dinero y se reporta como gasto de la categoría Consumo. La planilla los anota a precio de venta y, hasta julio, como gasto de Caja: en el sistema no pasan por Caja (P-35).
+- **CON-02** Venta al costo (tienda amiga): venta desde el POS con precio igual al costo y utilidad cero, marcada como tipo distinto (`sales.sale_type`). Se paga en el momento (Caja o QR) o queda total o parcialmente a crédito (DEU-05). No admite descuentos ni productos con costo 0.
 - **CON-03** Los reportes muestran por separado ventas normales, ventas al costo y consumos.
 - **CON-04** · V2 — Consumos y ventas al costo generan salidas de stock.
 
@@ -234,12 +236,18 @@ Requerimientos no funcionales, todos para la V1:
 
 ## 5. Preguntas
 
-No quedan preguntas que bloqueen la V1. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
+Las preguntas P-35 a P-40 (consumos y ventas al costo, 25-10-2026) salieron de validar `specs/consumptions.md` con la planilla; tienen supuesto y no frenan la construcción de los consumos, pero conviene responderlas antes de construir la venta al costo y la migración. La unidad de precio por peso quedó decidida el 25-10-2026: precio por kilo (CAT-08). Antes de migrar falta marcar en la planilla qué productos se venden por peso y llevar su precio a Bs por kilo. Las preguntas pendientes son para la V2 y la V3. Cada respuesta se convierte en requerimientos de la sección 3.
 
 ### 5.1 Pendientes
 
 | ID | Pregunta | Supuesto mientras tanto | Se necesita antes de |
 | --- | --- | --- | --- |
+| P-35 | La hoja Consumos anota el precio de venta (Roquin Bs 4; costo Bs 2,73) y hasta julio el consumo se sacaba de Caja como gasto. ¿Se confirma valorar al costo (P-27), aunque la línea Consumo de los reportes no coincida en monto con la planilla? | Al costo; en la fase 2 los consumos se comparan por cantidad, no por monto. | V1 (reportes) |
+| P-36 | Desde el 12-10 la hoja Consumos anota quién consumió (Ali). ¿Hay que guardarlo? | Campo opcional de texto libre «Para quién». | V1 |
+| P-37 | El almuerzo aparece en la hoja Consumos y también como gasto Comida de Caja. ¿Es un consumo? | No: sigue como gasto de caja Comida; los consumos son solo productos del catálogo. | V1 |
+| P-38 | ¿La tienda amiga es Tía Neida? Hoy Akhana paga a un proveedor mercadería para ella (Otro gasto, ej. Fit Mit −579) y ella la devuelve (Otro Ingreso +579). ¿Se registra como pedido + venta al costo a crédito + cobro? | Sí a las dos; los reportes por categoría mostrarán Pedido y Venta donde la planilla muestra Otro gasto y Otro Ingreso. | V1 (venta al costo) |
+| P-39 | En la hoja Ventas hay ventas a precio de costo a Mami («Mami precio costo») y regalos o roturas a costo («Regalo Ali», «Mami rompió»). ¿La venta al costo es para cualquiera o solo para la tienda amiga, y regalos y roturas son consumos? | Venta al costo para cualquiera pagada en el momento; crédito solo a un cliente registrado. Regalos y roturas son consumos con comentario. | V1 (venta al costo) |
+| P-40 | La hoja Consumos (desde el 17-07, texto libre sin código ni costo) se superpone del 17 al 28-07 con los gastos Consumo de Transacc. ¿Se migra? | No: se migran solo los movimientos de Transacc. (FIN-11); los consumos del sistema empiezan con la salida a producción. | V1 (migración) |
 | P-06 | ¿Se permite vender sin stock? | — | V2 |
 | P-07 | ¿Costo por último precio de compra o costo promedio? | Último precio de compra. | V2 |
 | P-09 | ¿Devoluciones de clientes después de cerrar la caja? | No. | V2 |
@@ -311,4 +319,6 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 - [x] Compras: entrega (COM-07), vista de pedidos por pagar (COM-08) y anulación de pedidos y pagos (COM-09) (25-10-2026).
 - [x] Spec de Deudas y cuentas por cobrar (`specs/debts.md`), incluido el pago de pedidos por una persona (DEU-02) (25-10-2026).
 - [x] Construir Deudas con personas (DEU-01 a DEU-04) (25-10-2026).
-- [ ] Escribir la spec de Consumos y ventas al costo; las cuentas por cobrar (DEU-05 a DEU-07) se construyen con la venta al costo (CON-02).
+- [x] Spec de Consumos y ventas al costo (`specs/consumptions.md`), validada con la planilla; preguntas P-35 a P-40 (25-10-2026).
+- [ ] Construir los consumos (CON-01).
+- [ ] Responder P-35 a P-40 y construir la venta al costo con las cuentas por cobrar (CON-02, DEU-05 a DEU-07).
