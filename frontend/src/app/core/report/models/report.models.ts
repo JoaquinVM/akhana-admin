@@ -60,6 +60,44 @@ export interface SalesBySupplierReport {
   totals: SalesBySupplierRow;
 }
 
+export interface CategoryAmount {
+  /** null en «Sin categoría» */
+  categoryId: string | null;
+  categoryName: string;
+  /** Ingresos en positivo, gastos en negativo */
+  amount: number;
+}
+
+export interface TransferAmount {
+  sourceAccountId: string;
+  sourceAccountName: string;
+  destinationAccountId: string;
+  destinationAccountName: string;
+  amount: number;
+}
+
+export interface TransactionsByCategoryMonth {
+  /** Mes de la tienda (YYYY-MM); null en el total del rango */
+  month: string | null;
+  incomes: CategoryAmount[];
+  incomeTotal: number;
+  expenses: CategoryAmount[];
+  expenseTotal: number;
+  /** Ingresos + gastos; no incluye transferencias ni consumos */
+  net: number;
+  transfers: TransferAmount[];
+  consumptions: number;
+  /** Consumos al costo, en positivo; sin movimiento de dinero (CON-03) */
+  consumptionTotal: number;
+}
+
+export interface TransactionsByCategoryReport {
+  from: string;
+  to: string;
+  months: TransactionsByCategoryMonth[];
+  totals: TransactionsByCategoryMonth;
+}
+
 export interface ReportRange {
   from?: string | null;
   to?: string | null;

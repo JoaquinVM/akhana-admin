@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
 import com.akhana.akhana_admin.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -34,5 +35,12 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(reportService.getSalesBySupplier(from, to));
+    }
+
+    @GetMapping("/transactions-by-category")
+    public ResponseEntity<TransactionsByCategoryReportResponse> getTransactionsByCategory(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(reportService.getTransactionsByCategory(from, to));
     }
 }

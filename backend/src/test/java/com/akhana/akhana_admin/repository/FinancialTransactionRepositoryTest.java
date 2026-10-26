@@ -108,6 +108,63 @@ class FinancialTransactionRepositoryTest {
         assertTrue(financialTransactionRepository.existsMovementsBesidesOpeningBalance(third));
     }
 
+    @Test
+    @Transactional
+    void reportSumsGroupActiveMovementsByStoreMonthCategoryAndTransferPair() {
+        Instant from = Instant.parse("2001-08-01T04:00:00Z");
+        Instant to = Instant.parse("2001-09-01T04:00:00Z");
+        UUID caja = newAccount("IT caja ");
+        UUID efectivo = newAccount("IT efectivo ");
+        UUID venta = newCategory("IT Venta ", "INGRESO", null);
+        UUID comida = newCategory("IT Comida ", "GASTO", null);
+        UUID disabled = newCategory("IT Vieja ", "GASTO", Instant.parse("2001-08-02T00:00:00Z"));
+        // 23:30 of 31-08 in Bolivia is 03:30 of 01-09 UTC: still August
+        Instant lastNight = Instant.parse("2001-09-01T03:30:00Z");
+        insertAt("VENTA_INGRESO", caja, null, venta, "100.00", "ACTIVO", lastNight);
+        insertAt("INGRESO_MANUAL", efectivo, null, venta, "20.00", "ACTIVO", lastNight);
+        insertAt("VENTA_INGRESO", caja, null, venta, "999.00", "ANULADO", lastNight);
+        insertAt("GASTO_MANUAL", caja, null, comida, "30.00", "ACTIVO", lastNight);
+        insertAt("GASTO_MANUAL", caja, null, disabled, "5.00", "ACTIVO", lastNight);
+        insertAt("SALDO_INICIAL", caja, null, null, "500.00", "ACTIVO", lastNight);
+        insertAt("TRANSFERENCIA", caja, efectivo, null, "60.00", "ACTIVO", lastNight);
+        insertAt("TRANSFERENCIA", caja, efectivo, null, "15.00", "ACTIVO", lastNight);
+        insertAt("TRANSFERENCIA", caja, efectivo, null, "7.00", "ANULADO", lastNight);
+        insertAt("GASTO_MANUAL", caja, null, comida, "40.00", "ACTIVO", to);
+
+        List<Object[]> categories = financialTransactionRepository.sumByMonthAndCategory(from, to);
+        assertEquals(3, categories.size());
+        assertEquals(0, new BigDecimal("120.00").compareTo(sumOf(categories, "INGRESO", venta)));
+        assertEquals(0, new BigDecimal("30.00").compareTo(sumOf(categories, "GASTO", comida)));
+        assertEquals(0, new BigDecimal("5.00").compareTo(sumOf(categories, "GASTO", disabled)));
+        categories.forEach(row -> assertEquals("2001-08", row[0]));
+
+        List<Object[]> transfers = financialTransactionRepository.sumTransfersByMonth(from, to);
+        assertEquals(1, transfers.size());
+        assertEquals("2001-08", transfers.getFirst()[0]);
+        assertEquals(caja, transfers.getFirst()[1]);
+        assertEquals(efectivo, transfers.getFirst()[3]);
+        assertEquals(0, new BigDecimal("75.00").compareTo((BigDecimal) transfers.getFirst()[5]));
+    }
+
+    private static BigDecimal sumOf(List<Object[]> rows, String direction, UUID category) {
+        return rows.stream().filter(row -> direction.equals(row[1]) && category.equals(row[2]))
+                .map(row -> (BigDecimal) row[4]).findFirst().orElseThrow();
+    }
+
+    private UUID newCategory(String prefix, String type, Instant deletedAt) {
+        return jdbc.queryForObject(
+                "INSERT INTO financial_categories (name, type, deleted_at) VALUES (?, ?, ?) RETURNING id",
+                UUID.class, prefix + UUID.randomUUID().toString().substring(0, 8), type,
+                deletedAt != null ? java.sql.Timestamp.from(deletedAt) : null);
+    }
+
+    private void insertAt(String type, UUID source, UUID destination, UUID category, String amount, String status,
+                          Instant date) {
+        jdbc.update("INSERT INTO financial_transactions (type, source_account_id, destination_account_id, category_id, amount, "
+                        + "transaction_date, description, status, created_by) VALUES (?, ?, ?, ?, ?, ?, 'IT', ?, 'it-repo')",
+                type, source, destination, category, new BigDecimal(amount), java.sql.Timestamp.from(date), status);
+    }
+
     private UUID newAccount(String prefix) {
         return jdbc.queryForObject(
                 "INSERT INTO financial_accounts (name, initial_balance, current_balance, created_by) VALUES (?, 0, 0, 'it-repo') RETURNING id",

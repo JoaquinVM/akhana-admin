@@ -7,7 +7,7 @@
         <span class="breadcrumb-item active">Reportes</span>
       </nav>
       <h1 class="page-title">Reportes</h1>
-      <p class="page-subtitle">Ventas normales y al costo por separado; lo anulado no cuenta</p>
+      <p class="page-subtitle">Ventas normales y al costo y consumos por separado; lo anulado no cuenta</p>
     </div>
   </header>
 
@@ -28,6 +28,9 @@
     }
     @case ('SALES_BY_SUPPLIER') {
       <app-sales-by-supplier-report />
+    }
+    @case ('TRANSACTIONS_BY_CATEGORY') {
+      <app-transactions-by-category-report />
     }
   }
 </div>

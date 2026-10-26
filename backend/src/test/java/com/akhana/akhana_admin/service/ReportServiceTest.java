@@ -3,6 +3,10 @@ package com.akhana.akhana_admin.service;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.CategoryRow;
+import com.akhana.akhana_admin.repository.ConsumptionRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.ReportServiceImpl;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +38,12 @@ class ReportServiceTest {
 
     @Mock
     private SaleRepository saleRepository;
+
+    @Mock
+    private FinancialTransactionRepository financialTransactionRepository;
+
+    @Mock
+    private ConsumptionRepository consumptionRepository;
 
     @InjectMocks
     private ReportServiceImpl reportService;
@@ -264,6 +274,145 @@ class ReportServiceTest {
         assertNull(report.totals().normalMargin());
         verify(saleRepository).findReportLines(Instant.parse("2026-07-17T04:00:00Z"), Instant.parse("2026-07-18T04:00:00Z"));
         assertThrows(IllegalArgumentException.class, () -> reportService.getSalesBySupplier(AUGUST_31, JULY_1));
+    }
+
+    @Test
+    @DisplayName("Agosto: Venta 67.031,50, Pedido -67.097,56 y Comida -2.530 como Resumen Transacc.; el neto los suma")
+    void augustByCategoryLikeThePivotTable() {
+        UUID venta = UUID.randomUUID();
+        UUID pedido = UUID.randomUUID();
+        UUID comida = UUID.randomUUID();
+        UUID otro = UUID.randomUUID();
+        // Sales of the POS and a collection from the friend store both go to Venta (FIN-07, DEU-06)
+        stubCategories(
+                category("2026-08", "INGRESO", venta, "Venta", "66500.00"),
+                category("2026-08", "INGRESO", venta, "Venta", "531.50"),
+                category("2026-08", "INGRESO", otro, "Otro", "2275.03"),
+                category("2026-08", "GASTO", pedido, "Pedido", "67097.56"),
+                category("2026-08", "GASTO", comida, "Comida", "2530.00"));
+        stubTransfers();
+        stubConsumptions();
+
+        TransactionsByCategoryReportResponse.Month august =
+                reportService.getTransactionsByCategory(JULY_1, AUGUST_31).months().getFirst();
+
+        assertEquals("2026-08", august.month());
+        assertEquals(List.of(new CategoryRow(otro, "Otro", new BigDecimal("2275.03")),
+                new CategoryRow(venta, "Venta", new BigDecimal("67031.50"))), august.incomes());
+        assertEquals(List.of(new CategoryRow(comida, "Comida", new BigDecimal("-2530.00")),
+                new CategoryRow(pedido, "Pedido", new BigDecimal("-67097.56"))), august.expenses());
+        assertEquals(new BigDecimal("69306.53"), august.incomeTotal());
+        assertEquals(new BigDecimal("-69627.56"), august.expenseTotal());
+        assertEquals(new BigDecimal("-321.03"), august.net());
+    }
+
+    @Test
+    @DisplayName("Retiro de caja y depósito van en Transferencias por origen y destino, fuera del neto")
+    void transfersApartFromTheNet() {
+        UUID caja = UUID.randomUUID();
+        UUID efectivo = UUID.randomUUID();
+        UUID bisa = UUID.randomUUID();
+        UUID venta = UUID.randomUUID();
+        stubCategories(category("2026-08", "INGRESO", venta, "Venta", "100.00"));
+        stubTransfers(
+                transfer("2026-08", caja, "Caja", efectivo, "Efectivo", "19500.00"),
+                transfer("2026-08", efectivo, "Efectivo", bisa, "Bisa", "7500.00"));
+        stubConsumptions();
+
+        TransactionsByCategoryReportResponse.Month august =
+                reportService.getTransactionsByCategory(JULY_1, AUGUST_31).months().getFirst();
+
+        assertEquals(new BigDecimal("100.00"), august.net());
+        assertEquals(2, august.transfers().size());
+        assertEquals("Caja", august.transfers().get(0).sourceAccountName());
+        assertEquals("Efectivo", august.transfers().get(0).destinationAccountName());
+        assertEquals(new BigDecimal("19500.00"), august.transfers().get(0).amount());
+        assertEquals("Efectivo", august.transfers().get(1).sourceAccountName());
+        assertEquals("Bisa", august.transfers().get(1).destinationAccountName());
+    }
+
+    @Test
+    @DisplayName("Consumo al costo va aparte sin movimiento de dinero; un mes solo con consumos aparece; el rango suma")
+    void consumptionsAtCostApartAndRangeTotals() {
+        UUID venta = UUID.randomUUID();
+        UUID comida = UUID.randomUUID();
+        UUID caja = UUID.randomUUID();
+        UUID efectivo = UUID.randomUUID();
+        stubCategories(
+                category("2026-08", "INGRESO", venta, "Venta", "1000.00"),
+                category("2026-08", "GASTO", comida, "Comida", "200.00"),
+                category("2026-09", "GASTO", null, null, "10.00"),
+                category("2026-09", "GASTO", comida, "Comida", "50.00"));
+        stubTransfers(transfer("2026-08", caja, "Caja", efectivo, "Efectivo", "300.00"),
+                transfer("2026-09", caja, "Caja", efectivo, "Efectivo", "200.00"));
+        stubConsumptions(consumption("2026-07", 2, "45.50"), consumption("2026-08", 1, "30.00"));
+
+        TransactionsByCategoryReportResponse report = reportService.getTransactionsByCategory(JULY_1, SEPTEMBER_30);
+
+        assertEquals(List.of("2026-07", "2026-08", "2026-09"),
+                report.months().stream().map(TransactionsByCategoryReportResponse.Month::month).toList());
+        TransactionsByCategoryReportResponse.Month july = report.months().getFirst();
+        assertTrue(july.incomes().isEmpty());
+        assertEquals(new BigDecimal("0.00"), july.net());
+        assertEquals(2, july.consumptions());
+        assertEquals(new BigDecimal("45.50"), july.consumptionTotal());
+        assertEquals(new BigDecimal("800.00"), report.months().get(1).net());
+        // Movements without a category go last
+        assertEquals("Sin categoría", report.months().get(2).expenses().getLast().categoryName());
+
+        TransactionsByCategoryReportResponse.Month totals = report.totals();
+        assertNull(totals.month());
+        assertEquals(new BigDecimal("740.00"), totals.net());
+        assertEquals(List.of(new CategoryRow(comida, "Comida", new BigDecimal("-250.00")),
+                new CategoryRow(null, "Sin categoría", new BigDecimal("-10.00"))), totals.expenses());
+        assertEquals(new BigDecimal("500.00"), totals.transfers().getFirst().amount());
+        assertEquals(3, totals.consumptions());
+        assertEquals(new BigDecimal("75.50"), totals.consumptionTotal());
+    }
+
+    @Test
+    @DisplayName("Movimientos usa el mismo rango de días de la tienda y sus validaciones")
+    void transactionsReportUsesTheSameRange() {
+        stubCategories();
+        stubTransfers();
+        stubConsumptions();
+
+        TransactionsByCategoryReportResponse report =
+                reportService.getTransactionsByCategory(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+
+        assertTrue(report.months().isEmpty());
+        assertEquals(new BigDecimal("0.00"), report.totals().net());
+        Instant from = Instant.parse("2026-07-17T04:00:00Z");
+        Instant to = Instant.parse("2026-07-18T04:00:00Z");
+        verify(financialTransactionRepository).sumByMonthAndCategory(from, to);
+        verify(financialTransactionRepository).sumTransfersByMonth(from, to);
+        verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+        assertThrows(IllegalArgumentException.class, () -> reportService.getTransactionsByCategory(AUGUST_31, JULY_1));
+    }
+
+    private void stubCategories(Object[]... rows) {
+        when(financialTransactionRepository.sumByMonthAndCategory(any(), any())).thenReturn(List.of(rows));
+    }
+
+    private void stubTransfers(Object[]... rows) {
+        when(financialTransactionRepository.sumTransfersByMonth(any(), any())).thenReturn(List.of(rows));
+    }
+
+    private void stubConsumptions(Object[]... rows) {
+        when(consumptionRepository.sumByMonth(any(), any())).thenReturn(List.of(rows));
+    }
+
+    private static Object[] category(String month, String direction, UUID id, String name, String amount) {
+        return new Object[] {month, direction, id, name, new BigDecimal(amount)};
+    }
+
+    private static Object[] transfer(String month, UUID source, String sourceName, UUID destination,
+                                     String destinationName, String amount) {
+        return new Object[] {month, source, sourceName, destination, destinationName, new BigDecimal(amount)};
+    }
+
+    private static Object[] consumption(String month, long consumptions, String total) {
+        return new Object[] {month, consumptions, new BigDecimal(total)};
     }
 
     private void stubLines(Object[]... lines) {

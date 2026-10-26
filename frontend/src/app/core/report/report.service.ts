@@ -1,7 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ReportRange, SalesByDayReport, SalesBySupplierReport } from './models/report.models';
+import {
+  ReportRange, SalesByDayReport, SalesBySupplierReport, TransactionsByCategoryReport
+} from './models/report.models';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +19,11 @@ export class ReportService {
 
   getSalesBySupplier(range: ReportRange = {}): Observable<SalesBySupplierReport> {
     return this.http.get<SalesBySupplierReport>(`${this.apiUrl}/sales-by-supplier`, { params: this.rangeParams(range) });
+  }
+
+  getTransactionsByCategory(range: ReportRange = {}): Observable<TransactionsByCategoryReport> {
+    return this.http.get<TransactionsByCategoryReport>(`${this.apiUrl}/transactions-by-category`,
+      { params: this.rangeParams(range) });
   }
 
   private rangeParams(range: ReportRange): HttpParams {

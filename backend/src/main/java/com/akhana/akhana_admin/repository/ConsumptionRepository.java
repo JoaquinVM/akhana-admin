@@ -45,4 +45,11 @@ public interface ConsumptionRepository extends JpaRepository<Consumption, UUID> 
                              @Param("status") ConsumptionStatus status,
                              @Param("productId") UUID productId,
                              @Param("search") String search);
+
+    // Active consumptions per month (FIN-10, CON-03): rows of {month 'YYYY-MM', consumptions, total at cost}
+    @Query(value = "SELECT to_char(consumption_date, 'YYYY-MM') AS month, COUNT(*), SUM(total_amount) " +
+                   "FROM consumptions WHERE status = 'REGISTRADO' AND consumption_date BETWEEN :from AND :to " +
+                   "GROUP BY month",
+           nativeQuery = true)
+    List<Object[]> sumByMonth(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

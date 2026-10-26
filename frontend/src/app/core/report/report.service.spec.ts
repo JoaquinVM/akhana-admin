@@ -43,4 +43,13 @@ describe('ReportService', () => {
     expect(req.request.params.get('to')).toBe('2026-09-30');
     req.flush({});
   });
+
+  it('FIN-10: pide los movimientos por categoría con el rango elegido', () => {
+    service.getTransactionsByCategory({ from: '2026-08-01', to: '2026-08-31' }).subscribe();
+    const req = httpTesting.expectOne(r => r.url === '/api/reports/transactions-by-category');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('from')).toBe('2026-08-01');
+    expect(req.request.params.get('to')).toBe('2026-08-31');
+    req.flush({});
+  });
 });

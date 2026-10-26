@@ -120,6 +120,20 @@ transferencias y el consumo.
 - **Cuando** hay consumos activos en el mes **entonces** aparece la línea Consumo con su total al costo, marcada
   «sin movimiento de dinero», fuera del neto (CON-03, FIN-08).
 - **Cuando** una categoría está desactivada **entonces** sus movimientos siguen apareciendo con su nombre.
+- Hecho el 26-10-2026: `GET /api/reports/transactions-by-category?from=&to=` (mismo rango y validaciones que ventas
+  por día). Ingresos = `VENTA_INGRESO` e `INGRESO_MANUAL` (incluye cobros a clientes y el Ajuste por sobrante);
+  gastos = `GASTO_MANUAL`, en negativo. `TRANSFERENCIA` va al bloque por par de cuentas y `SALDO_INICIAL` no
+  aparece. Consumo = consumos `REGISTRADO` por `consumption_date`, su total al costo, en negativo y en cursiva en la
+  pantalla. Categorías por nombre, «Sin categoría» al final; un mes aparece si tiene movimientos, transferencias o
+  consumos. En la pantalla una columna por mes y una con el total del rango, como la tabla dinámica.
+  Validado el 26-10-2026 cargando las 295 filas de agosto de la hoja Transacc. en PostgreSQL (transacción revertida)
+  y pasando el reporte: Venta 67.031,50, Pedido −67.097,56, Comida −2.530, Otro gasto −2.607, Otro Ingreso 835,72,
+  Transporte −320; transferencias Caja → Efectivo 19.500 (Retiro caja), Efectivo → Bisa 7.500 (Deposito),
+  Bisa → Efectivo 1.382,03 y Caja → Bisa 893. Neto −5.332,64; con las transferencias da 23.942,39, el «Total agosto».
+  Hallazgos para la fase 2: la categoría Otro de la planilla (2.275,03 en agosto) son solo transferencias (préstamos
+  Bisa → Efectivo, Caja → Bisa), así que en el sistema está en Transferencias y no en ingresos; Ajuste de la planilla
+  (−645,30) = Ajuste de ingreso (753,50) + Ajuste de gasto (−1.398,80), porque CAJ-09 usa dos categorías; y las
+  devoluciones anotadas como Gasto con monto positivo en Otro Ingreso son ingresos en el sistema.
 
 ## FIN-10 · Totales de ventas y utilidad (con CON-03)
 
@@ -176,7 +190,9 @@ hasta hoy.
 - [x] Ventas por proveedor y mes, con el reparto del descuento general (26-10-2026). Pruebas en
   `ReportServiceTest`, `SaleRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`,
   `report.service.spec.ts` y `sales-by-supplier-report.component.spec.ts`.
-- [ ] Movimientos por categoría y mes, con transferencias y la línea Consumo.
+- [x] Movimientos por categoría y mes, con transferencias y la línea Consumo (26-10-2026). Pruebas en
+  `ReportServiceTest`, `FinancialTransactionRepositoryTest` y `ConsumptionRepositoryTest` (contra PostgreSQL),
+  `EndpointAuthorizationTest`, `report.service.spec.ts` y `transactions-by-category-report.component.spec.ts`.
 - [ ] Totales de ventas y utilidad, y consumos al costo.
 - [ ] Exportar a Excel los cinco reportes.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.

@@ -4,7 +4,12 @@ import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Month;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.CategoryRow;
+import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse.TransferRow;
 import com.akhana.akhana_admin.model.SaleType;
+import com.akhana.akhana_admin.repository.ConsumptionRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +39,8 @@ public class ReportServiceImpl implements ReportService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final SaleRepository saleRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final ConsumptionRepository consumptionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -127,6 +134,40 @@ public class ReportServiceImpl implements ReportService {
         return new SalesBySupplierReportResponse(range.from(), range.to(), suppliers, rangeSums.toRow(null));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public TransactionsByCategoryReportResponse getTransactionsByCategory(LocalDate from, LocalDate to) {
+        Range range = Range.of(from, to);
+
+        Map<String, MovementSums> months = new TreeMap<>();
+        for (Object[] row : financialTransactionRepository.sumByMonthAndCategory(range.fromInstant(), range.toInstant())) {
+            MovementSums month = months.computeIfAbsent((String) row[0], m -> new MovementSums());
+            CategoryKey category = new CategoryKey((UUID) row[2], (String) row[3]);
+            // Expenses are shown negative, like the spreadsheet's pivot table
+            Map<CategoryKey, BigDecimal> sums = "GASTO".equals(row[1]) ? month.expenses : month.incomes;
+            BigDecimal amount = "GASTO".equals(row[1]) ? ((BigDecimal) row[4]).negate() : (BigDecimal) row[4];
+            sums.merge(category, amount, BigDecimal::add);
+        }
+        for (Object[] row : financialTransactionRepository.sumTransfersByMonth(range.fromInstant(), range.toInstant())) {
+            months.computeIfAbsent((String) row[0], m -> new MovementSums()).transfers.merge(
+                new TransferKey((UUID) row[1], (String) row[2], (UUID) row[3], (String) row[4]),
+                (BigDecimal) row[5], BigDecimal::add);
+        }
+        for (Object[] row : consumptionRepository.sumByMonth(range.from(), range.to())) {
+            MovementSums month = months.computeIfAbsent((String) row[0], m -> new MovementSums());
+            month.consumptions += ((Number) row[1]).longValue();
+            month.consumptionTotal = month.consumptionTotal.add((BigDecimal) row[2]);
+        }
+
+        MovementSums rangeSums = new MovementSums();
+        List<TransactionsByCategoryReportResponse.Month> rows = new ArrayList<>();
+        months.forEach((month, sums) -> {
+            rangeSums.add(sums);
+            rows.add(sums.toMonth(month));
+        });
+        return new TransactionsByCategoryReportResponse(range.from(), range.to(), rows, rangeSums.toMonth(null));
+    }
+
     /**
      * Spreads a sale's general discount (line subtotals - sale total) over its lines in proportion to their
      * subtotal. The rounding remainder goes to the line with the largest subtotal, so the lines always add up to
@@ -198,6 +239,71 @@ public class ReportServiceImpl implements ReportService {
             if (id == null) {
                 name = WITHOUT_SUPPLIER;
             }
+        }
+    }
+
+    /** A movement category; movements without one go last as "Sin categoría". Disabled ones keep their name. */
+    private record CategoryKey(UUID id, String name) {
+
+        static final String WITHOUT_CATEGORY = "Sin categoría";
+        static final Comparator<CategoryKey> ORDER = Comparator
+            .comparing((CategoryKey key) -> key.id() == null)
+            .thenComparing(CategoryKey::name, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(key -> String.valueOf(key.id()));
+
+        CategoryKey {
+            if (id == null) {
+                name = WITHOUT_CATEGORY;
+            }
+        }
+
+        CategoryRow toRow(BigDecimal amount) {
+            return new CategoryRow(id, name, money(amount));
+        }
+    }
+
+    /** A pair of accounts of the transfers block, ordered by source and then destination name. */
+    private record TransferKey(UUID sourceId, String sourceName, UUID destinationId, String destinationName) {
+
+        static final Comparator<TransferKey> ORDER = Comparator
+            .comparing(TransferKey::sourceName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(TransferKey::destinationName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(key -> key.sourceId() + "-" + key.destinationId());
+
+        TransferRow toRow(BigDecimal amount) {
+            return new TransferRow(sourceId, sourceName, destinationId, destinationName, money(amount));
+        }
+    }
+
+    /** Running sums of one month of movements, or of the range. */
+    private static final class MovementSums {
+        final Map<CategoryKey, BigDecimal> incomes = new HashMap<>();
+        final Map<CategoryKey, BigDecimal> expenses = new HashMap<>();
+        final Map<TransferKey, BigDecimal> transfers = new HashMap<>();
+        long consumptions;
+        BigDecimal consumptionTotal = BigDecimal.ZERO;
+
+        void add(MovementSums other) {
+            other.incomes.forEach((key, amount) -> incomes.merge(key, amount, BigDecimal::add));
+            other.expenses.forEach((key, amount) -> expenses.merge(key, amount, BigDecimal::add));
+            other.transfers.forEach((key, amount) -> transfers.merge(key, amount, BigDecimal::add));
+            consumptions += other.consumptions;
+            consumptionTotal = consumptionTotal.add(other.consumptionTotal);
+        }
+
+        TransactionsByCategoryReportResponse.Month toMonth(String month) {
+            BigDecimal incomeTotal = money(incomes.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+            BigDecimal expenseTotal = money(expenses.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+            return new TransactionsByCategoryReportResponse.Month(month,
+                categoryRows(incomes), incomeTotal, categoryRows(expenses), expenseTotal, incomeTotal.add(expenseTotal),
+                transfers.entrySet().stream().sorted(Map.Entry.comparingByKey(TransferKey.ORDER))
+                    .map(entry -> entry.getKey().toRow(entry.getValue())).toList(),
+                consumptions, money(consumptionTotal));
+        }
+
+        private static List<CategoryRow> categoryRows(Map<CategoryKey, BigDecimal> sums) {
+            return sums.entrySet().stream().sorted(Map.Entry.comparingByKey(CategoryKey.ORDER))
+                .map(entry -> entry.getKey().toRow(entry.getValue())).toList();
         }
     }
 

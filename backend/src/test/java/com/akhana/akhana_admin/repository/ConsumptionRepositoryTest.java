@@ -39,6 +39,25 @@ class ConsumptionRepositoryTest {
 
     @Test
     @Transactional
+    void reportSumsActiveConsumptionsPerMonth() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String insert = "INSERT INTO consumptions (consumption_number, consumption_date, total_amount, status, created_by) "
+                + "VALUES (?, ?, ?, ?, 'it-repo')";
+        jdbc.update(insert, "IT-CON-R1-" + suffix, LocalDate.of(2001, 8, 1), new BigDecimal("12.50"), "REGISTRADO");
+        jdbc.update(insert, "IT-CON-R2-" + suffix, LocalDate.of(2001, 8, 31), new BigDecimal("7.50"), "REGISTRADO");
+        jdbc.update(insert, "IT-CON-R3-" + suffix, LocalDate.of(2001, 8, 20), new BigDecimal("99.00"), "ANULADO");
+        jdbc.update(insert, "IT-CON-R4-" + suffix, LocalDate.of(2001, 9, 1), new BigDecimal("3.00"), "REGISTRADO");
+
+        List<Object[]> rows = consumptionRepository.sumByMonth(LocalDate.of(2001, 8, 1), LocalDate.of(2001, 8, 31));
+
+        assertEquals(1, rows.size());
+        assertEquals("2001-08", rows.getFirst()[0]);
+        assertEquals(2L, ((Number) rows.getFirst()[1]).longValue());
+        assertEquals(0, new BigDecimal("20.00").compareTo((BigDecimal) rows.getFirst()[2]));
+    }
+
+    @Test
+    @Transactional
     void consumptionWithLinesRoundTripsAndIsFilterable() {
         UUID productId = insertProduct();
         Product product = productRepository.findById(productId).orElseThrow();

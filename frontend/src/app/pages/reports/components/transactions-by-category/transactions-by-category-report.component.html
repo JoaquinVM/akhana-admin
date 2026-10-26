@@ -1,0 +1,111 @@
+<div class="report-filters">
+  <label class="filter-field">
+    <span>Desde</span>
+    <input type="date" class="form-control" aria-label="Desde"
+           [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Hasta</span>
+    <input type="date" class="form-control" aria-label="Hasta"
+           [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+  </label>
+  <p class="report-hint">
+    Ingresos en positivo y gastos en negativo; el neto es su suma. Las transferencias entre cuentas y el consumo al
+    costo se muestran aparte y no suman en el neto. Los saldos iniciales no cuentan.
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="table-container">
+  @if (isLoading()) {
+    <div class="table-loading">Cargando reporte…</div>
+  } @else if (report(); as r) {
+    @if (r.months.length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">📊</div>
+        <h4 class="table-empty-title">No hay movimientos</h4>
+        <p class="table-empty-desc">No hay movimientos activos ni consumos entre las fechas elegidas.</p>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              @for (column of r.months; track column.month) {
+                <th class="num month-header">{{ monthLabel(column.month!) }}</th>
+              }
+              <th class="num group-total">Total del rango</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section-row"><td [attr.colspan]="columns().length + 1">Ingresos</td></tr>
+            <ng-container *ngTemplateOutlet="lineRows; context: { $implicit: incomeLines() }" />
+            <tr class="subtotal-row">
+              <td>Total ingresos</td>
+              <ng-container *ngTemplateOutlet="amountCells; context: { $implicit: incomeTotals() }" />
+            </tr>
+
+            <tr class="section-row"><td [attr.colspan]="columns().length + 1">Gastos</td></tr>
+            <ng-container *ngTemplateOutlet="lineRows; context: { $implicit: expenseLines() }" />
+            <tr class="subtotal-row">
+              <td>Total gastos</td>
+              <ng-container *ngTemplateOutlet="amountCells; context: { $implicit: expenseTotals() }" />
+            </tr>
+          </tbody>
+          <tbody>
+            <tr class="total-row">
+              <td>Neto</td>
+              <ng-container *ngTemplateOutlet="amountCells; context: { $implicit: nets() }" />
+            </tr>
+          </tbody>
+          @if (transferLines().length > 0) {
+            <tbody class="apart">
+              <tr class="section-row">
+                <td [attr.colspan]="columns().length + 1">
+                  Transferencias <span class="apart-note">entre cuentas, no suman en el neto</span>
+                </td>
+              </tr>
+              <ng-container *ngTemplateOutlet="lineRows; context: { $implicit: transferLines() }" />
+            </tbody>
+          }
+          @if (r.totals.consumptions > 0) {
+            <tbody class="apart">
+              <tr class="consumption-row">
+                <td>
+                  Consumo al costo
+                  <span class="badge-no-money">sin movimiento de dinero</span>
+                </td>
+                @for (column of columns(); track $index) {
+                  <td class="num" [class.group-total]="$last">
+                    {{ column.consumptions > 0 ? (-column.consumptionTotal | number:'1.2-2') : '—' }}
+                  </td>
+                }
+              </tr>
+            </tbody>
+          }
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #lineRows let-lines>
+  @for (line of lines; track line.key) {
+    <tr>
+      <td class="line-cell">{{ line.label }}</td>
+      <ng-container *ngTemplateOutlet="amountCells; context: { $implicit: line.amounts }" />
+    </tr>
+  }
+</ng-template>
+
+<ng-template #amountCells let-amounts>
+  @for (amount of amounts; track $index) {
+    <td class="num" [class.group-total]="$last" [class.strong]="$last" [class.negative]="amount < 0">
+      {{ amount === null ? '—' : (amount | number:'1.2-2') }}
+    </td>
+  }
+</ng-template>
