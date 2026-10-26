@@ -12,6 +12,8 @@
   <p class="report-hint">
     La utilidad y el margen son solo de las ventas normales. Las ventas a crédito cuentan el día en que se vendieron.
   </p>
+  <app-report-export-button report="sales-by-day" [from]="fromDate()" [to]="toDate()"
+                            [disabled]="isLoading() || !report()" />
 </div>
 
 @if (errorMessage()) {

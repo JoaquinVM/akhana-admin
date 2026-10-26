@@ -169,3 +169,12 @@ export interface ReportRange {
   from?: string | null;
   to?: string | null;
 }
+
+/** Reporte exportable a Excel: el tramo de su ruta en /api/reports (FIN-10) */
+export type ReportName = 'sales-by-day' | 'sales-by-supplier' | 'transactions-by-category' | 'totals' | 'consumptions';
+
+/** Archivo .xlsx descargado: akhana-<reporte>-<desde>-<hasta>.xlsx */
+export interface ReportFile {
+  fileName: string;
+  content: Blob;
+}

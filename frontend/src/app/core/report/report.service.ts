@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, catchError, from, map, switchMap, throwError } from 'rxjs';
 import {
-  ConsumptionsReport, ReportRange, SalesByDayReport, SalesBySupplierReport, TotalsReport, TransactionsByCategoryReport
+  ConsumptionsReport, ReportFile, ReportName, ReportRange, SalesByDayReport, SalesBySupplierReport, TotalsReport, TransactionsByCategoryReport
 } from './models/report.models';
 
 @Injectable({
@@ -32,6 +32,35 @@ export class ReportService {
 
   getConsumptions(range: ReportRange = {}): Observable<ConsumptionsReport> {
     return this.http.get<ConsumptionsReport>(`${this.apiUrl}/consumptions`, { params: this.rangeParams(range) });
+  }
+
+  // FIN-10: el servidor arma el .xlsx con los mismos números de la pantalla
+  exportReport(report: ReportName, range: ReportRange = {}): Observable<ReportFile> {
+    return this.http.get(`${this.apiUrl}/${report}/export`,
+      { params: this.rangeParams(range), responseType: 'blob', observe: 'response' }).pipe(
+      map(response => ({
+        fileName: this.fileName(response.headers.get('Content-Disposition'))
+          ?? `akhana-${report}-${range.from ?? ''}-${range.to ?? ''}.xlsx`,
+        content: response.body ?? new Blob()
+      })),
+      // Con responseType blob el error JSON del servidor también llega como Blob: se lee para mostrar su mensaje
+      catchError((err: HttpErrorResponse) => from(this.readError(err)).pipe(switchMap(error => throwError(() => error))))
+    );
+  }
+
+  private fileName(contentDisposition: string | null): string | null {
+    return contentDisposition?.match(/filename="?([^";]+)"?/)?.[1] ?? null;
+  }
+
+  private async readError(err: HttpErrorResponse): Promise<unknown> {
+    if (err?.error instanceof Blob) {
+      try {
+        return { ...err, error: JSON.parse(await err.error.text()) };
+      } catch {
+        return { ...err, error: null };
+      }
+    }
+    return err;
   }
 
   private rangeParams(range: ReportRange): HttpParams {

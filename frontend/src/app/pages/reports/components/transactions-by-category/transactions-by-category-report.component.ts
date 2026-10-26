@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ReportExportButtonComponent } from '../export-button/report-export-button.component';
 import { ReportService } from '../../../../core/report/report.service';
 import {
   CategoryAmount, TransactionsByCategoryMonth, TransactionsByCategoryReport, TransferAmount
@@ -21,7 +22,7 @@ const transferKey = (t: TransferAmount) => `${t.sourceAccountId}>${t.destination
 @Component({
   selector: 'app-transactions-by-category-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './transactions-by-category-report.component.html',
   styleUrls: ['../sales-by-day/sales-by-day-report.component.css', './transactions-by-category-report.component.css']
 })

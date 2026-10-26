@@ -18,6 +18,8 @@
     Consumos internos al costo, sin movimiento de dinero; los anulados no cuentan. Cada producto cuenta en su
     proveedor actual.
   </p>
+  <app-report-export-button report="consumptions" [from]="fromDate()" [to]="toDate()"
+                            [disabled]="isLoading() || !report()" />
 </div>
 
 @if (errorMessage()) {

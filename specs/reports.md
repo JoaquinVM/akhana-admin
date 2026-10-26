@@ -177,6 +177,21 @@ transferencias y el consumo.
   con 3 y el nombre `akhana-<reporte>-<desde>-<hasta>.xlsx`.
 - Supuesto: lo genera el backend (Apache POI) en `GET /api/reports/<reporte>/export`, para que los números del
   archivo sean exactamente los de la pantalla. Se agrega cuando estén los cuatro reportes.
+- **Cuando** el rango no es válido **entonces** no se descarga nada y se muestra el mismo mensaje que en la pestaña.
+- Hecho el 26-10-2026: `GET /api/reports/<reporte>/export?from=&to=` para `sales-by-day`, `sales-by-supplier`,
+  `transactions-by-category`, `totals` y `consumptions`, permiso `REPORTS`. `ReportExportServiceImpl` arma el
+  `.xlsx` con Apache POI (`poi-ooxml`) a partir de la misma respuesta de `ReportService`, así que el rango propuesto
+  y las validaciones son los del reporte y el nombre usa el rango resuelto (sin fechas, el mes en curso), por
+  ejemplo `akhana-sales-by-day-2026-10-01-2026-10-26.xlsx`. Cada hoja tiene un título con el rango, los encabezados
+  agrupados como en la pantalla (Ventas normales, Ventas al costo…) y congelados, y las filas en el mismo orden con
+  subtotales y totales en negrita. Montos con formato `#,##0.00`, cantidades `#,##0.000`, conteos enteros, días como
+  fecha `dd/mm/yyyy`, margen como porcentaje con 2 decimales; un margen o un monto sin movimientos («—» en la
+  pantalla) queda como celda vacía. Movimientos por categoría: una columna por mes y el total del rango, bloques
+  Ingresos, Gastos, Neto, Transferencias y la línea «Consumo al costo (sin movimiento de dinero)». Consumos: dos
+  hojas, Por día y Por proveedor y mes. La búsqueda de proveedor solo filtra la pantalla: el archivo trae todos.
+  En la pantalla, botón «Exportar a Excel» en cada pestaña (`app-report-export-button`); el error del servidor
+  llega como Blob y se lee para mostrar su mensaje. Pruebas en `ReportExportServiceTest`,
+  `EndpointAuthorizationTest`, `report.service.spec.ts` y `report-export-button.component.spec.ts`.
 
 ## Históricos (FIN-11)
 
@@ -194,7 +209,7 @@ transferencias y el consumo.
 | GET | `/api/reports/transactions-by-category?from=&to=` | Movimientos por categoría y mes, transferencias y consumo |
 | GET | `/api/reports/totals?from=&to=` | Totales de ventas, utilidad y consumos por mes |
 | GET | `/api/reports/consumptions?from=&to=` | Consumos al costo por día, mes y proveedor |
-| GET | `/api/reports/<reporte>/export?from=&to=` | El mismo reporte en `.xlsx` |
+| GET | `/api/reports/<reporte>/export?from=&to=` | El mismo reporte en `.xlsx` (`<reporte>`: los cinco de arriba) |
 
 Todas con permiso `REPORTS`. `from` y `to` son días de la tienda (`to` incluido); si faltan, el mes en curso
 hasta hoy.
@@ -217,5 +232,5 @@ hasta hoy.
 - [x] Consumos al costo por día, mes y proveedor (26-10-2026). Pruebas en `ReportServiceTest`,
   `ConsumptionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`, `report.service.spec.ts` y
   `consumptions-report.component.spec.ts`.
-- [ ] Exportar a Excel los cinco reportes.
+- [x] Exportar a Excel los cinco reportes (26-10-2026). Suite completa del backend al cerrar el módulo.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.

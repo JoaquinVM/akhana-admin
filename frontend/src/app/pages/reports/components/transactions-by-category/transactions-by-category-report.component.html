@@ -13,6 +13,8 @@
     Ingresos en positivo y gastos en negativo; el neto es su suma. Las transferencias entre cuentas y el consumo al
     costo se muestran aparte y no suman en el neto. Los saldos iniciales no cuentan.
   </p>
+  <app-report-export-button report="transactions-by-category" [from]="fromDate()" [to]="toDate()"
+                            [disabled]="isLoading() || !report()" />
 </div>
 
 @if (errorMessage()) {

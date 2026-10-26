@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ReportExportButtonComponent } from '../export-button/report-export-button.component';
 import { ReportService } from '../../../../core/report/report.service';
 import { ConsumptionsReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
@@ -9,7 +10,7 @@ import { monthLabel } from '../../../../core/report/report-labels';
 @Component({
   selector: 'app-consumptions-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './consumptions-report.component.html',
   styleUrls: [
     '../sales-by-day/sales-by-day-report.component.css',

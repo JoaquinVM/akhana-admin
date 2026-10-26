@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.config.JwtAuthenticationEntryPoint;
 import com.akhana.akhana_admin.config.JwtAuthenticationFilter;
 import com.akhana.akhana_admin.config.SecurityConfig;
 import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
+import com.akhana.akhana_admin.dto.ReportFile;
 import com.akhana.akhana_admin.model.FinancialAccount;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
@@ -151,6 +152,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
     @MockitoBean private ReportService reportService;
+    @MockitoBean private ReportExportService reportExportService;
     @MockitoBean private SaleService saleService;
     @MockitoBean private SupplierService supplierService;
     @MockitoBean private TagService tagService;
@@ -292,6 +294,11 @@ class EndpointAuthorizationTest {
                 adminOnly(get, "/api/reports/transactions-by-category", null),
                 adminOnly(get, "/api/reports/totals", null),
                 adminOnly(get, "/api/reports/consumptions", null),
+                adminOnly(get, "/api/reports/sales-by-day/export", null),
+                adminOnly(get, "/api/reports/sales-by-supplier/export", null),
+                adminOnly(get, "/api/reports/transactions-by-category/export", null),
+                adminOnly(get, "/api/reports/totals/export", null),
+                adminOnly(get, "/api/reports/consumptions/export", null),
                 // Usuarios
                 adminOnly(get, "/api/users", null),
                 adminOnly(get, "/api/users/" + ID, null),
@@ -309,6 +316,12 @@ class EndpointAuthorizationTest {
         when(userService.getUsers(any(), any())).thenReturn(Page.empty());
         when(financialAccountRepository.findByIsCashAccountTrue())
                 .thenReturn(Optional.of(FinancialAccount.builder().id(UUID.randomUUID()).build()));
+        ReportFile file = new ReportFile("akhana-report.xlsx", new byte[0]);
+        when(reportExportService.exportSalesByDay(any(), any())).thenReturn(file);
+        when(reportExportService.exportSalesBySupplier(any(), any())).thenReturn(file);
+        when(reportExportService.exportTransactionsByCategory(any(), any())).thenReturn(file);
+        when(reportExportService.exportTotals(any(), any())).thenReturn(file);
+        when(reportExportService.exportConsumptions(any(), any())).thenReturn(file);
     }
 
     private void stubUser(String token, String username, Role role) {

@@ -18,6 +18,8 @@
     Cada producto cuenta en su proveedor actual. El descuento general se reparte entre las líneas según su subtotal.
     La utilidad y el margen son solo de las ventas normales.
   </p>
+  <app-report-export-button report="sales-by-supplier" [from]="fromDate()" [to]="toDate()"
+                            [disabled]="isLoading() || !report()" />
 </div>
 
 @if (errorMessage()) {

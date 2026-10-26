@@ -13,6 +13,8 @@
     Las ventas coinciden con los subtotales de Ventas por día. Los consumos al costo no mueven dinero: solo se restan
     en la utilidad menos consumos.
   </p>
+  <app-report-export-button report="totals" [from]="fromDate()" [to]="toDate()"
+                            [disabled]="isLoading() || !report()" />
 </div>
 
 @if (errorMessage()) {
