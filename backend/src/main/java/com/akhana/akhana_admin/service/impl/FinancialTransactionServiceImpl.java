@@ -1,7 +1,9 @@
 package com.akhana.akhana_admin.service.impl;
 
+import com.akhana.akhana_admin.dto.CashTransferRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.PaymentAccountResponse;
 import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
@@ -49,6 +51,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
     static final String PURCHASE_MOVEMENT = "Los movimientos de un pedido se gestionan desde Compras.";
     static final String DEBT_MOVEMENT = "Los movimientos de una deuda se gestionan desde Deudas.";
+    static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
+    static final String CASH_TRANSFER_SAME_ACCOUNT = "Elige una cuenta distinta de Caja para el ingreso o retiro.";
+    static final String CASH_TRANSFER_ONLY = "Solo se pueden anular desde el POS los ingresos y retiros de caja.";
 
     @Override
     @Transactional(readOnly = true)
@@ -298,6 +303,59 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<PaymentAccountResponse> getCashTransferAccounts() {
+        return financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc().stream()
+                .filter(a -> !Boolean.TRUE.equals(a.getIsCashAccount()))
+                .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), false,
+                        Boolean.TRUE.equals(a.getIsQrAccount())))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public FinancialTransactionResponse createCashTransfer(CashTransferRequest request, String currentUsername) {
+        FinancialAccount cashAccount = financialAccountRepository.findByIsCashAccountTrue()
+                .orElseThrow(() -> new ResourceNotFoundException(CASH_ACCOUNT_NOT_FOUND));
+        if (cashAccount.getId().equals(request.getAccountId())) {
+            throw new IllegalArgumentException(CASH_TRANSFER_SAME_ACCOUNT);
+        }
+        FinancialAccount otherAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(request.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.getAccountId()));
+
+        boolean withdrawal = request.getDirection() == CashTransferDirection.RETIRO;
+        FinancialTransactionRequest txRequest = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccountId(withdrawal ? cashAccount.getId() : otherAccount.getId())
+                .destinationAccountId(withdrawal ? otherAccount.getId() : cashAccount.getId())
+                .amount(request.getAmount())
+                .description(withdrawal
+                        ? "Retiro de caja a " + otherAccount.getName()
+                        : "Ingreso a caja desde " + otherAccount.getName())
+                .notes(request.getComment())
+                .build();
+
+        // createTransaction requires the open session, binds the transfer to it and refreshes the expected cash
+        return createTransaction(txRequest, currentUsername);
+    }
+
+    @Override
+    @Transactional
+    public FinancialTransactionResponse voidCashTransfer(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
+        requireVoidReason(request);
+        FinancialTransaction tx = financialTransactionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción financiera no encontrada con ID: " + id));
+
+        // Only transfers bound to a cash session move money in or out of the drawer
+        if (tx.getType() != FinancialTransactionType.TRANSFERENCIA || tx.getCashSessionId() == null) {
+            throw new IllegalStateException(CASH_TRANSFER_ONLY);
+        }
+        lockSessionIfOpen(tx.getCashSessionId(), "No se pueden anular ingresos o retiros de una caja cerrada.");
+
+        return voidTransaction(id, request, currentUsername);
+    }
+
+    @Override
     @Transactional
     public FinancialTransactionResponse voidTransaction(UUID id, VoidFinancialTransactionRequest request, String currentUsername) {
         String voidReason = requireVoidReason(request);
@@ -430,6 +488,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                     .id(tx.getSourceAccount().getId())
                     .name(tx.getSourceAccount().getName())
                     .color(tx.getSourceAccount().getColor())
+                    .cashAccount(Boolean.TRUE.equals(tx.getSourceAccount().getIsCashAccount()))
                     .build();
         }
 
@@ -439,6 +498,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                     .id(tx.getDestinationAccount().getId())
                     .name(tx.getDestinationAccount().getName())
                     .color(tx.getDestinationAccount().getColor())
+                    .cashAccount(Boolean.TRUE.equals(tx.getDestinationAccount().getIsCashAccount()))
                     .build();
         }
 

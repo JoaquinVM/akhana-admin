@@ -298,11 +298,12 @@ describe('PosComponent', () => {
     expect(viewPillGroup).toBeTruthy();
 
     const pills = viewPillGroup.queryAll(By.css('.view-pill'));
-    expect(pills.length).toBe(2);
+    expect(pills.length).toBe(3);
     expect(pills[0].nativeElement.textContent).toContain('Ventas');
     expect(pills[0].nativeElement.classList.contains('active')).toBe(true);
     expect(pills[1].nativeElement.textContent).toContain('Compras');
     expect(pills[1].nativeElement.classList.contains('active')).toBe(false);
+    expect(pills[2].nativeElement.textContent).toContain('Ingresos / Retiros');
 
     // Listado de ventas visible
     const salesTable = fixture.debugElement.query(By.css('.table'));
@@ -518,5 +519,7 @@ describe('PosComponent', () => {
 
     expect(component.recentExpenses().map((e) => e.id)).toEqual(['tx-1']);
     expect(component.totalExpensesAmount()).toBe(50.0);
+    // CAJ-08: las transferencias de Caja van a la pestaña Ingresos / Retiros
+    expect(component.recentTransfers().map((t) => t.id)).toEqual(['tx-2']);
   });
 });

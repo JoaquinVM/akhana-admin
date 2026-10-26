@@ -1,6 +1,8 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.CashTransferRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
+import com.akhana.akhana_admin.dto.PaymentAccountResponse;
 import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
 import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
 import com.akhana.akhana_admin.model.FinancialTransactionStatus;
@@ -40,4 +42,13 @@ public interface FinancialTransactionService {
 
     /** Voids a cash expense of the open cash session (POS screen). */
     FinancialTransactionResponse voidCashExpense(UUID id, VoidFinancialTransactionRequest request, String currentUsername);
+
+    /** Active accounts other than Caja, for cash transfers from the POS (CAJ-08). */
+    List<PaymentAccountResponse> getCashTransferAccounts();
+
+    /** Registers a cash income or withdrawal as a transfer between Caja and another account (CAJ-08). */
+    FinancialTransactionResponse createCashTransfer(CashTransferRequest request, String currentUsername);
+
+    /** Voids a cash transfer of the open cash session (POS screen). */
+    FinancialTransactionResponse voidCashTransfer(UUID id, VoidFinancialTransactionRequest request, String currentUsername);
 }

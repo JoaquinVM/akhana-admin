@@ -1,0 +1,210 @@
+<div class="cash-transfers">
+  <div class="transfers-toolbar">
+    <div class="transfers-totals">
+      <span>Ingresos: <strong class="text-in">Bs {{ totalIncome() | number:'1.2-2' }}</strong></span>
+      <span>Retiros: <strong class="text-out">Bs {{ totalWithdrawals() | number:'1.2-2' }}</strong></span>
+    </div>
+    <div class="transfers-actions">
+      <button type="button" class="btn btn-secondary btn-sm" [disabled]="!canOperate" (click)="openForm('INGRESO')">
+        <span>+ Ingreso a caja</span>
+      </button>
+      <button type="button" class="btn btn-warning btn-sm" [disabled]="!canOperate" (click)="openForm('RETIRO')">
+        <span>− Retiro de caja</span>
+      </button>
+    </div>
+  </div>
+
+  @if (items().length === 0) {
+    <div class="transactions-empty">
+      <h4>No hay ingresos ni retiros en este turno</h4>
+      <p>Un retiro saca efectivo de la gaveta hacia otra cuenta (ej. Efectivo o Bisa); un ingreso trae efectivo a la gaveta desde otra cuenta.</p>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 150px">Fecha / Hora</th>
+            <th style="width: 110px">Tipo</th>
+            <th style="width: 160px">Cuenta</th>
+            <th style="width: 130px">Responsable</th>
+            <th style="width: 110px">Estado</th>
+            <th>Comentario</th>
+            <th style="width: 130px; text-align: right">Monto</th>
+            <th style="width: 80px; text-align: right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tx of items(); track tx.id) {
+            <tr [class.row-voided]="tx.status === 'ANULADO'">
+              <td>{{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                @if (directionOf(tx) === 'INGRESO') {
+                  <span class="direction-pill pill-in">Ingreso</span>
+                } @else {
+                  <span class="direction-pill pill-out">Retiro</span>
+                }
+              </td>
+              <td>{{ otherAccountOf(tx) }}</td>
+              <td>{{ tx.createdBy || 'Sistema' }}</td>
+              <td>
+                @if (tx.status === 'ANULADO') {
+                  <span class="status-badge-sale badge-voided">Anulado</span>
+                } @else {
+                  <span class="status-badge-sale badge-completed">Activo</span>
+                }
+              </td>
+              <td>
+                <div class="detail-cell">
+                  <span class="detail-main">{{ tx.notes || tx.description }}</span>
+                  @if (tx.status === 'ANULADO' && tx.voidReason) {
+                    <small class="detail-notes">Anulado: {{ tx.voidReason }}</small>
+                  }
+                </div>
+              </td>
+              <td style="text-align: right">
+                <strong
+                  class="amount-val"
+                  [class.text-in]="directionOf(tx) === 'INGRESO'"
+                  [class.text-out]="directionOf(tx) === 'RETIRO'"
+                  [class.line-through]="tx.status === 'ANULADO'">
+                  {{ directionOf(tx) === 'INGRESO' ? '+' : '-' }} Bs {{ tx.amount | number:'1.2-2' }}
+                </strong>
+              </td>
+              <td style="text-align: right">
+                <div class="table-actions" style="justify-content: flex-end">
+                  <button
+                    type="button"
+                    class="btn-icon btn-delete"
+                    [disabled]="tx.status === 'ANULADO' || !canOperate"
+                    [title]="tx.status === 'ANULADO' ? 'Este movimiento ya está anulado' : 'Anular movimiento'"
+                    aria-label="Anular movimiento"
+                    (click)="openVoid(tx)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- Modal Registrar Ingreso / Retiro -->
+<app-modal
+  [isOpen]="isFormVisible()"
+  [title]="formDirection() === 'INGRESO' ? 'Ingreso a Caja' : 'Retiro de Caja'"
+  [subtitle]="formDirection() === 'INGRESO' ? 'Trae efectivo a la gaveta desde otra cuenta' : 'Saca efectivo de la gaveta hacia otra cuenta'"
+  [size]="'md'"
+  (close)="closeForm()">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    @if (formError()) {
+      <div class="alert alert-danger" role="alert">
+        <span>{{ formError() }}</span>
+      </div>
+    }
+
+    <div class="form-group">
+      <label for="ct-account" class="form-label">
+        <span>{{ formDirection() === 'INGRESO' ? 'Cuenta de origen' : 'Cuenta de destino' }} <span class="required-mark">*</span></span>
+      </label>
+      <select
+        id="ct-account"
+        class="form-control"
+        formControlName="accountId"
+        [class.is-invalid]="form.get('accountId')?.invalid && form.get('accountId')?.touched">
+        <option value="" disabled>Selecciona una cuenta</option>
+        @for (acc of accounts(); track acc.id) {
+          <option [value]="acc.id">{{ acc.name }}</option>
+        }
+      </select>
+      <span class="form-hint">
+        {{ formDirection() === 'INGRESO' ? 'Se transfiere de esta cuenta a Caja.' : 'Se transfiere de Caja a esta cuenta.' }}
+      </span>
+      @if (form.get('accountId')?.invalid && form.get('accountId')?.touched) {
+        <span class="invalid-feedback">La cuenta es obligatoria.</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="ct-amount" class="form-label">
+        <span>Monto (Bs.) <span class="required-mark">*</span></span>
+      </label>
+      <input
+        id="ct-amount"
+        type="number"
+        step="0.01"
+        min="0.01"
+        class="form-control"
+        formControlName="amount"
+        placeholder="0.00"
+        [class.is-invalid]="form.get('amount')?.invalid && form.get('amount')?.touched" />
+      @if (form.get('amount')?.invalid && form.get('amount')?.touched) {
+        <span class="invalid-feedback">El monto es obligatorio y debe ser mayor a 0.</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="ct-comment" class="form-label">
+        <span>Comentario <span class="required-mark">*</span></span>
+      </label>
+      <textarea
+        id="ct-comment"
+        class="form-control"
+        formControlName="comment"
+        rows="2"
+        maxlength="500"
+        [placeholder]="formDirection() === 'INGRESO' ? 'Ej: cambio para la caja' : 'Ej: depósito al banco, salida interna'"
+        [class.is-invalid]="form.get('comment')?.invalid && form.get('comment')?.touched"></textarea>
+      @if (form.get('comment')?.invalid && form.get('comment')?.touched) {
+        <span class="invalid-feedback">El comentario es obligatorio (máximo 500 caracteres).</span>
+      }
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeForm()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isLoading()">
+        {{ isLoading() ? 'Registrando...' : (formDirection() === 'INGRESO' ? 'Registrar ingreso' : 'Registrar retiro') }}
+      </button>
+    </div>
+  </form>
+</app-modal>
+
+<!-- Modal Anular Ingreso / Retiro -->
+<app-modal
+  [isOpen]="!!transferToVoid()"
+  title="Anular movimiento de caja"
+  [subtitle]="transferToVoid() ? (transferToVoid()!.description + ' - Bs. ' + (transferToVoid()!.amount | number:'1.2-2')) : ''"
+  [size]="'md'"
+  (close)="closeVoid()">
+  @if (voidError()) {
+    <div class="alert alert-danger" role="alert">
+      <span>{{ voidError() }}</span>
+    </div>
+  }
+  <p class="void-warning-text">
+    Se revierte la transferencia entre Caja y la otra cuenta, y el efectivo esperado se recalcula. El movimiento queda registrado como anulado.
+  </p>
+  <div class="form-group">
+    <label for="ct-void-reason" class="form-label">Motivo de anulación <span class="required-mark">*</span></label>
+    <textarea
+      id="ct-void-reason"
+      class="form-control"
+      rows="2"
+      [ngModel]="voidReason()"
+      (ngModelChange)="voidReason.set($event)"
+      placeholder="Explica brevemente por qué se anula..."></textarea>
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-secondary" (click)="closeVoid()" [disabled]="isLoading()">Cancelar</button>
+    <button type="button" class="btn btn-danger" (click)="confirmVoid()" [disabled]="isLoading() || !voidReason().trim()">
+      {{ isLoading() ? 'Anulando...' : 'Confirmar anulación' }}
+    </button>
+  </div>
+</app-modal>

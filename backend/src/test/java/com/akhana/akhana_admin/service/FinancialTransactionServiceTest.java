@@ -1,7 +1,9 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.CashTransferRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.PaymentAccountResponse;
 import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
@@ -840,5 +842,155 @@ class FinancialTransactionServiceTest {
                 () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
         assertTrue(ex.getMessage().contains("saldo inicial"));
         assertEquals(new BigDecimal("1000.00"), tx.getAmount());
+    }
+
+    private CashTransferRequest cashTransfer(CashTransferDirection direction, UUID accountId, String amount) {
+        return CashTransferRequest.builder()
+                .direction(direction)
+                .accountId(accountId)
+                .amount(new BigDecimal(amount))
+                .comment("Depósito al banco")
+                .build();
+    }
+
+    @Test
+    @DisplayName("CAJ-08: el retiro de caja es una transferencia de Caja a la otra cuenta vinculada a la caja abierta")
+    void testCashWithdrawalFromPos() {
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        CashSession session = openSession();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(joacoAccount, cajaAccount));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "100.00", "0");
+
+        FinancialTransactionResponse res = financialTransactionService.createCashTransfer(
+                cashTransfer(CashTransferDirection.RETIRO, joacoAccount.getId(), "100.00"), "operador");
+
+        assertEquals(FinancialTransactionType.TRANSFERENCIA, res.getType());
+        assertEquals(cajaAccount.getId(), res.getSourceAccount().getId());
+        assertTrue(res.getSourceAccount().isCashAccount());
+        assertEquals(joacoAccount.getId(), res.getDestinationAccount().getId());
+        assertFalse(res.getDestinationAccount().isCashAccount());
+        assertEquals("Retiro de caja a Cuenta Joaco", res.getDescription());
+        assertEquals("Depósito al banco", res.getNotes());
+        assertEquals(session.getId(), res.getCashSessionId());
+        assertEquals(new BigDecimal("400.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("300.00"), joacoAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("150.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: el ingreso de caja es una transferencia de la otra cuenta hacia Caja y suma al esperado")
+    void testCashIncomeFromPos() {
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(joacoAccount.getId())).thenReturn(false);
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        CashSession session = openSession();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(joacoAccount, cajaAccount));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        stubSessionSums(session.getId(), "0", "50.00");
+
+        FinancialTransactionResponse res = financialTransactionService.createCashTransfer(
+                cashTransfer(CashTransferDirection.INGRESO, joacoAccount.getId(), "50.00"), "operador");
+
+        assertEquals(joacoAccount.getId(), res.getSourceAccount().getId());
+        assertEquals(cajaAccount.getId(), res.getDestinationAccount().getId());
+        assertEquals("Ingreso a caja desde Cuenta Joaco", res.getDescription());
+        assertEquals(new BigDecimal("550.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("150.00"), joacoAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("300.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: rechaza un ingreso o retiro con la misma cuenta Caja")
+    void testCashTransferToCajaItselfRejected() {
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cajaAccount));
+
+        assertThrows(IllegalArgumentException.class, () -> financialTransactionService.createCashTransfer(
+                cashTransfer(CashTransferDirection.RETIRO, cajaAccount.getId(), "10.00"), "operador"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: sin caja abierta el ingreso o retiro se rechaza sin tocar saldos")
+    void testCashTransferWithoutOpenSession() {
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.createCashTransfer(
+                cashTransfer(CashTransferDirection.RETIRO, joacoAccount.getId(), "10.00"), "operador"));
+        assertEquals("Los movimientos de la cuenta Caja requieren una caja abierta.", ex.getMessage());
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: un retiro mayor al saldo de Caja se rechaza")
+    void testCashWithdrawalInsufficientBalance() {
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joacoAccount.getId())).thenReturn(Optional.of(joacoAccount));
+        when(financialAccountRepository.existsByIdAndIsCashAccountTrue(cajaAccount.getId())).thenReturn(true);
+        openSession();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(joacoAccount, cajaAccount));
+
+        assertThrows(IllegalStateException.class, () -> financialTransactionService.createCashTransfer(
+                cashTransfer(CashTransferDirection.RETIRO, joacoAccount.getId(), "600.00"), "operador"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: las cuentas para ingreso o retiro excluyen Caja")
+    void testCashTransferAccountsExcludeCaja() {
+        when(financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc())
+                .thenReturn(List.of(cajaAccount, bisaAccount, joacoAccount));
+
+        List<PaymentAccountResponse> accounts = financialTransactionService.getCashTransferAccounts();
+
+        assertEquals(List.of(bisaAccount.getId(), joacoAccount.getId()), accounts.stream().map(PaymentAccountResponse::id).toList());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: anula desde el POS un retiro de la caja abierta revirtiendo ambos saldos")
+    void testVoidCashTransferOpenSession() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccount(cajaAccount)
+                .destinationAccount(joacoAccount)
+                .amount(new BigDecimal("100.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(sessionId)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        CashSession session = CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA)
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+        when(cashSessionRepository.findByIdForUpdate(sessionId)).thenReturn(Optional.of(session));
+        stubSessionSums(sessionId, "0", "0");
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        FinancialTransactionResponse res = financialTransactionService.voidCashTransfer(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Monto equivocado").build(), "operador");
+
+        assertEquals(FinancialTransactionStatus.ANULADO, res.getStatus());
+        assertEquals(new BigDecimal("600.00"), cajaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("100.00"), joacoAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("250.00"), session.getExpectedCash());
+    }
+
+    @Test
+    @DisplayName("CAJ-08: el POS no anula como ingreso o retiro un movimiento que no es transferencia de caja")
+    void testVoidCashTransferRejectsOtherMovements() {
+        FinancialTransaction tx = cashExpense(UUID.randomUUID());
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThrows(IllegalStateException.class, () -> financialTransactionService.voidCashTransfer(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "operador"));
+        verify(financialTransactionRepository, never()).save(any());
     }
 }

@@ -1,7 +1,9 @@
 package com.akhana.akhana_admin.controller;
 
+import com.akhana.akhana_admin.dto.CashTransferRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.PaymentAccountResponse;
 import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
 import com.akhana.akhana_admin.model.FinancialTransactionStatus;
 import com.akhana.akhana_admin.model.FinancialTransactionType;
@@ -82,6 +84,34 @@ public class FinancialTransactionController {
 
         FinancialTransactionResponse created = financialTransactionService.createTransaction(txRequest, username);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PreAuthorize("hasAuthority('POS')")
+    @GetMapping("/cash-transfer/accounts")
+    public ResponseEntity<List<PaymentAccountResponse>> getCashTransferAccounts() {
+        return ResponseEntity.ok(financialTransactionService.getCashTransferAccounts());
+    }
+
+    @PreAuthorize("hasAuthority('POS')")
+    @PostMapping("/cash-transfer")
+    public ResponseEntity<FinancialTransactionResponse> createCashTransfer(
+            @Valid @RequestBody CashTransferRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        FinancialTransactionResponse created = financialTransactionService.createCashTransfer(request, username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PreAuthorize("hasAuthority('POS')")
+    @PostMapping("/cash-transfer/{id}/void")
+    public ResponseEntity<FinancialTransactionResponse> voidCashTransfer(
+            @PathVariable UUID id,
+            @Valid @RequestBody(required = false) VoidFinancialTransactionRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(financialTransactionService.voidCashTransfer(id, request, username));
     }
 
     @PreAuthorize("hasAnyAuthority('POS', 'CASH_HISTORY')")

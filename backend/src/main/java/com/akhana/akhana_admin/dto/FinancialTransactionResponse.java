@@ -55,6 +55,8 @@ public class FinancialTransactionResponse {
         private UUID id;
         private String name;
         private String color;
+        // Lets the POS tell a cash income from a withdrawal (CAJ-08)
+        private boolean cashAccount;
     }
 
     @Data

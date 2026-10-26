@@ -116,6 +116,8 @@ class EndpointAuthorizationTest {
             {"productIds":["%s"]}""".formatted(ID);
     private static final String CASH_EXPENSE = """
             {"amount":5.00,"categoryId":"%s","description":"Almuerzo"}""".formatted(ID);
+    private static final String CASH_TRANSFER = """
+            {"direction":"RETIRO","accountId":"%s","amount":5.00,"comment":"Depósito"}""".formatted(ID);
     private static final String TRANSACTION = """
             {"type":"GASTO_MANUAL","sourceAccountId":"%s","amount":5.00,"description":"Luz"}""".formatted(ID);
     private static final String VOID_TRANSACTION = """
@@ -255,6 +257,10 @@ class EndpointAuthorizationTest {
                 // Gastos de caja desde el POS: registrar y anular
                 both(post, "/api/finances/transactions/cash-expense", CASH_EXPENSE),
                 both(post, "/api/finances/transactions/cash-expense/" + ID + "/void", VOID_TRANSACTION),
+                // Ingresos y retiros de caja desde el POS (CAJ-08)
+                both(get, "/api/finances/transactions/cash-transfer/accounts", null),
+                both(post, "/api/finances/transactions/cash-transfer", CASH_TRANSFER),
+                both(post, "/api/finances/transactions/cash-transfer/" + ID + "/void", VOID_TRANSACTION),
                 both(get, "/api/finances/transactions/session/" + ID, null),
                 both(get, "/api/finances/categories", null),
                 adminOnly(post, "/api/finances/transactions/" + ID + "/void", VOID_TRANSACTION),

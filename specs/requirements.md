@@ -9,7 +9,7 @@ Akhana Admin ya resuelve bien la venta en POS, la caja y el dinero. **Ni el sist
 
 Stack: Spring Boot 4.1 (Java 21), Angular 21, PostgreSQL 17.
 
-Avance de la V1, actualizado al 25-10-2026. Esta tabla es el tablero del proyecto: se actualiza al cerrar cada sesión, en el mismo commit que el resto de los cambios. Los IDs pendientes se detallan en la sección 3.
+Avance de la V1, actualizado al 26-10-2026. Esta tabla es el tablero del proyecto: se actualiza al cerrar cada sesión, en el mismo commit que el resto de los cambios. Los IDs pendientes se detallan en la sección 3.
 
 | Módulo | Qué hace hoy | Estado V1 | Pendiente para la V1 | Spec |
 | --- | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Avance de la V1, actualizado al 25-10-2026. Esta tabla es el tablero del proyect
 | Deudas con personas | Personas, pagos de pedidos por una persona, devoluciones, saldo e historial (DEU-01 a DEU-04) | ✅ Completo | — | `debts.md` |
 | Cuentas por cobrar | Clientes, venta al costo total o parcialmente a crédito, cobros a Caja o QR con su anulación, saldo e historial; pestaña Clientes en Deudas (DEU-05 a DEU-07) | ✅ Completo | — | `debts.md`, `consumptions.md` |
 | Consumos y ventas al costo | Consumos internos al costo con número `CON-000001`, para quién, comentario, filtros y anulación, sin movimiento de dinero (CON-01). Venta al costo desde el POS con interruptor, cliente y crédito, marcada «Al costo» en el detalle (CON-02) | 🟡 Parcial | CON-03 con los reportes; confirmar P-38 y P-39 | `consumptions.md` |
-| Caja | Una caja abierta, apertura, cierre con arqueo por cortes, diferencia (CAJ-01 a CAJ-07). Las transferencias desde y hacia Caja ya existen en Finanzas | 🟡 Parcial | CAJ-08 ingresos y retiros desde la caja; CAJ-09 ajuste por sobrante o faltante; CAJ-10 caja inicial propuesta | `cash.md` |
+| Caja | Una caja abierta, apertura, cierre con arqueo por cortes, diferencia (CAJ-01 a CAJ-07). Ingresos y retiros de caja desde el POS como transferencia con otra cuenta y comentario, con su anulación (CAJ-08) | 🟡 Parcial | CAJ-09 ajuste por sobrante o faltante; CAJ-10 caja inicial propuesta | `cash.md` |
 | POS / ventas | Carrito, productos rápidos, descuentos, efectivo, QR o mixto, costo por línea, venta por peso, anulación, historial `/sales` con filtros y paginación (POS-01 a POS-10) | ✅ Completo | — | `sales.md` |
 | Finanzas | Cuentas, cuenta QR única, categorías, ingresos y gastos, transferencias, anulación, resumen (FIN-02 a FIN-09) | 🟡 Parcial | FIN-01 cuentas Caja, Bisa y Efectivo con saldo al corte | `finance.md` |
 | Reportes | Solo el resumen de finanzas | ❌ Pendiente | FIN-10 reportes con CON-03 (sin spec todavía) | — |
@@ -159,7 +159,7 @@ Detalle en `specs/consumptions.md` (escenarios del 25-10-2026, validados con la 
 - **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
 - **CAJ-06** Una caja cerrada es inmutable: no se reabre ni recibe movimientos.
 - **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
-- **CAJ-08** Ingreso y retiro de caja ("salida interna") como transferencia entre Caja y otra cuenta (ej. Efectivo), con comentario.
+- **CAJ-08** Ingreso y retiro de caja ("salida interna") como transferencia entre Caja y otra cuenta (ej. Efectivo), con comentario. Hecho el 26-10-2026: pestaña «Ingresos / Retiros» del POS (`pages/pos/components/cash-transfers`), permiso `POS`. `POST /api/finances/transactions/cash-transfer` recibe sentido (`INGRESO` o `RETIRO`), la otra cuenta, monto y comentario obligatorio; el servidor arma la `TRANSFERENCIA` (descripción «Retiro de caja a X» o «Ingreso a caja desde X», el comentario va en notas), la vincula a la caja abierta y recalcula el efectivo esperado (T-15, T-16). Un retiro mayor al saldo de la cuenta Caja se rechaza. Se anula desde el POS con motivo (`/cash-transfer/{id}/void`) solo si es una transferencia de la caja abierta. `GET /cash-transfer/accounts` lista las cuentas activas distintas de Caja. Cada cuenta de la respuesta de movimientos trae `cashAccount` para distinguir ingreso de retiro.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado.
 - **CAJ-10** La apertura propone como monto inicial el cierre anterior; si se cambia, pide comentario.
 

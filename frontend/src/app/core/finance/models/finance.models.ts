@@ -57,6 +57,7 @@ export interface AccountSummary {
   id: string;
   name: string;
   color: string;
+  cashAccount?: boolean;
 }
 
 export interface CategorySummary {
@@ -109,6 +110,24 @@ export interface CashExpenseRequest {
   cashSessionId?: string;
   description: string;
   notes?: string;
+}
+
+// CAJ-08: ingreso o retiro de caja, visto desde la cuenta Caja
+export type CashTransferDirection = 'INGRESO' | 'RETIRO';
+
+export interface CashTransferRequest {
+  direction: CashTransferDirection;
+  accountId: string;
+  amount: number;
+  comment: string;
+}
+
+export interface CashTransferAccount {
+  id: string;
+  name: string;
+  color?: string;
+  cashAccount: boolean;
+  qrAccount: boolean;
 }
 
 export interface VoidFinancialTransactionRequest {

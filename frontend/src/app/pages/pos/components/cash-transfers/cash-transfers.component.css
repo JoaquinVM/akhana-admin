@@ -1,0 +1,123 @@
+.transfers-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.transfers-totals {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.8125rem;
+  color: #475569;
+}
+.transfers-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.text-in {
+  color: #047857;
+}
+.text-out {
+  color: #b45309;
+}
+.direction-pill {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.pill-in {
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+.pill-out {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.amount-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.line-through {
+  text-decoration: line-through;
+}
+.detail-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8125rem;
+}
+.detail-main {
+  color: #1e293b;
+  font-weight: 500;
+}
+.detail-notes {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.transactions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #64748b;
+}
+.transactions-empty h4 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: #1e293b;
+}
+.transactions-empty p {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.status-badge-sale {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-badge-sale.badge-completed {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.status-badge-sale.badge-voided {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.row-voided {
+  background-color: #fffaf0;
+  opacity: 0.85;
+}
+.btn-delete:hover:not(:disabled) {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+}
+.btn-warning {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  color: #ffffff;
+  border: none;
+}
+.void-warning-text {
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}

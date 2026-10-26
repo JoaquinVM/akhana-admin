@@ -125,6 +125,29 @@ El sistema SHALL exigir una caja abierta para todo gasto o transferencia que sal
 - **WHEN** se intenta editar o anular un movimiento vinculado a una caja cerrada
 - **THEN** el sistema lo rechaza (CAJ-06); la corrección se registra en la caja actual
 
+### Requirement: Ingresos y retiros de caja desde el POS (CAJ-08)
+El sistema SHALL registrar desde la pantalla POS los ingresos y retiros de efectivo de la gaveta («salida interna») como una transferencia entre la cuenta Caja y otra cuenta activa, con monto y comentario obligatorio, vinculada a la caja abierta.
+
+#### Scenario: Retiro de caja
+- **WHEN** con la caja abierta el usuario registra un retiro de 300.00 Bs a la cuenta «Efectivo» con el comentario «Depósito al banco»
+- **THEN** se crea una transferencia de Caja a «Efectivo» con descripción «Retiro de caja a Efectivo» y el comentario en notas; el saldo de Caja baja 300.00 Bs, el de «Efectivo» sube 300.00 Bs y el efectivo esperado baja 300.00 Bs
+
+#### Scenario: Ingreso a caja
+- **WHEN** con la caja abierta el usuario registra un ingreso de 50.00 Bs desde «Efectivo» con el comentario «Cambio»
+- **THEN** se crea una transferencia de «Efectivo» a Caja y el efectivo esperado sube 50.00 Bs
+
+#### Scenario: Datos inválidos
+- **WHEN** falta el comentario, el monto no es mayor a 0, la otra cuenta es Caja o el retiro supera el saldo de la cuenta Caja
+- **THEN** el sistema lo rechaza sin tocar saldos
+
+#### Scenario: Sin caja abierta
+- **WHEN** no hay caja abierta y se intenta un ingreso o retiro
+- **THEN** se rechaza con «Los movimientos de la cuenta Caja requieren una caja abierta.»
+
+#### Scenario: Anulación desde el POS
+- **WHEN** el usuario anula con motivo un ingreso o retiro de la caja abierta desde la pestaña «Ingresos / Retiros»
+- **THEN** se revierten ambos saldos, el efectivo esperado deja de contarlo y el movimiento queda anulado; por esta vía el POS no anula gastos ni movimientos de una caja cerrada
+
 ### Requirement: Historial y consulta detallada en pantalla "Cajas"
 El sistema SHALL listar el historial cronológico de sesiones de caja y permitir consultar el detalle integral de cada sesión seleccionada.
 

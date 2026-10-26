@@ -198,7 +198,7 @@
             </span>
           </div>
           <div class="kpi-value highlight-value">Bs {{ expectedCashInDrawer() | number:'1.2-2' }}</div>
-          <span class="kpi-caption highlight-caption">Monto Inicial + Efectivo − Gastos</span>
+          <span class="kpi-caption highlight-caption">Inicial + Efectivo + Ingresos − Gastos − Retiros</span>
         </div>
       </div>
 
@@ -237,11 +237,28 @@
                   </svg>
                   <span>Compras</span>
                 </button>
+                <button
+                  type="button"
+                  class="view-pill"
+                  [class.active]="activeTab() === 'MOVIMIENTOS'"
+                  (click)="setActiveTab('MOVIMIENTOS')"
+                  role="tab"
+                  [attr.aria-selected]="activeTab() === 'MOVIMIENTOS'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="view-pill-icon">
+                    <polyline points="17 1 21 5 17 9" />
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                    <polyline points="7 23 3 19 7 15" />
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  <span>Ingresos / Retiros</span>
+                </button>
               </div>
             </div>
             <span class="transactions-counter">
               @if (activeTab() === 'VENTAS') {
                 {{ recentSales().length }} ventas registradas
+              } @else if (activeTab() === 'MOVIMIENTOS') {
+                {{ recentTransfers().length }} ingresos y retiros
               } @else {
                 {{ activeExpensesCount() }} gastos activos{{ recentExpenses().length > activeExpensesCount() ? ' (' + (recentExpenses().length - activeExpensesCount()) + ' anulados)' : '' }}
               }
@@ -260,7 +277,7 @@
                 </svg>
                 <span>Registrar venta</span>
               </button>
-            } @else {
+            } @else if (activeTab() === 'COMPRAS') {
               <button
                 type="button"
                 class="btn btn-warning btn-sm"
@@ -310,6 +327,12 @@
               (viewDetail)="openDetailModal($event)"
               (voidSale)="openVoidModal($event)" />
           }
+        } @else if (activeTab() === 'MOVIMIENTOS') {
+          <!-- VISTA DE INGRESOS Y RETIROS DE CAJA (CAJ-08) -->
+          <app-cash-transfers
+            [transfers]="recentTransfers()"
+            [canOperate]="cs.status === 'ABIERTA'"
+            (changed)="onCashTransfersChanged($event)" />
         } @else {
           <!-- VISTA DE COMPRAS (Gastos asociados a la sesión actual de Caja) -->
           @if (recentExpenses().length === 0) {

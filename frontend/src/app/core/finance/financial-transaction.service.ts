@@ -3,6 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import {
   CashExpenseRequest,
+  CashTransferAccount,
+  CashTransferRequest,
   FinancialTransaction,
   FinancialTransactionRequest,
   TransactionFilterParams,
@@ -114,6 +116,21 @@ export class FinancialTransactionService {
   /** Anula un gasto de la caja abierta desde el POS (permiso de pantalla POS). */
   voidCashExpense(id: string, request?: VoidFinancialTransactionRequest): Observable<FinancialTransaction> {
     return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-expense/${id}/void`, request || {});
+  }
+
+  /** Cuentas distintas de Caja para ingresos y retiros desde el POS (CAJ-08). */
+  getCashTransferAccounts(): Observable<CashTransferAccount[]> {
+    return this.http.get<CashTransferAccount[]>(`${this.apiUrl}/cash-transfer/accounts`);
+  }
+
+  /** Registra un ingreso o retiro de caja como transferencia entre Caja y otra cuenta (CAJ-08). */
+  createCashTransfer(request: CashTransferRequest): Observable<FinancialTransaction> {
+    return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-transfer`, request);
+  }
+
+  /** Anula un ingreso o retiro de la caja abierta desde el POS. */
+  voidCashTransfer(id: string, request: VoidFinancialTransactionRequest): Observable<FinancialTransaction> {
+    return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-transfer/${id}/void`, request);
   }
 
   voidTransaction(

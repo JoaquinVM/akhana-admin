@@ -13,6 +13,7 @@ import { OpenCashModalComponent } from '../cash/components/open-cash-modal/open-
 import { CloseCashModalComponent } from '../cash/components/close-cash-modal/close-cash-modal.component';
 import { CashSessionInfoModalComponent } from '../cash/components/cash-session-info-modal/cash-session-info-modal.component';
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
+import { CashTransfersComponent } from './components/cash-transfers/cash-transfers.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
@@ -37,6 +38,7 @@ import {
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
     VoidSaleModalComponent,
+    CashTransfersComponent,
     SaleDetailModalComponent,
     SalesTableComponent,
     ModalComponent
@@ -52,8 +54,8 @@ export class PosComponent implements OnInit {
   private readonly categoryService = inject(FinancialCategoryService);
   private readonly fb = inject(FormBuilder);
 
-  // Selector de vista: Ventas o Compras
-  activeTab = signal<'VENTAS' | 'COMPRAS'>('VENTAS');
+  // Selector de vista: Ventas, Compras o Ingresos/Retiros de caja
+  activeTab = signal<'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'>('VENTAS');
 
   // Estados de visibilidad de modales
   isOpenModalVisible = signal<boolean>(false);
@@ -84,6 +86,9 @@ export class PosComponent implements OnInit {
   recentExpenses = signal<FinancialTransaction[]>([]);
   isLoadingExpenses = signal<boolean>(false);
 
+  // Ingresos y retiros de caja de la sesión (CAJ-08)
+  recentTransfers = signal<FinancialTransaction[]>([]);
+
   // Computados de gastos (los gastos anulados no se cuentan como activos)
   activeExpenses = computed(() =>
     this.recentExpenses().filter((e) => e.status === 'ACTIVO')
@@ -107,7 +112,7 @@ export class PosComponent implements OnInit {
     this.loadCurrentSession();
   }
 
-  setActiveTab(tab: 'VENTAS' | 'COMPRAS'): void {
+  setActiveTab(tab: 'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'): void {
     this.activeTab.set(tab);
   }
 
@@ -128,11 +133,13 @@ export class PosComponent implements OnInit {
         } else {
           this.recentSales.set([]);
           this.recentExpenses.set([]);
+          this.recentTransfers.set([]);
         }
       },
       error: () => {
         this.recentSales.set([]);
         this.recentExpenses.set([]);
+        this.recentTransfers.set([]);
       }
     });
   }
@@ -141,15 +148,23 @@ export class PosComponent implements OnInit {
     this.isLoadingExpenses.set(true);
     this.transactionService.getExpensesByCashSession(sessionId).subscribe({
       next: (movements) => {
-        // La sesión también vincula transferencias de Caja; esta vista solo lista gastos
+        // La sesión vincula gastos y transferencias de Caja; cada pestaña muestra los suyos
         this.recentExpenses.set((movements || []).filter((m) => m.type === 'GASTO_MANUAL'));
+        this.recentTransfers.set((movements || []).filter((m) => m.type === 'TRANSFERENCIA'));
         this.isLoadingExpenses.set(false);
       },
       error: () => {
         this.recentExpenses.set([]);
+        this.recentTransfers.set([]);
         this.isLoadingExpenses.set(false);
       }
     });
+  }
+
+  // Tras registrar o anular un ingreso/retiro: refresca movimientos y el efectivo esperado
+  onCashTransfersChanged(message: string): void {
+    this.showFeedback('success', message);
+    this.loadCurrentSession();
   }
 
   private loadSalesForSession(sessionId: string): void {
@@ -288,6 +303,7 @@ export class PosComponent implements OnInit {
         this.showFeedback('success', `Caja #${closedSession.sessionNumber} cerrada exitosamente (${diffText}).`);
         this.recentSales.set([]);
         this.recentExpenses.set([]);
+        this.recentTransfers.set([]);
       },
       error: (err) => {
         this.isActionLoading.set(false);
