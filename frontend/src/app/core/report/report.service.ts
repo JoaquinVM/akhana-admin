@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  ReportRange, SalesByDayReport, SalesBySupplierReport, TotalsReport, TransactionsByCategoryReport
+  ConsumptionsReport, ReportRange, SalesByDayReport, SalesBySupplierReport, TotalsReport, TransactionsByCategoryReport
 } from './models/report.models';
 
 @Injectable({
@@ -28,6 +28,10 @@ export class ReportService {
 
   getTotals(range: ReportRange = {}): Observable<TotalsReport> {
     return this.http.get<TotalsReport>(`${this.apiUrl}/totals`, { params: this.rangeParams(range) });
+  }
+
+  getConsumptions(range: ReportRange = {}): Observable<ConsumptionsReport> {
+    return this.http.get<ConsumptionsReport>(`${this.apiUrl}/consumptions`, { params: this.rangeParams(range) });
   }
 
   private rangeParams(range: ReportRange): HttpParams {

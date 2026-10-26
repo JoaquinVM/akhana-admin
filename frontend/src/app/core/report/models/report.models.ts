@@ -125,6 +125,46 @@ export interface TotalsReport {
   totals: TotalsRow;
 }
 
+export interface ConsumptionsDayRow {
+  /** Día de la tienda (YYYY-MM-DD); null en el subtotal del mes y en el total del rango */
+  date: string | null;
+  consumptions: number;
+  /** Suma de las cantidades de sus líneas (kilos en los productos por peso) */
+  quantity: number;
+  /** Total al costo, sin movimiento de dinero */
+  total: number;
+}
+
+export interface ConsumptionsMonth {
+  month: string;
+  days: ConsumptionsDayRow[];
+  totals: ConsumptionsDayRow;
+}
+
+export interface ConsumptionsSupplierRow {
+  /** Mes de la tienda (YYYY-MM); null en el total del proveedor y del rango */
+  month: string | null;
+  quantity: number;
+  total: number;
+}
+
+export interface ConsumptionsSupplier {
+  /** null en «Sin proveedor» */
+  supplierId: string | null;
+  supplierName: string;
+  months: ConsumptionsSupplierRow[];
+  totals: ConsumptionsSupplierRow;
+}
+
+export interface ConsumptionsReport {
+  from: string;
+  to: string;
+  months: ConsumptionsMonth[];
+  totals: ConsumptionsDayRow;
+  suppliers: ConsumptionsSupplier[];
+  supplierTotals: ConsumptionsSupplierRow;
+}
+
 export interface ReportRange {
   from?: string | null;
   to?: string | null;

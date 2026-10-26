@@ -61,4 +61,13 @@ describe('ReportService', () => {
     expect(req.request.params.get('to')).toBe('2026-07-31');
     req.flush({});
   });
+
+  it('CON-03: pide los consumos al costo con el rango elegido', () => {
+    service.getConsumptions({ from: '2026-07-01', to: '2026-07-31' }).subscribe();
+    const req = httpTesting.expectOne(r => r.url === '/api/reports/consumptions');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('from')).toBe('2026-07-01');
+    expect(req.request.params.get('to')).toBe('2026-07-31');
+    req.flush({});
+  });
 });

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service.impl;
 
+import com.akhana.akhana_admin.dto.ConsumptionsReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Month;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
@@ -197,6 +198,70 @@ public class ReportServiceImpl implements ReportService {
         }
         return new TotalsReportResponse(sales.from(), sales.to(), months,
             totalsRow(null, sales.totals(), rangeConsumptions, rangeConsumptionTotal));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ConsumptionsReportResponse getConsumptions(LocalDate from, LocalDate to) {
+        Range range = Range.of(from, to);
+
+        Map<YearMonth, List<ConsumptionsReportResponse.DayRow>> byMonth = new TreeMap<>();
+        for (Object[] row : consumptionRepository.sumByDay(range.from(), range.to())) {
+            LocalDate date = LocalDate.parse((String) row[0]);
+            byMonth.computeIfAbsent(YearMonth.from(date), m -> new ArrayList<>()).add(new ConsumptionsReportResponse.DayRow(
+                date, ((Number) row[1]).longValue(), quantity((BigDecimal) row[2]), money((BigDecimal) row[3])));
+        }
+        List<ConsumptionsReportResponse.Month> months = new ArrayList<>();
+        List<ConsumptionsReportResponse.DayRow> monthTotals = new ArrayList<>();
+        byMonth.forEach((month, days) -> {
+            ConsumptionsReportResponse.DayRow totals = sumDays(days);
+            monthTotals.add(totals);
+            months.add(new ConsumptionsReportResponse.Month(month.toString(), days, totals));
+        });
+
+        Map<SupplierKey, List<ConsumptionsReportResponse.SupplierRow>> bySupplier = new HashMap<>();
+        for (Object[] row : consumptionRepository.sumBySupplierAndMonth(range.from(), range.to())) {
+            bySupplier.computeIfAbsent(new SupplierKey((UUID) row[1], (String) row[2]), s -> new ArrayList<>())
+                .add(new ConsumptionsReportResponse.SupplierRow((String) row[0], quantity((BigDecimal) row[3]),
+                    money((BigDecimal) row[4])));
+        }
+        List<ConsumptionsReportResponse.Supplier> suppliers = new ArrayList<>();
+        List<ConsumptionsReportResponse.SupplierRow> supplierTotals = new ArrayList<>();
+        bySupplier.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey(SupplierKey.ORDER))
+            .forEach(entry -> {
+                List<ConsumptionsReportResponse.SupplierRow> rows = entry.getValue().stream()
+                    .sorted(Comparator.comparing(ConsumptionsReportResponse.SupplierRow::month)).toList();
+                ConsumptionsReportResponse.SupplierRow totals = sumSupplierRows(rows);
+                supplierTotals.add(totals);
+                suppliers.add(new ConsumptionsReportResponse.Supplier(entry.getKey().id(), entry.getKey().name(),
+                    rows, totals));
+            });
+        return new ConsumptionsReportResponse(range.from(), range.to(), months, sumDays(monthTotals), suppliers,
+            sumSupplierRows(supplierTotals));
+    }
+
+    private static ConsumptionsReportResponse.DayRow sumDays(List<ConsumptionsReportResponse.DayRow> rows) {
+        long consumptions = 0;
+        BigDecimal quantity = BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        for (ConsumptionsReportResponse.DayRow row : rows) {
+            consumptions += row.consumptions();
+            quantity = quantity.add(row.quantity());
+            total = total.add(row.total());
+        }
+        return new ConsumptionsReportResponse.DayRow(null, consumptions, quantity(quantity), money(total));
+    }
+
+    private static ConsumptionsReportResponse.SupplierRow sumSupplierRows(
+            List<ConsumptionsReportResponse.SupplierRow> rows) {
+        BigDecimal quantity = BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        for (ConsumptionsReportResponse.SupplierRow row : rows) {
+            quantity = quantity.add(row.quantity());
+            total = total.add(row.total());
+        }
+        return new ConsumptionsReportResponse.SupplierRow(null, quantity(quantity), money(total));
     }
 
     private static TotalsReportResponse.Row totalsRow(String month, Row sales, long consumptions,

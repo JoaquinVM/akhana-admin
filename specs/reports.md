@@ -161,6 +161,14 @@ transferencias y el consumo.
 - **Cuando** un consumo está anulado **entonces** no cuenta.
 - **Cuando** se compara con la hoja Consumos en la fase 2 **entonces** se comparan cantidades por producto, no
   montos: la planilla los anota a precio de venta (P-35).
+- Hecho el 26-10-2026: `GET /api/reports/consumptions?from=&to=` (mismo rango y validaciones que ventas por día)
+  toma los consumos `REGISTRADO` por `consumption_date`. Por día: cantidad de consumos, cantidad de productos (suma
+  de las cantidades de sus líneas, kilos en los productos por peso) y total al costo (`total_amount`); subtotal por
+  mes y total del rango suman los días; solo días con consumos. Por proveedor y mes: cada línea va al proveedor
+  actual del producto, como en ventas por proveedor, con la suma de sus cantidades y de sus subtotales al costo;
+  proveedores por nombre, «Sin proveedor» al final. Ambos bloques dan el mismo total del rango porque el total de un
+  consumo es la suma de sus líneas (CON-01). Pestaña «Consumos» con las dos tablas y búsqueda de proveedor que solo
+  filtra la vista.
 
 ## FIN-10 · Exportar a Excel
 
@@ -206,6 +214,8 @@ hasta hoy.
   `EndpointAuthorizationTest`, `report.service.spec.ts` y `transactions-by-category-report.component.spec.ts`.
 - [x] Totales de ventas y utilidad por mes (26-10-2026). Pruebas en `ReportServiceTest`,
   `EndpointAuthorizationTest`, `report.service.spec.ts` y `totals-report.component.spec.ts`.
-- [ ] Consumos al costo.
+- [x] Consumos al costo por día, mes y proveedor (26-10-2026). Pruebas en `ReportServiceTest`,
+  `ConsumptionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`, `report.service.spec.ts` y
+  `consumptions-report.component.spec.ts`.
 - [ ] Exportar a Excel los cinco reportes.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.

@@ -1,0 +1,124 @@
+<div class="report-filters">
+  <label class="filter-field">
+    <span>Desde</span>
+    <input type="date" class="form-control" aria-label="Desde"
+           [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Hasta</span>
+    <input type="date" class="form-control" aria-label="Hasta"
+           [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Proveedor</span>
+    <input type="search" class="form-control" aria-label="Buscar proveedor" placeholder="Buscar…"
+           [ngModel]="search()" (ngModelChange)="search.set($event)" />
+  </label>
+  <p class="report-hint">
+    Consumos internos al costo, sin movimiento de dinero; los anulados no cuentan. Cada producto cuenta en su
+    proveedor actual.
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="table-container">
+  @if (isLoading()) {
+    <div class="table-loading">Cargando reporte…</div>
+  } @else if (report(); as r) {
+    @if (r.months.length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">📊</div>
+        <h4 class="table-empty-title">No hay consumos</h4>
+        <p class="table-empty-desc">No hay consumos activos entre las fechas elegidas.</p>
+      </div>
+    } @else {
+      <h3 class="report-section-title">Por día</h3>
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th class="num">Consumos</th>
+              <th class="num">Productos</th>
+              <th class="num">Total al costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (month of r.months; track month.month) {
+              @for (day of month.days; track day.date) {
+                <tr>
+                  <td>{{ dayLabel(day.date) }}</td>
+                  <ng-container *ngTemplateOutlet="dayCells; context: { $implicit: day }" />
+                </tr>
+              }
+              <tr class="subtotal-row">
+                <td>Total {{ monthLabel(month.month) }}</td>
+                <ng-container *ngTemplateOutlet="dayCells; context: { $implicit: month.totals }" />
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Total del rango</td>
+              <ng-container *ngTemplateOutlet="dayCells; context: { $implicit: r.totals }" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h3 class="report-section-title">Por proveedor y mes</h3>
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr>
+              <th>Proveedor / mes</th>
+              <th class="num">Productos</th>
+              <th class="num">Total al costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (supplier of suppliers(); track supplier.supplierId ?? supplier.supplierName) {
+              <tr class="supplier-row">
+                <td colspan="3">{{ supplier.supplierName }}</td>
+              </tr>
+              @for (month of supplier.months; track month.month) {
+                <tr>
+                  <td class="month-cell">{{ monthLabel(month.month!) }}</td>
+                  <ng-container *ngTemplateOutlet="supplierCells; context: { $implicit: month }" />
+                </tr>
+              }
+              <tr class="subtotal-row">
+                <td>Total {{ supplier.supplierName }}</td>
+                <ng-container *ngTemplateOutlet="supplierCells; context: { $implicit: supplier.totals }" />
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="no-match">Ningún proveedor coincide con «{{ search() }}».</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Total del rango</td>
+              <ng-container *ngTemplateOutlet="supplierCells; context: { $implicit: r.supplierTotals }" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #dayCells let-row>
+  <td class="num">{{ row.consumptions }}</td>
+  <td class="num">{{ row.quantity | number:'1.0-3' }}</td>
+  <td class="num strong">Bs {{ row.total | number:'1.2-2' }}</td>
+</ng-template>
+
+<ng-template #supplierCells let-row>
+  <td class="num">{{ row.quantity | number:'1.0-3' }}</td>
+  <td class="num strong">Bs {{ row.total | number:'1.2-2' }}</td>
+</ng-template>

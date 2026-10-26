@@ -291,6 +291,7 @@ class EndpointAuthorizationTest {
                 adminOnly(get, "/api/reports/sales-by-supplier", null),
                 adminOnly(get, "/api/reports/transactions-by-category", null),
                 adminOnly(get, "/api/reports/totals", null),
+                adminOnly(get, "/api/reports/consumptions", null),
                 // Usuarios
                 adminOnly(get, "/api/users", null),
                 adminOnly(get, "/api/users/" + ID, null),

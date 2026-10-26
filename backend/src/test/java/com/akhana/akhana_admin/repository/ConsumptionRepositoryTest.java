@@ -58,6 +58,37 @@ class ConsumptionRepositoryTest {
 
     @Test
     @Transactional
+    void reportSumsActiveConsumptionsPerDayAndSupplier() {
+        UUID productId = insertProduct();
+        UUID supplierId = jdbc.queryForObject("SELECT supplier_id FROM products WHERE id = ?", UUID.class, productId);
+        String suffix = productId.toString().substring(0, 8);
+        UUID first = insertReportConsumption("IT-CON-D1-" + suffix, LocalDate.of(2001, 8, 1), "6.00", "REGISTRADO");
+        insertReportLine(first, productId, "0.100", "6.00");
+        UUID second = insertReportConsumption("IT-CON-D2-" + suffix, LocalDate.of(2001, 8, 1), "120.00", "REGISTRADO");
+        insertReportLine(second, productId, "2.000", "120.00");
+        UUID voided = insertReportConsumption("IT-CON-D3-" + suffix, LocalDate.of(2001, 8, 1), "60.00", "ANULADO");
+        insertReportLine(voided, productId, "1.000", "60.00");
+        UUID outside = insertReportConsumption("IT-CON-D4-" + suffix, LocalDate.of(2001, 9, 1), "60.00", "REGISTRADO");
+        insertReportLine(outside, productId, "1.000", "60.00");
+
+        List<Object[]> days = consumptionRepository.sumByDay(LocalDate.of(2001, 8, 1), LocalDate.of(2001, 8, 31));
+        assertEquals(1, days.size());
+        assertEquals("2001-08-01", days.getFirst()[0]);
+        assertEquals(2L, ((Number) days.getFirst()[1]).longValue());
+        assertEquals(0, new BigDecimal("2.100").compareTo((BigDecimal) days.getFirst()[2]));
+        assertEquals(0, new BigDecimal("126.00").compareTo((BigDecimal) days.getFirst()[3]));
+
+        List<Object[]> suppliers = consumptionRepository.sumBySupplierAndMonth(
+                LocalDate.of(2001, 8, 1), LocalDate.of(2001, 8, 31));
+        assertEquals(1, suppliers.size());
+        assertEquals("2001-08", suppliers.getFirst()[0]);
+        assertEquals(supplierId, suppliers.getFirst()[1]);
+        assertEquals(0, new BigDecimal("2.100").compareTo((BigDecimal) suppliers.getFirst()[3]));
+        assertEquals(0, new BigDecimal("126.00").compareTo((BigDecimal) suppliers.getFirst()[4]));
+    }
+
+    @Test
+    @Transactional
     void consumptionWithLinesRoundTripsAndIsFilterable() {
         UUID productId = insertProduct();
         Product product = productRepository.findById(productId).orElseThrow();
@@ -134,6 +165,19 @@ class ConsumptionRepositoryTest {
 
     private static List<UUID> ids(List<Consumption> consumptions) {
         return consumptions.stream().map(Consumption::getId).toList();
+    }
+
+    private UUID insertReportConsumption(String number, LocalDate day, String total, String status) {
+        return jdbc.queryForObject(
+                "INSERT INTO consumptions (consumption_number, consumption_date, total_amount, status, created_by) "
+                        + "VALUES (?, ?, ?, ?, 'it-repo') RETURNING id",
+                UUID.class, number, day, new BigDecimal(total), status);
+    }
+
+    private void insertReportLine(UUID consumption, UUID productId, String quantity, String subtotal) {
+        jdbc.update("INSERT INTO consumption_items (consumption_id, product_id, product_name, quantity, unit_cost, subtotal) "
+                + "VALUES (?, ?, 'IT', ?, 60.00, ?)", consumption, productId, new BigDecimal(quantity),
+                new BigDecimal(subtotal));
     }
 
     // Supplier, category and product rolled back at the end of each test

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.ConsumptionsReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse.Row;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
@@ -459,6 +460,82 @@ class ReportServiceTest {
                 Instant.parse("2026-07-18T04:00:00Z"));
         verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
         assertThrows(IllegalArgumentException.class, () -> reportService.getTotals(AUGUST_31, JULY_1));
+    }
+
+    @Test
+    @DisplayName("Consumos por día y mes: cantidad de consumos, productos y total al costo, con subtotal y total")
+    void consumptionsByDayAndMonth() {
+        when(consumptionRepository.sumByDay(any(), any())).thenReturn(List.of(
+                new Object[] {"2026-07-21", 2L, new BigDecimal("1.100"), new BigDecimal("16.00")},
+                new Object[] {"2026-07-25", 1L, new BigDecimal("3.000"), new BigDecimal("30.00")},
+                new Object[] {"2026-08-25", 1L, new BigDecimal("1.000"), new BigDecimal("4.50")}));
+        stubConsumptionSuppliers();
+
+        ConsumptionsReportResponse report = reportService.getConsumptions(JULY_1, AUGUST_31);
+
+        assertEquals(List.of("2026-07", "2026-08"),
+                report.months().stream().map(ConsumptionsReportResponse.Month::month).toList());
+        ConsumptionsReportResponse.Month july = report.months().getFirst();
+        assertEquals(LocalDate.of(2026, 7, 21), july.days().getFirst().date());
+        assertEquals(new BigDecimal("1.100"), july.days().getFirst().quantity());
+        assertNull(july.totals().date());
+        assertEquals(3, july.totals().consumptions());
+        assertEquals(new BigDecimal("4.100"), july.totals().quantity());
+        assertEquals(new BigDecimal("46.00"), july.totals().total());
+        assertEquals(4, report.totals().consumptions());
+        assertEquals(new BigDecimal("5.100"), report.totals().quantity());
+        assertEquals(new BigDecimal("50.50"), report.totals().total());
+    }
+
+    @Test
+    @DisplayName("Consumos por proveedor y mes: proveedores por nombre, sin proveedor al final y total del rango")
+    void consumptionsBySupplierAndMonth() {
+        when(consumptionRepository.sumByDay(any(), any())).thenReturn(List.of());
+        stubConsumptionSuppliers(
+                supplierConsumption("2026-08", BOHEMIA, "Bohemia", "1.000", "72.00"),
+                supplierConsumption("2026-07", BOHEMIA, "Bohemia", "2.000", "144.00"),
+                supplierConsumption("2026-07", null, null, "0.250", "15.00"),
+                supplierConsumption("2026-07", ALMA, "Alma", "0.100", "6.00"));
+
+        ConsumptionsReportResponse report = reportService.getConsumptions(JULY_1, AUGUST_31);
+
+        assertEquals(List.of("Alma", "Bohemia", "Sin proveedor"),
+                report.suppliers().stream().map(ConsumptionsReportResponse.Supplier::supplierName).toList());
+        ConsumptionsReportResponse.Supplier bohemia = report.suppliers().get(1);
+        assertEquals(List.of("2026-07", "2026-08"),
+                bohemia.months().stream().map(ConsumptionsReportResponse.SupplierRow::month).toList());
+        assertEquals(new BigDecimal("3.000"), bohemia.totals().quantity());
+        assertEquals(new BigDecimal("216.00"), bohemia.totals().total());
+        assertNull(report.suppliers().get(2).supplierId());
+        assertNull(report.supplierTotals().month());
+        assertEquals(new BigDecimal("3.350"), report.supplierTotals().quantity());
+        assertEquals(new BigDecimal("237.00"), report.supplierTotals().total());
+        assertTrue(report.months().isEmpty());
+        assertEquals(new BigDecimal("0.00"), report.totals().total());
+    }
+
+    @Test
+    @DisplayName("Consumos usa el mismo rango de días de la tienda y sus validaciones")
+    void consumptionsReportUsesTheSameRange() {
+        when(consumptionRepository.sumByDay(any(), any())).thenReturn(List.of());
+        stubConsumptionSuppliers();
+
+        reportService.getConsumptions(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+
+        verify(consumptionRepository).sumByDay(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+        verify(consumptionRepository).sumBySupplierAndMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
+        assertThrows(IllegalArgumentException.class, () -> reportService.getConsumptions(AUGUST_31, JULY_1));
+        assertThrows(IllegalArgumentException.class,
+                () -> reportService.getConsumptions(JULY_1, JULY_1.plusDays(366)));
+    }
+
+    private void stubConsumptionSuppliers(Object[]... rows) {
+        when(consumptionRepository.sumBySupplierAndMonth(any(), any())).thenReturn(List.of(rows));
+    }
+
+    private static Object[] supplierConsumption(String month, UUID supplierId, String supplierName, String quantity,
+                                                String total) {
+        return new Object[] {month, supplierId, supplierName, new BigDecimal(quantity), new BigDecimal(total)};
     }
 
     private void stubCategories(Object[]... rows) {

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.ConsumptionsReportResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.SalesBySupplierReportResponse;
 import com.akhana.akhana_admin.dto.TotalsReportResponse;
@@ -19,4 +20,7 @@ public interface ReportService {
 
     /** Sales, profit and consumptions at cost per store month, with the profit after consumptions (FIN-10, CON-03). */
     TotalsReportResponse getTotals(LocalDate from, LocalDate to);
+
+    /** Active consumptions at cost per store day and month, and per supplier and month (CON-03). */
+    ConsumptionsReportResponse getConsumptions(LocalDate from, LocalDate to);
 }
