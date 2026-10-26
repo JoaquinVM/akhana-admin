@@ -440,16 +440,6 @@
   justify-content: center;
 }
 
-.sale-number-pill {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #1b3b18;
-  background-color: #f1f5f9;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-sm);
-}
-
 /* Distintivos de Estado de Venta */
 .status-badge-sale {
   display: inline-flex;
@@ -478,48 +468,11 @@
   opacity: 0.85;
 }
 
-.method-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-full);
-}
-
-.method-badge.cash { background-color: #ecfdf5; color: #065f46; }
-.method-badge.qr { background-color: #eff6ff; color: #1e40af; }
-.method-badge.mixed { background-color: #f5f3ff; color: #6d28d9; }
-
-.method-svg {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
 .sale-detail-cell {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   font-size: 0.8125rem;
-}
-
-.void-reason-note {
-  font-size: 0.6875rem;
-  color: #dc2626;
-  font-style: italic;
-}
-
-.sale-amount-val {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.875rem;
-  color: #0f172a;
-}
-
-.sale-amount-val.line-through {
-  text-decoration: line-through;
-  color: #94a3b8;
 }
 
 /* Botones de acción en tabla */

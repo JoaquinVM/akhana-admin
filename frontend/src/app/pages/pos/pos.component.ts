@@ -14,6 +14,7 @@ import { CloseCashModalComponent } from '../cash/components/close-cash-modal/clo
 import { CashSessionInfoModalComponent } from '../cash/components/cash-session-info-modal/cash-session-info-modal.component';
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
+import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
@@ -37,6 +38,7 @@ import {
     CashSessionInfoModalComponent,
     VoidSaleModalComponent,
     SaleDetailModalComponent,
+    SalesTableComponent,
     ModalComponent
   ],
   templateUrl: './pos.component.html',

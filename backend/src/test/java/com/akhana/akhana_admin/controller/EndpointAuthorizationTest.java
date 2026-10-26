@@ -183,6 +183,7 @@ class EndpointAuthorizationTest {
                 // Ventas: registrar, anular (POS) e historial
                 both(post, "/api/sales", SALE),
                 both(get, "/api/sales", null),
+                both(get, "/api/sales/sellers", null),
                 both(get, "/api/sales/" + ID, null),
                 both(get, "/api/sales/session/" + ID, null),
                 both(post, "/api/sales/" + ID + "/void", VOID_SALE),
