@@ -94,6 +94,18 @@
     </div>
   </div>
 
+  <!-- CAT-11: avisos del último guardado (venta a pérdida, precios fijos que no cambian) -->
+  @if (saveWarnings().length > 0) {
+    <div class="alert alert-warning" role="status">
+      <ul class="save-warnings">
+        @for (warning of saveWarnings(); track warning) {
+          <li>{{ warning }}</li>
+        }
+      </ul>
+      <button type="button" class="btn btn-outline btn-sm" (click)="saveWarnings.set([])">Entendido</button>
+    </div>
+  }
+
   <!-- Mensajes de Error de Red -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
@@ -540,6 +552,78 @@
           <option value="KILOGRAM">Peso (precio por kilo)</option>
         </select>
       </div>
+
+      <!-- Presentaciones del producto por kilo (CAT-11) -->
+      @if (isKilogramForm()) {
+        <div class="form-group presentations-section">
+          <label class="form-label">
+            <span>Presentaciones</span>
+            @if (presentationsModified()) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <span class="text-muted-sm">
+            Peso fijo en kilos. Sin precio fijo, el precio es peso × precio por kilo; el costo siempre es peso × costo por kilo.
+          </span>
+          <table class="presentations-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Peso (kg)</th>
+                <th>Precio fijo (Bs)</th>
+                <th class="text-right">Precio</th>
+                <th class="text-right">Costo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (draft of presentations(); track $index; let i = $index) {
+                <tr [class.presentation-inactive]="!draft.active">
+                  <td>
+                    <input type="text" class="form-control" maxlength="50" placeholder="1/2 libra"
+                           [attr.aria-label]="'Nombre de la presentación ' + (i + 1)"
+                           [disabled]="!draft.active" [value]="draft.name"
+                           (input)="updatePresentation(i, 'name', $any($event.target).value)" />
+                  </td>
+                  <td>
+                    <input type="number" class="form-control" step="0.001" min="0.001" placeholder="0,227"
+                           [attr.aria-label]="'Peso en kilos de la presentación ' + (i + 1)"
+                           [disabled]="!draft.active" [value]="draft.weightKg ?? ''"
+                           (input)="updatePresentation(i, 'weightKg', $any($event.target).value)" />
+                  </td>
+                  <td>
+                    <input type="number" class="form-control" step="0.01" min="0.01" placeholder="Calculado"
+                           [attr.aria-label]="'Precio fijo de la presentación ' + (i + 1)"
+                           [disabled]="!draft.active" [value]="draft.fixedPrice ?? ''"
+                           (input)="updatePresentation(i, 'fixedPrice', $any($event.target).value)" />
+                  </td>
+                  <td class="text-right">
+                    {{ presentationPricePreview(draft) !== null ? ('Bs ' + (presentationPricePreview(draft) | number:'1.2-2')) : '—' }}
+                  </td>
+                  <td class="text-right">
+                    {{ presentationCostPreview(draft) !== null ? ('Bs ' + (presentationCostPreview(draft) | number:'1.2-2')) : '—' }}
+                  </td>
+                  <td class="text-right">
+                    @if (draft.active) {
+                      <button type="button" class="btn btn-outline btn-sm" (click)="removePresentation(i)"
+                              [title]="draft.id ? 'Desactivar' : 'Quitar'">{{ draft.id ? 'Desactivar' : 'Quitar' }}</button>
+                    } @else {
+                      <button type="button" class="btn btn-outline btn-sm" (click)="setPresentationActive(i, true)">Reactivar</button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="text-muted-sm">Sin presentaciones: en el POS se vende escribiendo los kilos.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <button type="button" class="btn btn-outline btn-sm"
+                  [disabled]="activePresentationCount() >= maxActivePresentations"
+                  (click)="addPresentation()">Agregar presentación</button>
+        </div>
+      }
 
       <!-- Fila de Precios y Utilidad Automática -->
       <div class="form-row prices-row">

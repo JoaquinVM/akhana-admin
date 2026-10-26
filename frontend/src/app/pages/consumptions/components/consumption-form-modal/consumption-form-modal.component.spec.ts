@@ -52,7 +52,25 @@ describe('ConsumptionFormModalComponent', () => {
     expect(component.total()).toBe(5.46);
   });
 
-  it('CON-01: un producto por peso empieza en 100 g y acepta presentaciones', () => {
+  it('CAT-11: elige la presentación y la vale a peso × costo por kilo', () => {
+    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
+    const nut = product({ id: 'p-4', code: 'FSE-NUE', name: 'Nuez pelada', saleUnit: 'KILOGRAM', buyPrice: 130,
+      sellPrice: 210, presentations: [halfPound] });
+
+    component.addProduct(nut);
+    expect(component.pickerProduct()).toBe(nut);
+    expect(component.lines().length).toBe(0);
+    component.onPresentationPicked(halfPound);
+    component.addProduct(nut);
+    component.onPresentationPicked(halfPound);
+
+    expect(component.lines().length).toBe(1);
+    expect(component.lines()[0].quantity).toBe(2);
+    expect(component.total()).toBe(59.02);
+    expect(component.buildRequest().items).toEqual([{ productId: 'p-4', quantity: 2, presentationId: 'pres-half' }]);
+  });
+
+  it('CON-01: un producto por peso sin presentaciones empieza en 100 g', () => {
     component.addProduct(nuts);
     expect(component.lines()[0].quantity).toBe(0.1);
     expect(component.total()).toBe(6);

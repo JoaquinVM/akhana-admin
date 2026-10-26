@@ -39,6 +39,11 @@ export interface SaleItem {
   finalUnitPrice: number;
   quantity: number;
   subtotal: number;
+  // CAT-11: copia de la presentación vendida y los kilos de la línea
+  presentationId?: string | null;
+  presentationName?: string | null;
+  presentationWeightKg?: number | null;
+  weightKg?: number | null;
 }
 
 export interface Sale {

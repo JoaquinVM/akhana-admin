@@ -17,5 +17,12 @@ public record SaleItemRequest(
     BigDecimal quantity,
 
     @DecimalMin(value = "0.00", message = "El descuento unitario no puede ser negativo")
-    BigDecimal discountPerUnit
-) {}
+    BigDecimal discountPerUnit,
+
+    // CAT-11: sold by presentation; quantity is then the whole number of packs
+    UUID presentationId
+) {
+    public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit) {
+        this(productId, quantity, discountPerUnit, null);
+    }
+}

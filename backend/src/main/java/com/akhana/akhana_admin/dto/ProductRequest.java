@@ -42,5 +42,14 @@ public record ProductRequest(
     ProductStatus status,
 
     // Optional: null keeps UNIT on create and the current unit on update
-    SaleUnit saleUnit
-) {}
+    SaleUnit saleUnit,
+
+    // CAT-11: the whole list for a product sold by weight; null keeps the current presentations
+    List<ProductPresentationRequest> presentations
+) {
+    public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
+                          List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
+                          SaleUnit saleUnit) {
+        this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit, null);
+    }
+}

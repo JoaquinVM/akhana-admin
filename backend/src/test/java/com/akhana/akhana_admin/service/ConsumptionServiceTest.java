@@ -7,7 +7,10 @@ import com.akhana.akhana_admin.dto.VoidConsumptionRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
+import com.akhana.akhana_admin.repository.ProductPresentationRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.service.impl.ConsumptionServiceImpl;
+import com.akhana.akhana_admin.service.impl.ProductPresentationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,8 @@ class ConsumptionServiceTest {
 
     @Mock private ConsumptionRepository consumptionRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private ProductPresentationRepository presentationRepository;
+    @Mock private ProductPriceChangeRepository priceChangeRepository;
 
     private ConsumptionServiceImpl consumptionService;
 
@@ -46,7 +51,8 @@ class ConsumptionServiceTest {
     @BeforeEach
     void setUp() {
         // Only these two repositories: a consumption cannot reach a cash session, an account or a movement
-        consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository);
+        consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository));
 
         roquin = product("Roquin", "ROQ-1", SaleUnit.UNIT, "2.73", "4.00");
         bombitas = product("Bombitas Proteína", "BOM-1", SaleUnit.UNIT, "10.00", "15.00");
@@ -237,5 +243,27 @@ class ConsumptionServiceTest {
         assertThat(list).hasSize(1);
         assertThat(list.get(0).items()).isEmpty();
         verify(consumptionRepository).search(from, to, ConsumptionStatus.REGISTRADO, productId, "ali");
+    }
+
+    @Test
+    @DisplayName("CAT-11: dos veces la 1/2 libra suman en una línea de 0,454 kg valorada a 130 el kilo")
+    void register_byPresentation() {
+        nuts.setBuyPrice(new BigDecimal("130.00"));
+        ProductPresentation halfPound = ProductPresentation.builder().id(UUID.randomUUID()).product(nuts)
+            .name("1/2 libra").weightKg(new BigDecimal("0.227")).fixedPrice(new BigDecimal("45.00")).active(true).build();
+        when(presentationRepository.findById(halfPound.getId())).thenReturn(Optional.of(halfPound));
+        ConsumptionItemRequest pack = new ConsumptionItemRequest(nuts.getId(), BigDecimal.ONE, halfPound.getId());
+
+        ConsumptionResponse response = consumptionService.registerConsumption(
+            request(null, pack, pack, line(nuts, "0.300")), "operator");
+
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items().get(0).presentationName()).isEqualTo("1/2 libra");
+        assertThat(response.items().get(0).quantity()).isEqualByComparingTo("2");
+        assertThat(response.items().get(0).weightKg()).isEqualByComparingTo("0.454");
+        assertThat(response.items().get(0).subtotal()).isEqualByComparingTo("59.02");
+        assertThat(response.items().get(1).presentationId()).isNull();
+        assertThat(response.items().get(1).subtotal()).isEqualByComparingTo("39.00");
+        assertThat(response.totalAmount()).isEqualByComparingTo("98.02");
     }
 }

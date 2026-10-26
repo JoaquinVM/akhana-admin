@@ -13,6 +13,7 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
+import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.SaleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,6 +46,7 @@ public class SaleServiceImpl implements SaleService {
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
     private final CustomerRepository customerRepository;
+    private final ProductPresentationService presentationService;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
@@ -83,7 +85,13 @@ public class SaleServiceImpl implements SaleService {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' no se encuentra activo para la venta.");
             }
 
-            BigDecimal qty = normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
+            // CAT-11: by presentation the quantity is whole packs and the kilos are packs x presentation weight
+            ProductPresentation presentation = itemReq.presentationId() != null
+                ? presentationService.findActivePresentation(product, itemReq.presentationId())
+                : null;
+            BigDecimal qty = presentation != null
+                ? normalizePackQuantity(itemReq.quantity(), product.getName(), presentation.getName())
+                : normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
             // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
             BigDecimal unitCost = product.getBuyPrice() != null
                 ? product.getBuyPrice().setScale(2, RoundingMode.HALF_UP)
@@ -100,7 +108,15 @@ public class SaleServiceImpl implements SaleService {
                     throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
                 }
             }
-            BigDecimal unitPrice = atCost ? unitCost : product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
+            // A presentation at cost costs weight x cost per kilo: its fixed price is ignored (CAT-11)
+            BigDecimal unitPrice;
+            if (presentation != null) {
+                unitPrice = atCost
+                    ? ProductPresentationServiceImpl.costOf(presentation, product)
+                    : ProductPresentationServiceImpl.priceOf(presentation, product);
+            } else {
+                unitPrice = atCost ? unitCost : product.getSellPrice().setScale(2, RoundingMode.HALF_UP);
+            }
 
             if (discountPerUnit.compareTo(BigDecimal.ZERO) < 0 || discountPerUnit.compareTo(unitPrice) > 0) {
                 throw new IllegalArgumentException("El descuento por unidad para '" + product.getName() + "' no puede ser negativo ni superar su precio.");
@@ -124,6 +140,10 @@ public class SaleServiceImpl implements SaleService {
                 .discountPerUnit(discountPerUnit)
                 .finalUnitPrice(finalUnitPrice)
                 .quantity(qty)
+                .presentation(presentation)
+                .presentationName(presentation != null ? presentation.getName() : null)
+                .presentationWeightKg(presentation != null ? presentation.getWeightKg() : null)
+                .weightKg(presentation != null ? packWeight(qty, presentation) : null)
                 .subtotal(lineSubtotal)
                 .build();
 
@@ -385,6 +405,25 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalArgumentException("La cantidad de '" + productName + "' debe ser entera: se vende por unidad.");
         }
         return quantity.setScale(3);
+    }
+
+    // A line by presentation counts whole packs (CAT-11)
+    static BigDecimal normalizePackQuantity(BigDecimal quantity, String productName, String presentationName) {
+        String label = productName + " · " + presentationName;
+        if (quantity == null) {
+            return BigDecimal.ONE.setScale(3);
+        }
+        if (quantity.signum() <= 0) {
+            throw new IllegalArgumentException("La cantidad de '" + label + "' debe ser mayor a 0.");
+        }
+        if (quantity.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("La cantidad de '" + label + "' debe ser entera: se vende por presentación.");
+        }
+        return quantity.setScale(3);
+    }
+
+    static BigDecimal packWeight(BigDecimal packs, ProductPresentation presentation) {
+        return packs.multiply(presentation.getWeightKg()).setScale(3, RoundingMode.HALF_UP);
     }
 
     static String formatSaleNumber(long sequenceValue) {

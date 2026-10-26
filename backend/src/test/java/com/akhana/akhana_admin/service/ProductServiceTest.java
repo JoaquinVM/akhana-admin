@@ -38,6 +38,8 @@ class ProductServiceTest {
     private SupplierRepository supplierRepository;
     @Mock
     private TagRepository tagRepository;
+    @Mock
+    private ProductPresentationService presentationService;
 
     @InjectMocks
     private ProductServiceImpl productService;

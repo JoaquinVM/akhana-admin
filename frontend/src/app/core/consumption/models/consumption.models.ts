@@ -17,6 +17,11 @@ export interface ConsumptionItem {
   quantity: number;
   unitCost: number;
   subtotal: number;
+  // CAT-11: copia de la presentación consumida y los kilos de la línea
+  presentationId?: string | null;
+  presentationName?: string | null;
+  presentationWeightKg?: number | null;
+  weightKg?: number | null;
 }
 
 export interface Consumption {
@@ -39,6 +44,7 @@ export interface Consumption {
 export interface ConsumptionItemRequest {
   productId: string;
   quantity: number;
+  presentationId?: string | null;
 }
 
 export interface ConsumptionRequest {

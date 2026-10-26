@@ -53,10 +53,11 @@ public interface ConsumptionRepository extends JpaRepository<Consumption, UUID> 
            nativeQuery = true)
     List<Object[]> sumByMonth(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    // Active consumptions per day (CON-03): rows of {day 'YYYY-MM-DD', consumptions, quantity, total at cost}
+    // Active consumptions per day (CON-03): rows of {day 'YYYY-MM-DD', consumptions, quantity, total at cost};
+    // a line by presentation counts its kilos (CAT-11)
     @Query(value = "SELECT to_char(c.consumption_date, 'YYYY-MM-DD') AS day, COUNT(*), " +
                    "COALESCE(SUM(i.quantity), 0), SUM(c.total_amount) " +
-                   "FROM consumptions c LEFT JOIN (SELECT consumption_id, SUM(quantity) AS quantity " +
+                   "FROM consumptions c LEFT JOIN (SELECT consumption_id, SUM(COALESCE(weight_kg, quantity)) AS quantity " +
                    "FROM consumption_items GROUP BY consumption_id) i ON i.consumption_id = c.id " +
                    "WHERE c.status = 'REGISTRADO' AND c.consumption_date BETWEEN :from AND :to " +
                    "GROUP BY day ORDER BY day",
@@ -66,7 +67,7 @@ public interface ConsumptionRepository extends JpaRepository<Consumption, UUID> 
     // Lines of the active consumptions per supplier and month (CON-03): rows of {month 'YYYY-MM', supplier id,
     // supplier name, quantity, total at cost}. The supplier is the product's current one, like sales per supplier
     @Query(value = "SELECT to_char(c.consumption_date, 'YYYY-MM') AS month, sup.id, sup.name, " +
-                   "SUM(i.quantity), SUM(i.subtotal) " +
+                   "SUM(COALESCE(i.weight_kg, i.quantity)), SUM(i.subtotal) " +
                    "FROM consumption_items i JOIN consumptions c ON c.id = i.consumption_id " +
                    "JOIN products p ON p.id = i.product_id LEFT JOIN suppliers sup ON sup.id = p.supplier_id " +
                    "WHERE c.status = 'REGISTRADO' AND c.consumption_date BETWEEN :from AND :to " +

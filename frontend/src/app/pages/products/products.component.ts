@@ -2,7 +2,13 @@ import { Component, OnInit, computed, inject, signal, DestroyRef, HostListener }
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Product, ProductRequest, ProductStatus } from '../../core/product/models/product.models';
+import {
+  Product,
+  ProductPresentationRequest,
+  ProductRequest,
+  ProductStatus,
+  SUGGESTED_PRESENTATIONS
+} from '../../core/product/models/product.models';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
 import { Category } from '../../core/category/models/category.models';
@@ -15,6 +21,21 @@ import { AuditModalComponent } from '../../shared/components/audit-modal/audit-m
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
+
+// CAT-11: fila editable de la sección Presentaciones; las reglas las valida el servidor
+export interface PresentationDraft {
+  id: string | null;
+  name: string;
+  weightKg: number | null;
+  fixedPrice: number | null;
+  active: boolean;
+}
+
+export const MAX_ACTIVE_PRESENTATIONS = 6;
+
+function suggestedDrafts(): PresentationDraft[] {
+  return SUGGESTED_PRESENTATIONS.map((p) => ({ id: null, name: p.name, weightKg: p.weightKg, fixedPrice: null, active: true }));
+}
 
 @Component({
   selector: 'app-products',
@@ -56,6 +77,12 @@ export class ProductsComponent implements OnInit {
   isSubmitting = signal<boolean>(false);
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
+
+  // CAT-11: presentaciones del producto por kilo y avisos del último guardado
+  presentations = signal<PresentationDraft[]>([]);
+  private originalPresentations = signal<string>('[]');
+  saveWarnings = signal<string[]>([]);
+  readonly maxActivePresentations = MAX_ACTIVE_PRESENTATIONS;
 
   // Desplegables de selectores personalizados en formulario
   isCategoryDropdownOpen = signal<boolean>(false);
@@ -202,14 +229,35 @@ export class ProductsComponent implements OnInit {
            this.isFieldModified('buyPrice') ||
            this.isFieldModified('sellPrice') ||
            this.isFieldModified('status') ||
-           this.isFieldModified('saleUnit');
+           this.isFieldModified('saleUnit') ||
+           this.presentationsModified();
   });
+
+  isKilogramForm = computed<boolean>(() => {
+    this.formVersion();
+    return this.productForm.get('saleUnit')?.value === 'KILOGRAM';
+  });
+
+  activePresentationCount = computed<number>(() => this.presentations().filter((p) => p.active).length);
+
+  presentationsModified = computed<boolean>(() =>
+    this.isEditing() && JSON.stringify(this.presentations()) !== this.originalPresentations()
+  );
 
   ngOnInit(): void {
     this.productForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.formVersion.update(v => v + 1);
+      });
+
+    // CAT-11: al pasar a Kilo sin presentaciones se proponen 100 g y 1/2 libra
+    this.productForm.get('saleUnit')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((unit) => {
+        if (unit === 'KILOGRAM' && this.presentations().length === 0) {
+          this.presentations.set(suggestedDrafts());
+        }
       });
 
     this.loadCatalogDependencies();
@@ -391,6 +439,8 @@ export class ProductsComponent implements OnInit {
       status: 'ACTIVO',
       saleUnit: 'UNIT'
     });
+    this.presentations.set([]);
+    this.originalPresentations.set('[]');
     this.formVersion.update(v => v + 1);
     this.isFormModalOpen.set(true);
   }
@@ -416,6 +466,15 @@ export class ProductsComponent implements OnInit {
       saleUnit: product.saleUnit ?? 'UNIT'
     };
 
+    const drafts: PresentationDraft[] = (product.presentations ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      weightKg: p.weightKg,
+      fixedPrice: p.fixedPrice,
+      active: p.active
+    }));
+    this.presentations.set(drafts);
+    this.originalPresentations.set(JSON.stringify(drafts));
     this.originalFormValues.set(initialData);
     this.productForm.reset(initialData);
     this.formVersion.update(v => v + 1);
@@ -458,6 +517,8 @@ export class ProductsComponent implements OnInit {
       status: 'ACTIVO',
       saleUnit: 'UNIT'
     });
+    this.presentations.set([]);
+    this.originalPresentations.set('[]');
     this.formVersion.update(v => v + 1);
   }
 
@@ -485,13 +546,16 @@ export class ProductsComponent implements OnInit {
       buyPrice: Number(val.buyPrice),
       sellPrice: Number(val.sellPrice),
       status: this.isEditing() ? val.status : 'ACTIVO',
-      saleUnit: val.saleUnit
+      saleUnit: val.saleUnit,
+      presentations: val.saleUnit === 'KILOGRAM' ? this.presentationRequests() : undefined
     };
+    this.saveWarnings.set([]);
 
     if (this.isEditing() && this.selectedProductId()) {
       this.productService.updateProduct(this.selectedProductId()!, request).subscribe({
         next: (updated) => {
           this.products.update(prev => prev.map(p => p.id === updated.id ? updated : p));
+          this.saveWarnings.set(updated.warnings ?? []);
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.originalFormValues.set(null);
@@ -505,6 +569,7 @@ export class ProductsComponent implements OnInit {
       this.productService.createProduct(request).subscribe({
         next: (created) => {
           this.products.update(prev => [...prev, created]);
+          this.saveWarnings.set(created.warnings ?? []);
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.originalFormValues.set(null);
@@ -515,6 +580,53 @@ export class ProductsComponent implements OnInit {
         }
       });
     }
+  }
+
+  // --- Presentaciones (CAT-11) ---
+
+  addPresentation(): void {
+    this.presentations.update((list) => [...list, { id: null, name: '', weightKg: null, fixedPrice: null, active: true }]);
+  }
+
+  updatePresentation(index: number, field: 'name' | 'weightKg' | 'fixedPrice', value: string): void {
+    const parsed = field === 'name' ? value : value === '' || value === null ? null : Number(value);
+    this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, [field]: parsed } : p)));
+  }
+
+  // Una nueva se quita de la lista; una guardada se desactiva, nunca se borra
+  removePresentation(index: number): void {
+    const draft = this.presentations()[index];
+    if (!draft.id) {
+      this.presentations.update((list) => list.filter((_, i) => i !== index));
+      return;
+    }
+    this.setPresentationActive(index, false);
+  }
+
+  setPresentationActive(index: number, active: boolean): void {
+    this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, active } : p)));
+  }
+
+  // Vista previa; el servidor recalcula. Sin precio fijo: peso x precio por kilo
+  presentationPricePreview(draft: PresentationDraft): number | null {
+    if (draft.fixedPrice) return draft.fixedPrice;
+    const sell = Number(this.productForm.get('sellPrice')?.value) || 0;
+    return draft.weightKg ? Math.round(draft.weightKg * sell * 100) / 100 : null;
+  }
+
+  presentationCostPreview(draft: PresentationDraft): number | null {
+    const buy = Number(this.productForm.get('buyPrice')?.value) || 0;
+    return draft.weightKg ? Math.round(draft.weightKg * buy * 100) / 100 : null;
+  }
+
+  private presentationRequests(): ProductPresentationRequest[] {
+    return this.presentations().map((p) => ({
+      id: p.id,
+      name: p.name.trim(),
+      weightKg: Number(p.weightKg),
+      fixedPrice: p.fixedPrice ? Number(p.fixedPrice) : null,
+      active: p.active
+    }));
   }
 
   // --- Eliminación Lógica ---

@@ -9,6 +9,7 @@ import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.service.ConsumptionService;
+import com.akhana.akhana_admin.service.ProductPresentationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
 
     private final ConsumptionRepository consumptionRepository;
     private final ProductRepository productRepository;
+    private final ProductPresentationService presentationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,16 +68,24 @@ public class ConsumptionServiceImpl implements ConsumptionService {
             throw new IllegalArgumentException(FUTURE_DATE);
         }
 
-        // The same product twice adds up in one line, like the POS (POS-01)
-        Map<UUID, BigDecimal> quantities = new LinkedHashMap<>();
+        // The same product (and presentation, CAT-11) twice adds up in one line, like the POS (POS-01)
+        Map<LineKey, BigDecimal> quantities = new LinkedHashMap<>();
         Map<UUID, Product> products = new LinkedHashMap<>();
+        Map<UUID, ProductPresentation> presentations = new LinkedHashMap<>();
         for (ConsumptionItemRequest itemReq : request.items()) {
             Product product = products.containsKey(itemReq.productId())
                 ? products.get(itemReq.productId())
                 : findConsumableProduct(itemReq.productId());
             products.put(product.getId(), product);
-            BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
-            quantities.merge(product.getId(), quantity, BigDecimal::add);
+            BigDecimal quantity;
+            if (itemReq.presentationId() != null) {
+                ProductPresentation presentation = presentationService.findActivePresentation(product, itemReq.presentationId());
+                presentations.put(presentation.getId(), presentation);
+                quantity = SaleServiceImpl.normalizePackQuantity(itemReq.quantity(), product.getName(), presentation.getName());
+            } else {
+                quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
+            }
+            quantities.merge(new LineKey(product.getId(), itemReq.presentationId()), quantity, BigDecimal::add);
         }
 
         Instant now = Instant.now();
@@ -89,18 +99,27 @@ public class ConsumptionServiceImpl implements ConsumptionService {
             .build();
 
         BigDecimal total = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        for (Map.Entry<UUID, BigDecimal> entry : quantities.entrySet()) {
-            Product product = products.get(entry.getKey());
+        for (Map.Entry<LineKey, BigDecimal> entry : quantities.entrySet()) {
+            Product product = products.get(entry.getKey().productId());
+            ProductPresentation presentation = entry.getKey().presentationId() != null
+                ? presentations.get(entry.getKey().presentationId())
+                : null;
             BigDecimal quantity = entry.getValue().setScale(3, RoundingMode.HALF_UP);
             // Cost snapshot: later cost changes (COM-03 or catalog) do not alter this consumption
             BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
-            BigDecimal subtotal = unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP);
+            // By presentation the cost per kilo applies to the kilos of the packs (CAT-11)
+            BigDecimal weightKg = presentation != null ? SaleServiceImpl.packWeight(quantity, presentation) : null;
+            BigDecimal subtotal = unitCost.multiply(weightKg != null ? weightKg : quantity).setScale(2, RoundingMode.HALF_UP);
             consumption.getItems().add(ConsumptionItem.builder()
                 .consumption(consumption)
                 .product(product)
                 .productName(product.getName())
                 .productCode(product.getCode())
                 .quantity(quantity)
+                .presentation(presentation)
+                .presentationName(presentation != null ? presentation.getName() : null)
+                .presentationWeightKg(presentation != null ? presentation.getWeightKg() : null)
+                .weightKg(weightKg)
                 .unitCost(unitCost)
                 .subtotal(subtotal)
                 .build());
@@ -126,6 +145,8 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         consumption.setVoidReason(voidReason);
         return ConsumptionResponse.detail(consumptionRepository.save(consumption));
     }
+
+    private record LineKey(UUID productId, UUID presentationId) {}
 
     static String formatConsumptionNumber(long sequenceValue) {
         return String.format("CON-%06d", sequenceValue);

@@ -2,10 +2,13 @@ package com.akhana.akhana_admin.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -69,6 +72,13 @@ public class Product {
     )
     @Builder.Default
     private Set<Tag> tags = new HashSet<>();
+
+    // CAT-11: only products sold by weight have them; batch-loaded so the product list stays one query per page
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @OrderBy("weightKg ASC")
+    @BatchSize(size = 100)
+    @Builder.Default
+    private List<ProductPresentation> presentations = new ArrayList<>();
 
     // Campos de Auditoría
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)

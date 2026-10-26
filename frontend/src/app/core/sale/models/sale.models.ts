@@ -26,6 +26,8 @@ export interface SaleItemRequest {
   productId: string;
   quantity: number;
   discountPerUnit?: number;
+  // CAT-11: con presentación la cantidad son bolsitas enteras
+  presentationId?: string | null;
 }
 
 export interface SaleDetailRequest {

@@ -9,6 +9,7 @@ import com.akhana.akhana_admin.repository.CategoryRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
+import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
     private final TagRepository tagRepository;
+    private final ProductPresentationService presentationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -135,7 +137,9 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
-        return ProductResponse.fromEntity(saved);
+        // Presentations need the saved product (CAT-11)
+        List<String> warnings = presentationService.applyPresentations(saved, request.presentations(), null, currentUsername);
+        return ProductResponse.fromEntity(saved, warnings);
     }
 
     @Override
@@ -177,6 +181,8 @@ public class ProductServiceImpl implements ProductService {
         // Validar etiquetas
         Set<Tag> tags = resolveTags(request.tagIds());
 
+        BigDecimal previousSellPrice = product.getSellPrice();
+
         // Recalcular utilidades
         BigDecimal buyPrice = request.buyPrice().setScale(2, RoundingMode.HALF_UP);
         BigDecimal sellPrice = request.sellPrice().setScale(2, RoundingMode.HALF_UP);
@@ -204,8 +210,10 @@ public class ProductServiceImpl implements ProductService {
         product.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
         product.setUpdatedAt(Instant.now());
 
+        List<String> warnings = presentationService.applyPresentations(product, request.presentations(),
+                previousSellPrice, currentUsername);
         Product updated = productRepository.save(product);
-        return ProductResponse.fromEntity(updated);
+        return ProductResponse.fromEntity(updated, warnings);
     }
 
     @Override

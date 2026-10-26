@@ -3,13 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
-import { Product } from '../../../../core/product/models/product.models';
+import { Product, ProductPresentation, activePresentations } from '../../../../core/product/models/product.models';
 import { Consumption, ConsumptionRequest } from '../../../../core/consumption/models/consumption.models';
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
-import { WEIGHT_PRESETS } from '../../../pos/register-sale/register-sale.component';
+import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
+import { PresentationPickerComponent } from '../../../../shared/components/presentation-picker/presentation-picker.component';
 
 export interface ConsumptionLineDraft {
   product: Product;
+  // CAT-11: con presentación la cantidad son bolsitas enteras
+  presentation: ProductPresentation | null;
   quantity: number;
 }
 
@@ -19,7 +22,7 @@ const MAX_MATCHES = 8;
 @Component({
   selector: 'app-consumption-form-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PresentationPickerComponent],
   templateUrl: './consumption-form-modal.component.html',
   styleUrls: ['./consumption-form-modal.component.css']
 })
@@ -33,7 +36,6 @@ export class ConsumptionFormModalComponent {
   saved = output<Consumption>();
   close = output<void>();
 
-  readonly weightPresets = WEIGHT_PRESETS;
   readonly maxDate = todayIso();
 
   consumptionDate = signal<string>(todayIso());
@@ -41,6 +43,8 @@ export class ConsumptionFormModalComponent {
   comment = signal<string>('');
   lines = signal<ConsumptionLineDraft[]>([]);
   productSearch = signal<string>('');
+  // CAT-11: producto por kilo esperando que se elija su presentación
+  pickerProduct = signal<Product | null>(null);
 
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
@@ -73,6 +77,7 @@ export class ConsumptionFormModalComponent {
     this.comment.set('');
     this.lines.set([]);
     this.productSearch.set('');
+    this.pickerProduct.set(null);
     this.formError.set(null);
     this.isSubmitting.set(false);
   }
@@ -81,8 +86,20 @@ export class ConsumptionFormModalComponent {
     return product.saleUnit === 'KILOGRAM';
   }
 
+  // «Otro peso»: kilos; por unidad o presentación: enteros
+  isWeightLine(line: ConsumptionLineDraft): boolean {
+    return this.isWeighted(line.product) && !line.presentation;
+  }
+
+  lineKey(line: ConsumptionLineDraft): string {
+    return line.presentation ? `${line.product.id}:${line.presentation.id}` : line.product.id;
+  }
+
+  // Con presentación, el costo por kilo se aplica a los kilos de las bolsitas, como el servidor (CAT-11)
   lineSubtotal(line: ConsumptionLineDraft): number {
-    return round2((Number(line.quantity) || 0) * (line.product.buyPrice || 0));
+    const quantity = Number(line.quantity) || 0;
+    const kilos = line.presentation ? Math.round(quantity * line.presentation.weightKg * 1000) / 1000 : quantity;
+    return round2(kilos * (line.product.buyPrice || 0));
   }
 
   // Advertencia: un producto sin costo registrado vale Bs 0,00
@@ -90,17 +107,36 @@ export class ConsumptionFormModalComponent {
     return !(line.product.buyPrice > 0);
   }
 
-  // El mismo producto dos veces suma la cantidad, como el POS (POS-01)
+  // CAT-11: un producto por kilo con presentaciones abre el selector; sin ellas entra como «Otro peso»
   addProduct(product: Product): void {
-    const index = this.lines().findIndex(l => l.product.id === product.id);
+    this.productSearch.set('');
+    if (this.isWeighted(product) && activePresentations(product).length > 0) {
+      this.pickerProduct.set(product);
+      return;
+    }
+    this.addLine(product, null);
+  }
+
+  onPresentationPicked(presentation: ProductPresentation | null): void {
+    const product = this.pickerProduct();
+    this.pickerProduct.set(null);
+    if (product) {
+      this.addLine(product, presentation);
+    }
+  }
+
+  // El mismo producto (y presentación) dos veces suma la cantidad, como el POS (POS-01)
+  private addLine(product: Product, presentation: ProductPresentation | null): void {
+    const draft: ConsumptionLineDraft = { product, presentation, quantity: 0 };
+    const index = this.lines().findIndex(l => this.lineKey(l) === this.lineKey(draft));
+    const byWeight = this.isWeightLine(draft);
     if (index >= 0) {
-      if (!this.isWeighted(product)) {
+      if (!byWeight) {
         this.updateQuantity(index, this.lines()[index].quantity + 1);
       }
     } else {
-      this.lines.update(lines => [...lines, { product, quantity: this.isWeighted(product) ? WEIGHT_PRESETS[0].kilograms : 1 }]);
+      this.lines.update(lines => [...lines, { ...draft, quantity: byWeight ? WEIGHT_STEP_KG : 1 }]);
     }
-    this.productSearch.set('');
   }
 
   updateQuantity(index: number, value: number | string): void {
@@ -119,7 +155,11 @@ export class ConsumptionFormModalComponent {
       consumptionDate: this.consumptionDate() || null,
       consumedFor: consumedFor.length > 0 ? consumedFor : null,
       comment: comment.length > 0 ? comment : null,
-      items: this.lines().map(line => ({ productId: line.product.id, quantity: Number(line.quantity) }))
+      items: this.lines().map(line => ({
+        productId: line.product.id,
+        quantity: Number(line.quantity),
+        ...(line.presentation ? { presentationId: line.presentation.id } : {})
+      }))
     };
   }
 

@@ -8,7 +8,12 @@ import { QuickProductService } from '../../../core/quick-product/quick-product.s
 import { SaleService } from '../../../core/sale/sale.service';
 import { CustomerService } from '../../../core/debt/customer.service';
 import { Customer } from '../../../core/debt/models/debt.models';
-import { Product } from '../../../core/product/models/product.models';
+import {
+  Product,
+  ProductPresentation,
+  activePresentations,
+  presentationPrice
+} from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
 import {
   SaleDetailRequest,
@@ -16,16 +21,21 @@ import {
 } from '../../../core/sale/models/sale.models';
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 
-// POS-10 / CAT-08: el precio de los productos por peso es por kilo
+// POS-10 / CAT-08: el precio de los productos por peso es por kilo («Otro peso»)
 export const WEIGHT_STEP_KG = 0.1;
-export const WEIGHT_PRESETS: ReadonlyArray<{ label: string; kilograms: number }> = [
-  { label: '100 g', kilograms: 0.1 },
-  { label: '1/2 libra', kilograms: 0.227 }
-];
+
+// CAT-11: una línea es un producto, o un producto por kilo con una presentación (bolsitas enteras)
+export function cartKey(product: Product, presentation: ProductPresentation | null): string {
+  return presentation ? `${product.id}:${presentation.id}` : product.id;
+}
 
 export interface CartItem {
+  key: string;
   product: Product;
+  presentation: ProductPresentation | null;
   quantity: number;
   unitPrice: number;
   unitDiscount: number;
@@ -40,7 +50,9 @@ export interface CartItem {
     CommonModule,
     FormsModule,
     QuickProductsConfigModalComponent,
-    CheckoutModalComponent
+    CheckoutModalComponent,
+    ModalComponent,
+    PresentationPickerComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -52,7 +64,6 @@ export class RegisterSaleComponent implements OnInit {
   readonly quickProductService = inject(QuickProductService);
   private readonly saleService = inject(SaleService);
   private readonly customerService = inject(CustomerService);
-  readonly weightPresets = WEIGHT_PRESETS;
 
   // Estados de catálogo y búsqueda
   catalogProducts = signal<Product[]>([]);
@@ -62,6 +73,9 @@ export class RegisterSaleComponent implements OnInit {
   // Productos Rápidos
   activeGroupId = signal<string | null>(null);
   isConfigModalVisible = signal<boolean>(false);
+
+  // CAT-11: producto por kilo esperando que se elija su presentación
+  pickerProduct = signal<Product | null>(null);
 
   // Carrito de ventas
   cartItems = signal<CartItem[]>([]);
@@ -99,7 +113,7 @@ export class RegisterSaleComponent implements OnInit {
   // Computed: Métricas del Carrito
   // Un producto por peso cuenta como un ítem, sin importar los kilos
   cartCount = computed<number>(() => {
-    return this.cartItems().reduce((sum, item) => sum + (this.isWeighted(item.product) ? 1 : item.quantity), 0);
+    return this.cartItems().reduce((sum, item) => sum + (this.isWeightLine(item) ? 1 : item.quantity), 0);
   });
 
   subtotalGross = computed<number>(() => {
@@ -128,7 +142,8 @@ export class RegisterSaleComponent implements OnInit {
     return this.cartItems().map((it) => ({
       productId: it.product.id,
       quantity: it.quantity,
-      discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined
+      discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined,
+      presentationId: it.presentation?.id
     }));
   });
 
@@ -168,20 +183,54 @@ export class RegisterSaleComponent implements OnInit {
     return product.saleUnit === 'KILOGRAM';
   }
 
+  // «Otro peso»: cantidad en kilos con hasta 3 decimales
+  isWeightLine(item: CartItem): boolean {
+    return this.isWeighted(item.product) && !item.presentation;
+  }
+
+  lineName(item: CartItem): string {
+    return item.presentation ? `${item.product.name} · ${item.presentation.name}` : item.product.name;
+  }
+
+  // CAT-11: un producto por kilo con presentaciones abre el selector; sin ellas entra como «Otro peso»
   addToCart(product: Product): void {
-    const existing = this.cartItems().find((it) => it.product.id === product.id);
+    if (this.isWeighted(product) && activePresentations(product).length > 0) {
+      this.pickerProduct.set(product);
+      this.productSearchTerm.set('');
+      return;
+    }
+    this.addLine(product, null);
+  }
+
+  onPresentationPicked(presentation: ProductPresentation | null): void {
+    const product = this.pickerProduct();
+    this.pickerProduct.set(null);
+    if (product) {
+      this.addLine(product, presentation);
+    }
+  }
+
+  closePicker(): void {
+    this.pickerProduct.set(null);
+  }
+
+  private addLine(product: Product, presentation: ProductPresentation | null): void {
+    const key = cartKey(product, presentation);
+    const existing = this.cartItems().find((it) => it.key === key);
     if (existing) {
-      this.incrementQuantity(product.id);
+      this.incrementQuantity(key);
     } else {
       if (this.atCost() && !this.hasCost(product)) {
         this.errorMessage.set(this.zeroCostMessage(product));
         this.productSearchTerm.set('');
         return;
       }
-      const quantity = this.quantityStep(product);
-      const price = this.priceFor(product);
+      const quantity = presentation || !this.isWeighted(product) ? 1 : WEIGHT_STEP_KG;
+      const price = this.priceFor(product, presentation);
       const newItem: CartItem = {
+        key,
         product,
+        presentation,
         quantity,
         unitPrice: price,
         unitDiscount: 0,
@@ -194,34 +243,29 @@ export class RegisterSaleComponent implements OnInit {
     this.errorMessage.set(null);
   }
 
-  incrementQuantity(productId: string): void {
-    const item = this.cartItems().find((it) => it.product.id === productId);
+  incrementQuantity(key: string): void {
+    const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
-    this.updateQuantity(productId, item.quantity + this.quantityStep(item.product));
+    this.updateQuantity(key, item.quantity + this.quantityStep(item));
   }
 
-  decrementQuantity(productId: string): void {
-    const item = this.cartItems().find((it) => it.product.id === productId);
+  decrementQuantity(key: string): void {
+    const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
-    this.updateQuantity(productId, item.quantity - this.quantityStep(item.product));
+    this.updateQuantity(key, item.quantity - this.quantityStep(item));
   }
 
-  // POS-10: presentaciones rápidas de un producto por peso (precio por kilo)
-  applyWeightPreset(productId: string, kilograms: number): void {
-    this.updateQuantity(productId, kilograms);
-  }
-
-  updateQuantity(productId: string, quantity: number): void {
-    const item = this.cartItems().find((it) => it.product.id === productId);
+  updateQuantity(key: string, quantity: number): void {
+    const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
-    const normalized = this.normalizeQuantity(item.product, Number(quantity) || 0);
+    const normalized = this.normalizeQuantity(item, Number(quantity) || 0);
     if (normalized <= 0) {
-      this.removeFromCart(productId);
+      this.removeFromCart(key);
       return;
     }
     this.cartItems.update((items) =>
       items.map((it) => {
-        if (it.product.id === productId) {
+        if (it.key === key) {
           return {
             ...it,
             quantity: normalized,
@@ -233,23 +277,23 @@ export class RegisterSaleComponent implements OnInit {
     );
   }
 
-  // Por peso: kilos con hasta 3 decimales (paso de 100 g); por unidad: cantidades enteras
-  private quantityStep(product: Product): number {
-    return this.isWeighted(product) ? WEIGHT_STEP_KG : 1;
+  // «Otro peso»: kilos con hasta 3 decimales (paso de 100 g); por unidad o presentación: enteros
+  private quantityStep(item: CartItem): number {
+    return this.isWeightLine(item) ? WEIGHT_STEP_KG : 1;
   }
 
-  private normalizeQuantity(product: Product, quantity: number): number {
+  private normalizeQuantity(item: CartItem, quantity: number): number {
     if (quantity <= 0) return 0;
-    return this.isWeighted(product)
+    return this.isWeightLine(item)
       ? Math.round(quantity * 1000) / 1000
       : Math.max(1, Math.round(quantity));
   }
 
-  updateUnitDiscount(productId: string, discount: number): void {
+  updateUnitDiscount(key: string, discount: number): void {
     const safeDiscount = Math.max(0, discount || 0);
     this.cartItems.update((items) =>
       items.map((it) => {
-        if (it.product.id === productId) {
+        if (it.key === key) {
           const cappedDiscount = Math.min(it.unitPrice, safeDiscount);
           const unitFinalPrice = Math.max(0, Math.round((it.unitPrice - cappedDiscount) * 100) / 100);
           return {
@@ -280,8 +324,8 @@ export class RegisterSaleComponent implements OnInit {
     this.globalDiscount.set(Math.round(safeDiscount * 100) / 100);
   }
 
-  removeFromCart(productId: string): void {
-    this.cartItems.update((items) => items.filter((it) => it.product.id !== productId));
+  removeFromCart(key: string): void {
+    this.cartItems.update((items) => items.filter((it) => it.key !== key));
     if (this.globalDiscount() > this.subtotalPostItems()) {
       this.globalDiscount.set(this.subtotalPostItems());
     }
@@ -320,7 +364,7 @@ export class RegisterSaleComponent implements OnInit {
     this.globalDiscount.set(0);
     this.cartItems.update((items) =>
       items.map((it) => {
-        const price = this.priceFor(it.product);
+        const price = this.priceFor(it.product, it.presentation);
         return {
           ...it,
           unitPrice: price,
@@ -332,7 +376,8 @@ export class RegisterSaleComponent implements OnInit {
     );
   }
 
-  private priceFor(product: Product): number {
+  private priceFor(product: Product, presentation: ProductPresentation | null): number {
+    if (presentation) return presentationPrice(presentation, product, this.atCost());
     return this.atCost() ? product.buyPrice : product.sellPrice;
   }
 

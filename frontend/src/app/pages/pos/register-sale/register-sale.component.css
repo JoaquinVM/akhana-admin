@@ -596,39 +596,11 @@
   width: 104px;
 }
 
-.weight-presets {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.2rem;
-}
-
 .weight-unit {
+  display: block;
+  margin-top: 0.2rem;
   font-size: 0.75rem;
   color: #64748b;
-}
-
-.weight-preset-btn {
-  height: 22px;
-  padding: 0 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--radius-md);
-  background: #fff;
-  font-size: 0.75rem;
-  color: #334155;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.weight-preset-btn:hover {
-  background: #f1f5f9;
-}
-
-.weight-preset-btn.active {
-  border-color: var(--primary-color, #2e5b27);
-  color: var(--primary-color, #2e5b27);
-  font-weight: 600;
 }
 
 .item-discount-group {

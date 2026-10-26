@@ -53,6 +53,14 @@
       </div>
     </div>
 
+    @if (pickerProduct(); as product) {
+      <app-presentation-picker
+        [product]="product"
+        priceMode="cost"
+        (picked)="onPresentationPicked($event)"
+        (cancelled)="pickerProduct.set(null)" />
+    }
+
     <div class="table-responsive">
       <table class="table lines-table">
         <thead>
@@ -65,10 +73,10 @@
           </tr>
         </thead>
         <tbody>
-          @for (line of lines(); track line.product.id; let i = $index) {
+          @for (line of lines(); track lineKey(line); let i = $index) {
             <tr>
               <td>
-                <span class="line-name">{{ line.product.name }}</span>
+                <span class="line-name">{{ line.product.name }}{{ line.presentation ? ' · ' + line.presentation.name : '' }}</span>
                 <span class="line-code">{{ line.product.code }}</span>
                 @if (hasNoCost(line)) {
                   <span class="cost-warning" role="alert">Este producto no tiene costo registrado; el consumo vale Bs 0,00.</span>
@@ -76,15 +84,11 @@
               </td>
               <td class="text-right">
                 <input type="number" class="form-control input-number" [name]="'qty-' + i"
-                       [step]="isWeighted(line.product) ? 0.001 : 1" min="0"
+                       [step]="isWeightLine(line) ? 0.001 : 1" min="0"
                        [ngModel]="line.quantity" (ngModelChange)="updateQuantity(i, $event)" />
-                <span class="unit-hint">{{ isWeighted(line.product) ? 'kg' : 'u' }}</span>
-                @if (isWeighted(line.product)) {
-                  <div class="weight-presets">
-                    @for (preset of weightPresets; track preset.label) {
-                      <button type="button" class="btn-preset" (click)="updateQuantity(i, preset.kilograms)">{{ preset.label }}</button>
-                    }
-                  </div>
+                <span class="unit-hint">{{ isWeightLine(line) ? 'kg' : 'u' }}</span>
+                @if (line.presentation) {
+                  <span class="unit-hint">{{ line.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
                 }
               </td>
               <td class="text-right">Bs {{ line.product.buyPrice | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}</td>

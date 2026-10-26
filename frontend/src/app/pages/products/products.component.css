@@ -701,3 +701,58 @@
     max-width: 100%;
   }
 }
+
+/* CAT-11: presentaciones del producto por kilo */
+.presentations-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.presentations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.presentations-table th {
+  padding: 0.25rem 0.375rem;
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.presentations-table td {
+  padding: 0.25rem 0.375rem;
+  vertical-align: middle;
+}
+
+.presentations-table .text-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.presentation-inactive td {
+  opacity: 0.55;
+}
+
+.presentations-section > .btn {
+  align-self: flex-start;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8rem;
+}
+
+.alert-warning {
+  justify-content: space-between;
+  background-color: var(--color-warning-bg);
+  border-color: rgba(245, 184, 0, 0.35);
+  color: var(--color-warning);
+}
+
+.save-warnings {
+  margin: 0;
+  padding-left: 1.1rem;
+}

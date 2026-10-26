@@ -14,7 +14,12 @@ public record ConsumptionItemResponse(
     SaleUnit saleUnit,
     BigDecimal quantity,
     BigDecimal unitCost,
-    BigDecimal subtotal
+    BigDecimal subtotal,
+    // CAT-11: copy of the presentation consumed and the kilos of the line; null for other lines
+    UUID presentationId,
+    String presentationName,
+    BigDecimal presentationWeightKg,
+    BigDecimal weightKg
 ) {
     public static ConsumptionItemResponse fromEntity(ConsumptionItem item) {
         return new ConsumptionItemResponse(
@@ -25,7 +30,11 @@ public record ConsumptionItemResponse(
             item.getProduct().getSaleUnit(),
             item.getQuantity(),
             item.getUnitCost(),
-            item.getSubtotal()
+            item.getSubtotal(),
+            item.getPresentation() != null ? item.getPresentation().getId() : null,
+            item.getPresentationName(),
+            item.getPresentationWeightKg(),
+            item.getWeightKg()
         );
     }
 }

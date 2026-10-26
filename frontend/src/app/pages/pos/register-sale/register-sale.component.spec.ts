@@ -197,17 +197,6 @@ describe('RegisterSaleComponent', () => {
       expect(component.cartCount()).toBe(1);
     });
 
-    it('aplica las presentaciones rápidas 100 g y 1/2 libra', () => {
-      component.addToCart(weightProduct);
-      component.applyWeightPreset(weightProduct.id, 0.227);
-      expect(component.cartItems()[0].quantity).toBe(0.227);
-      expect(component.cartItems()[0].subtotal).toBe(18.16);
-      expect(component.checkoutItems()[0].quantity).toBe(0.227);
-
-      component.applyWeightPreset(weightProduct.id, 0.1);
-      expect(component.cartItems()[0].quantity).toBe(0.1);
-    });
-
     it('acepta kilos con hasta 3 decimales y redondea el resto', () => {
       component.addToCart(weightProduct);
       component.updateQuantity(weightProduct.id, 0.3755);
@@ -223,14 +212,78 @@ describe('RegisterSaleComponent', () => {
       expect(component.cartItems()[0].quantity).toBe(1);
     });
 
-    it('muestra las presentaciones solo en productos por peso', () => {
-      component.addToCart(mockProduct1);
+    it('ya no muestra botones fijos de 100 g y 1/2 libra en la línea', () => {
       component.addToCart(weightProduct);
       fixture.detectChanges();
-      const buttons = fixture.nativeElement.querySelectorAll('.weight-preset-btn');
-      expect(buttons.length).toBe(2);
-      expect(buttons[0].textContent.trim()).toBe('100 g');
-      expect(buttons[1].textContent.trim()).toBe('1/2 libra');
+      expect(fixture.nativeElement.querySelectorAll('.weight-preset-btn').length).toBe(0);
+    });
+  });
+
+  describe('CAT-11: presentaciones', () => {
+    // Nuez pelada: costo 130 y precio 210 por kilo
+    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
+    const hundred = { id: 'pres-100', name: '100 g', weightKg: 0.1, fixedPrice: null, price: 21, cost: 13, active: true };
+    const retired = { id: 'pres-old', name: '1 libra', weightKg: 0.454, fixedPrice: 90, price: 90, cost: 59.02, active: false };
+    const nut: Product = {
+      ...mockProduct1, id: 'prod-nut', code: 'FSE-NUE', name: 'Nuez pelada', buyPrice: 130, sellPrice: 210,
+      saleUnit: 'KILOGRAM', presentations: [hundred, halfPound, retired]
+    };
+
+    it('al elegir el producto abre el selector con las activas y no agrega nada aún', () => {
+      component.addToCart(nut);
+      fixture.detectChanges();
+      expect(component.pickerProduct()).toBe(nut);
+      expect(component.cartItems().length).toBe(0);
+      const options = fixture.nativeElement.querySelectorAll('.picker-option');
+      expect(Array.from(options).map((o: any) => o.querySelector('.option-name').textContent.trim())).toEqual([
+        '100 g', '1/2 libra', 'Otro peso…'
+      ]);
+      expect(Array.from(options).map((o: any) => o.querySelector('.option-amount').textContent.trim())).toEqual([
+        'Bs 21.00', 'Bs 45.00', 'kilos'
+      ]);
+    });
+
+    it('la 1/2 libra entra como bolsita de Bs 45 y suma de a una', () => {
+      component.addToCart(nut);
+      component.onPresentationPicked(halfPound);
+      component.addToCart(nut);
+      component.onPresentationPicked(halfPound);
+
+      const line = component.cartItems()[0];
+      expect(component.cartItems().length).toBe(1);
+      expect(component.lineName(line)).toBe('Nuez pelada · 1/2 libra');
+      expect(line.quantity).toBe(2);
+      expect(line.subtotal).toBe(90);
+      expect(component.cartCount()).toBe(2);
+      expect(component.checkoutItems()[0]).toEqual({ productId: 'prod-nut', quantity: 2, discountPerUnit: undefined, presentationId: 'pres-half' });
+
+      component.updateQuantity(line.key, 2.6);
+      expect(component.cartItems()[0].quantity).toBe(3);
+    });
+
+    it('«Otro peso» queda en kilos aparte de la presentación', () => {
+      component.addToCart(nut);
+      component.onPresentationPicked(halfPound);
+      component.addToCart(nut);
+      component.onPresentationPicked(null);
+
+      expect(component.cartItems().length).toBe(2);
+      expect(component.cartItems()[1].quantity).toBe(0.1);
+      expect(component.cartItems()[1].subtotal).toBe(21);
+      expect(component.checkoutItems()[1].presentationId).toBeUndefined();
+    });
+
+    it('al costo la presentación cobra peso × costo por kilo, sin el precio fijo', () => {
+      component.addToCart(nut);
+      component.onPresentationPicked(halfPound);
+      component.setAtCost(true);
+      expect(component.cartItems()[0].unitPrice).toBe(29.51);
+    });
+
+    it('un producto por kilo sin presentaciones entra directo como «Otro peso»', () => {
+      component.addToCart({ ...nut, presentations: [retired] });
+      expect(component.pickerProduct()).toBeNull();
+      expect(component.cartItems()[0].quantity).toBe(0.1);
     });
   });
 

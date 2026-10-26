@@ -336,6 +336,55 @@ describe('ProductsComponent', () => {
     expect(component.isFieldModified('sellPrice')).toBe(false);
   });
 
+  describe('CAT-11: presentaciones', () => {
+    it('al pasar a Kilo propone 100 g y 1/2 libra y las envía con el producto', () => {
+      component.openCreateModal();
+      component.productForm.patchValue({
+        code: 'FSE-NUE', name: 'Nuez pelada', categoryId: 'cat-1', supplierId: 'sup-1',
+        buyPrice: 130, sellPrice: 210, saleUnit: 'KILOGRAM'
+      });
+      expect(component.presentations().map(p => p.name)).toEqual(['100 g', '1/2 libra']);
+
+      component.updatePresentation(1, 'fixedPrice', '45');
+      expect(component.presentationPricePreview(component.presentations()[0])).toBe(21);
+      expect(component.presentationPricePreview(component.presentations()[1])).toBe(45);
+      expect(component.presentationCostPreview(component.presentations()[1])).toBe(29.51);
+      component.removePresentation(0);
+
+      mockProductService.createProduct.mockReturnValue(of({ ...mockProducts[0], warnings: ['La presentación \'x\' se vende a pérdida.'] }));
+      component.saveProduct();
+
+      expect(mockProductService.createProduct).toHaveBeenCalledWith(expect.objectContaining({
+        presentations: [{ id: null, name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, active: true }]
+      }));
+      expect(component.saveWarnings()).toEqual(['La presentación \'x\' se vende a pérdida.']);
+    });
+
+    it('en edición, una guardada se desactiva en vez de quitarse y cuenta como cambio', () => {
+      const nut: Product = {
+        ...mockProducts[0], saleUnit: 'KILOGRAM',
+        presentations: [{ id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true }]
+      };
+      component.openEditModal(nut);
+      expect(component.hasFormChanges()).toBe(false);
+
+      component.removePresentation(0);
+
+      expect(component.presentations()[0].active).toBe(false);
+      expect(component.hasFormChanges()).toBe(true);
+    });
+
+    it('un producto por unidad no envía presentaciones', () => {
+      component.openCreateModal();
+      component.productForm.patchValue({
+        code: 'P-U', name: 'Por unidad', categoryId: 'cat-1', supplierId: 'sup-1', buyPrice: 1, sellPrice: 2
+      });
+      mockProductService.createProduct.mockReturnValue(of(mockProducts[0]));
+      component.saveProduct();
+      expect(mockProductService.createProduct.mock.calls[0][0].presentations).toBeUndefined();
+    });
+  });
+
   it('debe solicitar confirmación al intentar cerrar modal con cambios sin guardar', () => {
     component.openCreateModal();
     component.productForm.patchValue({ code: 'PROD-DIRTY' });

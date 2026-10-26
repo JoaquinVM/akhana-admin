@@ -10,9 +10,12 @@ import com.akhana.akhana_admin.repository.CustomerRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
+import com.akhana.akhana_admin.repository.ProductPresentationRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
+import com.akhana.akhana_admin.service.impl.ProductPresentationServiceImpl;
 import com.akhana.akhana_admin.service.impl.SaleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -60,6 +63,12 @@ class SaleServiceTest {
     @Mock
     private CustomerRepository customerRepository;
 
+    @Mock
+    private ProductPresentationRepository presentationRepository;
+
+    @Mock
+    private ProductPriceChangeRepository priceChangeRepository;
+
     private SaleServiceImpl saleService;
 
     private CashSession activeSession;
@@ -73,7 +82,7 @@ class SaleServiceTest {
     void setUp() {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
-            customerRepository);
+            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository));
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)
@@ -575,6 +584,97 @@ class SaleServiceTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("debe ser entera");
 
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // CAT-11 presentations: Nuez pelada at 130 per kilo cost and 210 per kilo price
+    // ---------------------------------------------------------------------------------------------
+
+    private ProductPresentation nutPresentation(String name, String weight, String fixedPrice, boolean active) {
+        product1.setName("Nuez pelada");
+        product1.setSaleUnit(SaleUnit.KILOGRAM);
+        product1.setBuyPrice(new BigDecimal("130.00"));
+        product1.setSellPrice(new BigDecimal("210.00"));
+        ProductPresentation presentation = ProductPresentation.builder().id(UUID.randomUUID()).product(product1)
+            .name(name).weightKg(new BigDecimal(weight)).fixedPrice(fixedPrice != null ? new BigDecimal(fixedPrice) : null)
+            .active(active).build();
+        lenient().when(presentationRepository.findById(presentation.getId())).thenReturn(Optional.of(presentation));
+        return presentation;
+    }
+
+    private SaleDetailRequest presentationSale(ProductPresentation presentation, String packs, SaleType type) {
+        return new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal(packs), BigDecimal.ZERO, presentation.getId())),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null, type, null, null);
+    }
+
+    private Sale registerCapturing(SaleDetailRequest request) {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.nextSaleNumber()).thenReturn(9L);
+        ArgumentCaptor<Sale> saleCaptor = ArgumentCaptor.forClass(Sale.class);
+        when(saleRepository.save(saleCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+        saleService.registerSale(request, "cajero");
+        return saleCaptor.getValue();
+    }
+
+    @Test
+    @DisplayName("CAT-11: 2 x 1/2 libra con precio fijo cobra 90, guarda 0,454 kg y el costo por kilo")
+    void shouldSellByPresentationWithFixedPrice() {
+        ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
+
+        Sale sale = registerCapturing(presentationSale(halfPound, "2", SaleType.NORMAL));
+
+        SaleItem item = sale.getItems().get(0);
+        assertThat(item.getUnitPrice()).isEqualByComparingTo("45.00");
+        assertThat(item.getQuantity()).isEqualByComparingTo("2");
+        assertThat(item.getSubtotal()).isEqualByComparingTo("90.00");
+        assertThat(item.getUnitCost()).isEqualByComparingTo("130.00");
+        assertThat(item.getWeightKg()).isEqualByComparingTo("0.454");
+        assertThat(item.getPresentation()).isSameAs(halfPound);
+        assertThat(item.getPresentationName()).isEqualTo("1/2 libra");
+        assertThat(item.getPresentationWeightKg()).isEqualByComparingTo("0.227");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("90.00");
+    }
+
+    @Test
+    @DisplayName("CAT-11: sin precio fijo, 100 g cuesta 0,100 x 210 = 21,00")
+    void shouldSellByPresentationWithComputedPrice() {
+        ProductPresentation hundredGrams = nutPresentation("100 g", "0.100", null, true);
+
+        Sale sale = registerCapturing(presentationSale(hundredGrams, "1", SaleType.NORMAL));
+
+        assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("21.00");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("21.00");
+    }
+
+    @Test
+    @DisplayName("CAT-11: al costo, la 1/2 libra cobra 0,227 x 130 = 29,51 e ignora el precio fijo")
+    void shouldSellPresentationAtCostIgnoringFixedPrice() {
+        ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
+
+        Sale sale = registerCapturing(presentationSale(halfPound, "1", SaleType.AL_COSTO));
+
+        assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("29.51");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("29.51");
+    }
+
+    @Test
+    @DisplayName("CAT-11: rechaza una presentación inactiva y una cantidad con decimales")
+    void shouldRejectInactivePresentationAndDecimalPacks() {
+        ProductPresentation inactive = nutPresentation("1 libra", "0.454", "90.00", false);
+        ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        assertThatThrownBy(() -> saleService.registerSale(presentationSale(inactive, "1", SaleType.NORMAL), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La presentación '1 libra' de 'Nuez pelada' ya no está disponible.");
+        assertThatThrownBy(() -> saleService.registerSale(presentationSale(halfPound, "1.5", SaleType.NORMAL), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La cantidad de 'Nuez pelada · 1/2 libra' debe ser entera: se vende por presentación.");
         verify(saleRepository, never()).save(any(Sale.class));
     }
 

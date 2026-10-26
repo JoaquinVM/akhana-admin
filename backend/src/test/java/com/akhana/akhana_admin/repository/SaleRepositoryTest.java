@@ -148,6 +148,30 @@ class SaleRepositoryTest {
         assertNotEquals(supplier, line[4]);
     }
 
+    @Test
+    void countsTheKilosOfALineSoldByPresentation() {
+        UUID product = insertProduct();
+        UUID presentation = jdbc.queryForObject(
+                "INSERT INTO product_presentations (product_id, name, weight_kg, fixed_price, created_by) "
+                        + "VALUES (?, '1/2 libra', 0.227, 45.00, 'it-repo') RETURNING id", UUID.class, product);
+        // 2 x Nuez pelada 1/2 libra at Bs 45 with cost 130 per kilo: 0.454 kg, cost 59.02 (CAT-11)
+        UUID sale = insertSale("P1", "EFECTIVO", "NORMAL", "90.00", "0.00", "0.00", null, DAY);
+        jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
+                        + "quantity, subtotal, presentation_id, presentation_name, presentation_weight_kg, weight_kg) "
+                        + "VALUES (?, ?, 'Nuez pelada', 45.00, 130.00, 45.00, 2, 90.00, ?, '1/2 libra', 0.227, 0.454)",
+                sale, product, presentation);
+
+        Object[] day = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
+        assertEquals("0.454", plain(day[3]));
+        assertEquals("59.02", plain(day[5]));
+
+        Object[] line = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> sale.equals(row[0])).findFirst().orElseThrow();
+        assertEquals("0.454", plain(line[6]));
+        assertEquals("59.02", plain(line[8]));
+    }
+
     private static String plain(Object value) {
         return ((BigDecimal) value).stripTrailingZeros().toPlainString();
     }

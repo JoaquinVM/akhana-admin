@@ -101,27 +101,27 @@ El sistema SHALL aceptar en cada línea de venta una cantidad mayor a 0 con hast
 ---
 
 ### Requirement: Venta por peso en el carrito (POS-10, CAT-08)
-El sistema SHALL permitir en `/pos/sale` vender en kilos los productos con `sale_unit = KILOGRAM`, cuyo precio de venta es Bs por kilo, con cantidades de hasta 3 decimales y presentaciones rápidas «100 g» (0,100 kg) y «1/2 libra» (0,227 kg). Los productos por unidad siguen con cantidades enteras.
+El sistema SHALL permitir en `/pos/sale` vender en kilos los productos con `sale_unit = KILOGRAM`, cuyo precio de venta es Bs por kilo, con cantidades de hasta 3 decimales. Desde el 26-10-2026 las presentaciones son configurables por producto (CAT-11, `specs/product-presentations.md`): los botones fijos «100 g» y «1/2 libra» de la línea se reemplazaron por un selector al agregar el producto. Los productos por unidad siguen con cantidades enteras.
 
 #### Scenario: Agregar un producto por peso
-- **WHEN** se agrega al carrito un producto por kilo de Bs 80,00
+- **WHEN** se agrega al carrito un producto por kilo de Bs 80,00 sin presentaciones activas, o se elige «Otro peso» en el selector
 - **THEN** la línea entra con 0,100 kg y subtotal Bs 8,00, el precio se muestra «Bs 80,00 /kg» y la línea cuenta como un ítem
 
 #### Scenario: Sumar y restar de a 100 g
 - **WHEN** se pulsa + dos veces sobre esa línea
 - **THEN** la cantidad pasa a 0,300 kg (sin errores de redondeo) y el subtotal a Bs 24,00; con − la cantidad baja 100 g y la línea se quita al llegar a 0
 
-#### Scenario: Presentaciones rápidas
-- **WHEN** se pulsa «1/2 libra» en la línea de un producto por peso
-- **THEN** la cantidad pasa a 0,227 kg, el subtotal a Bs 18,16 (para Bs 80,00 /kg) y el botón queda marcado; «100 g» la deja en 0,100 kg
+#### Scenario: Elegir una presentación (CAT-11)
+- **WHEN** se agrega un producto por kilo con presentaciones activas (Nuez pelada a Bs 210,00 /kg con 1/2 libra a precio fijo Bs 45,00)
+- **THEN** se abre el selector con las presentaciones de menor a mayor peso y «Otro peso…»; al elegir «1/2 libra» entra la línea «Nuez pelada · 1/2 libra», 1 × Bs 45,00, cantidad entera, y elegirla otra vez suma 1
 
 #### Scenario: Cantidad escrita a mano
 - **WHEN** se escribe 0,3755 en la cantidad de un producto por peso
 - **THEN** se toma 0,376 kg (3 decimales); en un producto por unidad se toma el entero más cercano, mínimo 1
 
-#### Scenario: Presentaciones solo para productos por peso
-- **WHEN** el carrito tiene un producto por unidad y uno por peso
-- **THEN** solo la línea del producto por peso muestra los botones «100 g» y «1/2 libra»
+#### Scenario: Sin botones fijos en la línea
+- **WHEN** el carrito tiene un producto por peso en «Otro peso»
+- **THEN** la línea no muestra botones «100 g» ni «1/2 libra»: los pesos fijos son presentaciones del producto (CAT-11)
 
 ---
 

@@ -217,27 +217,17 @@
 
         <!-- Líneas de ítems -->
         <div class="cart-items-container">
-          @for (item of cartItems(); track item.product.id) {
+          @for (item of cartItems(); track item.key) {
             <div class="cart-item-row">
               <!-- Código y Nombre del producto -->
               <div class="item-identity">
                 <span class="item-code">{{ item.product.code }}</span>
-                <strong class="item-name" [title]="item.product.name">{{ item.product.name }}</strong>
-                <!-- Presentaciones rápidas por peso (POS-10) -->
-                @if (isWeighted(item.product)) {
-                  <div class="weight-presets">
-                    <span class="weight-unit">Peso en kg:</span>
-                    @for (preset of weightPresets; track preset.label) {
-                      <button
-                        type="button"
-                        class="weight-preset-btn"
-                        [class.active]="item.quantity === preset.kilograms"
-                        [title]="preset.label + ' = ' + preset.kilograms + ' kg'"
-                        (click)="applyWeightPreset(item.product.id, preset.kilograms)">
-                        {{ preset.label }}
-                      </button>
-                    }
-                  </div>
+                <strong class="item-name" [title]="lineName(item)">{{ lineName(item) }}</strong>
+                <!-- CAT-11: la presentación se eligió al agregar; «Otro peso» va en kilos -->
+                @if (item.presentation) {
+                  <span class="weight-unit">{{ item.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
+                } @else if (isWeightLine(item)) {
+                  <span class="weight-unit">Peso en kg</span>
                 }
               </div>
 
@@ -247,25 +237,25 @@
                   type="button"
                   class="qty-btn"
                   title="Restar cantidad"
-                  (click)="decrementQuantity(item.product.id)">
+                  (click)="decrementQuantity(item.key)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                 </button>
                 <input
                   type="number"
-                  [min]="isWeighted(item.product) ? 0.001 : 1"
-                  [step]="isWeighted(item.product) ? 0.001 : 1"
+                  [min]="isWeightLine(item) ? 0.001 : 1"
+                  [step]="isWeightLine(item) ? 0.001 : 1"
                   class="qty-input"
-                  [class.qty-input-weight]="isWeighted(item.product)"
-                  [title]="isWeighted(item.product) ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
+                  [class.qty-input-weight]="isWeightLine(item)"
+                  [title]="isWeightLine(item) ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
                   [ngModel]="item.quantity"
-                  (ngModelChange)="updateQuantity(item.product.id, $event)" />
+                  (ngModelChange)="updateQuantity(item.key, $event)" />
                 <button
                   type="button"
                   class="qty-btn"
                   title="Sumar cantidad"
-                  (click)="incrementQuantity(item.product.id)">
+                  (click)="incrementQuantity(item.key)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
@@ -286,7 +276,7 @@
                       [max]="item.unitPrice"
                       class="form-control form-control-sm text-right"
                       [ngModel]="item.unitDiscount"
-                      (ngModelChange)="updateUnitDiscount(item.product.id, $event)" />
+                      (ngModelChange)="updateUnitDiscount(item.key, $event)" />
                   </div>
                 </div>
               }
@@ -297,7 +287,7 @@
                   @if (item.unitDiscount > 0) {
                     <span class="old-price">Bs {{ item.unitPrice | number:'1.2-2' }}</span>
                   }
-                  <span class="final-unit-price">Bs {{ item.unitFinalPrice | number:'1.2-2' }} {{ isWeighted(item.product) ? '/kg' : 'c/u' }}</span>
+                  <span class="final-unit-price">Bs {{ item.unitFinalPrice | number:'1.2-2' }} {{ isWeightLine(item) ? '/kg' : 'c/u' }}</span>
                 </div>
                 <strong class="item-subtotal">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
               </div>
@@ -307,7 +297,7 @@
                 type="button"
                 class="btn-remove-item"
                 title="Quitar ítem"
-                (click)="removeFromCart(item.product.id)">
+                (click)="removeFromCart(item.key)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -396,6 +386,21 @@
       </div>
     </div>
   </div>
+
+  <!-- CAT-11: elegir la presentación de un producto por kilo -->
+  @if (pickerProduct(); as product) {
+    <app-modal
+      [isOpen]="true"
+      title="Elegir presentación"
+      size="sm"
+      (close)="closePicker()">
+      <app-presentation-picker
+        [product]="product"
+        [priceMode]="atCost() ? 'atCost' : 'price'"
+        (picked)="onPresentationPicked($event)"
+        (cancelled)="closePicker()" />
+    </app-modal>
+  }
 
   <!-- Modal de Cobro (Paso posterior al carrito) -->
   <app-checkout-modal

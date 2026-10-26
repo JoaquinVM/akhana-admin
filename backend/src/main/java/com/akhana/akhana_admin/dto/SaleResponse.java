@@ -101,7 +101,11 @@ public record SaleResponse(
                     item.getDiscountPerUnit(),
                     item.getFinalUnitPrice(),
                     item.getQuantity(),
-                    item.getSubtotal()
+                    item.getSubtotal(),
+                    item.getPresentation() != null ? item.getPresentation().getId() : null,
+                    item.getPresentationName(),
+                    item.getPresentationWeightKg(),
+                    item.getWeightKg()
                 ))
                 .collect(Collectors.toList())
             : Collections.emptyList();

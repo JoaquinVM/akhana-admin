@@ -1,0 +1,23 @@
+<div class="presentation-picker" role="group" [attr.aria-label]="'Presentaciones de ' + product().name">
+  <div class="picker-header">
+    <strong class="picker-title">{{ product().name }}</strong>
+    <button type="button" class="picker-close" title="Cancelar" (click)="cancelled.emit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
+  </div>
+  <div class="picker-options">
+    @for (option of options(); track option.presentation.id) {
+      <button type="button" class="picker-option" (click)="picked.emit(option.presentation)">
+        <span class="option-name">{{ option.presentation.name }}</span>
+        <span class="option-amount">Bs {{ option.amount | number:'1.2-2' }}</span>
+      </button>
+    }
+    <button type="button" class="picker-option picker-other" (click)="picked.emit(null)">
+      <span class="option-name">Otro peso…</span>
+      <span class="option-amount">kilos</span>
+    </button>
+  </div>
+</div>

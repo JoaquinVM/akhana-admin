@@ -11,5 +11,12 @@ public record ConsumptionItemRequest(
     UUID productId,
 
     @NotNull(message = "La cantidad es obligatoria.")
-    BigDecimal quantity
-) {}
+    BigDecimal quantity,
+
+    // CAT-11: consumed by presentation; quantity is then the whole number of packs
+    UUID presentationId
+) {
+    public ConsumptionItemRequest(UUID productId, BigDecimal quantity) {
+        this(productId, quantity, null);
+    }
+}

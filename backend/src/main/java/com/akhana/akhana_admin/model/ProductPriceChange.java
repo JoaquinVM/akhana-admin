@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Audit row of a product cost or sell price change (CAT-07, COM-03); never updated. */
+/** Audit row of a product cost or sell price change (CAT-07, COM-03) or of a presentation fixed price (CAT-11); never updated. */
 @Entity
 @Table(name = "product_price_changes")
 @Getter
@@ -42,6 +42,16 @@ public class ProductPriceChange {
 
     @Column(name = "purchase_id", updatable = false)
     private UUID purchaseId;
+
+    // Fixed price change of a presentation (CAT-11); null prices mean no fixed price
+    @Column(name = "presentation_id", updatable = false)
+    private UUID presentationId;
+
+    @Column(name = "previous_fixed_price", updatable = false, precision = 12, scale = 2)
+    private BigDecimal previousFixedPrice;
+
+    @Column(name = "new_fixed_price", updatable = false, precision = 12, scale = 2)
+    private BigDecimal newFixedPrice;
 
     @Column(name = "changed_by", nullable = false, length = 100, updatable = false)
     private String changedBy;

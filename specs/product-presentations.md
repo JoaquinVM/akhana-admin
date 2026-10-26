@@ -6,6 +6,11 @@ tener esto: la importación creará las presentaciones de los frutos secos direc
 
 Moneda Bs, montos con escala 2 `HALF_UP`; pesos en kilos con hasta 3 decimales (al gramo).
 
+Hecho el 26-10-2026 en la rama `feat/product-presentations`: migración `V15__product_presentations.sql`,
+`ProductPresentationService`, ventas, consumos y reportes con presentación, selector compartido
+`shared/components/presentation-picker` (POS en un modal, Consumos en línea) y sección Presentaciones en el
+formulario de Productos. No se probó todavía en la app con datos reales, solo con pruebas automáticas.
+
 ## Por qué
 
 En la planilla, cada fruto seco tiene un precio por gramo y además tres productos por presentación con precio
@@ -141,26 +146,31 @@ Ejemplo: 2 × Nuez pelada 1/2 libra, costo 130,00 / kg.
 
 | Método y ruta | Qué hace |
 | --- | --- |
-| `GET /api/products/{id}/presentations` | Presentaciones del producto (activas e inactivas), con precio y costo calculados. Permisos de lectura de productos. |
-| `PUT /api/products/{id}/presentations` | Guarda la lista completa desde el formulario (crea, cambia, desactiva). Permiso `PRODUCTS`. |
-| `GET /api/products` y `/{id}` | Agregan las presentaciones activas con precio calculado para el POS y Consumos. |
-| `POST /api/sales`, `POST /api/consumptions` | Cada línea acepta `presentationId` opcional; con él, `quantity` es entera. |
+| `POST /api/products`, `PUT /api/products/{id}` | `presentations` opcional en el cuerpo: la lista completa del formulario (sin `id` = nueva, `active: false` = desactivar, lo que falta se desactiva); sin el campo se mantienen. Se guarda en la misma transacción que el producto. La respuesta trae `warnings` (venta a pérdida, precios fijos que no cambian). |
+| `GET /api/products` y `/{id}` | Traen `presentations` (activas e inactivas, de menor a mayor peso) con `price` y `cost` calculados; el POS y Consumos usan solo las activas. |
+| `POST /api/sales`, `POST /api/consumptions` | Cada línea acepta `presentationId` opcional; con él, `quantity` es entera. Las líneas de la respuesta traen `presentationId`, `presentationName`, `presentationWeightKg` y `weightKg`. |
+
+Las presentaciones van dentro del producto y no en rutas aparte: el formulario guarda producto y presentaciones
+juntos, y el aviso de precios fijos depende del precio por kilo que se guarda en el mismo paso.
 
 ## Tareas
 
-- [ ] Migración `V15__product_presentations.sql` (tabla, columnas en líneas y en `product_price_changes`,
+- [x] Migración `V15__product_presentations.sql` (tabla, columnas en líneas y en `product_price_changes`,
   presentaciones 100 g y 1/2 libra para los productos por kilo existentes).
-- [ ] `ProductPresentationService`: reglas del catálogo, desactivar al pasar a Unidad, aviso de precio fijo al
+- [x] `ProductPresentationService`: reglas del catálogo, desactivar al pasar a Unidad, aviso de precio fijo al
   cambiar el precio por kilo, historial en `product_price_changes`.
-- [ ] `SaleServiceImpl` y `ConsumptionServiceImpl`: líneas con presentación (precio, kilos, costo, venta al costo,
+- [x] `SaleServiceImpl` y `ConsumptionServiceImpl`: líneas con presentación (precio, kilos, costo, venta al costo,
   presentación inactiva).
-- [ ] Reportes: sumar `COALESCE(weight_kg, quantity)` en cantidad y costo (`SaleRepository` y consultas de
+- [x] Reportes: sumar `COALESCE(weight_kg, quantity)` en cantidad y costo (`SaleRepository` y consultas de
   consumos).
-- [ ] Pruebas: `ProductPresentationServiceTest`, `SaleServiceTest`, `ConsumptionServiceTest`, `ReportServiceTest`
-  con la Nuez del ejemplo; `EndpointAuthorizationTest`.
-- [ ] Frontend: sección Presentaciones en el formulario de Productos; selector en el POS (dividir antes
-  `pos.component.html` si hay que tocarlo) y en el formulario de Consumos; detalle de venta y consumo; quitar los
-  botones fijos de `register-sale`; pruebas Vitest.
-- [ ] Actualizar `specs/sales.md` (POS-10) y `specs/requirements.md` (CAT-08, CAT-11, POS-10, tablero).
+- [x] Pruebas: `ProductPresentationServiceTest`, `SaleServiceTest`, `ConsumptionServiceTest` y
+  `SaleRepositoryTest` (kilos y costo contra PostgreSQL) con la Nuez del ejemplo. No hay rutas nuevas, así que
+  `EndpointAuthorizationTest` no cambia.
+- [x] Frontend: sección Presentaciones en el formulario de Productos; selector en el POS (`register-sale`, sin
+  tocar `pos.component.html`) y en el formulario de Consumos; detalle de venta y consumo; botones fijos quitados;
+  pruebas Vitest en `register-sale`, `consumption-form-modal` y `products`.
+- [ ] Probar en la app con un producto real (Nuez pelada): crear presentaciones, vender 1/2 libra, venta al costo,
+  consumo, y ver el reporte de ventas por día.
+- [x] Actualizar `specs/sales.md` (POS-10) y `specs/requirements.md` (CAT-08, CAT-11, POS-10, tablero).
 - [ ] Retomar `specs/product-import.md` (rama `feat/product-import`): las filas de libras de frutos secos pasan a
   ser presentaciones de su producto base.
