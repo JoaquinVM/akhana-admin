@@ -9,18 +9,27 @@ Akhana Admin ya resuelve bien la venta en POS, la caja y el dinero. **Ni el sist
 
 Stack: Spring Boot 4.1 (Java 21), Angular 21, PostgreSQL 17.
 
-| Módulo | Qué hace hoy | Estado | Qué falta |
-| --- | --- | --- | --- |
-| Login y usuarios | JWT, BCrypt, baja lógica, roles Operador/Administrador con permisos por pantalla, protección del último admin | Completo | Permisos de las pantallas de compras, consumos y reportes cuando se construyan |
-| Catálogo | Productos (código, nombre, categoría, proveedor, etiquetas, precio compra/venta, utilidad), categorías, etiquetas | Completo | Importación |
-| Proveedores | ABM con baja lógica | Completo | Base para compras |
-| Caja | Una sola caja abierta global, apertura, cierre con arqueo por cortes en Bs (caja + reserva), diferencia | Completo | Ingresos/retiros de caja, ajuste por sobrante |
-| POS / ventas | Carrito, productos rápidos por grupos, descuento por ítem y general, pago efectivo/QR/mixto, cambio, anulación solo con caja abierta | Completo | Costo por línea, venta al costo |
-| Historial de ventas | Ruta `/sales` existe pero es una página vacía | Pendiente | Construir |
-| Finanzas | Cuentas, cuenta QR única, categorías ingreso/gasto, ingresos/gastos manuales, transferencias, anulación, resumen | Completo | Cuentas Caja/Bisa/Efectivo, reportes |
-| Compras | Pedidos con líneas (cantidades de 3 decimales), envío como gasto de Transporte, pagos desde Caja u otra cuenta, estado de pago, alerta de costo y precio sugerido, entrega, vista por pagar y anulación de pedidos y pagos (COM-01 a COM-09, `specs/purchases.md`) | Completo para la V1 | Pago por persona (DEU-02) |
-| Inventario | Nada: sin stock, sin movimientos, sin kardex | No existe | V2 |
-| Reportes | Solo el resumen de finanzas | Mínimo | Construir |
+Avance de la V1, actualizado al 25-10-2026. Esta tabla es el tablero del proyecto: se actualiza al cerrar cada sesión, en el mismo commit que el resto de los cambios. Los IDs pendientes se detallan en la sección 3.
+
+| Módulo | Qué hace hoy | Estado V1 | Pendiente para la V1 | Spec |
+| --- | --- | --- | --- | --- |
+| Base técnica | Flyway, secretos por entorno, permisos en cada endpoint, bloqueos de dinero, efectivo esperado único, movimientos inmutables, límite de login (T-00 a T-19) | ✅ Completo | — | `requirements.md` §4 |
+| Login y usuarios | JWT, BCrypt, baja lógica, roles Operador y Administrador por pantalla, primer admin por entorno con cambio de contraseña, protección del último admin (USR-01 a USR-07) | ✅ Completo | — | `users.md` |
+| Catálogo | Productos, categorías, etiquetas, venta por peso con precio por kilo (CAT-01 a CAT-04, CAT-08) | 🟡 Parcial | CAT-06 importación; CAT-07 registrar cambios de costo y precio desde el catálogo en `product_price_changes` | — |
+| Proveedores | ABM con baja lógica (COM-01) | ✅ Completo | — | `purchases.md` |
+| Compras | Pedidos con líneas, envío, pagos desde Caja, cuentas o personas, estado de pago, costo y precio sugerido, entrega, por pagar, anulación (COM-01 a COM-09) | ✅ Completo | — | `purchases.md` |
+| Deudas con personas | Personas, pagos de pedidos por una persona, devoluciones, saldo e historial (DEU-01 a DEU-04) | ✅ Completo | — | `debts.md` |
+| Cuentas por cobrar | Nada | 📝 Spec lista | DEU-05 a DEU-07, junto con CON-02 | `debts.md`, `consumptions.md` |
+| Consumos y ventas al costo | Nada | 📝 Spec lista | CON-01; CON-02 (antes, responder P-38 y P-39); CON-03 con los reportes | `consumptions.md` |
+| Caja | Una caja abierta, apertura, cierre con arqueo por cortes, diferencia (CAJ-01 a CAJ-07). Las transferencias desde y hacia Caja ya existen en Finanzas | 🟡 Parcial | CAJ-08 ingresos y retiros desde la caja; CAJ-09 ajuste por sobrante o faltante; CAJ-10 caja inicial propuesta | `cash.md` |
+| POS / ventas | Carrito, productos rápidos, descuentos, efectivo, QR o mixto, costo por línea, venta por peso, anulación (POS-01 a POS-08, POS-10) | 🟡 Parcial | POS-09 historial de ventas (la ruta `/sales` está vacía) | `sales.md` |
+| Finanzas | Cuentas, cuenta QR única, categorías, ingresos y gastos, transferencias, anulación, resumen (FIN-02 a FIN-09) | 🟡 Parcial | FIN-01 cuentas Caja, Bisa y Efectivo con saldo al corte | `finance.md` |
+| Reportes | Solo el resumen de finanzas | ❌ Pendiente | FIN-10 reportes con CON-03 (sin spec todavía) | — |
+| Migración | Nada | ❌ Pendiente | Productos (CAT-06), saldos, pedidos por pagar e históricos desde julio (FIN-11); P-40 | — |
+| Producción | Nada | ❌ Pendiente | VPS con HTTPS y respaldo diario con restauración probada (NF-01, NF-02, NF-05) | — |
+| Inventario | Nada | V2 | — | — |
+
+Fuera del código: marcar en la planilla los productos por peso con su precio en Bs por kilo, contratar el VPS y responder P-35 a P-40.
 
 ### 1.1 Las planillas que hay que reemplazar
 

@@ -66,5 +66,7 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 - Git: una rama por modulo (`feat/<modulo>`) creada desde `main`, commits convencionales (`feat(purchases): ...`).
   Al cerrar la sesion, con las pruebas pasando, preguntar al usuario si subir a `main` (merge fast-forward si se
   puede, y push); no hacerlo sin su si. Si las pruebas fallan, no se hace merge y se reporta.
+- Avance: la tabla de la seccion 1 de `specs/requirements.md` es el tablero del proyecto. Al cerrar cada sesion,
+  actualizar su estado y pendientes en el mismo commit.
 - Cierre de sesion: ademas del resumen, dar el prompt listo para copiar de la siguiente sesion (proxima tarea
   pendiente segun la hoja de ruta de `specs/requirements.md`).
