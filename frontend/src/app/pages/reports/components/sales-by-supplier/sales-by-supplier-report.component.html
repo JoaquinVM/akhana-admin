@@ -1,0 +1,99 @@
+<div class="report-filters">
+  <label class="filter-field">
+    <span>Desde</span>
+    <input type="date" class="form-control" aria-label="Desde"
+           [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Hasta</span>
+    <input type="date" class="form-control" aria-label="Hasta"
+           [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Proveedor</span>
+    <input type="search" class="form-control" aria-label="Buscar proveedor" placeholder="Buscar…"
+           [ngModel]="search()" (ngModelChange)="search.set($event)" />
+  </label>
+  <p class="report-hint">
+    Cada producto cuenta en su proveedor actual. El descuento general se reparte entre las líneas según su subtotal.
+    La utilidad y el margen son solo de las ventas normales.
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="table-container">
+  @if (isLoading()) {
+    <div class="table-loading">Cargando reporte…</div>
+  } @else if (report(); as r) {
+    @if (r.suppliers.length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">📊</div>
+        <h4 class="table-empty-title">No hay ventas</h4>
+        <p class="table-empty-desc">No hay ventas activas entre las fechas elegidas.</p>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr class="group-header">
+              <th rowspan="2">Proveedor / mes</th>
+              <th colspan="5" class="group">Ventas normales</th>
+              <th colspan="2" class="group group-at-cost">Ventas al costo</th>
+              <th rowspan="2" class="num group-total">Total</th>
+            </tr>
+            <tr>
+              <th class="num">Cantidad</th>
+              <th class="num">Total</th>
+              <th class="num">Costo</th>
+              <th class="num">Utilidad</th>
+              <th class="num">Margen</th>
+              <th class="num group-at-cost">Cantidad</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (supplier of suppliers(); track supplier.supplierId ?? supplier.supplierName) {
+              <tr class="supplier-row">
+                <td colspan="9">{{ supplier.supplierName }}</td>
+              </tr>
+              @for (month of supplier.months; track month.month) {
+                <tr>
+                  <td class="month-cell">{{ monthLabel(month.month!) }}</td>
+                  <ng-container *ngTemplateOutlet="cells; context: { $implicit: month }" />
+                </tr>
+              }
+              <tr class="subtotal-row">
+                <td>Total {{ supplier.supplierName }}</td>
+                <ng-container *ngTemplateOutlet="cells; context: { $implicit: supplier.totals }" />
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="no-match">Ningún proveedor coincide con «{{ search() }}».</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Total del rango</td>
+              <ng-container *ngTemplateOutlet="cells; context: { $implicit: r.totals }" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #cells let-row>
+  <td class="num">{{ row.normalQuantity | number:'1.0-3' }}</td>
+  <td class="num">{{ row.normalTotal | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalCost | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalProfit | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalMargin === null ? '—' : (row.normalMargin | number:'1.2-2') + ' %' }}</td>
+  <td class="num group-at-cost">{{ row.atCostQuantity | number:'1.0-3' }}</td>
+  <td class="num">{{ row.atCostTotal | number:'1.2-2' }}</td>
+  <td class="num group-total strong">Bs {{ row.total | number:'1.2-2' }}</td>
+</ng-template>

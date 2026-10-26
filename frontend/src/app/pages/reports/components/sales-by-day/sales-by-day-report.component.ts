@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../../../core/report/report.service';
 import { SalesByDayReport } from '../../../../core/report/models/report.models';
-
-const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre',
-  'octubre', 'noviembre', 'diciembre'];
+import { monthLabel } from '../../../../core/report/report-labels';
 
 // FIN-10 / CON-03: ventas por día de la tienda, con subtotal por mes; reemplaza Resumen Ventas Diario
 @Component({
@@ -57,10 +55,7 @@ export class SalesByDayReportComponent implements OnInit {
     this.load();
   }
 
-  monthLabel(month: string): string {
-    const [year, number] = month.split('-');
-    return `${MONTH_NAMES[Number(number) - 1]} ${year}`;
-  }
+  readonly monthLabel = monthLabel;
 
   // Días de la tienda como texto, sin pasar por la zona horaria del navegador
   dayLabel(date: string | null): string {

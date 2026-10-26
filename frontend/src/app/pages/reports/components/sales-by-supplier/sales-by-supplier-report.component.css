@@ -1,0 +1,15 @@
+.report-table .supplier-row td {
+  font-weight: 700;
+  color: #1e293b;
+  border-top: 2px solid #e2e8f0;
+}
+
+.report-table .month-cell {
+  padding-left: 1.5rem;
+  text-transform: capitalize;
+}
+
+.report-table .no-match {
+  text-align: center;
+  color: #64748b;
+}

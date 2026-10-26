@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 // Sales history filters (POS-09); every row is rolled back at the end of each test
 @SpringBootTest
@@ -113,6 +114,38 @@ class SaleRepositoryTest {
                 "2001-05-10 AL_COSTO 1 1 104 104",
                 "2001-05-10 NORMAL 2 3.25 45 31",
                 "2001-05-11 NORMAL 1 1 8 5"), rows);
+    }
+
+    @Test
+    void listsActiveLinesWithTheCurrentSupplierAndStoreMonth() {
+        UUID product = insertProduct();
+        UUID supplier = jdbc.queryForObject("SELECT supplier_id FROM products WHERE id = ?", UUID.class, product);
+        // 23:30 of 31-05 in Bolivia is 03:30 of 01-06 UTC: still May for the store
+        UUID sale = insertSale("L1", "EFECTIVO", "NORMAL", "18.00", "0.00", "0.00", null, Instant.parse("2001-06-01T03:30:00Z"));
+        insertItem(sale, product, "0.250", "60.00");
+        UUID voided = insertSale("LVOID", "EFECTIVO", "NORMAL", "10.00", "0.00", "0.00", null, DAY);
+        insertItem(voided, product, "1", "6.00");
+        jdbc.update("UPDATE sales SET status = 'ANULADA', voided_by = 'it-repo', voided_at = now(), void_reason = 'IT' WHERE id = ?", voided);
+        // The current supplier of the product counts, not the one it had when sold
+        UUID newSupplier = jdbc.queryForObject(
+                "INSERT INTO suppliers (name, code, created_by) VALUES ('IT nuevo', ?, 'it-repo') RETURNING id",
+                UUID.class, "ITN-" + UUID.randomUUID().toString().substring(0, 8));
+        jdbc.update("UPDATE products SET supplier_id = ? WHERE id = ?", newSupplier, product);
+
+        List<Object[]> lines = saleRepository.findReportLines(Instant.parse("2001-05-01T04:00:00Z"), Instant.parse("2001-06-02T04:00:00Z"));
+
+        assertEquals(1, lines.size());
+        Object[] line = lines.getFirst();
+        assertEquals(sale, line[0]);
+        assertEquals("2001-05", line[1]);
+        assertEquals("NORMAL", line[2]);
+        assertEquals("18", plain(line[3]));
+        assertEquals(newSupplier, line[4]);
+        assertEquals("IT nuevo", line[5]);
+        assertEquals("0.25", plain(line[6]));
+        assertEquals("10", plain(line[7]));
+        assertEquals("15", plain(line[8]));
+        assertNotEquals(supplier, line[4]);
     }
 
     private static String plain(Object value) {

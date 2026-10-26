@@ -34,4 +34,13 @@ describe('ReportService', () => {
     expect(req.request.params.get('to')).toBe('2026-07-31');
     req.flush({});
   });
+
+  it('FIN-10: pide las ventas por proveedor con el rango elegido', () => {
+    service.getSalesBySupplier({ from: '2026-07-01', to: '2026-09-30' }).subscribe();
+    const req = httpTesting.expectOne(r => r.url === '/api/reports/sales-by-supplier');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('from')).toBe('2026-07-01');
+    expect(req.request.params.get('to')).toBe('2026-09-30');
+    req.flush({});
+  });
 });

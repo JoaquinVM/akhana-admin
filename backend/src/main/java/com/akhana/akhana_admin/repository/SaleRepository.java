@@ -62,6 +62,16 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
            nativeQuery = true)
     List<Object[]> sumByDayAndType(@Param("from") Instant from, @Param("to") Instant to);
 
+    // Lines of the active sales (FIN-10, CON-03): rows of {sale id, store month 'YYYY-MM', sale type, sale total,
+    // supplier id, supplier name, quantity, line subtotal, unrounded cost}. The supplier is the product's current one
+    @Query(value = "SELECT s.id, to_char(s.created_at AT TIME ZONE 'America/La_Paz', 'YYYY-MM'), s.sale_type, " +
+                   "s.total_amount, sup.id, sup.name, i.quantity, i.subtotal, i.quantity * i.unit_cost " +
+                   "FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN products p ON p.id = i.product_id " +
+                   "LEFT JOIN suppliers sup ON sup.id = p.supplier_id " +
+                   "WHERE s.status = 'COMPLETADA' AND s.created_at >= :from AND s.created_at < :to",
+           nativeQuery = true)
+    List<Object[]> findReportLines(@Param("from") Instant from, @Param("to") Instant to);
+
     // Sale numbers come from a database sequence so concurrent sales never share one (T-06)
     @Query(value = "SELECT nextval('sale_number_seq')", nativeQuery = true)
     long nextSaleNumber();

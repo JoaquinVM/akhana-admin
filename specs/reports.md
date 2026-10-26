@@ -89,6 +89,18 @@ Reemplaza Resumen Ventas. Una fila por proveedor con sus meses debajo y su total
   es igual al total de ventas por día.
 - **Cuando** se calcula el margen **entonces** se usa solo lo normal: las ventas al costo no bajan el margen
   (CON-03).
+- **Cuando** se calcula el costo **entonces** se suman cantidad × costo de las líneas del proveedor en el mes sin
+  redondear y se redondea una vez; el total del proveedor y el del rango suman sus meses. El total cobrado del
+  rango es igual al de ventas por día; el costo puede diferir en centavos porque allí se redondea por día.
+- **Cuando** se busca un proveedor en la pestaña **entonces** solo se filtran las filas a la vista; el total del
+  rango sigue siendo el de todos.
+- Hecho el 26-10-2026: `GET /api/reports/sales-by-supplier?from=&to=` (mismo rango y validaciones que ventas por
+  día). El descuento general de cada venta es la suma de los subtotales de sus líneas menos el total de la venta.
+  Proveedores por nombre, «Sin proveedor» al final. Validado con las siete filas de Bohemia de la hoja Ventas
+  (Catuai 80 con costo 72 el 28-07, 30-07, 18-08 ×2 y 25-09; Blend 75 con costo 65 dos veces el 29-09): da
+  jul 2 / 160 / 16, ago 2 / 160 / 16, sep 3 / 230 / 28, total 7 / 550 / 60, igual que Resumen Ventas.
+  Hallazgo: la tabla dinámica no incluye la venta del 16-10 (fila 5474, Java 97 con utilidad 10), así que en la
+  fase 2 hay que revisar su rango de origen o filtro antes de comparar octubre.
 
 ## FIN-10 · Movimientos por categoría y mes (con CON-03)
 
@@ -161,7 +173,9 @@ hasta hoy.
 - [x] Ventas por día: consulta agrupada por día de la tienda y tipo de venta, servicio con subtotales por mes,
   `GET /api/reports/sales-by-day`, pestaña en la pantalla. Pruebas en `ReportServiceTest`,
   `SaleRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest` y `report.service.spec.ts`.
-- [ ] Ventas por proveedor y mes, con el reparto del descuento general.
+- [x] Ventas por proveedor y mes, con el reparto del descuento general (26-10-2026). Pruebas en
+  `ReportServiceTest`, `SaleRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`,
+  `report.service.spec.ts` y `sales-by-supplier-report.component.spec.ts`.
 - [ ] Movimientos por categoría y mes, con transferencias y la línea Consumo.
 - [ ] Totales de ventas y utilidad, y consumos al costo.
 - [ ] Exportar a Excel los cinco reportes.
