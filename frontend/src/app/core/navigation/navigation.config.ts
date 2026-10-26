@@ -21,6 +21,7 @@ export const PERMISSIONS = {
   FINANCES_TRANSACTIONS: 'FINANCES_TRANSACTIONS',
   FINANCES_ACCOUNTS: 'FINANCES_ACCOUNTS',
   FINANCES_CATEGORIES: 'FINANCES_CATEGORIES',
+  REPORTS: 'REPORTS',
   USERS: 'USERS'
 } as const;
 
@@ -103,6 +104,11 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         label: 'Categorías',
         route: '/finances/categories',
         permissionKey: PERMISSIONS.FINANCES_CATEGORIES
+      },
+      {
+        label: 'Reportes',
+        route: '/reports',
+        permissionKey: PERMISSIONS.REPORTS
       }
     ]
   },

@@ -51,6 +51,17 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     @Query("SELECT DISTINCT s.createdBy FROM Sale s ORDER BY s.createdBy")
     List<String> findSellers();
 
+    // Active sales per store day and sale type (FIN-10, CON-03): rows of {day 'YYYY-MM-DD', sale type, sales,
+    // quantity, total, cost}. The cost is the unrounded sum of quantity x the cost copied on each line (POS-05)
+    @Query(value = "SELECT to_char(s.created_at AT TIME ZONE 'America/La_Paz', 'YYYY-MM-DD') AS day, s.sale_type, " +
+                   "COUNT(*), COALESCE(SUM(i.quantity), 0), SUM(s.total_amount), COALESCE(SUM(i.cost), 0) " +
+                   "FROM sales s LEFT JOIN (SELECT sale_id, SUM(quantity) AS quantity, " +
+                   "SUM(quantity * unit_cost) AS cost FROM sale_items GROUP BY sale_id) i ON i.sale_id = s.id " +
+                   "WHERE s.status = 'COMPLETADA' AND s.created_at >= :from AND s.created_at < :to " +
+                   "GROUP BY day, s.sale_type ORDER BY day",
+           nativeQuery = true)
+    List<Object[]> sumByDayAndType(@Param("from") Instant from, @Param("to") Instant to);
+
     // Sale numbers come from a database sequence so concurrent sales never share one (T-06)
     @Query(value = "SELECT nextval('sale_number_seq')", nativeQuery = true)
     long nextSaleNumber();

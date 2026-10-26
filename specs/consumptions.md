@@ -215,5 +215,6 @@ se ignora `customerId`. El filtro `GET /api/sales?saleType=` queda con el histor
 
 Reportes (con FIN-10):
 
-- [ ] Ventas normales y al costo en columnas aparte; reporte de consumos al costo; línea Consumo «sin movimiento
-  de dinero» en el resumen por categoría.
+- [x] Ventas normales y al costo en columnas aparte en ventas por día (26-10-2026, `specs/reports.md`).
+- [ ] Lo mismo en ventas por proveedor; reporte de consumos al costo; línea Consumo «sin movimiento de dinero» en el
+  resumen por categoría (tareas en `specs/reports.md`).

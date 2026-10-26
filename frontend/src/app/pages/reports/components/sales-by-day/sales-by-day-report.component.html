@@ -1,0 +1,93 @@
+<div class="report-filters">
+  <label class="filter-field">
+    <span>Desde</span>
+    <input type="date" class="form-control" aria-label="Desde"
+           [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+  </label>
+  <label class="filter-field">
+    <span>Hasta</span>
+    <input type="date" class="form-control" aria-label="Hasta"
+           [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+  </label>
+  <p class="report-hint">
+    La utilidad y el margen son solo de las ventas normales. Las ventas a crédito cuentan el día en que se vendieron.
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+}
+
+<div class="table-container">
+  @if (isLoading()) {
+    <div class="table-loading">Cargando reporte…</div>
+  } @else if (report(); as r) {
+    @if (r.months.length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">📊</div>
+        <h4 class="table-empty-title">No hay ventas</h4>
+        <p class="table-empty-desc">No hay ventas activas entre las fechas elegidas.</p>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table report-table">
+          <thead>
+            <tr class="group-header">
+              <th rowspan="2">Día</th>
+              <th colspan="6" class="group">Ventas normales</th>
+              <th colspan="3" class="group group-at-cost">Ventas al costo</th>
+              <th colspan="2" class="group">Total</th>
+            </tr>
+            <tr>
+              <th class="num">Ventas</th>
+              <th class="num">Cantidad</th>
+              <th class="num">Total</th>
+              <th class="num">Costo</th>
+              <th class="num">Utilidad</th>
+              <th class="num">Margen</th>
+              <th class="num group-at-cost">Ventas</th>
+              <th class="num">Cantidad</th>
+              <th class="num">Total</th>
+              <th class="num group-total">Total</th>
+              <th class="num">Utilidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (month of r.months; track month.month) {
+              @for (day of month.days; track day.date) {
+                <tr>
+                  <td>{{ dayLabel(day.date) }}</td>
+                  <ng-container *ngTemplateOutlet="cells; context: { $implicit: day }" />
+                </tr>
+              }
+              <tr class="subtotal-row">
+                <td>Total {{ monthLabel(month.month) }}</td>
+                <ng-container *ngTemplateOutlet="cells; context: { $implicit: month.totals }" />
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Total del rango</td>
+              <ng-container *ngTemplateOutlet="cells; context: { $implicit: r.totals }" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #cells let-row>
+  <td class="num">{{ row.normalSales }}</td>
+  <td class="num">{{ row.normalQuantity | number:'1.0-3' }}</td>
+  <td class="num">{{ row.normalTotal | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalCost | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalProfit | number:'1.2-2' }}</td>
+  <td class="num">{{ row.normalMargin === null ? '—' : (row.normalMargin | number:'1.2-2') + ' %' }}</td>
+  <td class="num group-at-cost">{{ row.atCostSales }}</td>
+  <td class="num">{{ row.atCostQuantity | number:'1.0-3' }}</td>
+  <td class="num">{{ row.atCostTotal | number:'1.2-2' }}</td>
+  <td class="num group-total strong">Bs {{ row.total | number:'1.2-2' }}</td>
+  <td class="num strong">{{ row.profit | number:'1.2-2' }}</td>
+</ng-template>

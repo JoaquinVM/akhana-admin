@@ -1,0 +1,30 @@
+<div class="reports-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Finanzas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Reportes</span>
+      </nav>
+      <h1 class="page-title">Reportes</h1>
+      <p class="page-subtitle">Ventas normales y al costo por separado; lo anulado no cuenta</p>
+    </div>
+  </header>
+
+  <div class="filter-pill-group" role="tablist" aria-label="Reportes">
+    @for (tab of tabs; track tab.value) {
+      <button type="button" role="tab" class="filter-pill"
+              [class.active]="activeTab() === tab.value"
+              [attr.aria-selected]="activeTab() === tab.value"
+              (click)="activeTab.set(tab.value)">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  @switch (activeTab()) {
+    @case ('SALES_BY_DAY') {
+      <app-sales-by-day-report />
+    }
+  }
+</div>

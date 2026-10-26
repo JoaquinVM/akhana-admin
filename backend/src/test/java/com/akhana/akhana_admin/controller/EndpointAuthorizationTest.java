@@ -58,6 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ProductController.class,
         PurchaseController.class,
         QuickProductController.class,
+        ReportController.class,
         SaleController.class,
         SupplierController.class,
         TagController.class,
@@ -149,6 +150,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private ProductService productService;
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
+    @MockitoBean private ReportService reportService;
     @MockitoBean private SaleService saleService;
     @MockitoBean private SupplierService supplierService;
     @MockitoBean private TagService tagService;
@@ -284,6 +286,8 @@ class EndpointAuthorizationTest {
                 adminOnly(put, "/api/finances/categories/" + ID + "/sales-default", null),
                 adminOnly(delete, "/api/finances/categories/" + ID, null),
                 adminOnly(get, "/api/finances/summary", null),
+                // Reportes
+                adminOnly(get, "/api/reports/sales-by-day", null),
                 // Usuarios
                 adminOnly(get, "/api/users", null),
                 adminOnly(get, "/api/users/" + ID, null),

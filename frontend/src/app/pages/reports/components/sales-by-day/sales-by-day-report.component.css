@@ -1,0 +1,64 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.report-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #545f73;
+}
+
+.filter-field .form-control {
+  width: 160px;
+}
+
+.report-hint {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.report-table th.num,
+.report-table td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-table thead th.group {
+  text-align: center;
+}
+
+.report-table .group-at-cost,
+.report-table .group-total {
+  border-left: 1px solid #e2e8f0;
+}
+
+.report-table .strong {
+  font-weight: 600;
+}
+
+.report-table .subtotal-row td {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.report-table .total-row td {
+  background: #eef2f7;
+  font-weight: 700;
+  border-top: 2px solid #cbd5e1;
+}

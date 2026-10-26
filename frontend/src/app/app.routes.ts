@@ -92,6 +92,13 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.FINANCES_CATEGORIES }
       },
       {
+        path: 'reports',
+        // Carga diferida: el bundle inicial está en el límite de presupuesto (1 MB)
+        loadComponent: () => import('./pages/reports/reports.component').then(m => m.ReportsComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.REPORTS }
+      },
+      {
         path: 'products',
         component: ProductsComponent,
         canActivate: [permissionGuard],

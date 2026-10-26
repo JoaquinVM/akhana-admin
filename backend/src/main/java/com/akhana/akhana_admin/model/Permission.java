@@ -34,6 +34,8 @@ public enum Permission {
     FINANCES_ACCOUNTS,
     /** Financial categories. */
     FINANCES_CATEGORIES,
+    /** Reports of sales, profit, transactions and consumptions (FIN-10, CON-03). */
+    REPORTS,
     /** Users and their roles. */
     USERS
 }
