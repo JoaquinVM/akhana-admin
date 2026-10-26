@@ -262,63 +262,6 @@ describe('RegisterSaleComponent', () => {
     expect(component.totalAmount()).toBe(0);
   });
 
-  it('debe procesar el método de pago EFECTIVO calculando el cambio', () => {
-    component.addToCart(mockProduct1); // 20 Bs
-    component.setPaymentMethod('EFECTIVO');
-
-    component.amountReceived.set(50);
-    expect(component.changeGiven()).toBe(30);
-    expect(component.isPaymentValid()).toBe(true);
-
-    component.amountReceived.set(15);
-    expect(component.isPaymentValid()).toBe(false); // insuficiente
-  });
-
-  it('debe procesar el método de pago QR fijando el monto y sin cambio', () => {
-    component.addToCart(mockProduct1); // 20 Bs
-    component.setPaymentMethod('QR');
-
-    expect(component.amountQr()).toBe(20);
-    expect(component.changeGiven()).toBe(0);
-    expect(component.isPaymentValid()).toBe(true);
-  });
-
-  it('debe procesar el método de pago MIXTO calculando el remanente QR y cambio en efectivo', () => {
-    component.addToCart(mockProduct1); // 20 Bs
-    component.setPaymentMethod('MIXTO');
-
-    component.amountCash.set(10);
-    component.amountReceived.set(15); // entrega billete de 15 para pagar 10
-
-    expect(component.amountQr()).toBe(10); // 20 - 10
-    expect(component.changeGiven()).toBe(5); // 15 - 10
-    expect(component.isPaymentValid()).toBe(true);
-  });
-
-  it('debe sincronizar monto recibido al cambiar la porción en efectivo con onCashPortionChange', () => {
-    component.addToCart(mockProduct1); // 20 Bs
-    component.setPaymentMethod('MIXTO'); // por defecto 10 efe, 10 qr, 10 recibido
-
-    expect(component.amountCash()).toBe(10);
-    expect(component.amountReceived()).toBe(10);
-
-    // Cambiar porción en efectivo a 15
-    component.onCashPortionChange(15);
-    expect(component.amountCash()).toBe(15);
-    expect(component.amountQr()).toBe(5);
-    expect(component.amountReceived()).toBe(15); // se sincronizó automáticamente
-
-    // Si cliente entrega 20 (cambio de 5)
-    component.addReceived(5);
-    expect(component.amountReceived()).toBe(20);
-    expect(component.changeGiven()).toBe(5);
-
-    // Botón Exacto restablece monto recibido a la porción de efectivo
-    component.setExactAmount();
-    expect(component.amountReceived()).toBe(15);
-    expect(component.changeGiven()).toBe(0);
-  });
-
   it('debe manejar la apertura y cierre del modal de cobro preservando el carrito', () => {
     // Si el carrito está vacío, no debe abrir el modal
     component.openCheckoutModal();
@@ -341,12 +284,13 @@ describe('RegisterSaleComponent', () => {
     component.openCheckoutModal();
     expect(component.isCheckoutModalOpen()).toBe(true);
 
-    component.setPaymentMethod('EFECTIVO');
-    component.amountReceived.set(20);
+    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20 });
 
-    component.submitSale();
-
-    expect(mockSaleService.registerSale).toHaveBeenCalled();
+    expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
+      paymentMethod: 'EFECTIVO',
+      amountCash: 20,
+      amountReceived: 20
+    }));
     expect(component.isCheckoutModalOpen()).toBe(false);
     expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
       state: expect.objectContaining({
@@ -358,31 +302,5 @@ describe('RegisterSaleComponent', () => {
   it('debe permitir cancelar la venta y regresar al POS', () => {
     component.cancelAndReturn();
     expect(router.navigate).toHaveBeenCalledWith(['/pos']);
-  });
-
-  it('debe actualizar el monto recibido con onAmountReceivedChange y validar cuando es menor al total en EFECTIVO', () => {
-    component.addToCart(mockProduct1); // total = 20
-    component.openCheckoutModal();
-    component.setPaymentMethod('EFECTIVO');
-
-    // Por defecto es igual al total
-    expect(component.amountReceived()).toBe(20);
-    expect(component.isPaymentValid()).toBe(true);
-
-    // Usuario introduce un monto menor
-    component.onAmountReceivedChange(15);
-    expect(component.amountReceived()).toBe(15);
-    expect(component.isPaymentValid()).toBe(false);
-
-    // Usuario borra el campo (null)
-    component.onAmountReceivedChange(null);
-    expect(component.amountReceived()).toBe(0);
-    expect(component.isPaymentValid()).toBe(false);
-
-    // Usuario introduce monto suficiente
-    component.onAmountReceivedChange(25);
-    expect(component.amountReceived()).toBe(25);
-    expect(component.changeGiven()).toBe(5);
-    expect(component.isPaymentValid()).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -9,12 +9,11 @@ import { SaleService } from '../../../core/sale/sale.service';
 import { Product } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
 import {
-  PaymentMethod,
   SaleDetailRequest,
   SaleItemRequest
 } from '../../../core/sale/models/sale.models';
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
-import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
 
 // POS-10 / CAT-08: el precio de los productos por peso es por kilo
 export const WEIGHT_STEP_KG = 0.1;
@@ -39,7 +38,7 @@ export interface CartItem {
     CommonModule,
     FormsModule,
     QuickProductsConfigModalComponent,
-    ModalComponent
+    CheckoutModalComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -65,11 +64,8 @@ export class RegisterSaleComponent implements OnInit {
   cartItems = signal<CartItem[]>([]);
   globalDiscount = signal<number>(0);
 
-  // Pasarela y Modal de Cobro
+  // Modal de Cobro (el pago vive en CheckoutModalComponent)
   isCheckoutModalOpen = signal<boolean>(false);
-  paymentMethod = signal<PaymentMethod>('EFECTIVO');
-  amountCash = signal<number>(0);
-  amountReceived = signal<number>(0);
 
   // Estados operativos
   isSubmitting = signal<boolean>(false);
@@ -128,69 +124,6 @@ export class RegisterSaleComponent implements OnInit {
       discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined
     }));
   });
-
-  // Computed: Cálculos del Cobro Inline
-  amountQr = computed<number>(() => {
-    if (this.paymentMethod() === 'QR') {
-      return this.totalAmount();
-    }
-    if (this.paymentMethod() === 'MIXTO') {
-      const remaining = this.totalAmount() - this.amountCash();
-      return remaining > 0 ? Math.round(remaining * 100) / 100 : 0;
-    }
-    return 0;
-  });
-
-  changeGiven = computed<number>(() => {
-    const received = this.amountReceived() || 0;
-    if (this.paymentMethod() === 'EFECTIVO') {
-      const diff = received - this.totalAmount();
-      return diff > 0 ? Math.round(diff * 100) / 100 : 0;
-    }
-    if (this.paymentMethod() === 'MIXTO') {
-      const diff = received - this.amountCash();
-      return diff > 0 ? Math.round(diff * 100) / 100 : 0;
-    }
-    return 0;
-  });
-
-  isPaymentValid = computed<boolean>(() => {
-    if (this.cartItems().length === 0 || this.totalAmount() <= 0) {
-      return false;
-    }
-    const received = this.amountReceived() || 0;
-    if (this.paymentMethod() === 'EFECTIVO') {
-      return received >= this.totalAmount();
-    }
-    if (this.paymentMethod() === 'QR') {
-      return true;
-    }
-    if (this.paymentMethod() === 'MIXTO') {
-      const cashPortion = this.amountCash();
-      return (
-        cashPortion >= 0 &&
-        cashPortion <= this.totalAmount() &&
-        received >= cashPortion
-      );
-    }
-    return false;
-  });
-
-  constructor() {
-    // Sincronizar automáticamente porción de efectivo si cambia el total
-    effect(() => {
-      const total = this.totalAmount();
-      const method = this.paymentMethod();
-
-      if (method === 'EFECTIVO') {
-        this.amountCash.set(total);
-      } else if (method === 'MIXTO') {
-        if (this.amountCash() > total) {
-          this.amountCash.set(total);
-        }
-      }
-    });
-  }
 
   ngOnInit(): void {
     // Validar existencia de caja activa
@@ -360,58 +293,11 @@ export class RegisterSaleComponent implements OnInit {
     this.isConfigModalVisible.set(false);
   }
 
-  // Métodos de Pago Inline
-  setPaymentMethod(method: PaymentMethod): void {
-    this.paymentMethod.set(method);
-    const total = this.totalAmount();
-
-    if (method === 'EFECTIVO') {
-      this.amountCash.set(total);
-      this.amountReceived.set(total);
-    } else if (method === 'QR') {
-      this.amountCash.set(0);
-      this.amountReceived.set(0);
-    } else if (method === 'MIXTO') {
-      const half = Math.round((total / 2) * 100) / 100;
-      this.amountCash.set(half);
-      this.amountReceived.set(half);
-    }
-    this.errorMessage.set(null);
-  }
-
-  addReceived(amount: number): void {
-    this.amountReceived.update((current) => Math.round(((current || 0) + amount) * 100) / 100);
-  }
-
-  onAmountReceivedChange(val: number | null): void {
-    const parsed = val !== null && !isNaN(val) ? Number(val) : 0;
-    this.amountReceived.set(parsed);
-  }
-
-  setExactAmount(): void {
-    if (this.paymentMethod() === 'EFECTIVO') {
-      this.amountReceived.set(this.totalAmount());
-    } else if (this.paymentMethod() === 'MIXTO') {
-      this.amountReceived.set(this.amountCash());
-    }
-  }
-
-  onCashPortionChange(val: number): void {
-    const previousCash = this.amountCash();
-    const wasExact = this.amountReceived() === previousCash;
-    const newCash = Math.max(0, Math.min(this.totalAmount(), val || 0));
-    this.amountCash.set(newCash);
-    if (wasExact || this.amountReceived() < newCash) {
-      this.amountReceived.set(newCash);
-    }
-  }
-
   // Control del Modal de Cobro
   openCheckoutModal(): void {
     if (this.cartItems().length === 0 || this.totalAmount() <= 0) {
       return;
     }
-    this.setPaymentMethod(this.paymentMethod());
     this.errorMessage.set(null);
     this.isCheckoutModalOpen.set(true);
   }
@@ -425,36 +311,22 @@ export class RegisterSaleComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 
-  submitSale(): void {
-    if (!this.isPaymentValid() || this.isSubmitting()) {
+  submitSale(payment: CheckoutPayment): void {
+    if (this.isSubmitting() || this.cartItems().length === 0 || this.totalAmount() <= 0) {
       return;
     }
 
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    let finalAmountCash = 0;
-    let finalAmountQr = 0;
-
-    if (this.paymentMethod() === 'EFECTIVO') {
-      finalAmountCash = this.totalAmount();
-      finalAmountQr = 0;
-    } else if (this.paymentMethod() === 'QR') {
-      finalAmountCash = 0;
-      finalAmountQr = this.totalAmount();
-    } else if (this.paymentMethod() === 'MIXTO') {
-      finalAmountCash = this.amountCash();
-      finalAmountQr = this.amountQr();
-    }
-
     const payload: SaleDetailRequest = {
       items: this.checkoutItems(),
       globalDiscountAmount: this.globalDiscount(),
-      paymentMethod: this.paymentMethod(),
-      amountCash: finalAmountCash,
-      amountQr: finalAmountQr,
-      amountReceived: this.amountReceived(),
-      description: `Venta POS (${this.paymentMethod()})`
+      paymentMethod: payment.paymentMethod,
+      amountCash: payment.amountCash,
+      amountQr: payment.amountQr,
+      amountReceived: payment.amountReceived,
+      description: `Venta POS (${payment.paymentMethod})`
     };
 
     this.saleService.registerSale(payload).subscribe({
