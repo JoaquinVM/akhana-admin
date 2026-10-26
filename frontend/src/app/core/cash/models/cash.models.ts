@@ -12,6 +12,12 @@ export interface CashCutItem {
   subtotal: number;
 }
 
+// CAJ-10: monto inicial propuesto a partir del cierre de la caja anterior
+export interface CashOpeningProposal {
+  proposedAmount: number;
+  previousSessionNumber: number | null;
+}
+
 export interface OpenCashRequest {
   openingAmount: number;
   openingComment?: string | null;

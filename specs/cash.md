@@ -28,6 +28,29 @@ El sistema SHALL registrar la apertura de una nueva sesión de caja requiriendo 
 - **WHEN** el usuario ingresa monto inicial y añade un comentario "Inicio de turno de fin de semana con sencillo"
 - **THEN** el sistema almacena el comentario asociado a la información de apertura
 
+### Requirement: Caja inicial propuesta desde el cierre anterior (CAJ-10)
+El sistema SHALL proponer como monto inicial de la apertura el monto de cierre de la última caja cerrada y SHALL exigir, validado en el servidor, un comentario de apertura cuando el monto inicial ingresado difiera de ese cierre.
+
+#### Scenario: Propuesta de monto inicial
+- **WHEN** la última caja cerrada (#7) cerró con 245.50 Bs y el usuario abre el modal de apertura
+- **THEN** el monto inicial aparece con 245.50 Bs y se indica que viene del cierre de la caja #7
+
+#### Scenario: Apertura con el monto propuesto
+- **WHEN** el usuario abre la caja con 245.50 Bs sin comentario
+- **THEN** la caja se abre normalmente
+
+#### Scenario: Monto cambiado sin comentario
+- **WHEN** el usuario cambia el monto a 200.00 Bs y deja el comentario vacío o solo con espacios
+- **THEN** el sistema rechaza la apertura con «El monto inicial es distinto al cierre de la caja anterior (Bs 245.50). Indique el motivo en el comentario de apertura.»
+
+#### Scenario: Monto cambiado con comentario
+- **WHEN** el usuario cambia el monto a 200.00 Bs con el comentario «Se depositaron 45.50»
+- **THEN** la caja se abre con 200.00 Bs y guarda el comentario
+
+#### Scenario: Primera caja del sistema
+- **WHEN** no existe ninguna caja cerrada
+- **THEN** se propone 0.00 Bs y el comentario sigue siendo opcional para cualquier monto
+
 ### Requirement: Vinculación obligatoria de ventas a la caja activa
 El sistema SHALL vincular cualquier venta registrada a la sesión de caja actualmente abierta, conservando la referencia al usuario que ejecutó la transacción, actualizando los saldos de efectivo y QR según el método de pago (incluyendo pagos mixtos), y permitiendo generar transacciones de tipo `ANULACIÓN` que revierten los saldos de la sesión abierta. No se permitirá registrar ventas si no hay una caja abierta.
 

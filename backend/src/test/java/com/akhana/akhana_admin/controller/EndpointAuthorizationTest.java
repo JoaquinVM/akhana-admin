@@ -178,6 +178,7 @@ class EndpointAuthorizationTest {
         return Stream.of(
                 // Caja: abrir, ver y cerrar; historial
                 both(post, "/api/cash-sessions/open", OPEN_CASH),
+                both(get, "/api/cash-sessions/opening-proposal", null),
                 both(get, "/api/cash-sessions/current", null),
                 both(post, "/api/cash-sessions/current/close", CLOSE_CASH),
                 both(get, "/api/cash-sessions", null),

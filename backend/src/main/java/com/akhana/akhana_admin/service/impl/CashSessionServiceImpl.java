@@ -37,6 +37,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
+    static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (Bs %s). Indique el motivo en el comentario de apertura.";
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
 
     @Override
@@ -46,11 +47,21 @@ public class CashSessionServiceImpl implements CashSessionService {
         }
 
         BigDecimal openingAmount = request.openingAmount().setScale(2, RoundingMode.HALF_UP);
+        String openingComment = request.openingComment() != null && !request.openingComment().isBlank()
+            ? request.openingComment().trim() : null;
+
+        // CAJ-10: an opening amount that differs from the previous closing must be explained
+        CashOpeningProposalResponse proposal = getOpeningProposal();
+        if (proposal.previousSessionNumber() != null
+                && openingAmount.compareTo(proposal.proposedAmount()) != 0 && openingComment == null) {
+            throw new IllegalArgumentException(
+                String.format(OPENING_COMMENT_REQUIRED, proposal.proposedAmount().toPlainString()));
+        }
 
         CashSession session = CashSession.builder()
             .status(CashSessionStatus.ABIERTA)
             .openingAmount(openingAmount)
-            .openingComment(request.openingComment() != null ? request.openingComment().trim() : null)
+            .openingComment(openingComment)
             .openedBy(username)
             .openedAt(Instant.now())
             .expectedCash(openingAmount)
@@ -67,6 +78,15 @@ public class CashSessionServiceImpl implements CashSessionService {
             throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
         }
         return mapToSummary(saved, 0);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CashOpeningProposalResponse getOpeningProposal() {
+        return cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA)
+            .map(previous -> new CashOpeningProposalResponse(
+                previous.getClosingAmount().setScale(2, RoundingMode.HALF_UP), previous.getSessionNumber()))
+            .orElseGet(() -> new CashOpeningProposalResponse(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), null));
     }
 
     @Override

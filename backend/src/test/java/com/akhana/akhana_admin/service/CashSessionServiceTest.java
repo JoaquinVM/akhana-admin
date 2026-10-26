@@ -96,6 +96,86 @@ class CashSessionServiceTest {
         assertThat(response.openedBy()).isEqualTo("cajero1");
     }
 
+    private CashSession closedSession(String closingAmount) {
+        return CashSession.builder()
+            .id(UUID.randomUUID())
+            .sessionNumber(7L)
+            .status(CashSessionStatus.CERRADA)
+            .openingAmount(new BigDecimal("100.00"))
+            .closingAmount(new BigDecimal(closingAmount))
+            .closedAt(Instant.now())
+            .build();
+    }
+
+    @Test
+    @DisplayName("CAJ-10: propone como monto inicial el cierre de la caja anterior")
+    void getOpeningProposal_returnsPreviousClosing() {
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("245.5")));
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.proposedAmount()).isEqualByComparingTo("245.50");
+        assertThat(proposal.previousSessionNumber()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("CAJ-10: sin caja anterior propone 0.00")
+    void getOpeningProposal_noPreviousSession_returnsZero() {
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.empty());
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.proposedAmount()).isEqualByComparingTo("0.00");
+        assertThat(proposal.previousSessionNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-10: abrir con el monto propuesto no exige comentario")
+    void openSession_withProposedAmount_noCommentNeeded() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("245.50")));
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(
+            new OpenCashRequest(new BigDecimal("245.5"), "  "), "cajero1");
+
+        assertThat(response.openingAmount()).isEqualByComparingTo("245.50");
+        assertThat(response.openingComment()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-10: abrir con un monto distinto al cierre anterior sin comentario se rechaza")
+    void openSession_changedAmountWithoutComment_throws() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("245.50")));
+
+        assertThatThrownBy(() -> cashSessionService.openSession(
+                new OpenCashRequest(new BigDecimal("200.00"), " "), "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("245.50")
+            .hasMessageContaining("comentario de apertura");
+        verify(cashSessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-10: abrir con un monto distinto al cierre anterior y comentario se acepta")
+    void openSession_changedAmountWithComment_succeeds() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("245.50")));
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(
+            new OpenCashRequest(new BigDecimal("200.00"), " Se depositaron 45.50 "), "cajero1");
+
+        assertThat(response.openingAmount()).isEqualByComparingTo("200.00");
+        assertThat(response.openingComment()).isEqualTo("Se depositaron 45.50");
+    }
+
     @Test
     @DisplayName("Debe lanzar excepción al intentar abrir caja si ya existe una abierta")
     void openSession_alreadyOpen_throwsException() {

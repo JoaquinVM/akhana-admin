@@ -50,6 +50,17 @@ describe('CashService', () => {
     httpTesting.verify();
   });
 
+  it('debe obtener el monto inicial propuesto (CAJ-10)', () => {
+    service.getOpeningProposal().subscribe((proposal) => {
+      expect(proposal.proposedAmount).toBe(245.5);
+      expect(proposal.previousSessionNumber).toBe(7);
+    });
+
+    const req = httpTesting.expectOne('/api/cash-sessions/opening-proposal');
+    expect(req.request.method).toBe('GET');
+    req.flush({ proposedAmount: 245.5, previousSessionNumber: 7 });
+  });
+
   it('debe obtener la sesión actual y actualizar el signal currentSession', () => {
     service.getCurrentSession().subscribe((session) => {
       expect(session.status).toBe('ABIERTA');

@@ -26,19 +26,34 @@
       @if (form.get('openingAmount')?.invalid && form.get('openingAmount')?.touched) {
         <span class="error-feedback">El monto inicial es obligatorio y debe ser mayor o igual a 0.</span>
       }
-      <span class="form-hint">Efectivo físico disponible en gaveta al momento de la apertura.</span>
+      @if (proposal(); as p) {
+        <span class="form-hint">
+          Propuesto: Bs {{ p.proposedAmount | number:'1.2-2' }}, el cierre de la caja #{{ p.previousSessionNumber }}.
+          Si lo cambias, explica el motivo en el comentario.
+        </span>
+      } @else {
+        <span class="form-hint">Efectivo físico disponible en gaveta al momento de la apertura.</span>
+      }
     </div>
 
     <div class="form-group">
       <label for="openingComment" class="form-label">
-        Comentario de Apertura (Opcional)
+        @if (amountChanged()) {
+          <span>Comentario de Apertura <span class="required-mark">*</span></span>
+        } @else {
+          Comentario de Apertura (Opcional)
+        }
       </label>
       <textarea
         id="openingComment"
         formControlName="openingComment"
         rows="3"
         class="form-control"
-        placeholder="Ej: Inicio de turno con billetes de corte bajo para sencillo..."></textarea>
+        placeholder="Ej: Inicio de turno con billetes de corte bajo para sencillo..."
+        [class.is-invalid]="form.get('openingComment')?.invalid && form.get('openingComment')?.touched"></textarea>
+      @if (amountChanged() && form.get('openingComment')?.invalid && form.get('openingComment')?.touched) {
+        <span class="error-feedback">El monto es distinto al cierre anterior: indica el motivo.</span>
+      }
       <span class="form-hint">Máximo 500 caracteres.</span>
     </div>
 

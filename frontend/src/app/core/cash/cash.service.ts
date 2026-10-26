@@ -4,6 +4,7 @@ import { Observable, tap } from 'rxjs';
 import {
   CashSessionSummary,
   CashSessionDetail,
+  CashOpeningProposal,
   OpenCashRequest,
   CloseCashRequest
 } from './models/cash.models';
@@ -33,6 +34,10 @@ export class CashService {
         }
       })
     );
+  }
+
+  getOpeningProposal(): Observable<CashOpeningProposal> {
+    return this.http.get<CashOpeningProposal>(`${this.apiUrl}/opening-proposal`);
   }
 
   openSession(request: OpenCashRequest): Observable<CashSessionSummary> {

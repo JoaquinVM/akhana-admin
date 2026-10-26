@@ -9,6 +9,8 @@ public interface CashSessionService {
 
     CashSessionSummaryResponse openSession(OpenCashRequest request, String username);
 
+    CashOpeningProposalResponse getOpeningProposal();
+
     CashSessionSummaryResponse getCurrentSession();
 
     CashSessionSummaryResponse closeCurrentSession(CloseCashRequest request, String username);

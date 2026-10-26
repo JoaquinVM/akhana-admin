@@ -31,6 +31,8 @@ public interface CashSessionRepository extends JpaRepository<CashSession, UUID> 
 
     List<CashSession> findAllByOrderByOpenedAtDesc();
 
+    Optional<CashSession> findFirstByStatusOrderByClosedAtDesc(CashSessionStatus status);
+
     @Query("SELECT DISTINCT cs FROM CashSession cs " +
            "LEFT JOIN FETCH cs.cuts " +
            "WHERE cs.id = :id")

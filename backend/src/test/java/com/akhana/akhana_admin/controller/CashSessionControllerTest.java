@@ -115,6 +115,19 @@ class CashSessionControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/cash-sessions/opening-proposal - Debe retornar el monto inicial propuesto (CAJ-10)")
+    void getOpeningProposal_success() throws Exception {
+        when(cashSessionService.getOpeningProposal())
+            .thenReturn(new CashOpeningProposalResponse(new BigDecimal("245.50"), 7L));
+
+        mockMvc.perform(get("/api/cash-sessions/opening-proposal")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.proposedAmount").value(245.50))
+            .andExpect(jsonPath("$.previousSessionNumber").value(7));
+    }
+
+    @Test
     @DisplayName("GET /api/cash-sessions/current - Debe retornar la caja activa")
     void getCurrentSession_success() throws Exception {
         when(cashSessionService.getCurrentSession()).thenReturn(summaryResponse);

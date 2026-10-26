@@ -32,6 +32,12 @@ public class CashSessionController {
     }
 
     @PreAuthorize("hasAuthority('POS')")
+    @GetMapping("/opening-proposal")
+    public ResponseEntity<CashOpeningProposalResponse> getOpeningProposal() {
+        return ResponseEntity.ok(cashSessionService.getOpeningProposal());
+    }
+
+    @PreAuthorize("hasAuthority('POS')")
     @GetMapping("/current")
     public ResponseEntity<CashSessionSummaryResponse> getCurrentSession() {
         CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
