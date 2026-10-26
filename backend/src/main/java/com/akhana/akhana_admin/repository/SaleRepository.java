@@ -1,11 +1,18 @@
 package com.akhana.akhana_admin.repository;
 
+import com.akhana.akhana_admin.model.PaymentMethod;
 import com.akhana.akhana_admin.model.Sale;
+import com.akhana.akhana_admin.model.SaleStatus;
+import com.akhana.akhana_admin.model.SaleType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +26,30 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     // Sales with a part on credit to a customer, voided included, for the receivables history (DEU-07)
     @Query("SELECT s FROM Sale s WHERE s.customer.id = :customerId AND s.creditAmount > 0 ORDER BY s.createdAt")
     List<Sale> findCreditSalesByCustomerId(@Param("customerId") UUID customerId);
+
+    // Sales history (POS-09). A method matches every sale that used it: Efectivo and QR include the mixed ones,
+    // Crédito includes the partly-on-credit ones; Mixto matches only mixed sales
+    @EntityGraph(attributePaths = {"cashSession", "customer"})
+    @Query("SELECT s FROM Sale s " +
+           "WHERE s.createdAt >= :from AND s.createdAt < :to " +
+           "AND (:status IS NULL OR s.status = :status) " +
+           "AND (:saleType IS NULL OR s.saleType = :saleType) " +
+           "AND (:paymentMethod IS NULL OR s.paymentMethod = :paymentMethod " +
+           "OR (:paymentMethod = com.akhana.akhana_admin.model.PaymentMethod.EFECTIVO AND s.amountCash > 0) " +
+           "OR (:paymentMethod = com.akhana.akhana_admin.model.PaymentMethod.QR AND s.amountQr > 0) " +
+           "OR (:paymentMethod = com.akhana.akhana_admin.model.PaymentMethod.CREDITO AND s.creditAmount > 0)) " +
+           "AND (CAST(:createdBy AS string) IS NULL OR s.createdBy = :createdBy)")
+    Page<Sale> search(@Param("from") Instant from,
+                      @Param("to") Instant to,
+                      @Param("status") SaleStatus status,
+                      @Param("saleType") SaleType saleType,
+                      @Param("paymentMethod") PaymentMethod paymentMethod,
+                      @Param("createdBy") String createdBy,
+                      Pageable pageable);
+
+    // Users that registered at least one sale, for the history's user filter (POS-09)
+    @Query("SELECT DISTINCT s.createdBy FROM Sale s ORDER BY s.createdBy")
+    List<String> findSellers();
 
     // Sale numbers come from a database sequence so concurrent sales never share one (T-06)
     @Query(value = "SELECT nextval('sale_number_seq')", nativeQuery = true)

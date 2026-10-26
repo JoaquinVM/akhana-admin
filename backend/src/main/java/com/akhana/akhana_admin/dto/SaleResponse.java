@@ -81,7 +81,16 @@ public record SaleResponse(
     }
 
     public static SaleResponse fromEntity(Sale sale) {
-        List<SaleItemResponse> itemResponses = sale.getItems() != null
+        return of(sale, true);
+    }
+
+    // History row without its lines: the detail loads them by id (POS-09)
+    public static SaleResponse summary(Sale sale) {
+        return of(sale, false);
+    }
+
+    private static SaleResponse of(Sale sale, boolean withItems) {
+        List<SaleItemResponse> itemResponses = withItems && sale.getItems() != null
             ? sale.getItems().stream()
                 .map(item -> new SaleItemResponse(
                     item.getId(),

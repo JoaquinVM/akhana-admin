@@ -213,3 +213,33 @@ El sistema SHALL proveer un componente modal reutilizable e independiente (`Sale
 #### Scenario: Restricción de solo consulta
 - **WHEN** el modal de detalle se encuentra abierto
 - **THEN** no se presentan controles de edición de productos, cantidades, precios o métodos de pago, ni botones de anulación dentro del modal, permitiendo únicamente cerrar el modal y regresar a la vista de origen
+
+---
+
+### Requirement: Historial de ventas (POS-09)
+El sistema SHALL ofrecer en `/sales` (permiso `SALES_HISTORY`) el historial de ventas de todas las cajas, de la más reciente a la más antigua, paginado en el servidor (`GET /api/sales`, 20 por página, hasta 100) y filtrable por fecha, estado, tipo de venta, método de pago y usuario. El detalle se abre con `SaleDetailModalComponent`.
+
+#### Scenario: Filtro por fechas
+- **WHEN** se filtra desde el 01/10/2026 hasta el 25/10/2026
+- **THEN** se listan las ventas registradas entre las 00:00 del 1 y las 23:59 del 25 en hora de Bolivia; si «desde» es posterior a «hasta» se muestra «La fecha desde no puede ser posterior a la fecha hasta.»
+
+#### Scenario: Filtro por método de pago
+- **WHEN** se filtra por Efectivo, QR o Crédito
+- **THEN** se listan las ventas que usaron ese método aunque sea en parte: Efectivo y QR incluyen las mixtas y Crédito incluye las ventas al costo pagadas en parte y el resto a crédito; Mixto lista solo las mixtas
+
+#### Scenario: Filtros por estado, tipo y usuario
+- **WHEN** se elige Anuladas, «Al costo» y un usuario de la lista (usuarios con al menos una venta)
+- **THEN** se listan solo las ventas anuladas al costo registradas por ese usuario, y la paginación vuelve a la página 1
+
+#### Scenario: Fila de una venta a crédito
+- **WHEN** una venta al costo quedó toda a crédito o en parte a crédito
+- **THEN** la fila muestra el distintivo «Al costo», el método «Crédito» (o el método pagado y «+ Crédito Bs X») y el cliente
+
+#### Scenario: Paginación
+- **WHEN** hay 41 ventas con los filtros elegidos
+- **THEN** se muestran 20 por página, «41 ventas · Página 1 de 3» y los botones Anterior y Siguiente
+
+#### Scenario: Detalle desde el historial
+- **WHEN** se pulsa «Ver detalle» en una fila
+- **THEN** se abre el detalle de solo lectura con sus líneas, pagos y, si está anulada, la auditoría; el historial no ofrece «Anular»
+

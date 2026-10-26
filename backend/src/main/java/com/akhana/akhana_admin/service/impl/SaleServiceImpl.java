@@ -15,6 +15,8 @@ import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.SaleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -388,12 +391,32 @@ public class SaleServiceImpl implements SaleService {
         return String.format("VTA-%06d", sequenceValue);
     }
 
+    static final int MAX_PAGE_SIZE = 100;
+    // Open bounds of the history when a date is missing: before and after any real sale
+    private static final Instant NO_FROM = Instant.parse("2000-01-01T00:00:00Z");
+    private static final Instant NO_TO = Instant.parse("3000-01-01T00:00:00Z");
+
     @Override
     @Transactional(readOnly = true)
-    public List<SaleResponse> getAllSales() {
-        return saleRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-            .map(SaleResponse::fromEntity)
-            .collect(Collectors.toList());
+    public Page<SaleResponse> searchSales(LocalDate from, LocalDate to, SaleStatus status, SaleType saleType,
+                                          PaymentMethod paymentMethod, String createdBy, int page, int size) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");
+        }
+        // Dates are store days (America/La_Paz); "to" includes the whole day
+        Instant fromInstant = from != null ? from.atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant() : NO_FROM;
+        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant() : NO_TO;
+        String seller = createdBy != null && !createdBy.isBlank() ? createdBy.trim() : null;
+        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        return saleRepository.search(fromInstant, toInstant, status, saleType, paymentMethod, seller, pageRequest)
+            .map(SaleResponse::summary);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getSellers() {
+        return saleRepository.findSellers();
     }
 
     @Override

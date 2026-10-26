@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import { Sale, SaleDetailRequest, VoidSaleRequest } from './models/sale.models';
+import { PageResponse, Sale, SaleDetailRequest, SaleFilters, VoidSaleRequest } from './models/sale.models';
 import { CashService } from '../cash/cash.service';
 
 @Injectable({
@@ -61,20 +61,21 @@ export class SaleService {
     );
   }
 
-  getAllSales(): Observable<Sale[]> {
-    this.isLoading.set(true);
-    return this.http.get<Sale[]>(this.apiUrl).pipe(
-      tap({
-        next: (data) => {
-          this.sales.set(data);
-          this.isLoading.set(false);
-        },
-        error: () => {
-          this.sales.set([]);
-          this.isLoading.set(false);
-        }
-      })
-    );
+  // POS-09: historial paginado, del más reciente al más antiguo
+  searchSales(filters: SaleFilters = {}, page = 0, size = 20): Observable<PageResponse<Sale>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    for (const key of ['from', 'to', 'status', 'saleType', 'paymentMethod', 'createdBy'] as const) {
+      const value = filters[key];
+      if (value) {
+        params = params.set(key, value);
+      }
+    }
+    return this.http.get<PageResponse<Sale>>(this.apiUrl, { params });
+  }
+
+  // Usuarios que registraron al menos una venta, para el filtro del historial
+  getSellers(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/sellers`);
   }
 
   getSaleById(saleId: string): Observable<Sale> {

@@ -57,13 +57,10 @@ export const routes: Routes = [
       },
       {
         path: 'sales',
-        component: SectionPageComponent,
+        // Carga diferida: el bundle inicial está en el límite de presupuesto (1 MB)
+        loadComponent: () => import('./pages/sales/sales-history.component').then(m => m.SalesHistoryComponent),
         canActivate: [permissionGuard],
-        data: {
-          permission: PERMISSIONS.SALES_HISTORY,
-          title: 'Ventas',
-          subtitle: 'Historial y Reporte de Transacciones'
-        }
+        data: { permission: PERMISSIONS.SALES_HISTORY }
       },
       {
         path: 'finances',

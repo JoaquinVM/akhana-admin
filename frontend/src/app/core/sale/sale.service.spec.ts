@@ -110,4 +110,29 @@ describe('SaleService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockSale);
   });
+
+  it('POS-09: busca ventas paginadas enviando solo los filtros con valor', () => {
+    service.searchSales({ from: '2026-10-01', to: null, paymentMethod: 'CREDITO', createdBy: 'admin' }, 2, 20)
+      .subscribe((page) => {
+        expect(page.totalElements).toBe(41);
+        expect(page.content[0].id).toBe('sale-1');
+      });
+
+    const req = httpTesting.expectOne((r) => r.url === '/api/sales');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('size')).toBe('20');
+    expect(req.request.params.get('from')).toBe('2026-10-01');
+    expect(req.request.params.get('paymentMethod')).toBe('CREDITO');
+    expect(req.request.params.get('createdBy')).toBe('admin');
+    expect(req.request.params.has('to')).toBe(false);
+    expect(req.request.params.has('status')).toBe(false);
+    req.flush({ content: [mockSale], totalElements: 41, totalPages: 3, size: 20, number: 2 });
+  });
+
+  it('POS-09: obtiene los usuarios con ventas', () => {
+    service.getSellers().subscribe((sellers) => expect(sellers).toEqual(['admin', 'cajero']));
+
+    const req = httpTesting.expectOne('/api/sales/sellers');
+    req.flush(['admin', 'cajero']);
+  });
 });

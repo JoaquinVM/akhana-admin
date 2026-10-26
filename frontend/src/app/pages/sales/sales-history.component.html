@@ -1,0 +1,104 @@
+<div class="sales-history-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Ventas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Historial</span>
+      </nav>
+      <h1 class="page-title">Historial de ventas</h1>
+      <p class="page-subtitle">Ventas de todas las cajas, de la más reciente a la más antigua</p>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+  }
+
+  <div class="filters-card">
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
+      @for (filter of statusFilters; track filter.value) {
+        <button type="button" role="tab" class="filter-pill"
+                [class.active]="statusFilter() === filter.value"
+                [attr.aria-selected]="statusFilter() === filter.value"
+                (click)="setStatusFilter(filter.value)">
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+    <div class="filters-right">
+      <input type="date" class="form-control date-filter" aria-label="Desde"
+             [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+      <input type="date" class="form-control date-filter" aria-label="Hasta"
+             [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+      <select class="form-control select-filter" aria-label="Filtrar por tipo de venta"
+              [ngModel]="saleType()" (ngModelChange)="onSaleType($event)">
+        <option value="">Todos los tipos</option>
+        @for (type of saleTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+      <select class="form-control select-filter" aria-label="Filtrar por método de pago"
+              [ngModel]="paymentMethod()" (ngModelChange)="onPaymentMethod($event)">
+        <option value="">Todos los métodos</option>
+        @for (method of paymentMethods; track method.value) {
+          <option [value]="method.value">{{ method.label }}</option>
+        }
+      </select>
+      <select class="form-control select-filter" aria-label="Filtrar por usuario"
+              [ngModel]="createdBy()" (ngModelChange)="onCreatedBy($event)">
+        <option value="">Todos los usuarios</option>
+        @for (seller of sellers(); track seller) {
+          <option [value]="seller">{{ seller }}</option>
+        }
+      </select>
+      @if (hasFilters()) {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">Limpiar filtros</button>
+      }
+    </div>
+  </div>
+  @if (paymentMethod() === 'EFECTIVO' || paymentMethod() === 'QR' || paymentMethod() === 'CREDITO') {
+    <p class="filter-hint">
+      Incluye las ventas que usaron ese método en parte:
+      {{ paymentMethod() === 'CREDITO' ? 'las ventas al costo pagadas en parte y el resto a crédito.' : 'también las ventas mixtas.' }}
+    </p>
+  }
+
+  <div class="table-container">
+    @if (isLoading()) {
+      <div class="table-loading">Cargando ventas…</div>
+    } @else if (sales().length === 0) {
+      <div class="table-empty">
+        <div class="table-empty-icon">🧾</div>
+        <h4 class="table-empty-title">No hay ventas</h4>
+        <p class="table-empty-desc">
+          {{ hasFilters() ? 'Ninguna venta coincide con los filtros elegidos.' : 'Las ventas registradas en el POS aparecerán aquí.' }}
+        </p>
+      </div>
+    } @else {
+      <app-sales-table [sales]="sales()" [showSession]="true" (viewDetail)="openDetail($event)" />
+    }
+
+    @if (totalElements() > 0) {
+      <div class="pagination-container">
+        <div class="pagination-info">
+          {{ totalElements() }} {{ totalElements() === 1 ? 'venta' : 'ventas' }} · Página {{ currentPage() + 1 }} de {{ totalPages() }}
+        </div>
+        @if (totalPages() > 1) {
+          <div class="pagination-controls">
+            <button type="button" class="btn-page" [disabled]="currentPage() === 0 || isLoading()"
+                    (click)="goToPage(currentPage() - 1)">Anterior</button>
+            <button type="button" class="btn-page" [disabled]="currentPage() >= totalPages() - 1 || isLoading()"
+                    (click)="goToPage(currentPage() + 1)">Siguiente</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <app-sale-detail-modal
+    [isOpen]="detailSale() !== null"
+    [saleId]="detailSale()?.id ?? null"
+    [initialSale]="detailSale()"
+    (close)="detailSale.set(null)" />
+</div>

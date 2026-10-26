@@ -23,6 +23,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -854,4 +858,32 @@ class SaleServiceTest {
 
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.ANULADA);
     }
+
+    @Test
+    @DisplayName("POS-09: el historial filtra por días de la tienda y limita el tamaño de página")
+    void searchSalesUsesStoreDaysAndCapsPageSize() {
+        when(saleRepository.search(any(), any(), any(), any(), any(), any(), any()))
+            .thenReturn(Page.empty());
+
+        saleService.searchSales(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 25),
+            SaleStatus.COMPLETADA, SaleType.AL_COSTO, PaymentMethod.CREDITO, " operador ", -1, 500);
+
+        ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
+        // Bolivia is UTC-4: the 1st starts at 04:00 UTC and the 25th ends at 04:00 UTC of the 26th
+        verify(saleRepository).search(eq(Instant.parse("2026-10-01T04:00:00Z")), eq(Instant.parse("2026-10-26T04:00:00Z")),
+            eq(SaleStatus.COMPLETADA), eq(SaleType.AL_COSTO), eq(PaymentMethod.CREDITO), eq("operador"), page.capture());
+        assertThat(page.getValue().getPageNumber()).isZero();
+        assertThat(page.getValue().getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("POS-09: rechaza un rango de fechas invertido")
+    void searchSalesRejectsInvertedRange() {
+        assertThatThrownBy(() -> saleService.searchSales(LocalDate.of(2026, 10, 26),
+                LocalDate.of(2026, 10, 1), null, null, null, null, 0, 20))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La fecha desde no puede ser posterior a la fecha hasta.");
+        verifyNoInteractions(saleRepository);
+    }
 }
+

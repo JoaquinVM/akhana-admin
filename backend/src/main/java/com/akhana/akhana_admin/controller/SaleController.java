@@ -3,16 +3,22 @@ package com.akhana.akhana_admin.controller;
 import com.akhana.akhana_admin.dto.SaleDetailRequest;
 import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
+import com.akhana.akhana_admin.model.PaymentMethod;
+import com.akhana.akhana_admin.model.SaleStatus;
+import com.akhana.akhana_admin.model.SaleType;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.SaleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,8 +52,22 @@ public class SaleController {
 
     @PreAuthorize("hasAuthority('SALES_HISTORY')")
     @GetMapping
-    public ResponseEntity<List<SaleResponse>> getAllSales() {
-        return ResponseEntity.ok(saleService.getAllSales());
+    public ResponseEntity<Page<SaleResponse>> searchSales(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) SaleStatus status,
+            @RequestParam(required = false) SaleType saleType,
+            @RequestParam(required = false) PaymentMethod paymentMethod,
+            @RequestParam(required = false) String createdBy,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(saleService.searchSales(from, to, status, saleType, paymentMethod, createdBy, page, size));
+    }
+
+    @PreAuthorize("hasAuthority('SALES_HISTORY')")
+    @GetMapping("/sellers")
+    public ResponseEntity<List<String>> getSellers() {
+        return ResponseEntity.ok(saleService.getSellers());
     }
 
     @PreAuthorize("hasAnyAuthority('POS', 'SALES_HISTORY', 'CASH_HISTORY')")

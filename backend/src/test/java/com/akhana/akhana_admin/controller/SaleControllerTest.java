@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -29,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -191,14 +194,37 @@ class SaleControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/sales - Debe listar ventas")
+    @DisplayName("GET /api/sales - Debe listar ventas paginadas con filtros (POS-09)")
     void shouldListSales() throws Exception {
-        when(saleService.getAllSales()).thenReturn(List.of(sampleResponse));
+        when(saleService.searchSales(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 26), SaleStatus.ANULADA,
+                SaleType.AL_COSTO, PaymentMethod.CREDITO, "admin", 1, 10))
+            .thenReturn(new PageImpl<>(List.of(sampleResponse), PageRequest.of(1, 10), 11));
 
         mockMvc.perform(get("/api/sales")
+                .param("from", "2026-10-01")
+                .param("to", "2026-10-26")
+                .param("status", "ANULADA")
+                .param("saleType", "AL_COSTO")
+                .param("paymentMethod", "CREDITO")
+                .param("createdBy", "admin")
+                .param("page", "1")
+                .param("size", "10")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].saleNumber").value("VTA-0001-001"));
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].saleNumber").value("VTA-0001-001"))
+            .andExpect(jsonPath("$.totalElements").value(11))
+            .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
+    @Test
+    @DisplayName("GET /api/sales/sellers - Debe listar los usuarios con ventas")
+    void shouldListSellers() throws Exception {
+        when(saleService.getSellers()).thenReturn(List.of("admin", "operador"));
+
+        mockMvc.perform(get("/api/sales/sellers")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[1]").value("operador"));
     }
 }
