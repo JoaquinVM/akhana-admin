@@ -148,6 +148,25 @@ El sistema SHALL registrar desde la pantalla POS los ingresos y retiros de efect
 - **WHEN** el usuario anula con motivo un ingreso o retiro de la caja abierta desde la pestaña «Ingresos / Retiros»
 - **THEN** se revierten ambos saldos, el efectivo esperado deja de contarlo y el movimiento queda anulado; por esta vía el POS no anula gastos ni movimientos de una caja cerrada
 
+### Requirement: Ajuste automático por sobrante o faltante al cerrar (CAJ-09)
+El sistema SHALL registrar al cerrar la caja la diferencia (monto de cierre − efectivo esperado) como un movimiento de la cuenta Caja con la categoría de sistema «Ajuste», en la misma transacción del cierre, para que el saldo de Caja coincida con lo contado.
+
+#### Scenario: Cierre con sobrante
+- **WHEN** el efectivo esperado es 100.00 Bs y se cierra con 112.50 Bs
+- **THEN** se crea un ingreso de 12.50 Bs en Caja con la categoría Ajuste (ingreso), descripción «Sobrante al cierre de caja #N», el comentario de cierre en notas y vinculado a la caja cerrada; el saldo de Caja sube 12.50 Bs
+
+#### Scenario: Cierre con faltante
+- **WHEN** el efectivo esperado es 100.00 Bs y se cierra con 93.00 Bs
+- **THEN** se crea un gasto de 7.00 Bs en Caja con la categoría Ajuste (gasto) y descripción «Faltante al cierre de caja #N»; el saldo de Caja baja 7.00 Bs
+
+#### Scenario: Cuadre exacto
+- **WHEN** el monto de cierre es igual al efectivo esperado
+- **THEN** no se crea ningún ajuste
+
+#### Scenario: Ajuste inmutable
+- **WHEN** se intenta editar o anular el ajuste desde Finanzas
+- **THEN** se rechaza porque pertenece a una caja cerrada (CAJ-06)
+
 ### Requirement: Historial y consulta detallada en pantalla "Cajas"
 El sistema SHALL listar el historial cronológico de sesiones de caja y permitir consultar el detalle integral de cada sesión seleccionada.
 

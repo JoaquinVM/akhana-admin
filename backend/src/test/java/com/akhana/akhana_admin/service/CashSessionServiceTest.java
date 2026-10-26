@@ -5,6 +5,8 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,6 +41,12 @@ class CashSessionServiceTest {
     @Mock
     private FinancialTransactionRepository financialTransactionRepository;
 
+    @Mock
+    private FinancialAccountRepository financialAccountRepository;
+
+    @Mock
+    private FinancialCategoryRepository financialCategoryRepository;
+
     private CashSessionServiceImpl cashSessionService;
 
     private UUID sessionId;
@@ -46,7 +55,8 @@ class CashSessionServiceTest {
     @BeforeEach
     void setUp() {
         cashSessionService = new CashSessionServiceImpl(cashSessionRepository, saleRepository,
-            new ExpectedCashCalculator(financialTransactionRepository));
+            new ExpectedCashCalculator(financialTransactionRepository),
+            financialAccountRepository, financialCategoryRepository, financialTransactionRepository);
         sessionId = UUID.randomUUID();
         activeSession = CashSession.builder()
             .id(sessionId)
@@ -140,6 +150,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("Debe cerrar caja y calcular la diferencia frente al efectivo esperado")
     void closeSession_withDifferenceAndCuts_success() {
+        stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(saleRepository.countByCashSessionId(sessionId)).thenReturn(2L);
@@ -216,6 +227,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("Debe cerrar caja y calcular la diferencia considerando los gastos activos descontados")
     void closeSession_withActiveExpenses_calculatesDifferenceAccurately() {
+        stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "930.00");
         activeSession.setOpeningAmount(new BigDecimal("200.00"));
         activeSession.setTotalSalesCash(new BigDecimal("850.00"));
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
@@ -253,5 +265,100 @@ class CashSessionServiceTest {
 
         assertThat(response.expectedCash()).isEqualByComparingTo("680.00");
         assertThat(response.difference()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-09: un sobrante se registra como ingreso de Ajuste en Caja vinculado a la caja cerrada")
+    void closeSession_withSurplus_recordsIncomeAdjustment() {
+        FinancialAccount cash = stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("112.50"), "Sobró sencillo", Collections.emptyList()), "cajero1");
+
+        FinancialTransaction tx = captureAdjustment();
+        assertThat(tx.getType()).isEqualTo(FinancialTransactionType.INGRESO_MANUAL);
+        assertThat(tx.getAmount()).isEqualByComparingTo("12.50");
+        assertThat(tx.getSourceAccount()).isSameAs(cash);
+        assertThat(tx.getCategory().getSystemKey()).isEqualTo(FinancialCategorySystemKey.CASH_SURPLUS);
+        assertThat(tx.getCashSessionId()).isEqualTo(sessionId);
+        assertThat(tx.getDescription()).isEqualTo("Sobrante al cierre de caja #1");
+        assertThat(tx.getNotes()).isEqualTo("Sobró sencillo");
+        assertThat(tx.getCreatedBy()).isEqualTo("cajero1");
+        // El saldo de Caja queda igual a lo contado
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("112.50");
+    }
+
+    @Test
+    @DisplayName("CAJ-09: un faltante se registra como gasto de Ajuste en Caja y baja su saldo")
+    void closeSession_withShortage_recordsExpenseAdjustment() {
+        FinancialAccount cash = stubAdjustment(FinancialCategorySystemKey.CASH_SHORTAGE, FinancialCategoryType.GASTO, "100.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("93.00"), null, Collections.emptyList()), "cajero1");
+
+        assertThat(response.difference()).isEqualByComparingTo("-7.00");
+        FinancialTransaction tx = captureAdjustment();
+        assertThat(tx.getType()).isEqualTo(FinancialTransactionType.GASTO_MANUAL);
+        assertThat(tx.getAmount()).isEqualByComparingTo("7.00");
+        assertThat(tx.getCategory().getSystemKey()).isEqualTo(FinancialCategorySystemKey.CASH_SHORTAGE);
+        assertThat(tx.getDescription()).isEqualTo("Faltante al cierre de caja #1");
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("93.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-09: con cuadre exacto no se registra ningún ajuste")
+    void closeSession_exact_recordsNoAdjustment() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("100.00"), null, Collections.emptyList()), "cajero1");
+
+        verify(financialTransactionRepository, never()).save(any());
+        verify(financialAccountRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-09: sin la categoría de sistema Ajuste el cierre falla y no se toca la cuenta")
+    void closeSession_withoutAdjustmentCategory_fails() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.CASH_SURPLUS))
+            .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("120.00"), null, Collections.emptyList()), "cajero1"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Ajuste");
+        verify(financialAccountRepository, never()).save(any());
+    }
+
+    private FinancialAccount stubAdjustment(FinancialCategorySystemKey key, FinancialCategoryType type, String cashBalance) {
+        FinancialAccount cash = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("Caja")
+            .isCashAccount(true)
+            .currentBalance(new BigDecimal(cashBalance))
+            .build();
+        FinancialCategory category = FinancialCategory.builder()
+            .id(UUID.randomUUID())
+            .name("Ajuste")
+            .type(type)
+            .systemKey(key)
+            .build();
+        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(key)).thenReturn(Optional.of(category));
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cash));
+        when(financialAccountRepository.findAllByIdForUpdate(List.of(cash.getId()))).thenReturn(List.of(cash));
+        return cash;
+    }
+
+    private FinancialTransaction captureAdjustment() {
+        ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository).save(captor.capture());
+        return captor.getValue();
     }
 }

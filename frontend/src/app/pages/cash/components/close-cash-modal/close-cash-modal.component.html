@@ -47,6 +47,11 @@
         </div>
       </div>
     </div>
+    @if (difference() !== 0) {
+      <p class="adjustment-hint">
+        Al cerrar, el {{ difference() > 0 ? 'sobrante' : 'faltante' }} se registrará como ajuste en la cuenta Caja.
+      </p>
+    }
 
     <!-- Selector de Modo de Cierre (Arqueo por Cortes vs Conteo Directo) -->
     <div class="mode-toggle-bar">

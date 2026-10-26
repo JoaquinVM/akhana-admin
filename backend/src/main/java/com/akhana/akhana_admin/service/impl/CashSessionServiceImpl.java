@@ -5,6 +5,9 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.FinancialAccountRepository;
+import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
+import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +31,13 @@ public class CashSessionServiceImpl implements CashSessionService {
     private final CashSessionRepository cashSessionRepository;
     private final SaleRepository saleRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    private final FinancialAccountRepository financialAccountRepository;
+    private final FinancialCategoryRepository financialCategoryRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
+    static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
+    static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
 
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
@@ -111,6 +119,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         }
 
         CashSession closed = cashSessionRepository.save(session);
+        recordClosingAdjustment(closed, difference, username);
         long salesCount = saleRepository.countByCashSessionId(closed.getId());
         return mapToSummary(closed, salesCount);
     }
@@ -174,6 +183,44 @@ public class CashSessionServiceImpl implements CashSessionService {
             cutDtos,
             saleResponses
         );
+    }
+
+    // CAJ-09: the difference goes to Caja as an Ajuste income (surplus) or expense (shortage) so its balance
+    // matches the counted cash. It is linked to the closed session, so it cannot be edited or voided (CAJ-06).
+    // Lock order T-14: the session is already locked, then the account.
+    private void recordClosingAdjustment(CashSession session, BigDecimal difference, String username) {
+        if (difference.signum() == 0) {
+            return;
+        }
+        boolean surplus = difference.signum() > 0;
+        FinancialCategory category = financialCategoryRepository
+            .findBySystemKeyAndDeletedAtIsNull(surplus ? FinancialCategorySystemKey.CASH_SURPLUS : FinancialCategorySystemKey.CASH_SHORTAGE)
+            .orElseThrow(() -> new IllegalStateException(ADJUSTMENT_CATEGORY_MISSING));
+        UUID cashAccountId = financialAccountRepository.findByIsCashAccountTrue()
+            .orElseThrow(() -> new IllegalStateException(CASH_ACCOUNT_NOT_FOUND))
+            .getId();
+        FinancialAccount cashAccount = financialAccountRepository.findAllByIdForUpdate(List.of(cashAccountId)).get(0);
+
+        BigDecimal amount = difference.abs();
+        cashAccount.setCurrentBalance(surplus
+            ? cashAccount.getCurrentBalance().add(amount)
+            : cashAccount.getCurrentBalance().subtract(amount));
+        financialAccountRepository.save(cashAccount);
+
+        Instant now = Instant.now();
+        financialTransactionRepository.save(FinancialTransaction.builder()
+            .type(surplus ? FinancialTransactionType.INGRESO_MANUAL : FinancialTransactionType.GASTO_MANUAL)
+            .sourceAccount(cashAccount)
+            .category(category)
+            .amount(amount)
+            .transactionDate(now)
+            .description((surplus ? "Sobrante" : "Faltante") + " al cierre de caja #" + session.getSessionNumber())
+            .notes(session.getClosingComment())
+            .status(FinancialTransactionStatus.ACTIVO)
+            .cashSessionId(session.getId())
+            .createdBy(username)
+            .createdAt(now)
+            .build());
     }
 
     private CashSessionSummaryResponse mapToSummary(CashSession session, long salesCount) {
