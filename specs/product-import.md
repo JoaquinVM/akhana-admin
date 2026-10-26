@@ -24,17 +24,18 @@ Codigo, Costo, Precio Venta, Utilidad, Utilidad %. Hay 3 grupos reales (Nutricio
 | Granel en 100 g (Psylium 100gr a Bs 25, Espirulina 100gr) | 10 | Se importan por unidad salvo que la planilla los marque Kilo con precio por kilo (P-31: lo hace el dueño antes de migrar). |
 | Presentaciones de frutos secos (Arandano 1/4, 1/2 y 1 libra, códigos `-CLI`, `-MLI`, `-1LI`; filas 812 a 853) | 42 | No son productos: cada fila es una presentación de su producto base (`FSE-ARA-MLI` → 1/2 libra de `FSE-ARA`) con su Precio Venta como precio fijo (Pistacho 1/2 libra a Bs 63). Los 14 productos base tienen las tres. Mientras su base no esté marcada Kilo, se rechazan junto con ella. |
 | Código repetido (`COR-QUI-HOC-70GR` en Quintos Hojuela y Quintos Rulito; `VIL-SHA-ROM` dos veces igual) | 2 | Se importa la primera; la siguiente se rechaza: «El código ya está en la fila 462.» |
-| Mismo nombre, otro proveedor (Kefir Natural 2L de Sativa y de Belen; Cardo Mariano de 3 proveedores) | 16 | Se importa como «Kefir Natural 2L (Belen)» y se avisa (CAT-01 no admite nombres repetidos). |
-| Mismo nombre y proveedor (Moringa y Guanabana de Desconocida 4, hoja y polvo) | 2 | Rechazada: «El nombre ya está en la fila 619.» El dueño las renombra en la planilla antes de migrar (Moringa hoja / Moringa polvo, Guanabana hoja / Guanabana polvo; decidido el 26-10-2026). |
-| Precio menor al costo (Barra Chia Caja x12: costo 25,50, precio 4) | 4 | Se importa con aviso «Se vende a pérdida.» (CAT-02). Los 4 casos (filas 274 a 277 de Natuser) son cajas con costo de la caja y precio de la barra, que ya existe suelta (Barra Chia, fila 270): el dueño quita esas filas de la planilla antes de migrar y las cajas se configuran como formas de compra (COM-10; decidido el 26-10-2026). |
+| Mismo nombre, otro proveedor (Kefir Natural 2L de Sativa y de Belen; Cardo Mariano de 3 proveedores) | 14 | Se importa como «Kefir Natural 2L (Belen)» y se avisa (CAT-01 no admite nombres repetidos). |
+| Mismo nombre y proveedor (Moringa y Guanabana de Desconocida 4, hoja y polvo) | 0 | Ya renombradas en la planilla (Moringa Hoja / Moringa Polvo, Guanabana Hoja / Guanabana Polvo, verificado el 26-10-2026): no chocan con la Moringa ni la Guanabana de Autentica. Si vuelve a pasar: «El nombre ya está en la fila <n>.» |
+| Precio menor al costo (Barra Chia Caja x12: costo 25,50, precio 4) | 4 | Se importa con aviso «Se vende a pérdida.» (CAT-02). Los 4 casos (filas 274 a 277 de Natuser) son cajas con costo de la caja y el precio de la barra suelta (Barra Chia, fila 270). Las cajas también se venden: quedan como productos aparte (decidido el 26-10-2026) y el dueño corrige su Precio Venta al de la caja antes de migrar. En la V2 se vinculan con la barra para «Abrir caja» (COM-10). |
 | Grupo «Sativa» (Kefir Griego 800 gr, filas 31 y 32) | 2 | Corregido en la planilla el 26-10-2026: ahora son Nutricion. |
 | Proveedores que solo cambiaban en mayúsculas (Alfavitamins y AlfaVitamins) | 18 | Corregido en la planilla el 26-10-2026: las 18 filas dicen Alfavitamins (95 proveedores distintos). Se sigue comparando sin distinguir mayúsculas ni espacios al borde, contra la planilla y contra los que ya existen en el sistema. |
 | Columnas a la derecha (cálculos de libras, «Cambiar 100gr», fechas) y Utilidad / Utilidad % | — | Se ignoran: la utilidad la calcula el sistema (CAT-02). |
 | Espacios al borde («Moringa ») | 2 | Se recortan. |
 
-Con las reglas de abajo y la planilla tal como está hoy (nada marcado Kilo): 778 productos importados (16
-renombrados, 4 a pérdida, 3 con costo 0) y 101 filas rechazadas (las 59 de la tabla y las 42 presentaciones, porque
-sus 14 bases se rechazan por precio por gramo). Con los 14 frutos secos marcados Kilo y su precio por kilo: 792
+Con las reglas de abajo y la planilla tal como está hoy (nada marcado Kilo): 780 productos importados (14
+renombrados, 4 a pérdida mientras no se corrija el precio de las cajas, 3 con costo 0) y 99 filas rechazadas (las 57
+de la tabla y las 42 presentaciones, porque
+sus 14 bases se rechazan por precio por gramo). Con los 14 frutos secos marcados Kilo y su precio por kilo: 794
 productos y 42
 presentaciones. Los valores de la hoja leída por la API vienen redondeados por el formato de la celda (0,095 se ve
 0,10), por eso se importa el `.xlsx` con los valores reales y no lo que muestra la pantalla.
@@ -148,7 +149,7 @@ Nombre de la fila solo se muestra en el resultado.
   importados), ya existentes, rechazadas y con aviso; categorías, proveedores y etiquetas nuevos; y la tabla de
   rechazadas y avisos con fila, código, nombre y motivo, filtrable por tipo.
 - **Cuando** una fila se rechaza porque su código ya existe en el catálogo (o es una presentación de un producto
-  que ya existe) **entonces** cuenta como «ya existente», no como rechazada: el resumen dice «792 ya estaban en el
+  que ya existe) **entonces** cuenta como «ya existente», no como rechazada: el resumen dice «794 ya estaban en el
   sistema» y la tabla no las muestra salvo que se elija el filtro «Ya existentes». No van en la descarga de
   rechazadas.
 - **Cuando** se importa **entonces** todas las filas válidas se guardan en una sola transacción: si algo falla al
@@ -186,5 +187,5 @@ newCategories[], newSuppliers[], newTags[], rows: [{ rowNumber, code, name, stat
   proveedor en otra mayúscula, repetir la importación).
 - [ ] Frontend: botón Importar en `pages/products`, modal con Revisar / Importar, resumen y tabla de rechazadas,
   descarga `.xlsx`; pruebas Vitest del servicio y del modal.
-- [ ] Validar con el `.xlsx` real de la planilla: 778 productos y 101 rechazadas sin marcar Kilo.
+- [ ] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin marcar Kilo.
 - [ ] Actualizar `specs/requirements.md` (CAT-06, P-02, tablero).
