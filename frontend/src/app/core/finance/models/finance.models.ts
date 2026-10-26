@@ -17,6 +17,8 @@ export interface FinancialAccount {
   currentBalance: number;
   isCashAccount: boolean;
   isQrAccount: boolean;
+  // FIN-01: the cutover balance can still be entered
+  openingBalanceEditable?: boolean;
   createdBy?: string;
   createdAt?: string;
   updatedBy?: string;

@@ -35,6 +35,15 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findByCashSessionIdOrderByTransactionDateDesc(UUID cashSessionId);
 
+    Optional<FinancialTransaction> findFirstBySourceAccountIdAndType(UUID accountId, FinancialTransactionType type);
+
+    // Any movement other than the opening balance, active or voided (FIN-01)
+    @Query("SELECT COUNT(t) > 0 FROM FinancialTransaction t LEFT JOIN t.destinationAccount d " +
+           "WHERE (t.sourceAccount.id = :accountId " +
+           "AND t.type <> com.akhana.akhana_admin.model.FinancialTransactionType.SALDO_INICIAL) " +
+           "OR d.id = :accountId")
+    boolean existsMovementsBesidesOpeningBalance(@Param("accountId") UUID accountId);
+
     // Cash leaving the drawer during the session: Caja expenses and transfers out of Caja (CAJ-03, T-15)
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
            "WHERE t.cashSessionId = :cashSessionId " +

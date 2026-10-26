@@ -93,6 +93,20 @@
               <span>Movimientos</span>
             </button>
 
+            @if (account.openingBalanceEditable) {
+              <button
+                type="button"
+                class="btn-card-action btn-opening"
+                (click)="openOpeningBalanceModal(account)"
+                title="Cargar el saldo de la cuenta al día del corte de las planillas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <span>Saldo al corte</span>
+              </button>
+            }
+
             <button
               type="button"
               class="btn-card-action btn-edit"
@@ -197,6 +211,54 @@
             <span>Guardando...</span>
           } @else {
             <span>{{ isEditing() ? 'Actualizar Cuenta' : 'Crear Cuenta' }}</span>
+          }
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal Saldo al corte (FIN-01) -->
+  <app-modal
+    [isOpen]="isOpeningBalanceModalOpen()"
+    [title]="'Saldo al corte: ' + (accountForOpeningBalance()?.name || '')"
+    [subtitle]="'Saldo de la cuenta el día que se dejan las planillas'"
+    [size]="'sm'"
+    (close)="closeOpeningBalanceModal()">
+
+    <form [formGroup]="openingBalanceForm" (ngSubmit)="saveOpeningBalance()" class="account-form">
+      @if (openingBalanceError()) {
+        <div class="alert alert-danger" role="alert">
+          <span>{{ openingBalanceError() }}</span>
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="acc-opening-balance" class="form-label required">Saldo al corte (Bs.)</label>
+        <input
+          id="acc-opening-balance"
+          type="number"
+          step="0.01"
+          min="0"
+          class="form-control"
+          formControlName="amount"
+          placeholder="0.00" />
+        @if (openingBalanceControl.touched && openingBalanceControl.invalid) {
+          <span class="field-error">Ingrese un monto mayor o igual a 0.</span>
+        }
+        <span class="form-hint">
+          Reemplaza el saldo inicial. Solo se puede cargar mientras la cuenta no tenga otros movimientos
+          @if (accountForOpeningBalance()?.isCashAccount) { y antes de abrir la primera caja }.
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeOpeningBalanceModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSavingOpeningBalance()">
+          @if (isSavingOpeningBalance()) {
+            <span class="spinner-small"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>Guardar saldo</span>
           }
         </button>
       </div>

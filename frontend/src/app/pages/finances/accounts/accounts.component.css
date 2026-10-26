@@ -287,6 +287,12 @@
   background-color: #eff6ff !important;
 }
 
+.btn-opening:hover {
+  color: #b45309 !important;
+  border-color: #fcd34d !important;
+  background-color: #fffbeb !important;
+}
+
 .btn-edit:hover {
   color: #059669 !important;
   border-color: #a7f3d0 !important;

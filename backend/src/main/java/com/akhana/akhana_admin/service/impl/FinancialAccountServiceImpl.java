@@ -2,12 +2,14 @@ package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.dto.FinancialAccountRequest;
 import com.akhana.akhana_admin.dto.FinancialAccountResponse;
+import com.akhana.akhana_admin.dto.OpeningBalanceRequest;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.FinancialAccount;
 import com.akhana.akhana_admin.model.FinancialTransaction;
 import com.akhana.akhana_admin.model.FinancialTransactionStatus;
 import com.akhana.akhana_admin.model.FinancialTransactionType;
+import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.service.FinancialAccountService;
@@ -28,6 +30,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
 
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
+    private final CashSessionRepository cashSessionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -158,6 +161,47 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
 
     @Override
     @Transactional
+    public FinancialAccountResponse setOpeningBalance(UUID id, OpeningBalanceRequest request, String currentUsername) {
+        String username = currentUsername != null ? currentUsername : "SYSTEM";
+        BigDecimal amount = request.getAmount().setScale(2, RoundingMode.HALF_UP);
+
+        FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+
+        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.count() > 0) {
+            throw new IllegalStateException("Ya se abrió una caja: el saldo al corte de Caja solo se carga antes de la primera apertura.");
+        }
+        if (financialTransactionRepository.existsMovementsBesidesOpeningBalance(id)) {
+            throw new IllegalStateException("La cuenta ya tiene movimientos: el saldo al corte solo se carga antes de operar. Corrija con un ingreso, gasto o transferencia.");
+        }
+
+        Instant now = Instant.now();
+        FinancialTransaction openingTx = financialTransactionRepository
+                .findFirstBySourceAccountIdAndType(id, FinancialTransactionType.SALDO_INICIAL)
+                .orElseGet(() -> FinancialTransaction.builder()
+                        .type(FinancialTransactionType.SALDO_INICIAL)
+                        .sourceAccount(account)
+                        .transactionDate(now)
+                        .status(FinancialTransactionStatus.ACTIVO)
+                        .createdBy(username)
+                        .createdAt(now)
+                        .build());
+        openingTx.setAmount(amount);
+        openingTx.setDescription("Saldo al corte");
+        openingTx.setUpdatedBy(username);
+        openingTx.setUpdatedAt(now);
+        financialTransactionRepository.save(openingTx);
+
+        account.setInitialBalance(amount);
+        account.setCurrentBalance(amount);
+        account.setUpdatedBy(username);
+        account.setUpdatedAt(now);
+
+        return mapToResponse(financialAccountRepository.save(account));
+    }
+
+    @Override
+    @Transactional
     public void deleteAccount(UUID id, String currentUsername) {
         FinancialAccount account = financialAccountRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
@@ -179,6 +223,13 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         financialAccountRepository.save(account);
     }
 
+    private boolean isOpeningBalanceEditable(FinancialAccount account) {
+        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.count() > 0) {
+            return false;
+        }
+        return !financialTransactionRepository.existsMovementsBesidesOpeningBalance(account.getId());
+    }
+
     private FinancialAccountResponse mapToResponse(FinancialAccount account) {
         return FinancialAccountResponse.builder()
                 .id(account.getId())
@@ -188,6 +239,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
                 .currentBalance(account.getCurrentBalance())
                 .isCashAccount(account.getIsCashAccount())
                 .isQrAccount(account.getIsQrAccount())
+                .openingBalanceEditable(isOpeningBalanceEditable(account))
                 .createdBy(account.getCreatedBy())
                 .createdAt(account.getCreatedAt())
                 .updatedBy(account.getUpdatedBy())

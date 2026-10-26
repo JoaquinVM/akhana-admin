@@ -21,6 +21,8 @@ public class FinancialAccountResponse {
     private BigDecimal currentBalance;
     private Boolean isCashAccount;
     private Boolean isQrAccount;
+    // FIN-01: the cutover balance can still be entered (no other movements, and for Caja no cash session yet)
+    private Boolean openingBalanceEditable;
 
     // Auditoría
     private String createdBy;

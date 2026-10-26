@@ -48,6 +48,19 @@ export class AccountsComponent implements OnInit {
   accountTransactions = signal<FinancialTransaction[]>([]);
   isLoadingMovements = signal<boolean>(false);
 
+  // Modal Saldo al corte (FIN-01)
+  isOpeningBalanceModalOpen = signal<boolean>(false);
+  accountForOpeningBalance = signal<FinancialAccount | null>(null);
+  openingBalanceError = signal<string | null>(null);
+  isSavingOpeningBalance = signal<boolean>(false);
+  openingBalanceForm: FormGroup = this.fb.group({
+    amount: [null as number | null, [Validators.required, Validators.min(0)]]
+  });
+
+  get openingBalanceControl() {
+    return this.openingBalanceForm.controls['amount'];
+  }
+
   accountForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
     color: ['#2e5b27', [Validators.required]],
@@ -195,6 +208,41 @@ export class AccountsComponent implements OnInit {
         this.isDeleting.set(false);
         this.errorMessage.set(err.error?.message || 'Error al eliminar la cuenta.');
         this.closeDeleteModal();
+      }
+    });
+  }
+
+  openOpeningBalanceModal(account: FinancialAccount): void {
+    this.accountForOpeningBalance.set(account);
+    this.openingBalanceError.set(null);
+    this.openingBalanceControl.reset(account.initialBalance);
+    this.isOpeningBalanceModalOpen.set(true);
+  }
+
+  closeOpeningBalanceModal(): void {
+    this.isOpeningBalanceModalOpen.set(false);
+    this.accountForOpeningBalance.set(null);
+  }
+
+  saveOpeningBalance(): void {
+    const acc = this.accountForOpeningBalance();
+    if (!acc) return;
+    if (this.openingBalanceControl.invalid) {
+      this.openingBalanceControl.markAsTouched();
+      return;
+    }
+
+    this.isSavingOpeningBalance.set(true);
+    this.openingBalanceError.set(null);
+    this.accountService.setOpeningBalance(acc.id, this.openingBalanceControl.value!).subscribe({
+      next: () => {
+        this.isSavingOpeningBalance.set(false);
+        this.closeOpeningBalanceModal();
+        this.loadAccounts();
+      },
+      error: (err) => {
+        this.isSavingOpeningBalance.set(false);
+        this.openingBalanceError.set(err.error?.message || 'Error al guardar el saldo al corte.');
       }
     });
   }

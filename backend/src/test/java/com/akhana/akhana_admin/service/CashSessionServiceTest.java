@@ -120,7 +120,7 @@ class CashSessionServiceTest {
     }
 
     @Test
-    @DisplayName("CAJ-10: sin caja anterior propone 0.00")
+    @DisplayName("CAJ-10: sin caja anterior ni cuenta Caja propone 0.00")
     void getOpeningProposal_noPreviousSession_returnsZero() {
         when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.empty());
@@ -128,6 +128,20 @@ class CashSessionServiceTest {
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
 
         assertThat(proposal.proposedAmount()).isEqualByComparingTo("0.00");
+        assertThat(proposal.previousSessionNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("FIN-01: la primera caja propone el saldo al corte de Caja")
+    void getOpeningProposal_noPreviousSession_returnsCashBalance() {
+        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.empty());
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(FinancialAccount.builder()
+            .isCashAccount(true).currentBalance(new BigDecimal("7637.9")).build()));
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.proposedAmount()).isEqualByComparingTo("7637.90");
         assertThat(proposal.previousSessionNumber()).isNull();
     }
 

@@ -76,6 +76,12 @@ export class FinancialAccountService {
     );
   }
 
+  setOpeningBalance(id: string, amount: number): Observable<FinancialAccount> {
+    return this.http.put<FinancialAccount>(`${this.apiUrl}/${id}/opening-balance`, { amount }).pipe(
+      tap((updated) => this.accounts.update((current) => current.map((a) => (a.id === id ? updated : a))))
+    );
+  }
+
   deleteAccount(id: string): Observable<void> {
     this.isLoading.set(true);
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(

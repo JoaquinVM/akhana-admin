@@ -2,10 +2,13 @@ package com.akhana.akhana_admin.service;
 
 import com.akhana.akhana_admin.dto.FinancialAccountRequest;
 import com.akhana.akhana_admin.dto.FinancialAccountResponse;
+import com.akhana.akhana_admin.dto.OpeningBalanceRequest;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.FinancialAccount;
 import com.akhana.akhana_admin.model.FinancialTransaction;
+import com.akhana.akhana_admin.model.FinancialTransactionType;
+import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.service.impl.FinancialAccountServiceImpl;
@@ -35,6 +38,9 @@ class FinancialAccountServiceTest {
 
     @Mock
     private FinancialTransactionRepository financialTransactionRepository;
+
+    @Mock
+    private CashSessionRepository cashSessionRepository;
 
     @InjectMocks
     private FinancialAccountServiceImpl financialAccountService;
@@ -219,5 +225,75 @@ class FinancialAccountServiceTest {
         assertNotNull(joaco.getDeletedAt());
         assertEquals("admin", joaco.getDeletedBy());
         verify(financialAccountRepository).save(joaco);
+    }
+
+    @Test
+    @DisplayName("FIN-01: el saldo al corte reemplaza el saldo inicial de una cuenta sin otros movimientos")
+    void setOpeningBalance_updatesInitialMovementAndBalances() {
+        bisaAccount.setInitialBalance(new BigDecimal("0.00"));
+        bisaAccount.setCurrentBalance(new BigDecimal("0.00"));
+        FinancialTransaction openingTx = FinancialTransaction.builder()
+                .type(FinancialTransactionType.SALDO_INICIAL)
+                .sourceAccount(bisaAccount)
+                .amount(new BigDecimal("0.00"))
+                .createdBy("SYSTEM")
+                .build();
+        when(financialAccountRepository.findActiveByIdForUpdate(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
+        when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(bisaAccount.getId())).thenReturn(false);
+        when(financialTransactionRepository.findFirstBySourceAccountIdAndType(bisaAccount.getId(), FinancialTransactionType.SALDO_INICIAL))
+                .thenReturn(Optional.of(openingTx));
+        when(financialAccountRepository.save(any(FinancialAccount.class))).thenAnswer(i -> i.getArgument(0));
+
+        FinancialAccountResponse res = financialAccountService.setOpeningBalance(
+                bisaAccount.getId(), new OpeningBalanceRequest(new BigDecimal("31562.575")), "admin");
+
+        assertEquals(new BigDecimal("31562.58"), res.getInitialBalance());
+        assertEquals(new BigDecimal("31562.58"), res.getCurrentBalance());
+        assertEquals(new BigDecimal("31562.58"), openingTx.getAmount());
+        assertEquals("Saldo al corte", openingTx.getDescription());
+        assertEquals("admin", openingTx.getUpdatedBy());
+        assertEquals("SYSTEM", openingTx.getCreatedBy());
+        verify(financialTransactionRepository).save(openingTx);
+    }
+
+    @Test
+    @DisplayName("FIN-01: una cuenta con movimientos no admite saldo al corte")
+    void setOpeningBalance_withMovements_isRejected() {
+        when(financialAccountRepository.findActiveByIdForUpdate(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
+        when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(bisaAccount.getId())).thenReturn(true);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialAccountService.setOpeningBalance(bisaAccount.getId(), new OpeningBalanceRequest(new BigDecimal("10")), "admin"));
+
+        assertTrue(ex.getMessage().contains("ya tiene movimientos"));
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("FIN-01: el saldo al corte de Caja se rechaza si ya se abrió una caja")
+    void setOpeningBalance_cashAfterFirstSession_isRejected() {
+        when(financialAccountRepository.findActiveByIdForUpdate(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
+        when(cashSessionRepository.count()).thenReturn(1L);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> financialAccountService.setOpeningBalance(cajaAccount.getId(), new OpeningBalanceRequest(new BigDecimal("7637.90")), "admin"));
+
+        assertTrue(ex.getMessage().contains("primera apertura"));
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("FIN-01: el listado indica si la cuenta todavía admite saldo al corte")
+    void getAllAccounts_reportsOpeningBalanceEditable() {
+        when(financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(bisaAccount, cajaAccount));
+        when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(bisaAccount.getId())).thenReturn(true);
+        when(cashSessionRepository.count()).thenReturn(0L);
+        when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(cajaAccount.getId())).thenReturn(false);
+
+        List<FinancialAccountResponse> list = financialAccountService.getAllAccounts();
+
+        assertFalse(list.get(0).getOpeningBalanceEditable());
+        assertTrue(list.get(1).getOpeningBalanceEditable());
     }
 }

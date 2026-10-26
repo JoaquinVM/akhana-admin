@@ -276,6 +276,7 @@ class EndpointAuthorizationTest {
                 adminOnly(post, "/api/finances/accounts", ACCOUNT),
                 adminOnly(put, "/api/finances/accounts/" + ID, ACCOUNT),
                 adminOnly(put, "/api/finances/accounts/" + ID + "/qr", null),
+                adminOnly(put, "/api/finances/accounts/" + ID + "/opening-balance", "{\"amount\":10}"),
                 adminOnly(delete, "/api/finances/accounts/" + ID, null),
                 adminOnly(get, "/api/finances/categories/" + ID, null),
                 adminOnly(post, "/api/finances/categories", FINANCIAL_CATEGORY),

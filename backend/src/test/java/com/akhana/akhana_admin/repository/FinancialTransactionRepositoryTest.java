@@ -14,7 +14,9 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SpringBootTest
@@ -87,6 +89,29 @@ class FinancialTransactionRepositoryTest {
 
         assertEquals(0, new BigDecimal("100.00").compareTo(financialTransactionRepository.sumActiveCashOutflowsBySessionId(session)));
         assertEquals(0, new BigDecimal("55.00").compareTo(financialTransactionRepository.sumActiveCashInflowsBySessionId(session)));
+    }
+
+    @Test
+    @Transactional
+    void movementsBesidesOpeningBalanceIgnoreOnlyTheOpeningBalance() {
+        UUID account = newAccount("IT corte ");
+        UUID other = newAccount("IT otra ");
+        insert("SALDO_INICIAL", account, null, "0.00", "ACTIVO", null);
+        assertFalse(financialTransactionRepository.existsMovementsBesidesOpeningBalance(account));
+
+        insert("TRANSFERENCIA", other, account, "5.00", "ANULADO", null);
+        assertTrue(financialTransactionRepository.existsMovementsBesidesOpeningBalance(account));
+
+        UUID third = newAccount("IT gasto ");
+        insert("SALDO_INICIAL", third, null, "0.00", "ACTIVO", null);
+        insert("GASTO_MANUAL", third, null, "1.00", "ACTIVO", null);
+        assertTrue(financialTransactionRepository.existsMovementsBesidesOpeningBalance(third));
+    }
+
+    private UUID newAccount(String prefix) {
+        return jdbc.queryForObject(
+                "INSERT INTO financial_accounts (name, initial_balance, current_balance, created_by) VALUES (?, 0, 0, 'it-repo') RETURNING id",
+                UUID.class, prefix + UUID.randomUUID().toString().substring(0, 8));
     }
 
     private void insert(String type, UUID source, UUID destination, String amount, String status, UUID session) {

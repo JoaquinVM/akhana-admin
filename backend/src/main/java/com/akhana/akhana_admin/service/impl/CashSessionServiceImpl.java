@@ -86,7 +86,12 @@ public class CashSessionServiceImpl implements CashSessionService {
         return cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA)
             .map(previous -> new CashOpeningProposalResponse(
                 previous.getClosingAmount().setScale(2, RoundingMode.HALF_UP), previous.getSessionNumber()))
-            .orElseGet(() -> new CashOpeningProposalResponse(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), null));
+            // First session: the balance of Caja, which holds its cutover balance (FIN-01)
+            .orElseGet(() -> new CashOpeningProposalResponse(
+                financialAccountRepository.findByIsCashAccountTrue()
+                    .map(cash -> cash.getCurrentBalance().setScale(2, RoundingMode.HALF_UP))
+                    .orElse(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)),
+                null));
     }
 
     @Override

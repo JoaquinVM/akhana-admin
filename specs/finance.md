@@ -7,7 +7,7 @@ Permite la administración integral de las cuentas financieras del negocio, cate
 ## Requirements
 
 ### Requirement: Cuentas financieras y saldos iniciales
-El sistema SHALL permitir la administración de cuentas financieras iniciando con las cuentas maestras «Caja», «Cuenta bancaria BISA» y «Cuenta Joaco», asignando nombre, color identificador discreto y registrando su saldo inicial como un movimiento formal en el historial de la cuenta.
+El sistema SHALL permitir la administración de cuentas financieras iniciando con las cuentas «Caja», «Bisa» (cuenta QR) y «Efectivo» (FIN-01), asignando nombre, color identificador discreto y registrando su saldo inicial como un movimiento formal en el historial de la cuenta. El saldo de cada cuenta al día del corte de las planillas se carga una sola vez, antes de operar.
 
 #### Scenario: Creación de nueva cuenta financiera
 - **WHEN** el usuario registra una cuenta con nombre, color y saldo inicial de 1000.00 Bs
@@ -16,6 +16,22 @@ El sistema SHALL permitir la administración de cuentas financieras iniciando co
 #### Scenario: Saldo inicial con más de dos decimales (T-18)
 - **WHEN** el usuario registra una cuenta con saldo inicial de 100.005 Bs
 - **THEN** el sistema guarda la cuenta y su movimiento `SALDO_INICIAL` por 100.01 Bs (escala 2, `HALF_UP`)
+
+#### Scenario: Cuentas iniciales (FIN-01)
+- **WHEN** se aplica la migración en una base nueva
+- **THEN** existen Caja, Bisa y Efectivo, cada una con su color y un movimiento `SALDO_INICIAL` por 0.00 Bs; Bisa es la cuenta QR si no había otra, y una cuenta que ya se llame así se reutiliza
+
+#### Scenario: Carga del saldo al corte (FIN-01)
+- **WHEN** el administrador carga en Bisa un saldo al corte de 31562.575 Bs y la cuenta no tiene otros movimientos
+- **THEN** el movimiento `SALDO_INICIAL` pasa a 31562.58 Bs con descripción «Saldo al corte» y auditoría de modificación, y el saldo inicial y actual de Bisa quedan en 31562.58 Bs
+
+#### Scenario: Saldo al corte de una cuenta que ya operó (FIN-01)
+- **WHEN** se intenta cargar el saldo al corte en una cuenta con cualquier otro movimiento (activo o anulado), o en Caja después de abrir la primera caja
+- **THEN** el sistema lo rechaza indicando que el saldo al corte solo se carga antes de operar y que se corrija con un ingreso, gasto o transferencia; la pantalla ya no ofrece «Saldo al corte»
+
+#### Scenario: Primera caja después del corte (FIN-01, CAJ-10)
+- **WHEN** se abre la primera caja del sistema con Caja en 7637.90 Bs
+- **THEN** la apertura propone 7637.90 Bs como monto inicial
 
 #### Scenario: Edición de nombre y color de cuenta
 - **WHEN** el usuario actualiza el nombre o la selección de color de una cuenta existente
@@ -40,8 +56,8 @@ El sistema SHALL mantener la cuenta «Caja» como una cuenta especial y fija del
 El sistema SHALL disponer de una única cuenta activa configurada como «cuenta de pagos QR», impidiendo desactivar dicha configuración sin asignar previamente otra cuenta y transfiriendo automáticamente la marca QR al seleccionar una cuenta distinta.
 
 #### Scenario: Asignación de nueva cuenta de pagos QR
-- **WHEN** el usuario activa el toggle de cuenta QR en la «Cuenta bancaria BISA» teniendo previamente configurada la «Cuenta Joaco»
-- **THEN** la «Cuenta bancaria BISA» pasa a ser la cuenta QR activa, la «Cuenta Joaco» pierde la condición de cuenta QR y el sistema garantiza que existe exactamente una cuenta QR
+- **WHEN** el usuario activa el toggle de cuenta QR en la cuenta «Bisa» teniendo previamente configurada la cuenta «Efectivo»
+- **THEN** la cuenta «Bisa» pasa a ser la cuenta QR activa, la cuenta «Efectivo» pierde la condición de cuenta QR y el sistema garantiza que existe exactamente una cuenta QR
 
 #### Scenario: Intento de desmarcar cuenta QR sin sustituto
 - **WHEN** el usuario intenta desactivar directamente el indicador de cuenta QR en la cuenta actualmente configurada
@@ -87,7 +103,7 @@ El sistema SHALL permitir administrar categorías clasificadas obligatoriamente 
 El sistema SHALL permitir registrar ingresos manuales en cualquier cuenta distinta de Caja, especificando cuenta, monto, categoría de ingreso, descripción y comentario opcional. La fecha del movimiento la pone el servidor al registrarlo (T-18). Un ingreso registrado solo admite editar descripción, comentario y categoría; el monto y la cuenta no cambian (T-05).
 
 #### Scenario: Registro exitoso de ingreso manual
-- **WHEN** el usuario registra un ingreso manual de 500.00 Bs en la «Cuenta bancaria BISA» con categoría «Aportes»
+- **WHEN** el usuario registra un ingreso manual de 500.00 Bs en la cuenta «Bisa» con categoría «Aportes»
 - **THEN** el sistema crea la transacción en estado `ACTIVO` con la fecha/hora actual del servidor, incrementa el saldo de la cuenta en 500.00 Bs y registra el usuario como auditoría de registro
 
 #### Scenario: Monto con más de dos decimales (T-18)
@@ -108,7 +124,7 @@ El sistema SHALL permitir registrar ingresos manuales en cualquier cuenta distin
 El sistema SHALL permitir registrar gastos manuales en cualquier cuenta (incluida Caja), y proveer un acceso específico desde la pantalla de Caja con la cuenta Caja preseleccionada y bloqueada. Un gasto registrado solo admite editar descripción, comentario y categoría (T-05).
 
 #### Scenario: Registro de gasto en cuenta bancaria
-- **WHEN** el usuario registra un gasto de 200.00 Bs en la «Cuenta Joaco» con categoría «Servicios»
+- **WHEN** el usuario registra un gasto de 200.00 Bs en la cuenta «Efectivo» con categoría «Servicios»
 - **THEN** el sistema deduce 200.00 Bs del saldo de la cuenta y persiste la transacción de gasto con su auditoría
 
 #### Scenario: Registro de gasto directo desde terminal de Caja
@@ -129,8 +145,8 @@ El sistema SHALL permitir registrar gastos manuales en cualquier cuenta (incluid
 El sistema SHALL permitir registrar transferencias entre dos cuentas diferentes verificando que la cuenta origen cuente con saldo actual suficiente para cubrir el monto solicitado.
 
 #### Scenario: Transferencia exitosa entre cuentas
-- **WHEN** el usuario transfiere 300.00 Bs de «Cuenta bancaria BISA» (saldo 1000.00 Bs) a «Cuenta Joaco» (saldo 200.00 Bs)
-- **THEN** el sistema disminuye el saldo de BISA a 700.00 Bs, incrementa el saldo de Joaco a 500.00 Bs y registra la transacción de transferencia vinculando origen y destino
+- **WHEN** el usuario transfiere 300.00 Bs de «Bisa» (saldo 1000.00 Bs) a «Efectivo» (saldo 200.00 Bs)
+- **THEN** el sistema disminuye el saldo de Bisa a 700.00 Bs, incrementa el saldo de Efectivo a 500.00 Bs y registra la transacción de transferencia vinculando origen y destino
 
 #### Scenario: Rechazo de transferencia con saldo insuficiente
 - **WHEN** el usuario intenta transferir un monto mayor al saldo actual disponible en la cuenta origen
@@ -162,8 +178,8 @@ El sistema SHALL permitir anular ingresos manuales, gastos y transferencias sin 
 - **THEN** el sistema rechaza la anulación indicando que el motivo es obligatorio y no toca saldos
 
 #### Scenario: Anulación del saldo inicial (T-18)
-- **WHEN** el usuario intenta anular o editar el movimiento `SALDO_INICIAL` de una cuenta
-- **THEN** el sistema lo rechaza indicando que el saldo inicial no se puede anular ni editar
+- **WHEN** el usuario intenta anular o editar el movimiento `SALDO_INICIAL` de una cuenta desde Transacciones
+- **THEN** el sistema lo rechaza indicando que el saldo inicial no se puede anular ni editar; la única vía es el saldo al corte antes de operar (FIN-01)
 
 ---
 
@@ -186,7 +202,7 @@ El sistema SHALL proveer una vista de transacciones financieras con filtros por 
 ---
 
 ### Requirement: Resumen financiero y saldos consolidados
-El sistema SHALL presentar en Finanzas → Resumen una vista ejecutiva con el saldo actual de Caja, Cuenta BISA, Cuenta Joaco, saldo total consolidado de todas las cuentas, indicador de la cuenta QR activa y los movimientos recientes del negocio.
+El sistema SHALL presentar en Finanzas → Resumen una vista ejecutiva con el saldo actual de Caja, Bisa, Efectivo, saldo total consolidado de todas las cuentas, indicador de la cuenta QR activa y los movimientos recientes del negocio.
 
 #### Scenario: Visualización del panel de resumen
 - **WHEN** el usuario accede a Finanzas → Resumen

@@ -46,7 +46,8 @@ describe('AccountsComponent', () => {
       getAccounts: vi.fn().mockReturnValue(of(mockAccounts)),
       createAccount: vi.fn().mockReturnValue(of(mockAccounts[0])),
       updateAccount: vi.fn().mockReturnValue(of(mockAccounts[0])),
-      deleteAccount: vi.fn().mockReturnValue(of(void 0))
+      deleteAccount: vi.fn().mockReturnValue(of(void 0)),
+      setOpeningBalance: vi.fn().mockReturnValue(of(mockAccounts[0]))
     };
 
     mockTransactionService = {
@@ -172,5 +173,35 @@ describe('AccountsComponent', () => {
     expect(mockAccountService.deleteAccount).toHaveBeenCalledWith('acc-zero');
     expect(component.isDeleteModalOpen()).toBe(false);
     expect(mockAccountService.getAccounts).toHaveBeenCalledTimes(2);
+  });
+
+  it('FIN-01: muestra «Saldo al corte» solo en cuentas que lo admiten', () => {
+    component.accounts.set([{ ...mockAccounts[0], openingBalanceEditable: true }, mockAccounts[1]]);
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.btn-opening');
+    expect(buttons.length).toBe(1);
+  });
+
+  it('FIN-01: guarda el saldo al corte y recarga las cuentas', () => {
+    component.openOpeningBalanceModal(mockAccounts[0]);
+    expect(component.openingBalanceControl.value).toBe(100);
+
+    component.openingBalanceControl.setValue(7637.9);
+    component.saveOpeningBalance();
+
+    expect(mockAccountService.setOpeningBalance).toHaveBeenCalledWith('acc-caja', 7637.9);
+    expect(component.isOpeningBalanceModalOpen()).toBe(false);
+    expect(mockAccountService.getAccounts).toHaveBeenCalledTimes(2);
+  });
+
+  it('FIN-01: muestra el error del servidor al guardar el saldo al corte', () => {
+    mockAccountService.setOpeningBalance.mockReturnValue(throwError(() => ({ error: { message: 'La cuenta ya tiene movimientos' } })));
+    component.openOpeningBalanceModal(mockAccounts[1]);
+
+    component.saveOpeningBalance();
+
+    expect(component.openingBalanceError()).toBe('La cuenta ya tiene movimientos');
+    expect(component.isOpeningBalanceModalOpen()).toBe(true);
   });
 });

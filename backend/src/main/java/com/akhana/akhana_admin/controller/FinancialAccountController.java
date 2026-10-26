@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.controller;
 import com.akhana.akhana_admin.dto.FinancialAccountRequest;
 import com.akhana.akhana_admin.dto.FinancialAccountResponse;
 import com.akhana.akhana_admin.dto.FinancialTransactionResponse;
+import com.akhana.akhana_admin.dto.OpeningBalanceRequest;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.FinancialAccountService;
 import com.akhana.akhana_admin.service.FinancialTransactionService;
@@ -75,6 +76,16 @@ public class FinancialAccountController {
     ) {
         String username = extractUsername(authentication);
         return ResponseEntity.ok(financialAccountService.setQrAccount(id, username));
+    }
+
+    @PutMapping("/{id}/opening-balance")
+    public ResponseEntity<FinancialAccountResponse> setOpeningBalance(
+            @PathVariable UUID id,
+            @Valid @RequestBody OpeningBalanceRequest request,
+            Authentication authentication
+    ) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(financialAccountService.setOpeningBalance(id, request, username));
     }
 
     @DeleteMapping("/{id}")
