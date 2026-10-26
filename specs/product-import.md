@@ -20,22 +20,22 @@ Codigo, Costo, Precio Venta, Utilidad, Utilidad %. Hay 3 grupos reales (Nutricio
 | Sin código (Oleo Primula Capsulas, Konjac 138 cap) | 15 | Rechazada: «Falta el código.» |
 | Sin precio de venta (Crema Facial Rosa Mosqueta, Toronjil) | 24 más (34 en total con las sin código) | Rechazada: «Falta el precio de venta.» |
 | Costo 0 (Lip care frutos rojos, jabon regenerante, Arcilla 8g) | 3 | Se importa con el aviso «Costo 0: toda la venta cuenta como utilidad.» Son bonificaciones sin costo conocido; cuando se compren, COM-03 propone el costo real (decidido el 26-10-2026; CAT-01 pasa a aceptar costo 0). |
-| Frutos Secos base con precio por gramo (Arandano: costo 0,095, precio 0,14) y granolas Miranda Fruit (0,075 / 0,1) | 16 | Rechazada mientras no se marque «Kilo» y se lleve a Bs por kilo: «Precio menor a Bs 1: si se vende por peso, marcar Kilo y poner el precio por kilo.» Con Kilo, Arandano queda costo 95,00 y precio 140,00 por kilo. |
-| Granel en 100 g (Psylium 100gr a Bs 25, Espirulina 100gr) | 10 | Se importan por unidad salvo que la planilla los marque Kilo con precio por kilo (P-31: lo hace el dueño antes de migrar). |
+| Frutos Secos base con precio por gramo (Arandano: costo 0,095, precio 0,14) y granolas Miranda Fruit (0,075 / 0,1) | 16 | Rechazada mientras «Se vende por» no diga Gramo: «Precio menor a Bs 1: si se vende por peso, marcar en Se vende por Gramo, 100 g o Kilo.» Con Gramo, la importación convierte a Bs por kilo sin tocar la planilla: Arandano queda costo 95,00 y precio 140,00 por kilo. |
+| Granel en 100 g (Psylium 100gr a Bs 25, Espirulina 100gr) | 10 | Se importan por unidad salvo que «Se vende por» diga 100 g (precio × 10 = Bs por kilo: Psylium a 250,00) (P-31: lo marca el dueño antes de migrar). |
 | Presentaciones de frutos secos (Arandano 1/4, 1/2 y 1 libra, códigos `-CLI`, `-MLI`, `-1LI`; filas 812 a 853) | 42 | No son productos: cada fila es una presentación de su producto base (`FSE-ARA-MLI` → 1/2 libra de `FSE-ARA`) con su Precio Venta como precio fijo (Pistacho 1/2 libra a Bs 63). Los 14 productos base tienen las tres. Mientras su base no esté marcada Kilo, se rechazan junto con ella. |
 | Código repetido (`COR-QUI-HOC-70GR` en Quintos Hojuela y Quintos Rulito; `VIL-SHA-ROM` dos veces igual) | 2 | Se importa la primera; la siguiente se rechaza: «El código ya está en la fila 462.» |
 | Mismo nombre, otro proveedor (Kefir Natural 2L de Sativa y de Belen; Cardo Mariano de 3 proveedores) | 14 | Se importa como «Kefir Natural 2L (Belen)» y se avisa (CAT-01 no admite nombres repetidos). |
 | Mismo nombre y proveedor (Moringa y Guanabana de Desconocida 4, hoja y polvo) | 0 | Ya renombradas en la planilla (Moringa Hoja / Moringa Polvo, Guanabana Hoja / Guanabana Polvo, verificado el 26-10-2026): no chocan con la Moringa ni la Guanabana de Autentica. Si vuelve a pasar: «El nombre ya está en la fila <n>.» |
-| Precio menor al costo (Barra Chia Caja x12: costo 25,50, precio 4) | 4 | Se importa con aviso «Se vende a pérdida.» (CAT-02). Los 4 casos (filas 274 a 277 de Natuser) son cajas con costo de la caja y el precio de la barra suelta (Barra Chia, fila 270). Las cajas también se venden: quedan como productos aparte (decidido el 26-10-2026) y el dueño corrige su Precio Venta al de la caja antes de migrar. En la V2 se vinculan con la barra para «Abrir caja» (COM-10). |
+| Precio menor al costo | 0 | Se importa con aviso «Se vende a pérdida.» (CAT-02). Los 4 casos que había eran las cajas de Natuser (filas 274 a 277) con el precio de la barra suelta; el dueño puso el precio de la caja el 26-10-2026 (Barra Chia, Papaya y Mani Caja x12 a 44, Roquin Caja x24 a 88). Las cajas quedan como productos aparte; en la V2 se vinculan con la barra para «Abrir caja» (COM-10). |
 | Grupo «Sativa» (Kefir Griego 800 gr, filas 31 y 32) | 2 | Corregido en la planilla el 26-10-2026: ahora son Nutricion. |
 | Proveedores que solo cambiaban en mayúsculas (Alfavitamins y AlfaVitamins) | 18 | Corregido en la planilla el 26-10-2026: las 18 filas dicen Alfavitamins (95 proveedores distintos). Se sigue comparando sin distinguir mayúsculas ni espacios al borde, contra la planilla y contra los que ya existen en el sistema. |
 | Columnas a la derecha (cálculos de libras, «Cambiar 100gr», fechas) y Utilidad / Utilidad % | — | Se ignoran: la utilidad la calcula el sistema (CAT-02). |
 | Espacios al borde («Moringa ») | 2 | Se recortan. |
 
-Con las reglas de abajo y la planilla tal como está hoy (nada marcado Kilo): 780 productos importados (14
-renombrados, 4 a pérdida mientras no se corrija el precio de las cajas, 3 con costo 0) y 99 filas rechazadas (las 57
+Con las reglas de abajo y la planilla tal como está hoy (sin la columna «Se vende por»): 780 productos importados (14
+renombrados, 3 con costo 0) y 99 filas rechazadas (las 57
 de la tabla y las 42 presentaciones, porque
-sus 14 bases se rechazan por precio por gramo). Con los 14 frutos secos marcados Kilo y su precio por kilo: 794
+sus 14 bases se rechazan por precio por gramo). Con los 14 frutos secos marcados Gramo: 794
 productos y 42
 presentaciones. Los valores de la hoja leída por la API vienen redondeados por el formato de la celda (0,095 se ve
 0,10), por eso se importa el `.xlsx` con los valores reales y no lo que muestra la pantalla.
@@ -71,7 +71,8 @@ frena a las demás.
   números de la celda y texto con punto o coma decimal.
 - **Cuando** Costo o Precio Venta tiene más de 2 decimales en su valor real (no el que muestra la celda)
   **entonces** «<columna> admite hasta 2 decimales: '<valor>'.» No se redondea nada (decidido el 26-10-2026; hoy
-  solo pasa en las filas de costo por gramo, que dejan de rechazarse al pasarlas a Bs por kilo).
+  solo pasa en las filas de costo por gramo, que no se rechazan si «Se vende por» dice Gramo: ahí se valida el
+  valor convertido, ver CAT-08).
 - **Cuando** Precio Venta es 0 o negativo **entonces** «Precio Venta debe ser mayor a 0.»; cuando Costo es
   negativo, «Costo no puede ser negativo.»
 - **Cuando** Costo es 0 **entonces** se importa con el aviso «Costo 0: toda la venta cuenta como utilidad.» y
@@ -95,15 +96,28 @@ frena a las demás.
 
 ## CAT-08 · Venta por peso
 
-- **Cuando** la columna «Se vende por» dice Kilo (o kg) **entonces** el producto queda `KILOGRAM` y Costo y
-  Precio Venta se toman como Bs por kilo. Vacía, «Unidad» o «u» es `UNIT`; otro valor se rechaza con «Se vende
-  por debe ser Unidad o Kilo.»
+La planilla no se modifica: se sigue usando en paralelo en la fase 2 y sus columnas de libras calculan desde el
+precio por gramo (decidido el 26-10-2026). El dueño solo agrega la columna «Se vende por», que dice cómo se vende
+el producto y en qué unidad están Costo y Precio Venta; la importación convierte a Bs por kilo.
+
+| Se vende por | Producto | Costo y Precio Venta de la planilla | Arandano (0,095 / 0,14) se importa como |
+| --- | --- | --- | --- |
+| vacía, Unidad o u | `UNIT` | por unidad | — |
+| Gramo o g | `KILOGRAM` | por gramo: × 1.000 | 95,00 / 140,00 por kilo |
+| 100 g | `KILOGRAM` | por 100 g: × 10 | — (Psylium 100gr a 25 → 250,00 por kilo) |
+| Kilo o kg | `KILOGRAM` | por kilo, sin convertir | — |
+
+- **Cuando** «Se vende por» tiene otro valor **entonces** «Se vende por debe ser Unidad, Gramo, 100 g o Kilo.»
+  (sin distinguir mayúsculas, tildes ni espacios: «100g» y «100 gr» valen).
+- **Cuando** se convierte **entonces** las reglas de número (mayor a 0, hasta 2 decimales) se aplican al valor ya
+  convertido: 0,095 × 1.000 = 95,00 pasa; un precio por gramo con más de 5 decimales se rechaza con «<columna>
+  convertido a Bs por kilo tiene más de 2 decimales: '<valor>'.»
 - **Cuando** una fila por unidad tiene Precio Venta menor a Bs 1 **entonces** se rechaza con «Precio menor a
-  Bs 1: si se vende por peso, marcar Kilo y poner el precio por kilo.» (protege de importar el precio por gramo
-  de Frutos Secos).
-- **Cuando** una fila Kilo tiene Precio Venta menor a Bs 10 **entonces** se rechaza con «Precio por kilo menor a
-  Bs 10: ¿es el precio por gramo o por 100 g?»
-- **Cuando** se importa Arandano con Kilo, costo 95 y precio 140 **entonces** en el POS 100 g cuesta Bs 14,00 y
+  Bs 1: si se vende por peso, marcar en Se vende por Gramo, 100 g o Kilo.» (protege de importar el precio por
+  gramo de Frutos Secos como precio por unidad).
+- **Cuando** una fila por peso queda, ya convertida, con Precio Venta menor a Bs 10 por kilo **entonces** se
+  rechaza con «Precio por kilo menor a Bs 10: revisar Se vende por (¿Gramo o 100 g?).»
+- **Cuando** se importa Arandano con Gramo (costo 95, precio 140 por kilo) **entonces** en el POS 100 g cuesta Bs 14,00 y
   1/2 libra (0,227 kg) Bs 31,78.
 
 ## CAT-11 · Presentaciones de frutos secos
@@ -187,5 +201,5 @@ newCategories[], newSuppliers[], newTags[], rows: [{ rowNumber, code, name, stat
   proveedor en otra mayúscula, repetir la importación).
 - [ ] Frontend: botón Importar en `pages/products`, modal con Revisar / Importar, resumen y tabla de rechazadas,
   descarga `.xlsx`; pruebas Vitest del servicio y del modal.
-- [ ] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin marcar Kilo.
+- [ ] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin la columna «Se vende por», y 794 productos y 42 presentaciones con los 14 frutos secos en Gramo.
 - [ ] Actualizar `specs/requirements.md` (CAT-06, P-02, tablero).
