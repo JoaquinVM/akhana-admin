@@ -11,6 +11,7 @@
   </label>
   <p class="report-hint">
     La utilidad y el margen son solo de las ventas normales. Las ventas a crédito cuentan el día en que se vendieron.
+    «Por asignar» suma al total pero no a la utilidad hasta asignarse; las ventas de terceros no son de la tienda.
   </p>
   <app-report-export-button report="sales-by-day" [from]="fromDate()" [to]="toDate()"
                             [disabled]="isLoading() || !report()" />
@@ -38,6 +39,8 @@
               <th rowspan="2">Día</th>
               <th colspan="6" class="group">Ventas normales</th>
               <th colspan="3" class="group group-at-cost">Ventas al costo</th>
+              <th rowspan="2" class="num group-at-cost">Por asignar</th>
+              <th rowspan="2" class="num">De terceros</th>
               <th colspan="2" class="group">Total</th>
             </tr>
             <tr>
@@ -90,6 +93,8 @@
   <td class="num group-at-cost">{{ row.atCostSales }}</td>
   <td class="num">{{ row.atCostQuantity | number:'1.0-3' }}</td>
   <td class="num">{{ row.atCostTotal | number:'1.2-2' }}</td>
+  <td class="num group-at-cost">{{ row.pendingTotal | number:'1.2-2' }}</td>
+  <td class="num muted">{{ row.thirdPartyTotal | number:'1.2-2' }}</td>
   <td class="num group-total strong">Bs {{ row.total | number:'1.2-2' }}</td>
   <td class="num strong">{{ row.profit | number:'1.2-2' }}</td>
 </ng-template>

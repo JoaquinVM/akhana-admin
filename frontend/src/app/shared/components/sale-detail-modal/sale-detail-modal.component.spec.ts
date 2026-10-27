@@ -226,4 +226,60 @@ describe('SaleDetailModalComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('No se pudo cargar la información de la venta');
   });
+
+  describe('POS-12: asignación desde el historial', () => {
+    const pendingSale: Sale = {
+      ...mockCompletedSale,
+      items: [{
+        id: 'item-free', productId: 'prod-sin', productName: 'Granola de coco', productCode: 'SIN-IDENT',
+        unitPrice: 25, discountPerUnit: 0, finalUnitPrice: 25, quantity: 2, subtotal: 50,
+        freeLineType: 'UNIDENTIFIED', freeName: 'Granola de coco', assignmentStatus: 'POR_ASIGNAR'
+      }]
+    };
+    const assignedSale: Sale = {
+      ...pendingSale,
+      items: [{ ...pendingSale.items![0], productName: 'Granola coco 250 g', productCode: 'GRA-250',
+        assignmentStatus: 'ASIGNADO', assignedBy: 'admin', assignedAt: '2026-10-27T12:00:00Z' }]
+    };
+
+    beforeEach(() => {
+      saleServiceMock.getSaleById.mockReturnValue(of(pendingSale));
+      saleServiceMock.assignItem = vi.fn().mockReturnValue(of(assignedSale));
+    });
+
+    it('solo el historial ofrece asignar la línea por asignar', async () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('saleId', 'sale-125');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text()).toContain('Por asignar');
+      expect(text()).not.toContain('Asignar producto');
+
+      fixture.componentRef.setInput('canAssign', true);
+      fixture.detectChanges();
+      expect(text()).toContain('Asignar producto');
+      expect(text()).toContain('Sin identificar definitivo');
+    });
+
+    it('al asignar muestra la venta actualizada y la emite', async () => {
+      const updated: Sale[] = [];
+      component.saleUpdated.subscribe((sale) => updated.push(sale));
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('saleId', 'sale-125');
+      fixture.componentRef.setInput('canAssign', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.assignTo(pendingSale, pendingSale.items![0], { id: 'prod-gra' } as any);
+      fixture.detectChanges();
+
+      expect(saleServiceMock.assignItem).toHaveBeenCalledWith('sale-125', 'item-free', 'prod-gra');
+      expect(updated).toEqual([assignedSale]);
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).toContain('Granola coco 250 g');
+      expect(text).toContain('Vendido como «Granola de coco»');
+      expect(text).not.toContain('Asignar producto');
+    });
+  });
 });

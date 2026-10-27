@@ -92,7 +92,11 @@
                   <strong class="res-name">{{ prod.name }}</strong>
                 </div>
                 <div class="res-price">
-                  <span>Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
+                  @if (prod.specialType) {
+                    <span class="free-line-badge">Precio libre</span>
+                  } @else {
+                    <span>Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
+                  }
                   <button type="button" class="btn-add-result">+ Añadir</button>
                 </div>
               </div>
@@ -224,7 +228,9 @@
                 <span class="item-code">{{ item.product.code }}</span>
                 <strong class="item-name" [title]="lineName(item)">{{ lineName(item) }}</strong>
                 <!-- CAT-11: la presentación se eligió al agregar; «Otro peso» va en kilos -->
-                @if (item.presentation) {
+                @if (item.freeName) {
+                  <span class="free-line-badge">{{ freeLineLabel(item) }}</span>
+                } @else if (item.presentation) {
                   <span class="weight-unit">{{ item.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
                 } @else if (isWeightLine(item)) {
                   <span class="weight-unit">Peso en kg</span>
@@ -263,7 +269,7 @@
                 </button>
               </div>
 
-              @if (!atCost()) {
+              @if (!atCost() && !item.freeName) {
                 <!-- Descuento por unidad -->
                 <div class="item-discount-group">
                   <label class="discount-lbl">Desc/u:</label>
@@ -338,7 +344,7 @@
             <span class="sum-value">Bs {{ subtotalPostItems() | number:'1.2-2' }}</span>
           </div>
 
-          @if (!atCost()) {
+          @if (!atCost() && !hasFreeLines()) {
             <div class="summary-line discount-global-row">
               <label class="sum-label" for="globalDiscount">Descuento General:</label>
               <div class="global-discount-input-wrap">
@@ -386,6 +392,20 @@
       </div>
     </div>
   </div>
+
+  <!-- POS-11: nombre y precio de la línea libre -->
+  @if (freeLineProduct(); as product) {
+    <app-modal
+      [isOpen]="true"
+      [title]="product.name"
+      size="sm"
+      (close)="closeFreeLine()">
+      <app-free-line-form
+        [product]="product"
+        (confirmed)="onFreeLineConfirmed($event)"
+        (cancelled)="closeFreeLine()" />
+    </app-modal>
+  }
 
   <!-- CAT-11: elegir la presentación de un producto por kilo -->
   @if (pickerProduct(); as product) {

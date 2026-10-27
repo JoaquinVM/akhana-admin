@@ -23,8 +23,9 @@ public class CreditorController {
 
     private final CreditorService creditorService;
 
-    // Compras lists the active people for a payment made by a person (DEU-02)
-    @PreAuthorize("hasAnyAuthority('DEBTS', 'PURCHASES')")
+    // Compras lists the active people for a payment made by a person (DEU-02); Productos for the owner of a
+    // third-party product (POS-13)
+    @PreAuthorize("hasAnyAuthority('DEBTS', 'PURCHASES', 'PRODUCTS')")
     @GetMapping
     public ResponseEntity<List<CreditorResponse>> getCreditors(
             @RequestParam(required = false) CreditorStatus status,

@@ -39,17 +39,24 @@ public interface CreditorRepository extends JpaRepository<Creditor, UUID> {
     @Query("SELECT c FROM Creditor c WHERE c.id IN :ids ORDER BY c.id")
     List<Creditor> findAllByIdForUpdate(@Param("ids") Collection<UUID> ids);
 
-    /** Debt with a person (DEU-04): active purchase payments made by them minus active repayments. */
+    /**
+     * Debt with a person (DEU-04): active purchase payments made by them plus their third-party lines of completed
+     * sales (POS-13) minus active repayments.
+     */
     @Query(value = "SELECT COALESCE((SELECT SUM(p.amount) FROM purchase_payments p " +
                    "WHERE p.creditor_id = :id AND p.status = 'ACTIVO'), 0) " +
+                   "+ COALESCE((SELECT SUM(i.subtotal) FROM sale_items i JOIN sales s ON s.id = i.sale_id " +
+                   "WHERE i.creditor_id = :id AND s.status = 'COMPLETADA'), 0) " +
                    "- COALESCE((SELECT SUM(r.amount) FROM creditor_repayments r " +
                    "WHERE r.creditor_id = :id AND r.status = 'ACTIVO'), 0)",
            nativeQuery = true)
     BigDecimal computeDebt(@Param("id") UUID id);
 
-    /** Debt of every person with payments or repayments: rows of {creditor id, debt}. */
+    /** Debt of every person: rows of {creditor id, debt}, computed like {@link #computeDebt}. */
     @Query(value = "SELECT c.id, COALESCE((SELECT SUM(p.amount) FROM purchase_payments p " +
                    "WHERE p.creditor_id = c.id AND p.status = 'ACTIVO'), 0) " +
+                   "+ COALESCE((SELECT SUM(i.subtotal) FROM sale_items i JOIN sales s ON s.id = i.sale_id " +
+                   "WHERE i.creditor_id = c.id AND s.status = 'COMPLETADA'), 0) " +
                    "- COALESCE((SELECT SUM(r.amount) FROM creditor_repayments r " +
                    "WHERE r.creditor_id = c.id AND r.status = 'ACTIVO'), 0) FROM creditors c",
            nativeQuery = true)

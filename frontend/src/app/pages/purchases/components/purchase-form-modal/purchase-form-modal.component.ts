@@ -5,7 +5,7 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
-import { Product, SaleUnit } from '../../../../core/product/models/product.models';
+import { Product, SaleUnit, isSpecialProduct } from '../../../../core/product/models/product.models';
 import { Category } from '../../../../core/category/models/category.models';
 import { Supplier } from '../../../../core/supplier/models/supplier.models';
 import { Creditor } from '../../../../core/debt/models/debt.models';
@@ -167,7 +167,8 @@ export class PurchaseFormModalComponent {
 
   private loadProducts(): void {
     this.productService.getProducts().subscribe({
-      next: products => this.products.set(products),
+      // POS-11: los productos especiales no se compran
+      next: products => this.products.set(products.filter(p => !isSpecialProduct(p))),
       error: () => this.formError.set('No se pudo cargar el catálogo de productos.')
     });
   }

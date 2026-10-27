@@ -5,7 +5,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { QuickProductService } from '../../../../core/quick-product/quick-product.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
-import { Product } from '../../../../core/product/models/product.models';
+import { Product, isSpecialProduct } from '../../../../core/product/models/product.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
 @Component({
@@ -29,7 +29,8 @@ export class QuickProductsConfigModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.productService.getProducts(undefined, 'ACTIVO').subscribe({
-      next: (products) => this.catalogProducts.set(products),
+      // POS-11: los productos especiales piden nombre y precio, no van a productos rápidos
+      next: (products) => this.catalogProducts.set(products.filter((p) => !isSpecialProduct(p))),
       error: () => this.catalogProducts.set([])
     });
 

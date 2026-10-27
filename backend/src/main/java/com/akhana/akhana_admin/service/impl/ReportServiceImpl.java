@@ -55,7 +55,12 @@ public class ReportServiceImpl implements ReportService {
             Sums day = days.computeIfAbsent(LocalDate.parse((String) row[0]), d -> new Sums());
             long sales = ((Number) row[2]).longValue();
             BigDecimal quantity = (BigDecimal) row[3];
-            BigDecimal total = (BigDecimal) row[4];
+            BigDecimal pending = (BigDecimal) row[6];
+            BigDecimal thirdParty = (BigDecimal) row[7];
+            // Pending (POS-12) and third-party (POS-13) lines are not normal sales
+            BigDecimal total = ((BigDecimal) row[4]).subtract(pending).subtract(thirdParty);
+            day.pendingTotal = day.pendingTotal.add(pending);
+            day.thirdPartyTotal = day.thirdPartyTotal.add(thirdParty);
             if (SaleType.AL_COSTO.name().equals(row[1])) {
                 day.atCostSales += sales;
                 day.atCostQuantity = day.atCostQuantity.add(quantity);
@@ -103,6 +108,10 @@ public class ReportServiceImpl implements ReportService {
                 lines.stream().map(line -> (BigDecimal) line[7]).toList(), (BigDecimal) lines.getFirst()[3]);
             for (int i = 0; i < lines.size(); i++) {
                 Object[] line = lines.get(i);
+                // Pending and third-party lines are not sales of a supplier (POS-12, POS-13)
+                if (!Boolean.TRUE.equals(line[9])) {
+                    continue;
+                }
                 SupplierKey supplier = new SupplierKey((UUID) line[4], (String) line[5]);
                 SupplierSums month = bySupplier.computeIfAbsent(supplier, s -> new TreeMap<>())
                     .computeIfAbsent((String) line[1], m -> new SupplierSums());
@@ -268,8 +277,8 @@ public class ReportServiceImpl implements ReportService {
                                                       BigDecimal consumptionTotal) {
         Row s = sales != null ? sales : new Sums().toRow(null);
         return new TotalsReportResponse.Row(month, s.normalSales(), s.normalTotal(), s.normalCost(), s.normalProfit(),
-            s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.total(), consumptions, consumptionTotal,
-            s.normalProfit().subtract(consumptionTotal));
+            s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.pendingTotal(), s.thirdPartyTotal(), s.total(),
+            consumptions, consumptionTotal, s.normalProfit().subtract(consumptionTotal));
     }
 
     /**
@@ -447,8 +456,12 @@ public class ReportServiceImpl implements ReportService {
         long atCostSales;
         BigDecimal atCostQuantity = BigDecimal.ZERO;
         BigDecimal atCostTotal = BigDecimal.ZERO;
+        BigDecimal pendingTotal = BigDecimal.ZERO;
+        BigDecimal thirdPartyTotal = BigDecimal.ZERO;
 
         void add(Sums other) {
+            pendingTotal = pendingTotal.add(other.pendingTotal);
+            thirdPartyTotal = thirdPartyTotal.add(other.thirdPartyTotal);
             normalSales += other.normalSales;
             normalQuantity = normalQuantity.add(other.normalQuantity);
             normalTotal = normalTotal.add(other.normalTotal);
@@ -463,9 +476,10 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal margin = normalTotal.signum() > 0
                 ? profit.multiply(HUNDRED).divide(normalTotal, 2, RoundingMode.HALF_UP)
                 : null;
+            // The store's sales include those waiting for their product, not the third-party ones
             return new Row(date, normalSales, quantity(normalQuantity), money(normalTotal), money(normalCost), profit,
-                margin, atCostSales, quantity(atCostQuantity), money(atCostTotal), money(normalTotal.add(atCostTotal)),
-                profit);
+                margin, atCostSales, quantity(atCostQuantity), money(atCostTotal), money(pendingTotal),
+                money(thirdPartyTotal), money(normalTotal.add(atCostTotal).add(pendingTotal)), profit);
         }
     }
 }

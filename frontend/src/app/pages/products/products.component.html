@@ -173,6 +173,11 @@
                 <td>
                   <div class="product-info">
                     <span class="product-name">{{ product.name }}</span>
+                    @if (product.specialType) {
+                      <span class="special-badge" [title]="specialTypeLabels[product.specialType]">
+                        Especial · {{ product.specialType === 'THIRD_PARTY' ? 'de ' + product.ownerCreditorName : 'sin identificar' }}
+                      </span>
+                    }
                     @if (product.description) {
                       <span class="product-description">{{ product.description }}</span>
                     }
@@ -202,6 +207,9 @@
                   </div>
                 </td>
                 <td style="text-align: right">
+                  @if (product.specialType) {
+                    <span class="text-muted-sm">Precio al vender</span>
+                  } @else {
                   <div class="price-stack">
                     <div class="price-stack-row">
                       <span class="price-badge-label sell">Venta</span>
@@ -212,6 +220,7 @@
                       <span class="price-val price-val-subtle">Bs {{ product.buyPrice | number:'1.2-2' }}</span>
                     </div>
                   </div>
+                  }
                 </td>
                 <td style="text-align: right">
                   <div class="profit-cell">
@@ -536,6 +545,45 @@
         </div>
       </div>
 
+      <!-- Tipo de producto (POS-11): solo al crear; el especial se vende con nombre y precio escritos -->
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label class="form-label" for="product-special-type">
+            <span>Tipo</span>
+          </label>
+          <select id="product-special-type" class="form-control" formControlName="specialType"
+                  [attr.disabled]="isEditing() ? true : null">
+            <option value="">Normal</option>
+            <option value="UNIDENTIFIED">Especial: sin identificar</option>
+            <option value="THIRD_PARTY">Especial: de tercero</option>
+          </select>
+          @if (isSpecialForm()) {
+            <span class="text-muted-sm">En el POS pide nombre y precio al vender. El tipo no cambia después de crearlo.</span>
+          }
+        </div>
+        @if (isThirdPartyForm()) {
+          <div class="form-group flex-1">
+            <label class="form-label" for="product-owner">
+              <span>Dueña <span class="required-mark">*</span></span>
+            </label>
+            <select id="product-owner" class="form-control" formControlName="ownerCreditorId"
+                    [attr.disabled]="isEditing() ? true : null">
+              <option value="">Elija una persona de Deudas</option>
+              @for (c of creditors(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+              @if (isEditing() && productForm.get('ownerCreditorId')?.value && !hasOwnerOption()) {
+                <option [value]="productForm.get('ownerCreditorId')?.value">{{ editingOwnerName() }}</option>
+              }
+            </select>
+            @if (productForm.get('ownerCreditorId')?.touched && productForm.get('ownerCreditorId')?.errors) {
+              <span class="field-error">Elija la dueña del producto de tercero.</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (!isSpecialForm()) {
       <!-- Unidad de venta (CAT-08) -->
       <div class="form-group">
         <label class="form-label" for="product-sale-unit">
@@ -554,8 +602,10 @@
         </select>
       </div>
 
+      }
+
       <!-- Presentaciones del producto por kilo (CAT-11) -->
-      @if (isKilogramForm()) {
+      @if (isKilogramForm() && !isSpecialForm()) {
         <div class="form-group presentations-section">
           <label class="form-label">
             <span>Presentaciones</span>
@@ -627,6 +677,7 @@
       }
 
       <!-- Fila de Precios y Utilidad Automática -->
+      @if (!isSpecialForm()) {
       <div class="form-row prices-row">
         <!-- Precio Compra -->
         <div class="form-group flex-1">
@@ -703,6 +754,7 @@
           </div>
         </div>
       </div>
+      }
 
       <!-- Descripción -->
       <div class="form-group">

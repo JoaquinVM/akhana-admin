@@ -12,6 +12,11 @@ export interface SalesByDayRow {
   atCostSales: number;
   atCostQuantity: number;
   atCostTotal: number;
+  /** POS-12: líneas por asignar; venta de la tienda fuera de la utilidad hasta asignarse */
+  pendingTotal: number;
+  /** POS-13: ventas de terceros; no suman al total ni a la utilidad de la tienda */
+  thirdPartyTotal: number;
+  /** Normales + al costo + por asignar */
   total: number;
   profit: number;
 }
@@ -110,6 +115,9 @@ export interface TotalsRow {
   normalMargin: number | null;
   atCostSales: number;
   atCostTotal: number;
+  /** POS-12, POS-13: igual que en ventas por día */
+  pendingTotal: number;
+  thirdPartyTotal: number;
   total: number;
   consumptions: number;
   /** Consumos al costo, sin movimiento de dinero */

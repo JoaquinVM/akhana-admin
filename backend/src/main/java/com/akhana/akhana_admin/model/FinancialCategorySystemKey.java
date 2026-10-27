@@ -9,5 +9,7 @@ public enum FinancialCategorySystemKey {
     /** Ajuste (income): surplus recorded when closing the cash session (CAJ-09). */
     CASH_SURPLUS,
     /** Ajuste (expense): shortage recorded when closing the cash session (CAJ-09). */
-    CASH_SHORTAGE
+    CASH_SHORTAGE,
+    /** Pago a tercero: repayment of third-party sales to their owner (POS-13). */
+    THIRD_PARTY_PAYMENT
 }

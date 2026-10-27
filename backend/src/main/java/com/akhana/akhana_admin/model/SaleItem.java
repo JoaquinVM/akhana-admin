@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -23,20 +24,23 @@ public class SaleItem {
     @JoinColumn(name = "sale_id", nullable = false)
     private Sale sale;
 
+    // Product, name, code and cost are a copy of the moment of the sale; they change only when an unidentified line
+    // is assigned (POS-12), through SaleItemRepository.assign, never by writing the entity
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id", nullable = false, updatable = false)
     private Product product;
 
-    @Column(name = "product_name", nullable = false, length = 150)
+    @Column(name = "product_name", nullable = false, length = 150, updatable = false)
     private String productName;
 
-    @Column(name = "product_code", length = 50)
+    @Column(name = "product_code", length = 50, updatable = false)
     private String productCode;
 
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
 
-    // Product cost at the moment of the sale (POS-05); never updated afterwards
+    // Product cost at the moment of the sale (POS-05); never updated afterwards, except once when an
+    // unidentified line is assigned (POS-12)
     @Column(name = "unit_cost", nullable = false, updatable = false, precision = 12, scale = 2)
     private BigDecimal unitCost;
 
@@ -68,4 +72,28 @@ public class SaleItem {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
+
+    // POS-11: free line of a special product, with the name typed in the POS (kept after an assignment)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "free_line_type", length = 20, updatable = false)
+    private ProductSpecialType freeLineType;
+
+    @Column(name = "free_name", length = 150, updatable = false)
+    private String freeName;
+
+    // POS-12: only for unidentified lines
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_status", length = 20, updatable = false)
+    private SaleItemAssignmentStatus assignmentStatus;
+
+    @Column(name = "assigned_by", length = 100, updatable = false)
+    private String assignedBy;
+
+    @Column(name = "assigned_at", updatable = false)
+    private Instant assignedAt;
+
+    // POS-13: owner of a third-party line, copied from the product at the moment of the sale
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creditor_id", updatable = false)
+    private Creditor creditor;
 }

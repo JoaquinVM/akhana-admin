@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConsumptionService } from '../../core/consumption/consumption.service';
 import { ProductService } from '../../core/product/product.service';
-import { Product } from '../../core/product/models/product.models';
+import { Product, isSpecialProduct } from '../../core/product/models/product.models';
 import {
   CONSUMPTION_STATUS_LABELS,
   Consumption,
@@ -57,7 +57,8 @@ export class ConsumptionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.productService.getProducts().subscribe({
-      next: products => this.products.set(products),
+      // POS-11: los productos especiales no se consumen
+      next: products => this.products.set(products.filter(p => !isSpecialProduct(p))),
       error: () => this.errorMessage.set('No se pudo cargar el catálogo de productos.')
     });
     this.loadConsumptions();

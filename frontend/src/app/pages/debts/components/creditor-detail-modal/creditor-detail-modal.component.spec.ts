@@ -6,7 +6,8 @@ import { CreditorHistory, CreditorHistoryEntry } from '../../../../core/debt/mod
 
 const repayment: CreditorHistoryEntry = {
   type: 'REPAYMENT', id: 'rep-1', date: '2026-10-25T14:00:00Z', amount: 150, purchaseId: null, purchaseNumber: null,
-  supplierName: null, accountId: 'acc-1', accountName: 'Bisa', comment: null, voided: false, voidedBy: null,
+  supplierName: null, saleId: null, saleNumber: null, accountId: 'acc-1', accountName: 'Bisa', comment: null,
+  concept: 'PURCHASE', voided: false, voidedBy: null,
   voidedAt: null, voidReason: null, balanceAfter: 150
 };
 const history: CreditorHistory = {
@@ -65,7 +66,8 @@ describe('CreditorDetailModalComponent', () => {
     component.repaymentAccountId.set('acc-1');
     component.repaymentComment.set('  en mano ');
     component.registerRepayment();
-    expect(creditorService.registerRepayment).toHaveBeenCalledWith('cre-1', { accountId: 'acc-1', amount: 150, comment: 'en mano' });
+    expect(creditorService.registerRepayment).toHaveBeenCalledWith('cre-1', { accountId: 'acc-1', amount: 150, comment: 'en mano',
+      concept: 'PURCHASE' });
     expect(component.canRepay()).toBe(false);
     expect(changed).toHaveBeenCalled();
   });

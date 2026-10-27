@@ -26,7 +26,11 @@ export interface CreditorRequest {
 }
 
 // DEU-04: pagos de pedidos hechos por la persona (PAYMENT) y devoluciones (REPAYMENT)
-export type CreditorHistoryEntryType = 'PAYMENT' | 'REPAYMENT';
+// POS-13: SALE es una venta con productos de la persona (suma a la deuda)
+export type CreditorHistoryEntryType = 'PAYMENT' | 'SALE' | 'REPAYMENT';
+
+// Qué devuelve: pedidos que pagó (categoría Pedido) o ventas de sus productos (Pago a tercero)
+export type CreditorRepaymentConcept = 'PURCHASE' | 'THIRD_PARTY';
 
 export interface CreditorHistoryEntry {
   type: CreditorHistoryEntryType;
@@ -36,9 +40,12 @@ export interface CreditorHistoryEntry {
   purchaseId: string | null;
   purchaseNumber: string | null;
   supplierName: string | null;
+  saleId: string | null;
+  saleNumber: string | null;
   accountId: string | null;
   accountName: string | null;
   comment: string | null;
+  concept: CreditorRepaymentConcept | null;
   voided: boolean;
   voidedBy: string | null;
   voidedAt: string | null;
@@ -57,6 +64,7 @@ export interface CreditorRepaymentRequest {
   accountId: string;
   amount: number;
   comment: string | null;
+  concept?: CreditorRepaymentConcept;
 }
 
 export interface VoidDebtRequest {

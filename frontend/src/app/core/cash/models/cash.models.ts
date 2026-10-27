@@ -44,7 +44,17 @@ export interface SaleItem {
   presentationName?: string | null;
   presentationWeightKg?: number | null;
   weightKg?: number | null;
+  // POS-11 a POS-13: línea libre con el nombre escrito, su asignación y la dueña
+  freeLineType?: 'UNIDENTIFIED' | 'THIRD_PARTY' | null;
+  freeName?: string | null;
+  assignmentStatus?: SaleItemAssignmentStatus | null;
+  assignedBy?: string | null;
+  assignedAt?: string | null;
+  creditorId?: string | null;
+  creditorName?: string | null;
 }
+
+export type SaleItemAssignmentStatus = 'POR_ASIGNAR' | 'ASIGNADO' | 'SIN_IDENTIFICAR';
 
 export interface Sale {
   id: string;

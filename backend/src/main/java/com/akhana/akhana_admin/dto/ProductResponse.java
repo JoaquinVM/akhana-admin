@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
 import com.akhana.akhana_admin.model.Product;
+import com.akhana.akhana_admin.model.ProductSpecialType;
 import com.akhana.akhana_admin.model.ProductStatus;
 import com.akhana.akhana_admin.model.SaleUnit;
 
@@ -36,7 +37,11 @@ public record ProductResponse(
     // CAT-11: active and inactive, lightest first; the POS shows only the active ones
     List<ProductPresentationResponse> presentations,
     // Non-blocking notices of a save (loss-making presentation, fixed prices left unchanged); empty otherwise
-    List<String> warnings
+    List<String> warnings,
+    // POS-11, POS-13: null for normal products
+    ProductSpecialType specialType,
+    UUID ownerCreditorId,
+    String ownerCreditorName
 ) {
     public record TagItemResponse(UUID id, String name, String color) {}
 
@@ -48,7 +53,7 @@ public record ProductResponse(
                            Instant updatedAt, String deletedBy, Instant deletedAt) {
         this(id, code, name, categoryId, categoryName, categoryColor, supplierId, supplierName, description, tags,
             buyPrice, sellPrice, fixedProfit, percentageProfit, status, saleUnit, createdBy, createdAt, updatedBy,
-            updatedAt, deletedBy, deletedAt, List.of(), List.of());
+            updatedAt, deletedBy, deletedAt, List.of(), List.of(), null, null, null);
     }
 
     public static ProductResponse fromEntity(Product product, List<String> warnings) {
@@ -58,7 +63,7 @@ public record ProductResponse(
             response.description, response.tags, response.buyPrice, response.sellPrice, response.fixedProfit,
             response.percentageProfit, response.status, response.saleUnit, response.createdBy, response.createdAt,
             response.updatedBy, response.updatedAt, response.deletedBy, response.deletedAt, response.presentations,
-            List.copyOf(warnings));
+            List.copyOf(warnings), response.specialType, response.ownerCreditorId, response.ownerCreditorName);
     }
 
     public static ProductResponse fromEntity(Product product) {
@@ -103,7 +108,10 @@ public record ProductResponse(
             product.getDeletedBy(),
             product.getDeletedAt(),
             presentations,
-            List.of()
+            List.of(),
+            product.getSpecialType(),
+            product.getOwnerCreditor() != null ? product.getOwnerCreditor().getId() : null,
+            product.getOwnerCreditor() != null ? product.getOwnerCreditor().getName() : null
         );
     }
 }

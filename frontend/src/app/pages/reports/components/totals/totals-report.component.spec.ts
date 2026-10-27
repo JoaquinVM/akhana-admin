@@ -11,7 +11,7 @@ describe('TotalsReportComponent', () => {
 
   const row = (month: string | null, overrides: Partial<TotalsRow> = {}): TotalsRow => ({
     month, normalSales: 430, normalTotal: 37584, normalCost: 29078.22, normalProfit: 8505.78, normalMargin: 22.63,
-    atCostSales: 1, atCostTotal: 104, total: 37688, consumptions: 3, consumptionTotal: 300,
+    atCostSales: 1, atCostTotal: 104, pendingTotal: 0, thirdPartyTotal: 0, total: 37688, consumptions: 3, consumptionTotal: 300,
     profitAfterConsumptions: 8205.78, ...overrides
   });
   const report: TotalsReport = {

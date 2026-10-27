@@ -7,6 +7,8 @@ import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CreditorRepository;
+import com.akhana.akhana_admin.repository.SaleItemRepository;
 import com.akhana.akhana_admin.repository.CustomerRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
@@ -28,7 +30,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,6 +51,8 @@ public class SaleServiceImpl implements SaleService {
     private final ExpectedCashCalculator expectedCashCalculator;
     private final CustomerRepository customerRepository;
     private final ProductPresentationService presentationService;
+    private final SaleItemRepository saleItemRepository;
+    private final CreditorRepository creditorRepository;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
@@ -57,6 +63,15 @@ public class SaleServiceImpl implements SaleService {
     static final String CREDIT_CUSTOMER_REQUIRED = "Elija un cliente activo para la venta a crédito.";
     static final String CREDIT_OUT_OF_RANGE = "El crédito debe estar entre Bs 0,00 y el total de la venta.";
     static final String CREDIT_METHOD_INCOMPLETE = "El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.";
+    static final String FREE_NAME_REQUIRED = "Escriba el nombre de la línea libre.";
+    static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";
+    static final String FREE_LINE_NO_DISCOUNT = "Una línea libre no admite descuentos.";
+    static final String FREE_LINES_NO_GLOBAL_DISCOUNT = "Una venta con líneas libres no admite descuento general.";
+    static final String AT_COST_NO_FREE_LINES = "Una venta al costo no admite líneas libres.";
+    static final String ALREADY_ASSIGNED = "La línea ya fue asignada.";
+    static final String VOIDED_SALE_ASSIGNMENT = "Una venta anulada no se asigna.";
+    static final String ASSIGNABLE_PRODUCT_REQUIRED = "Elija un producto activo que se venda por unidad.";
+    static final int FREE_NAME_MAX = 150;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -76,6 +91,7 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal subtotalGross = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal discountItemsTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         List<SaleItem> saleItems = new ArrayList<>();
+        boolean hasFreeLines = false;
 
         for (SaleItemRequest itemReq : request.items()) {
             Product product = productRepository.findById(itemReq.productId())
@@ -83,6 +99,18 @@ public class SaleServiceImpl implements SaleService {
 
             if (product.getStatus() != ProductStatus.ACTIVO) {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' no se encuentra activo para la venta.");
+            }
+
+            if (product.isSpecial()) {
+                if (atCost) {
+                    throw new IllegalArgumentException(AT_COST_NO_FREE_LINES);
+                }
+                hasFreeLines = true;
+                saleItems.add(buildFreeLine(product, itemReq));
+                continue;
+            }
+            if (itemReq.freeName() != null || itemReq.freePrice() != null) {
+                throw new IllegalArgumentException(FREE_LINE_ONLY_SPECIAL);
             }
 
             // CAT-11: by presentation the quantity is whole packs and the kilos are packs x presentation weight
@@ -150,10 +178,22 @@ public class SaleServiceImpl implements SaleService {
             saleItems.add(item);
         }
 
+        // Free lines have no discount, so their subtotal is the gross amount
+        for (SaleItem item : saleItems) {
+            if (item.getFreeLineType() != null) {
+                subtotalGross = subtotalGross.add(item.getSubtotal());
+            }
+        }
+
         BigDecimal subtotalPostItems = subtotalGross.subtract(discountItemsTotal).setScale(2, RoundingMode.HALF_UP);
         BigDecimal globalDiscount = request.globalDiscountAmount() != null 
             ? request.globalDiscountAmount().setScale(2, RoundingMode.HALF_UP) 
             : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+        // POS-11: each free line's amount is exact for the owner's debt and the reports
+        if (hasFreeLines && globalDiscount.signum() != 0) {
+            throw new IllegalArgumentException(FREE_LINES_NO_GLOBAL_DISCOUNT);
+        }
 
         if (atCost && globalDiscount.signum() != 0) {
             throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
@@ -327,6 +367,23 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
+        // Voiding lowers the debt with the owners of its third-party lines, which cannot go below 0 (POS-13)
+        Map<UUID, BigDecimal> owed = new TreeMap<>();
+        for (SaleItem item : sale.getItems()) {
+            if (item.getCreditor() != null) {
+                owed.merge(item.getCreditor().getId(), item.getSubtotal(), BigDecimal::add);
+            }
+        }
+        if (!owed.isEmpty()) {
+            for (Creditor owner : creditorRepository.findAllByIdForUpdate(owed.keySet())) {
+                BigDecimal debt = Optional.ofNullable(creditorRepository.computeDebt(owner.getId())).orElse(BigDecimal.ZERO);
+                if (debt.subtract(owed.get(owner.getId())).signum() < 0) {
+                    throw new IllegalStateException("Ya se devolvió a " + owner.getName()
+                        + " parte de esta venta; anule primero la devolución.");
+                }
+            }
+        }
+
         sale.setStatus(SaleStatus.ANULADA);
         sale.setVoidedAt(Instant.now());
         sale.setVoidedBy(username);
@@ -367,6 +424,86 @@ public class SaleServiceImpl implements SaleService {
         }
 
         return SaleResponse.fromEntity(updatedSale);
+    }
+
+    // POS-11: a special product sold with the name and price typed in the POS. Unidentified lines wait for their
+    // product with cost 0 (POS-12); third-party lines cost their price and are owed to the owner (POS-13)
+    private static SaleItem buildFreeLine(Product product, SaleItemRequest itemReq) {
+        String freeName = itemReq.freeName() != null ? itemReq.freeName().trim() : "";
+        if (freeName.isEmpty()) {
+            throw new IllegalArgumentException(FREE_NAME_REQUIRED);
+        }
+        if (freeName.length() > FREE_NAME_MAX) {
+            throw new IllegalArgumentException("El nombre de la línea libre no debe superar los 150 caracteres.");
+        }
+        BigDecimal price = itemReq.freePrice();
+        if (price == null || price.signum() <= 0 || price.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("El precio de '" + freeName + "' debe ser mayor a 0, con hasta 2 decimales.");
+        }
+        if (itemReq.presentationId() != null) {
+            throw new IllegalArgumentException("'" + freeName + "' no se vende por presentación.");
+        }
+        if (itemReq.discountPerUnit() != null && itemReq.discountPerUnit().signum() != 0) {
+            throw new IllegalArgumentException(FREE_LINE_NO_DISCOUNT);
+        }
+        BigDecimal unitPrice = price.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal qty = normalizeQuantity(itemReq.quantity(), freeName, SaleUnit.UNIT);
+        boolean thirdParty = product.getSpecialType() == ProductSpecialType.THIRD_PARTY;
+        return SaleItem.builder()
+            .product(product)
+            .productName(freeName)
+            .productCode(product.getCode())
+            .unitPrice(unitPrice)
+            .unitCost(thirdParty ? unitPrice : ZERO)
+            .discountPerUnit(ZERO)
+            .finalUnitPrice(unitPrice)
+            .quantity(qty)
+            .subtotal(unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP))
+            .freeLineType(product.getSpecialType())
+            .freeName(freeName)
+            .assignmentStatus(thirdParty ? null : SaleItemAssignmentStatus.POR_ASIGNAR)
+            .creditor(thirdParty ? product.getOwnerCreditor() : null)
+            .build();
+    }
+
+    @Override
+    public SaleResponse assignItem(UUID saleId, UUID itemId, UUID productId, String username) {
+        SaleItem item = lockPendingItem(saleId, itemId);
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + productId));
+        ProductServiceImpl.ensureNotSpecial(product);
+        if (product.getStatus() != ProductStatus.ACTIVO || product.getSaleUnit() != SaleUnit.UNIT) {
+            throw new IllegalArgumentException(ASSIGNABLE_PRODUCT_REQUIRED);
+        }
+        // The only change of a line's cost (T-07): the real product's current cost; amounts and cash stay as sold
+        saleItemRepository.assign(item.getId(), product, product.getCode(), product.getName(),
+            product.getBuyPrice().setScale(2, RoundingMode.HALF_UP), SaleItemAssignmentStatus.ASIGNADO, username, Instant.now());
+        return getSaleById(saleId);
+    }
+
+    @Override
+    public SaleResponse closeUnidentified(UUID saleId, UUID itemId, String username) {
+        SaleItem item = lockPendingItem(saleId, itemId);
+        saleItemRepository.assign(item.getId(), item.getProduct(), item.getProductCode(), item.getProductName(), ZERO,
+            SaleItemAssignmentStatus.SIN_IDENTIFICAR, username, Instant.now());
+        return getSaleById(saleId);
+    }
+
+    // The line is locked so two people never assign it at the same time (POS-12)
+    private SaleItem lockPendingItem(UUID saleId, UUID itemId) {
+        SaleItem item = saleItemRepository.findByIdForUpdate(itemId)
+            .filter(i -> i.getSale().getId().equals(saleId))
+            .orElseThrow(() -> new ResourceNotFoundException("Línea de venta no encontrada con ID: " + itemId));
+        if (item.getFreeLineType() != ProductSpecialType.UNIDENTIFIED) {
+            throw new IllegalArgumentException("Solo se asigna una línea de producto sin identificar.");
+        }
+        if (item.getAssignmentStatus() != SaleItemAssignmentStatus.POR_ASIGNAR) {
+            throw new IllegalStateException(ALREADY_ASSIGNED);
+        }
+        if (item.getSale().getStatus() == SaleStatus.ANULADA) {
+            throw new IllegalStateException(VOIDED_SALE_ASSIGNMENT);
+        }
+        return item;
     }
 
     private void recordSaleIncome(FinancialAccount account, FinancialCategory category, BigDecimal amount,
@@ -438,7 +575,8 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public Page<SaleResponse> searchSales(LocalDate from, LocalDate to, SaleStatus status, SaleType saleType,
-                                          PaymentMethod paymentMethod, String createdBy, int page, int size) {
+                                          PaymentMethod paymentMethod, String createdBy, boolean pendingAssignment,
+                                          int page, int size) {
         if (from != null && to != null && from.isAfter(to)) {
             throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");
         }
@@ -448,7 +586,8 @@ public class SaleServiceImpl implements SaleService {
         String seller = createdBy != null && !createdBy.isBlank() ? createdBy.trim() : null;
         PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE),
             Sort.by(Sort.Direction.DESC, "createdAt"));
-        return saleRepository.search(fromInstant, toInstant, status, saleType, paymentMethod, seller, pageRequest)
+        return saleRepository.search(fromInstant, toInstant, status, saleType, paymentMethod, seller, pendingAssignment,
+                pageRequest)
             .map(SaleResponse::summary);
     }
 

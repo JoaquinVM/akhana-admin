@@ -6,6 +6,7 @@ import { Creditor, CreditorRequest, CreditorStatus, DebtAccount } from '../../..
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../../shared/components/audit-modal/audit-modal.component';
+import { SaleDetailModalComponent } from '../../../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { CreditorDetailModalComponent } from '../creditor-detail-modal/creditor-detail-modal.component';
 import { PurchaseDetailModalComponent } from '../../../purchases/components/purchase-detail-modal/purchase-detail-modal.component';
 
@@ -30,7 +31,8 @@ interface CreditorDraft {
     ConfirmModalComponent,
     AuditModalComponent,
     CreditorDetailModalComponent,
-    PurchaseDetailModalComponent
+    PurchaseDetailModalComponent,
+    SaleDetailModalComponent
   ],
   templateUrl: './creditors-view.component.html',
   styleUrls: ['./creditors-view.component.css']
@@ -67,6 +69,8 @@ export class CreditorsViewComponent implements OnInit {
   // Detalle con historial; al abrir un pedido se oculta y vuelve al cerrarlo
   detailCreditorId = signal<string | null>(null);
   purchaseId = signal<string | null>(null);
+  // POS-13: venta abierta desde el historial de la persona
+  saleId = signal<string | null>(null);
   // Cambia para que el detalle vuelva a cargar el historial
   detailRefresh = signal<number>(0);
 

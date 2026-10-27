@@ -40,6 +40,8 @@ class CreditorServiceTest {
     @Mock private FinancialAccountRepository financialAccountRepository;
     @Mock private FinancialCategoryRepository financialCategoryRepository;
     @Mock private FinancialTransactionRepository financialTransactionRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private SaleItemRepository saleItemRepository;
 
     private CreditorServiceImpl creditorService;
 
@@ -55,7 +57,7 @@ class CreditorServiceTest {
     void setUp() {
         creditorService = new CreditorServiceImpl(creditorRepository, creditorRepaymentRepository, purchasePaymentRepository,
             cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
-            new ExpectedCashCalculator(financialTransactionRepository));
+            new ExpectedCashCalculator(financialTransactionRepository), productRepository, saleItemRepository);
 
         mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
         bisa = FinancialAccount.builder().id(UUID.randomUUID()).name("Bisa")
@@ -215,6 +217,61 @@ class CreditorServiceTest {
         assertThat(res).extracting(CreditorResponse::name).containsExactly("Mami", "Rosa");
         assertThat(res.get(0).debt()).isEqualByComparingTo("150.00");
         assertThat(res.get(1).debt()).isEqualByComparingTo("0.00");
+    }
+
+    // ---------------------------------------------------------------- POS-13
+
+    @Test
+    @DisplayName("POS-13: el pago a tercero usa la categoría Pago a tercero y queda con su concepto")
+    void registerRepayment_thirdParty() {
+        debt("60.00");
+        FinancialCategory thirdParty = FinancialCategory.builder().id(UUID.randomUUID()).name("Pago a tercero")
+            .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT).build();
+        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT))
+            .thenReturn(Optional.of(thirdParty));
+
+        creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("60"),
+            null, CreditorRepaymentConcept.THIRD_PARTY), "operator");
+
+        assertThat(repayments.getFirst().getConcept()).isEqualTo(CreditorRepaymentConcept.THIRD_PARTY);
+        ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository).save(captor.capture());
+        assertThat(captor.getValue().getCategory()).isSameAs(thirdParty);
+        assertThat(captor.getValue().getDescription()).isEqualTo("Pago a tercero a Mami");
+    }
+
+    @Test
+    @DisplayName("POS-13: el historial muestra cada venta con productos de Mami y la anulada no cuenta")
+    void history_includesThirdPartySales() {
+        Sale sale = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000123").status(SaleStatus.COMPLETADA)
+            .createdAt(Instant.parse("2026-10-20T15:00:00Z")).build();
+        Sale voided = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000124").status(SaleStatus.ANULADA)
+            .createdAt(Instant.parse("2026-10-21T15:00:00Z")).build();
+        when(saleItemRepository.findThirdPartyLinesByCreditorId(mami.getId())).thenReturn(List.of(
+            SaleItem.builder().sale(sale).subtotal(new BigDecimal("40.00")).build(),
+            SaleItem.builder().sale(sale).subtotal(new BigDecimal("20.00")).build(),
+            SaleItem.builder().sale(voided).subtotal(new BigDecimal("15.00")).build()));
+
+        CreditorHistoryResponse history = creditorService.getHistory(mami.getId());
+
+        assertThat(history.entries()).hasSize(2);
+        CreditorHistoryResponse.Entry first = history.entries().getFirst();
+        assertThat(first.type()).isEqualTo(CreditorHistoryResponse.EntryType.SALE);
+        assertThat(first.saleNumber()).isEqualTo("VTA-000123");
+        assertThat(first.amount()).isEqualByComparingTo("60.00");
+        assertThat(first.balanceAfter()).isEqualByComparingTo("60.00");
+        assertThat(history.entries().get(1).voided()).isTrue();
+        assertThat(history.entries().get(1).balanceAfter()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    @DisplayName("POS-13: la dueña de un producto de tercero no se da de baja")
+    void delete_rejectedWhileOwningAProduct() {
+        when(productRepository.findFirstByOwnerCreditorIdAndStatusNot(mami.getId(), ProductStatus.ELIMINADO))
+            .thenReturn(Optional.of(Product.builder().name("Producto de Mami").build()));
+
+        assertThatThrownBy(() -> creditorService.deleteCreditor(mami.getId(), "admin"))
+            .hasMessage("Mami es dueña de 'Producto de Mami'; dé de baja el producto primero.");
     }
 
     // ---------------------------------------------------------------- DEU-03

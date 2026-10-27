@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.CreditorRepository;
 import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
@@ -451,5 +452,69 @@ class ProductServiceTest {
         assertThat(activeProduct.getStatus()).isEqualTo(ProductStatus.ELIMINADO);
         assertThat(activeProduct.getDeletedBy()).isEqualTo("admin");
         assertThat(activeProduct.getDeletedAt()).isNotNull();
+    }
+
+    // ---------------------------------------------------------------- POS-11
+
+    @Mock
+    private CreditorRepository creditorRepository;
+
+    private ProductRequest specialRequest(ProductSpecialType type, UUID ownerId) {
+        return new ProductRequest("SIN-IDENT", "Producto sin identificar", categoryId, supplierId, null, List.of(),
+                new BigDecimal("5.00"), new BigDecimal("9.00"), ProductStatus.ACTIVO, SaleUnit.KILOGRAM, null, type, ownerId);
+    }
+
+    private void stubCreate() {
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    @Test
+    @DisplayName("POS-11: el producto sin identificar se guarda con costo y precio 0, por unidad")
+    void createUnidentified_zeroPricesByUnit() {
+        stubCreate();
+
+        ProductResponse response = productService.createProduct(specialRequest(ProductSpecialType.UNIDENTIFIED, null), "admin");
+
+        assertThat(response.specialType()).isEqualTo(ProductSpecialType.UNIDENTIFIED);
+        assertThat(response.buyPrice()).isEqualByComparingTo("0");
+        assertThat(response.sellPrice()).isEqualByComparingTo("0");
+        assertThat(response.saleUnit()).isEqualTo(SaleUnit.UNIT);
+        verify(presentationService, never()).applyPresentations(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("POS-11: solo un producto sin identificar y el de tercero exige dueña activa")
+    void createSpecial_rules() {
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.existsBySpecialTypeAndStatusNot(ProductSpecialType.UNIDENTIFIED, ProductStatus.ELIMINADO))
+                .thenReturn(true);
+        assertThatThrownBy(() -> productService.createProduct(specialRequest(ProductSpecialType.UNIDENTIFIED, null), "admin"))
+                .hasMessage("Ya existe un producto sin identificar.");
+        assertThatThrownBy(() -> productService.createProduct(specialRequest(ProductSpecialType.THIRD_PARTY, null), "admin"))
+                .hasMessage("Elija la dueña del producto de tercero.");
+
+        Creditor mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
+        when(creditorRepository.findById(mami.getId())).thenReturn(Optional.of(mami));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        ProductResponse response = productService.createProduct(specialRequest(ProductSpecialType.THIRD_PARTY, mami.getId()), "admin");
+        assertThat(response.ownerCreditorName()).isEqualTo("Mami");
+    }
+
+    @Test
+    @DisplayName("POS-11: el tipo no cambia al editar y un producto normal sigue pidiendo precio mayor a 0")
+    void update_keepsTypeAndRequiresPrice() {
+        when(productRepository.findByIdWithRelations(productId)).thenReturn(Optional.of(activeProduct));
+        assertThatThrownBy(() -> productService.updateProduct(productId, specialRequest(ProductSpecialType.UNIDENTIFIED, null), "admin"))
+                .hasMessage("El tipo de producto y su dueña no se cambian después de crearlo.");
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        ProductRequest zeroPrice = new ProductRequest("PROD-001", "Té Matcha Ceremonial 100g", categoryId, supplierId,
+                null, List.of(), new BigDecimal("40.00"), BigDecimal.ZERO, ProductStatus.ACTIVO, SaleUnit.UNIT);
+        assertThatThrownBy(() -> productService.updateProduct(productId, zeroPrice, "admin"))
+                .hasMessage("El precio de venta debe ser mayor a 0.");
     }
 }

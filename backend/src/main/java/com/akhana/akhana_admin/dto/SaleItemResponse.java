@@ -1,6 +1,11 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.ProductSpecialType;
+import com.akhana.akhana_admin.model.SaleItem;
+import com.akhana.akhana_admin.model.SaleItemAssignmentStatus;
+
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 public record SaleItemResponse(
@@ -17,5 +22,38 @@ public record SaleItemResponse(
     UUID presentationId,
     String presentationName,
     BigDecimal presentationWeightKg,
-    BigDecimal weightKg
-) {}
+    BigDecimal weightKg,
+    // POS-11 to POS-13: free line with its typed name, assignment and owner; null for other lines
+    ProductSpecialType freeLineType,
+    String freeName,
+    SaleItemAssignmentStatus assignmentStatus,
+    String assignedBy,
+    Instant assignedAt,
+    UUID creditorId,
+    String creditorName
+) {
+    public static SaleItemResponse fromEntity(SaleItem item) {
+        return new SaleItemResponse(
+            item.getId(),
+            item.getProduct() != null ? item.getProduct().getId() : null,
+            item.getProductName(),
+            item.getProductCode(),
+            item.getUnitPrice(),
+            item.getDiscountPerUnit(),
+            item.getFinalUnitPrice(),
+            item.getQuantity(),
+            item.getSubtotal(),
+            item.getPresentation() != null ? item.getPresentation().getId() : null,
+            item.getPresentationName(),
+            item.getPresentationWeightKg(),
+            item.getWeightKg(),
+            item.getFreeLineType(),
+            item.getFreeName(),
+            item.getAssignmentStatus(),
+            item.getAssignedBy(),
+            item.getAssignedAt(),
+            item.getCreditor() != null ? item.getCreditor().getId() : null,
+            item.getCreditor() != null ? item.getCreditor().getName() : null
+        );
+    }
+}

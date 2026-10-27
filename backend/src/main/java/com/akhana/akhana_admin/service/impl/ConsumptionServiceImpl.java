@@ -159,6 +159,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         if (product.getStatus() == ProductStatus.ELIMINADO) {
             throw new IllegalArgumentException("El producto '" + product.getName() + "' no existe o fue eliminado.");
         }
+        ProductServiceImpl.ensureNotSpecial(product);
         return product;
     }
 

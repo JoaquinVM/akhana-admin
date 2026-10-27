@@ -6,7 +6,8 @@ import java.util.List;
 
 /**
  * Sales per store day (FIN-10), grouped by month with subtotals. Normal and at-cost sales go in separate columns
- * (CON-03): at-cost sales never change the profit or the margin of the normal ones.
+ * (CON-03): at-cost sales never change the profit or the margin of the normal ones. Lines waiting for their product
+ * (POS-12) are store sales outside the profit until assigned; third-party lines (POS-13) are not store sales.
  */
 public record SalesByDayReportResponse(LocalDate from, LocalDate to, List<Month> months, Row totals) {
 
@@ -28,6 +29,8 @@ public record SalesByDayReportResponse(LocalDate from, LocalDate to, List<Month>
                       long atCostSales,
                       BigDecimal atCostQuantity,
                       BigDecimal atCostTotal,
+                      BigDecimal pendingTotal,
+                      BigDecimal thirdPartyTotal,
                       BigDecimal total,
                       BigDecimal profit) {
     }

@@ -35,7 +35,8 @@ describe('SalesHistoryComponent', () => {
 
   it('POS-09: carga la primera página, los usuarios y muestra la paginación', () => {
     expect(saleService.searchSales).toHaveBeenCalledWith(
-      { from: null, to: null, status: null, saleType: null, paymentMethod: null, createdBy: null }, 0, 20);
+      { from: null, to: null, status: null, saleType: null, paymentMethod: null, createdBy: null,
+        pendingAssignment: false }, 0, 20);
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('VTA-000010');
     expect(text).toContain('Sesión #3');
@@ -58,7 +59,7 @@ describe('SalesHistoryComponent', () => {
     component.onCreatedBy('operador');
     expect(saleService.searchSales).toHaveBeenLastCalledWith({
       from: '2026-10-01', to: '2026-10-25', status: 'ANULADA', saleType: 'AL_COSTO',
-      paymentMethod: 'CREDITO', createdBy: 'operador'
+      paymentMethod: 'CREDITO', createdBy: 'operador', pendingAssignment: false
     }, 0, 20);
     expect(component.currentPage()).toBe(0);
 

@@ -171,12 +171,19 @@
   (close)="auditCreditor.set(null)" />
 
 <app-creditor-detail-modal
-  [creditorId]="purchaseId() ? null : detailCreditorId()"
+  [creditorId]="purchaseId() || saleId() ? null : detailCreditorId()"
   [accounts]="accounts()"
   [refreshKey]="detailRefresh()"
   (changed)="loadCreditors()"
   (openPurchase)="openPurchase($event)"
+  (openSale)="saleId.set($event)"
   (close)="closeDetail()" />
+
+<!-- POS-13: venta con productos de la persona -->
+<app-sale-detail-modal
+  [isOpen]="!!saleId()"
+  [saleId]="saleId()"
+  (close)="saleId.set(null)" />
 
 <app-purchase-detail-modal
   [purchaseId]="purchaseId()"

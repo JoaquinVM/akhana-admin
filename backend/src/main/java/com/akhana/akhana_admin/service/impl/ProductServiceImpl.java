@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.CreditorRepository;
 import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
@@ -32,6 +33,13 @@ public class ProductServiceImpl implements ProductService {
     private final TagRepository tagRepository;
     private final ProductPresentationService presentationService;
     private final ProductPriceChangeRepository priceChangeRepository;
+    private final CreditorRepository creditorRepository;
+
+    static final String SELL_PRICE_REQUIRED = "El precio de venta debe ser mayor a 0.";
+    static final String OWNER_REQUIRED = "Elija la dueña del producto de tercero.";
+    static final String UNIDENTIFIED_EXISTS = "Ya existe un producto sin identificar.";
+    static final String SPECIAL_TYPE_FIXED = "El tipo de producto y su dueña no se cambian después de crearlo.";
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     @Override
     @Transactional(readOnly = true)
@@ -111,9 +119,25 @@ public class ProductServiceImpl implements ProductService {
         // Validar y asociar etiquetas
         Set<Tag> tags = resolveTags(request.tagIds());
 
+        // POS-11: a special product has no cost or price in the catalog and is sold by unit
+        ProductSpecialType specialType = request.specialType();
+        Creditor owner = null;
+        if (specialType == ProductSpecialType.UNIDENTIFIED
+                && productRepository.existsBySpecialTypeAndStatusNot(specialType, ProductStatus.ELIMINADO)) {
+            throw new IllegalArgumentException(UNIDENTIFIED_EXISTS);
+        }
+        if (specialType == ProductSpecialType.THIRD_PARTY) {
+            if (request.ownerCreditorId() == null) {
+                throw new IllegalArgumentException(OWNER_REQUIRED);
+            }
+            owner = creditorRepository.findById(request.ownerCreditorId())
+                    .filter(c -> c.getStatus() == CreditorStatus.ACTIVO)
+                    .orElseThrow(() -> new IllegalArgumentException(OWNER_REQUIRED));
+        }
+
         // Cálculo automático de utilidades
-        BigDecimal buyPrice = request.buyPrice().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal sellPrice = request.sellPrice().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal buyPrice = specialType != null ? ZERO : request.buyPrice().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal sellPrice = specialType != null ? ZERO : requireSellPrice(request.sellPrice());
         BigDecimal fixedProfit = calculateFixedProfit(buyPrice, sellPrice);
         BigDecimal percentageProfit = calculatePercentageProfit(buyPrice, fixedProfit);
 
@@ -133,7 +157,9 @@ public class ProductServiceImpl implements ProductService {
                 .fixedProfit(fixedProfit)
                 .percentageProfit(percentageProfit)
                 .status(status)
-                .saleUnit(request.saleUnit() != null ? request.saleUnit() : SaleUnit.UNIT)
+                .saleUnit(specialType == null && request.saleUnit() != null ? request.saleUnit() : SaleUnit.UNIT)
+                .specialType(specialType)
+                .ownerCreditor(owner)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
                 .createdAt(Instant.now())
                 .build();
@@ -141,6 +167,9 @@ public class ProductServiceImpl implements ProductService {
         Product saved = productRepository.save(product);
         recordPriceChange(saved, null, null, product.getCreatedBy(), product.getCreatedAt());
         // Presentations need the saved product (CAT-11)
+        if (specialType != null) {
+            return ProductResponse.fromEntity(saved, List.of());
+        }
         List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
         warnings.addAll(presentationService.applyPresentations(saved, request.presentations(), null, currentUsername));
         return ProductResponse.fromEntity(saved, warnings);
@@ -154,6 +183,13 @@ public class ProductServiceImpl implements ProductService {
         if (product.getStatus() == ProductStatus.ELIMINADO) {
             throw new IllegalStateException("Los productos con estado ELIMINADO no pueden ser editados.");
         }
+
+        UUID ownerId = product.getOwnerCreditor() != null ? product.getOwnerCreditor().getId() : null;
+        if (request.specialType() != product.getSpecialType()
+                || (product.getSpecialType() == ProductSpecialType.THIRD_PARTY && !ownerId.equals(request.ownerCreditorId()))) {
+            throw new IllegalArgumentException(SPECIAL_TYPE_FIXED);
+        }
+        boolean special = product.isSpecial();
 
         String code = request.code().trim();
         String name = request.name().trim();
@@ -189,8 +225,8 @@ public class ProductServiceImpl implements ProductService {
         BigDecimal previousSellPrice = product.getSellPrice();
 
         // Recalcular utilidades
-        BigDecimal buyPrice = request.buyPrice().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal sellPrice = request.sellPrice().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal buyPrice = special ? ZERO : request.buyPrice().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal sellPrice = special ? ZERO : requireSellPrice(request.sellPrice());
         BigDecimal fixedProfit = calculateFixedProfit(buyPrice, sellPrice);
         BigDecimal percentageProfit = calculatePercentageProfit(buyPrice, fixedProfit);
 
@@ -208,7 +244,7 @@ public class ProductServiceImpl implements ProductService {
         if (request.status() != null && request.status() != ProductStatus.ELIMINADO) {
             product.setStatus(request.status());
         }
-        if (request.saleUnit() != null) {
+        if (request.saleUnit() != null && !special) {
             product.setSaleUnit(request.saleUnit());
         }
 
@@ -219,9 +255,11 @@ public class ProductServiceImpl implements ProductService {
             recordPriceChange(product, previousBuyPrice, previousSellPrice, product.getUpdatedBy(), product.getUpdatedAt());
         }
 
-        List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
-        warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
-                previousSellPrice, currentUsername));
+        List<String> warnings = new ArrayList<>(special ? List.of() : costWarnings(buyPrice));
+        if (!special) {
+            warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
+                    previousSellPrice, currentUsername));
+        }
         Product updated = productRepository.save(product);
         return ProductResponse.fromEntity(updated, warnings);
     }
@@ -290,6 +328,21 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         return new HashSet<>(foundTags);
+    }
+
+    // POS-11: special products are only sold in the POS with a typed name and price
+    static void ensureNotSpecial(Product product) {
+        if (product.isSpecial()) {
+            throw new IllegalArgumentException("'" + product.getName()
+                    + "' es un producto especial: solo se vende en el POS con nombre y precio.");
+        }
+    }
+
+    private static BigDecimal requireSellPrice(BigDecimal sellPrice) {
+        if (sellPrice.signum() <= 0) {
+            throw new IllegalArgumentException(SELL_PRICE_REQUIRED);
+        }
+        return sellPrice.setScale(2, RoundingMode.HALF_UP);
     }
 
     static final String ZERO_COST_WARNING = "Costo 0: toda la venta cuenta como utilidad.";

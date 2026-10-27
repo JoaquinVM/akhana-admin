@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
-import { CreditorHistory, CreditorHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
+import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
 
 // DEU-03 y DEU-04: historial de la persona con el saldo tras cada registro, devolución y su anulación
 @Component({
@@ -25,6 +25,8 @@ export class CreditorDetailModalComponent {
   // Emite tras una devolución o su anulación, para refrescar el listado
   changed = output<void>();
   openPurchase = output<string>();
+  // POS-13: ventas con productos de la persona
+  openSale = output<string>();
   close = output<void>();
 
   history = signal<CreditorHistory | null>(null);
@@ -34,6 +36,7 @@ export class CreditorDetailModalComponent {
   repaymentAccountId = signal<string>('');
   repaymentAmount = signal<number | null>(null);
   repaymentComment = signal<string>('');
+  repaymentConcept = signal<CreditorRepaymentConcept>('PURCHASE');
   repaymentError = signal<string | null>(null);
   isRepaying = signal<boolean>(false);
 
@@ -80,6 +83,10 @@ export class CreditorDetailModalComponent {
     this.repaymentAccountId.set('');
     this.repaymentAmount.set(history.creditor.debt > 0 ? history.creditor.debt : null);
     this.repaymentComment.set('');
+    // POS-13: si solo vende productos suyos, se propone «Pago a tercero»
+    const hasSales = history.entries.some(e => e.type === 'SALE');
+    const hasPayments = history.entries.some(e => e.type === 'PAYMENT');
+    this.repaymentConcept.set(hasSales && !hasPayments ? 'THIRD_PARTY' : 'PURCHASE');
   }
 
   registerRepayment(): void {
@@ -102,7 +109,8 @@ export class CreditorDetailModalComponent {
     this.creditorService.registerRepayment(history.creditor.id, {
       accountId: this.repaymentAccountId(),
       amount,
-      comment: comment.length > 0 ? comment : null
+      comment: comment.length > 0 ? comment : null,
+      concept: this.repaymentConcept()
     }).subscribe({
       next: updated => {
         this.setHistory(updated);

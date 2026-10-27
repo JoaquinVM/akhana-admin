@@ -197,7 +197,7 @@ class SaleControllerTest {
     @DisplayName("GET /api/sales - Debe listar ventas paginadas con filtros (POS-09)")
     void shouldListSales() throws Exception {
         when(saleService.searchSales(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 26), SaleStatus.ANULADA,
-                SaleType.AL_COSTO, PaymentMethod.CREDITO, "admin", 1, 10))
+                SaleType.AL_COSTO, PaymentMethod.CREDITO, "admin", false, 1, 10))
             .thenReturn(new PageImpl<>(List.of(sampleResponse), PageRequest.of(1, 10), 11));
 
         mockMvc.perform(get("/api/sales")

@@ -201,6 +201,8 @@ class EndpointAuthorizationTest {
                 both(get, "/api/sales/" + ID, null),
                 both(get, "/api/sales/session/" + ID, null),
                 both(post, "/api/sales/" + ID + "/void", VOID_SALE),
+                both(post, "/api/sales/" + ID + "/items/" + ID + "/assign", "{\"productId\":\"" + ID + "\"}"),
+                both(post, "/api/sales/" + ID + "/items/" + ID + "/close-unidentified", null),
                 // Catálogo: productos (costo y precio), categorías, etiquetas, productos rápidos
                 both(get, "/api/products", null),
                 both(get, "/api/products/" + ID, null),

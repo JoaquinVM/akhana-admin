@@ -1,5 +1,5 @@
 <app-modal [isOpen]="!!creditorId()" [title]="history()?.creditor?.name || 'Persona'"
-           subtitle="Pagos de pedidos y devoluciones" size="lg" (close)="onClose()">
+           subtitle="Pagos de pedidos, ventas de sus productos y devoluciones" size="lg" (close)="onClose()">
   @if (isLoading() && !history()) {
     <p class="hint">Cargando historial…</p>
   }
@@ -15,7 +15,7 @@
 
     <h4 class="section-title">Historial</h4>
     @if (h.entries.length === 0) {
-      <p class="hint">Todavía no pagó pedidos por el negocio.</p>
+      <p class="hint">Todavía no pagó pedidos por el negocio ni se vendieron productos suyos.</p>
     } @else {
       <div class="table-responsive">
         <table class="table">
@@ -36,8 +36,11 @@
                   @if (entry.type === 'PAYMENT') {
                     <span class="entry-title">Pagó pedido {{ entry.purchaseNumber }}</span>
                     <span class="entry-note">{{ entry.supplierName }}</span>
+                  } @else if (entry.type === 'SALE') {
+                    <span class="entry-title">Venta {{ entry.saleNumber }}</span>
+                    <span class="entry-note">Productos suyos vendidos en la tienda</span>
                   } @else {
-                    <span class="entry-title">Devolución desde {{ entry.accountName }}</span>
+                    <span class="entry-title">{{ entry.concept === 'THIRD_PARTY' ? 'Pago a tercero' : 'Devolución' }} desde {{ entry.accountName }}</span>
                     @if (entry.comment) {
                       <span class="entry-note">{{ entry.comment }}</span>
                     }
@@ -47,12 +50,14 @@
                   }
                 </td>
                 <td class="text-right">
-                  {{ entry.type === 'PAYMENT' ? '+' : '−' }} Bs {{ entry.amount | number:'1.2-2' }}
+                  {{ entry.type === 'REPAYMENT' ? '−' : '+' }} Bs {{ entry.amount | number:'1.2-2' }}
                 </td>
                 <td class="text-right">Bs {{ entry.balanceAfter | number:'1.2-2' }}</td>
                 <td class="text-right">
                   @if (entry.type === 'PAYMENT' && entry.purchaseId) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="openPurchase.emit(entry.purchaseId)">Ver pedido</button>
+                  } @else if (entry.type === 'SALE' && entry.saleId) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openSale.emit(entry.saleId)">Ver venta</button>
                   } @else if (entry.type === 'REPAYMENT' && !entry.voided) {
                     <button type="button" class="btn btn-ghost btn-sm btn-void" (click)="openVoid(entry)">Anular</button>
                   }
@@ -86,6 +91,14 @@
             <input id="repayment-amount" type="number" min="0.01" step="0.01" class="form-control" name="amount"
                    [ngModel]="repaymentAmount()" (ngModelChange)="repaymentAmount.set($event)" />
             <span class="form-hint">Deuda Bs {{ h.creditor.debt | number:'1.2-2' }}</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="repayment-concept">Concepto</label>
+            <select id="repayment-concept" class="form-control" name="concept"
+                    [ngModel]="repaymentConcept()" (ngModelChange)="repaymentConcept.set($event)">
+              <option value="PURCHASE">Pedidos que pagó (Pedido)</option>
+              <option value="THIRD_PARTY">Ventas de sus productos (Pago a tercero)</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="repayment-comment">Comentario</label>

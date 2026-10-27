@@ -92,21 +92,7 @@ public record SaleResponse(
     private static SaleResponse of(Sale sale, boolean withItems) {
         List<SaleItemResponse> itemResponses = withItems && sale.getItems() != null
             ? sale.getItems().stream()
-                .map(item -> new SaleItemResponse(
-                    item.getId(),
-                    item.getProduct() != null ? item.getProduct().getId() : null,
-                    item.getProductName(),
-                    item.getProductCode(),
-                    item.getUnitPrice(),
-                    item.getDiscountPerUnit(),
-                    item.getFinalUnitPrice(),
-                    item.getQuantity(),
-                    item.getSubtotal(),
-                    item.getPresentation() != null ? item.getPresentation().getId() : null,
-                    item.getPresentationName(),
-                    item.getPresentationWeightKg(),
-                    item.getWeightKg()
-                ))
+                .map(SaleItemResponse::fromEntity)
                 .collect(Collectors.toList())
             : Collections.emptyList();
 

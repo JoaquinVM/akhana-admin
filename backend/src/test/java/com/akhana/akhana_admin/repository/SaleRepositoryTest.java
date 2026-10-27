@@ -78,9 +78,9 @@ class SaleRepositoryTest {
 
         assertEquals(List.of("VOID"), numbers(null, null, SaleStatus.ANULADA));
         assertEquals(List.of("FIRST", "LAST"), numbers(null, null, SaleStatus.COMPLETADA));
-        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller + "-otro", PageRequest.of(0, 10)).getTotalElements());
+        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller + "-otro", false, PageRequest.of(0, 10)).getTotalElements());
 
-        Page<Sale> secondPage = saleRepository.search(FROM, TO, null, null, null, seller,
+        Page<Sale> secondPage = saleRepository.search(FROM, TO, null, null, null, seller, false,
                 PageRequest.of(1, 2, Sort.by(Sort.Direction.DESC, "createdAt")));
         assertEquals(3, secondPage.getTotalElements());
         assertEquals(2, secondPage.getTotalPages());
@@ -172,6 +172,56 @@ class SaleRepositoryTest {
         assertEquals("59.02", plain(line[8]));
     }
 
+    @Test
+    void separatesPendingAndThirdPartyLinesAndFiltersPendingSales() {
+        UUID product = insertProduct();
+        UUID mami = jdbc.queryForObject("INSERT INTO creditors (name, created_by) VALUES (?, 'it-repo') RETURNING id",
+                UUID.class, "IT Mami " + UUID.randomUUID().toString().substring(0, 8));
+        // POS-12, POS-13: one sale of 100 with a normal line of 50 (cost 30), a pending line of 20 and Mami's 30
+        UUID sale = insertSale("F1", "EFECTIVO", "NORMAL", "100.00", "0.00", "0.00", null, DAY);
+        jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
+                + "quantity, subtotal) VALUES (?, ?, 'IT normal', 50.00, 30.00, 50.00, 1, 50.00)", sale, product);
+        insertFreeItem(sale, product, "UNIDENTIFIED", "20.00", "0.00", "'POR_ASIGNAR'", null);
+        insertFreeItem(sale, product, "THIRD_PARTY", "30.00", "30.00", "NULL", mami);
+        // A sale with only Mami's products is not a store sale
+        UUID onlyMami = insertSale("F2", "EFECTIVO", "NORMAL", "15.00", "0.00", "0.00", null, DAY);
+        insertFreeItem(onlyMami, product, "THIRD_PARTY", "15.00", "15.00", "NULL", mami);
+
+        Object[] day = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
+        assertEquals(1, ((Number) day[2]).longValue());
+        assertEquals("1", plain(day[3]));
+        assertEquals("115", plain(day[4]));
+        assertEquals("30", plain(day[5]));
+        assertEquals("20", plain(day[6]));
+        assertEquals("45", plain(day[7]));
+
+        List<Boolean> normal = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> sale.equals(row[0])).map(row -> (Boolean) row[9]).sorted().toList();
+        assertEquals(List.of(false, false, true), normal);
+
+        assertEquals(List.of(seller + "-F1"), saleRepository.search(FROM, TO, null, null, null, seller, true,
+                PageRequest.of(0, 10)).stream().map(s -> s.getSaleNumber()).toList());
+        // Once assigned, the line is normal and the sale is no longer pending
+        jdbc.update("UPDATE sale_items SET assignment_status = 'ASIGNADO', unit_cost = 12.00, assigned_by = 'it-repo', "
+                + "assigned_at = now() WHERE sale_id = ? AND free_line_type = 'UNIDENTIFIED'", sale);
+        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller, true, PageRequest.of(0, 10))
+                .getTotalElements());
+        Object[] assigned = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
+        assertEquals("42", plain(assigned[5]));
+        assertEquals("0", plain(assigned[6]));
+    }
+
+    private void insertFreeItem(UUID sale, UUID product, String type, String price, String cost, String status,
+                                UUID creditor) {
+        jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
+                        + "quantity, subtotal, free_line_type, free_name, assignment_status, creditor_id) "
+                        + "VALUES (?, ?, 'IT libre', ?::numeric, ?::numeric, ?::numeric, 1, ?::numeric, ?, 'IT libre', "
+                        + status + ", ?)",
+                sale, product, price, cost, price, price, type, creditor);
+    }
+
     private static String plain(Object value) {
         return ((BigDecimal) value).stripTrailingZeros().toPlainString();
     }
@@ -198,7 +248,7 @@ class SaleRepositoryTest {
 
     // Sorted by number so each assertion reads the same whatever the creation order
     private List<String> numbers(PaymentMethod method, SaleType type, SaleStatus status) {
-        return saleRepository.search(FROM, TO, status, type, method, seller, PageRequest.of(0, 50)).stream()
+        return saleRepository.search(FROM, TO, status, type, method, seller, false, PageRequest.of(0, 50)).stream()
                 .map(sale -> sale.getSaleNumber().substring(seller.length() + 1))
                 .sorted()
                 .toList();

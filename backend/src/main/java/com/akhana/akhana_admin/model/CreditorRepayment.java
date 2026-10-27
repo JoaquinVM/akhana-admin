@@ -41,6 +41,11 @@ public class CreditorRepayment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
+    private CreditorRepaymentConcept concept = CreditorRepaymentConcept.PURCHASE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
     private CreditorRepaymentStatus status = CreditorRepaymentStatus.ACTIVO;
 
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)

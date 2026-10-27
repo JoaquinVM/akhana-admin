@@ -56,11 +56,11 @@ public class ReportExportServiceImpl implements ReportExportService {
     public ReportFile exportSalesByDay(LocalDate from, LocalDate to) {
         SalesByDayReportResponse report = reportService.getSalesByDay(from, to);
         return write("sales-by-day", report.from(), report.to(), book -> {
-            SheetWriter sheet = book.sheet("Ventas por día", title("Ventas por día", report.from(), report.to()), 12);
+            SheetWriter sheet = book.sheet("Ventas por día", title("Ventas por día", report.from(), report.to()), 14);
             sheet.groups(new Group("", 1), new Group("Ventas normales", 6), new Group("Ventas al costo", 3),
-                    new Group("Total", 2));
+                    new Group("", 2), new Group("Total", 2));
             sheet.headers("Día", "Ventas", "Cantidad", "Total", "Costo", "Utilidad", "Margen", "Ventas", "Cantidad",
-                    "Total", "Total", "Utilidad");
+                    "Total", "Por asignar", "De terceros", "Total", "Utilidad");
             for (SalesByDayReportResponse.Month month : report.months()) {
                 month.days().forEach(day -> sheet.row(false, salesByDayCells(Value.date(day.date()), day)));
                 sheet.row(true, salesByDayCells(Value.text("Total " + monthLabel(month.month())), month.totals()));
@@ -136,11 +136,11 @@ public class ReportExportServiceImpl implements ReportExportService {
         TotalsReportResponse report = reportService.getTotals(from, to);
         return write("totals", report.from(), report.to(), book -> {
             SheetWriter sheet = book.sheet("Totales", title("Totales de ventas y utilidad", report.from(), report.to()),
-                    12);
+                    14);
             sheet.groups(new Group("", 1), new Group("Ventas normales", 5), new Group("Ventas al costo", 2),
-                    new Group("", 1), new Group("Consumos al costo", 2), new Group("", 1));
-            sheet.headers("Mes", "Ventas", "Total", "Costo", "Utilidad", "Margen", "Ventas", "Total", "Total ventas",
-                    "Consumos", "Total", "Utilidad menos consumos");
+                    new Group("", 3), new Group("Consumos al costo", 2), new Group("", 1));
+            sheet.headers("Mes", "Ventas", "Total", "Costo", "Utilidad", "Margen", "Ventas", "Total", "Por asignar",
+                    "De terceros", "Total ventas", "Consumos", "Total", "Utilidad menos consumos");
             report.months().forEach(month -> sheet.row(false, totalsCells(Value.text(monthLabel(month.month())), month)));
             sheet.row(true, totalsCells(Value.text(RANGE_TOTAL), report.totals()));
         });
@@ -176,7 +176,8 @@ public class ReportExportServiceImpl implements ReportExportService {
         return new Value[]{label, Value.count(row.normalSales()), Value.quantity(row.normalQuantity()),
                 Value.money(row.normalTotal()), Value.money(row.normalCost()), Value.money(row.normalProfit()),
                 Value.percent(row.normalMargin()), Value.count(row.atCostSales()), Value.quantity(row.atCostQuantity()),
-                Value.money(row.atCostTotal()), Value.money(row.total()), Value.money(row.profit())};
+                Value.money(row.atCostTotal()), Value.money(row.pendingTotal()), Value.money(row.thirdPartyTotal()),
+                Value.money(row.total()), Value.money(row.profit())};
     }
 
     private static Value[] salesBySupplierCells(Value label, SalesBySupplierReportResponse.Row row) {
@@ -188,8 +189,8 @@ public class ReportExportServiceImpl implements ReportExportService {
     private static Value[] totalsCells(Value label, TotalsReportResponse.Row row) {
         return new Value[]{label, Value.count(row.normalSales()), Value.money(row.normalTotal()),
                 Value.money(row.normalCost()), Value.money(row.normalProfit()), Value.percent(row.normalMargin()),
-                Value.count(row.atCostSales()), Value.money(row.atCostTotal()), Value.money(row.total()),
-                Value.count(row.consumptions()), Value.money(row.consumptionTotal()),
+                Value.count(row.atCostSales()), Value.money(row.atCostTotal()), Value.money(row.pendingTotal()),
+                Value.money(row.thirdPartyTotal()), Value.money(row.total()), Value.count(row.consumptions()), Value.money(row.consumptionTotal()),
                 Value.money(row.profitAfterConsumptions())};
     }
 

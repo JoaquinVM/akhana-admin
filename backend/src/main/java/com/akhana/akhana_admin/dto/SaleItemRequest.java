@@ -20,9 +20,18 @@ public record SaleItemRequest(
     BigDecimal discountPerUnit,
 
     // CAT-11: sold by presentation; quantity is then the whole number of packs
-    UUID presentationId
+    UUID presentationId,
+
+    // POS-11: name and price typed in the POS, required for special products and rejected for the others
+    String freeName,
+
+    BigDecimal freePrice
 ) {
     public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit) {
         this(productId, quantity, discountPerUnit, null);
+    }
+
+    public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit, UUID presentationId) {
+        this(productId, quantity, discountPerUnit, presentationId, null, null);
     }
 }

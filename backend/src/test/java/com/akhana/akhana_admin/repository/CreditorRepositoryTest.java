@@ -183,6 +183,43 @@ class CreditorRepositoryTest {
         assertEquals(0, BigDecimal.ZERO.compareTo(creditorRepository.computeDebt(mami)));
     }
 
+    @Test
+    @Transactional
+    void debtAddsThirdPartyLinesOfCompletedSales() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        UUID mami = insertCreditor("IT Tercero " + suffix, "ACTIVO");
+        UUID category = jdbc.queryForObject(
+                "INSERT INTO categories (name, color, created_by) VALUES (?, '#000000', 'it-repo') RETURNING id",
+                UUID.class, "IT cat " + suffix);
+        UUID supplier = jdbc.queryForObject(
+                "INSERT INTO suppliers (name, code, created_by) VALUES (?, ?, 'it-repo') RETURNING id",
+                UUID.class, "IT prov " + suffix, "ITT-" + suffix);
+        UUID product = jdbc.queryForObject(
+                "INSERT INTO products (code, name, category_id, supplier_id, buy_price, sell_price, fixed_profit, "
+                        + "percentage_profit, special_type, owner_creditor_id, created_by) "
+                        + "VALUES (?, ?, ?, ?, 0, 0, 0, 0, 'THIRD_PARTY', ?, 'it-repo') RETURNING id",
+                UUID.class, "ITT-" + suffix, "IT de Mami " + suffix, category, supplier, mami);
+        UUID session = jdbc.queryForObject(
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 0, 'it-repo') RETURNING id",
+                UUID.class);
+        for (String status : List.of("COMPLETADA", "ANULADA")) {
+            UUID sale = jdbc.queryForObject(
+                    "INSERT INTO sales (sale_number, cash_session_id, payment_method, total_amount, status, created_by) "
+                            + "VALUES (?, ?, 'EFECTIVO', 60, ?, 'it-repo') RETURNING id",
+                    UUID.class, "IT-T-" + status + suffix, session, status);
+            jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
+                    + "quantity, subtotal, free_line_type, free_name, creditor_id) "
+                    + "VALUES (?, ?, 'Mermelada', 30, 30, 30, 2, 60, 'THIRD_PARTY', 'Mermelada', ?)", sale, product, mami);
+        }
+        insertPersonPayment(insertPurchase(), mami, "100.00", "ACTIVO");
+
+        // Payment 100 + completed sale 60; the voided sale does not count (POS-13)
+        assertEquals(0, new BigDecimal("160.00").compareTo(creditorRepository.computeDebt(mami)));
+        // A third-party product needs its owner
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+                "UPDATE products SET owner_creditor_id = NULL WHERE id = ?", product));
+    }
+
     private UUID anyAccount() {
         return jdbc.queryForObject("SELECT id FROM financial_accounts WHERE deleted_at IS NULL LIMIT 1", UUID.class);
     }

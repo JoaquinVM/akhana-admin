@@ -64,6 +64,16 @@ public class Product {
     @Builder.Default
     private SaleUnit saleUnit = SaleUnit.UNIT;
 
+    // POS-11: null for normal products; set on create and never changed
+    @Enumerated(EnumType.STRING)
+    @Column(name = "special_type", length = 20, updatable = false)
+    private ProductSpecialType specialType;
+
+    // POS-13: owner of a third-party product
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_creditor_id", updatable = false)
+    private Creditor ownerCreditor;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "product_tags",
@@ -98,4 +108,8 @@ public class Product {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    public boolean isSpecial() {
+        return specialType != null;
+    }
 }

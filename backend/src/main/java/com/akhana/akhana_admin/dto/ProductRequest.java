@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.ProductSpecialType;
 import com.akhana.akhana_admin.model.ProductStatus;
 import com.akhana.akhana_admin.model.SaleUnit;
 import jakarta.validation.constraints.DecimalMin;
@@ -37,7 +38,8 @@ public record ProductRequest(
     BigDecimal buyPrice,
 
     @NotNull(message = "El precio de venta es obligatorio.")
-    @DecimalMin(value = "0.01", message = "El precio de venta debe ser mayor a 0.")
+    // Must be more than 0 except on special products, which keep 0 (POS-11): checked by the service
+    @DecimalMin(value = "0.00", message = "El precio de venta debe ser mayor a 0.")
     BigDecimal sellPrice,
 
     ProductStatus status,
@@ -46,11 +48,23 @@ public record ProductRequest(
     SaleUnit saleUnit,
 
     // CAT-11: the whole list for a product sold by weight; null keeps the current presentations
-    List<ProductPresentationRequest> presentations
+    List<ProductPresentationRequest> presentations,
+
+    // POS-11: null for a normal product; set on create only, the owner is required for THIRD_PARTY (POS-13)
+    ProductSpecialType specialType,
+
+    UUID ownerCreditorId
 ) {
     public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
                           List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
                           SaleUnit saleUnit) {
         this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit, null);
+    }
+
+    public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
+                          List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
+                          SaleUnit saleUnit, List<ProductPresentationRequest> presentations) {
+        this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit,
+            presentations, null, null);
     }
 }

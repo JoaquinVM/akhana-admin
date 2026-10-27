@@ -70,6 +70,9 @@ export class SaleService {
         params = params.set(key, value);
       }
     }
+    if (filters.pendingAssignment) {
+      params = params.set('pendingAssignment', true);
+    }
     return this.http.get<PageResponse<Sale>>(this.apiUrl, { params });
   }
 
@@ -80,5 +83,14 @@ export class SaleService {
 
   getSaleById(saleId: string): Observable<Sale> {
     return this.http.get<Sale>(`${this.apiUrl}/${saleId}`);
+  }
+
+  // POS-12: la línea sin identificar toma el producto real y su costo, una sola vez
+  assignItem(saleId: string, itemId: string, productId: string): Observable<Sale> {
+    return this.http.post<Sale>(`${this.apiUrl}/${saleId}/items/${itemId}/assign`, { productId });
+  }
+
+  closeUnidentified(saleId: string, itemId: string): Observable<Sale> {
+    return this.http.post<Sale>(`${this.apiUrl}/${saleId}/items/${itemId}/close-unidentified`, {});
   }
 }

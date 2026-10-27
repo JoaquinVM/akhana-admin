@@ -125,6 +125,22 @@
                       @if (item.productCode) {
                         <span class="product-code">{{ item.productCode }}</span>
                       }
+                      <!-- POS-11 a POS-13: línea libre, su asignación y la dueña -->
+                      @if (freeLineLabel(item); as label) {
+                        <span class="free-line-badge" [class.pending]="item.assignmentStatus === 'POR_ASIGNAR'">{{ label }}</span>
+                      }
+                      @if (item.freeName && item.freeName !== item.productName) {
+                        <span class="product-code">Vendido como «{{ item.freeName }}»</span>
+                      }
+                      @if (item.assignedBy) {
+                        <span class="product-code">{{ item.assignedBy }} · {{ item.assignedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                      }
+                      @if (canAssignItem(sale, item) && assigningItemId() !== item.id && closingItemId() !== item.id) {
+                        <div class="assign-actions">
+                          <button type="button" class="btn-link" (click)="startAssignment(item)">Asignar producto</button>
+                          <button type="button" class="btn-link muted" (click)="startClosing(item)">Sin identificar definitivo</button>
+                        </div>
+                      }
                     </div>
                   </td>
                   <td style="text-align: right">
@@ -151,6 +167,44 @@
                     <strong class="subtotal-value">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
                   </td>
                 </tr>
+                @if (assigningItemId() === item.id) {
+                  <tr class="assign-row">
+                    <td colspan="5">
+                      <div class="assign-panel">
+                        <span class="assign-hint">La línea toma el producto elegido y su costo actual; el monto vendido y la caja no cambian. Se hace una sola vez.</span>
+                        <input type="search" class="assign-search" placeholder="Buscar producto por nombre o código"
+                               [value]="assignSearch()" (input)="assignSearch.set($any($event.target).value)" />
+                        @for (product of assignResults(); track product.id) {
+                          <button type="button" class="assign-option" [disabled]="isAssigning()"
+                                  (click)="assignTo(sale, item, product)">
+                            <span>{{ product.code }} · {{ product.name }}</span>
+                            <span class="product-code">Costo Bs {{ product.buyPrice | number:'1.2-2' }}</span>
+                          </button>
+                        }
+                        @if (assignError()) {
+                          <span class="assign-error">{{ assignError() }}</span>
+                        }
+                        <button type="button" class="btn-link muted" (click)="cancelAssignment()">Cancelar</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+                @if (closingItemId() === item.id) {
+                  <tr class="assign-row">
+                    <td colspan="5">
+                      <div class="assign-panel">
+                        <span class="assign-hint">La línea queda sin identificar con costo 0: toda la venta cuenta como utilidad. No se puede deshacer.</span>
+                        @if (assignError()) {
+                          <span class="assign-error">{{ assignError() }}</span>
+                        }
+                        <div class="assign-actions">
+                          <button type="button" class="btn-link" [disabled]="isAssigning()" (click)="confirmClose(sale, item)">Confirmar</button>
+                          <button type="button" class="btn-link muted" (click)="cancelAssignment()">Cancelar</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>

@@ -141,6 +141,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             if (product.getStatus() == ProductStatus.ELIMINADO) {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' está eliminado.");
             }
+            ProductServiceImpl.ensureNotSpecial(product);
 
             BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
             if (itemReq.unitCost() == null || itemReq.unitCost().signum() < 0) {

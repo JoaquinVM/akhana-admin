@@ -11,7 +11,8 @@ describe('SalesByDayReportComponent', () => {
 
   const row = (date: string | null, overrides: Partial<SalesByDayRow> = {}): SalesByDayRow => ({
     date, normalSales: 30, normalQuantity: 74, normalTotal: 2745, normalCost: 2104.16, normalProfit: 640.84,
-    normalMargin: 23.35, atCostSales: 1, atCostQuantity: 1, atCostTotal: 104, total: 2849, profit: 640.84,
+    normalMargin: 23.35, atCostSales: 1, atCostQuantity: 1, atCostTotal: 104, pendingTotal: 0, thirdPartyTotal: 0, total: 2849,
+    profit: 640.84,
     ...overrides
   });
   const report: SalesByDayReport = {

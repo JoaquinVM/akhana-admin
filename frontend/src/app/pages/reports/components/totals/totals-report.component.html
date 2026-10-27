@@ -39,6 +39,8 @@
               <th rowspan="2">Mes</th>
               <th colspan="5" class="group">Ventas normales</th>
               <th colspan="2" class="group group-at-cost">Ventas al costo</th>
+              <th rowspan="2" class="num group-at-cost">Por asignar</th>
+              <th rowspan="2" class="num">De terceros</th>
               <th rowspan="2" class="num group-total">Total ventas</th>
               <th colspan="2" class="group group-at-cost">Consumos al costo</th>
               <th rowspan="2" class="num group-total">Utilidad menos consumos</th>
@@ -83,6 +85,8 @@
   <td class="num">{{ row.normalMargin === null ? '—' : (row.normalMargin | number:'1.2-2') + ' %' }}</td>
   <td class="num group-at-cost">{{ row.atCostSales }}</td>
   <td class="num">{{ row.atCostTotal | number:'1.2-2' }}</td>
+  <td class="num group-at-cost">{{ row.pendingTotal | number:'1.2-2' }}</td>
+  <td class="num muted">{{ row.thirdPartyTotal | number:'1.2-2' }}</td>
   <td class="num group-total strong">Bs {{ row.total | number:'1.2-2' }}</td>
   <td class="num group-at-cost muted">{{ row.consumptions }}</td>
   <td class="num muted">{{ row.consumptionTotal | number:'1.2-2' }}</td>

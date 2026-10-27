@@ -6,9 +6,13 @@ import {
   Product,
   ProductPresentationRequest,
   ProductRequest,
+  ProductSpecialType,
   ProductStatus,
+  SPECIAL_TYPE_LABELS,
   SUGGESTED_PRESENTATIONS
 } from '../../core/product/models/product.models';
+import { CreditorService } from '../../core/debt/creditor.service';
+import { Creditor } from '../../core/debt/models/debt.models';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
 import { Category } from '../../core/category/models/category.models';
@@ -57,6 +61,7 @@ export class ProductsComponent implements OnInit {
   private readonly categoryService = inject(CategoryService);
   private readonly supplierService = inject(SupplierService);
   private readonly tagService = inject(TagService);
+  private readonly creditorService = inject(CreditorService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -65,6 +70,9 @@ export class ProductsComponent implements OnInit {
   categories = signal<Category[]>([]);
   suppliers = signal<Supplier[]>([]);
   tags = signal<Tag[]>([]);
+  // POS-13: personas activas que pueden ser dueñas de un producto de tercero
+  creditors = signal<Creditor[]>([]);
+  readonly specialTypeLabels = SPECIAL_TYPE_LABELS;
 
   searchTerm = signal<string>('');
   selectedStatusFilter = signal<ProductStatusFilter>('ACTIVE_INACTIVE');
@@ -117,7 +125,32 @@ export class ProductsComponent implements OnInit {
     buyPrice: [null, [Validators.required, Validators.min(0)]],
     sellPrice: [null, [Validators.required, Validators.min(0.01)]],
     status: ['ACTIVO'],
-    saleUnit: ['UNIT']
+    saleUnit: ['UNIT'],
+    // POS-11: '' es un producto normal; el tipo y la dueña solo se eligen al crear
+    specialType: [''],
+    ownerCreditorId: ['']
+  });
+
+  // POS-11: un producto especial no lleva costo, precio, unidad ni presentaciones
+  isSpecialForm = computed<boolean>(() => {
+    this.formVersion();
+    return !!this.productForm.get('specialType')?.value;
+  });
+
+  // Al editar, la dueña puede estar inactiva y no venir en la lista
+  hasOwnerOption(): boolean {
+    const id = this.productForm.get('ownerCreditorId')?.value;
+    return this.creditors().some((c) => c.id === id);
+  }
+
+  editingOwnerName(): string {
+    const id = this.selectedProductId();
+    return this.products().find((p) => p.id === id)?.ownerCreditorName ?? '';
+  }
+
+  isThirdPartyForm = computed<boolean>(() => {
+    this.formVersion();
+    return this.productForm.get('specialType')?.value === 'THIRD_PARTY';
   });
 
   // Lista de productos filtrada y ordenada por Nombre A-Z
@@ -264,11 +297,36 @@ export class ProductsComponent implements OnInit {
         }
       });
 
+    // POS-11: al elegir un tipo especial los precios quedan en 0 y se vende por unidad
+    this.productForm.get('specialType')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((type) => this.applySpecialType(type));
+
     this.loadCatalogDependencies();
     this.loadProducts();
   }
 
+  private applySpecialType(type: ProductSpecialType | ''): void {
+    const sell = this.productForm.get('sellPrice');
+    const owner = this.productForm.get('ownerCreditorId');
+    if (type) {
+      this.productForm.patchValue({ buyPrice: 0, sellPrice: 0, saleUnit: 'UNIT' }, { emitEvent: false });
+      sell?.setValidators([Validators.required, Validators.min(0)]);
+      this.presentations.set([]);
+    } else {
+      sell?.setValidators([Validators.required, Validators.min(0.01)]);
+    }
+    owner?.setValidators(type === 'THIRD_PARTY' ? [Validators.required] : []);
+    sell?.updateValueAndValidity({ emitEvent: false });
+    owner?.updateValueAndValidity({ emitEvent: false });
+    this.formVersion.update(v => v + 1);
+  }
+
   loadCatalogDependencies(): void {
+    this.creditorService.getCreditors('ACTIVO').subscribe({
+      next: (data) => this.creditors.set(data),
+      error: () => this.creditors.set([])
+    });
     // Cargar categorías no eliminadas
     this.categoryService.getCategories(undefined, 'ACTIVO').subscribe({
       next: (data) => this.categories.set(data),
@@ -441,7 +499,9 @@ export class ProductsComponent implements OnInit {
       buyPrice: null,
       sellPrice: null,
       status: 'ACTIVO',
-      saleUnit: 'UNIT'
+      saleUnit: 'UNIT',
+      specialType: '',
+      ownerCreditorId: ''
     });
     this.presentations.set([]);
     this.originalPresentations.set('[]');
@@ -467,7 +527,9 @@ export class ProductsComponent implements OnInit {
       buyPrice: product.buyPrice,
       sellPrice: product.sellPrice,
       status: product.status,
-      saleUnit: product.saleUnit ?? 'UNIT'
+      saleUnit: product.saleUnit ?? 'UNIT',
+      specialType: product.specialType ?? '',
+      ownerCreditorId: product.ownerCreditorId ?? ''
     };
 
     const drafts: PresentationDraft[] = (product.presentations ?? []).map((p) => ({
@@ -519,7 +581,9 @@ export class ProductsComponent implements OnInit {
       buyPrice: null,
       sellPrice: null,
       status: 'ACTIVO',
-      saleUnit: 'UNIT'
+      saleUnit: 'UNIT',
+      specialType: '',
+      ownerCreditorId: ''
     });
     this.presentations.set([]);
     this.originalPresentations.set('[]');
@@ -551,7 +615,9 @@ export class ProductsComponent implements OnInit {
       sellPrice: Number(val.sellPrice),
       status: this.isEditing() ? val.status : 'ACTIVO',
       saleUnit: val.saleUnit,
-      presentations: val.saleUnit === 'KILOGRAM' ? this.presentationRequests() : undefined
+      presentations: val.saleUnit === 'KILOGRAM' && !val.specialType ? this.presentationRequests() : undefined,
+      specialType: val.specialType || null,
+      ownerCreditorId: val.specialType === 'THIRD_PARTY' ? val.ownerCreditorId : null
     };
     this.saveWarnings.set([]);
 

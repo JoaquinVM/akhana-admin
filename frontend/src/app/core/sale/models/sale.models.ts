@@ -20,6 +20,8 @@ export interface SaleFilters {
   saleType?: SaleType | null;
   paymentMethod?: PaymentMethod | null;
   createdBy?: string | null;
+  // POS-12: solo ventas con líneas por asignar
+  pendingAssignment?: boolean;
 }
 
 export interface SaleItemRequest {
@@ -28,6 +30,9 @@ export interface SaleItemRequest {
   discountPerUnit?: number;
   // CAT-11: con presentación la cantidad son bolsitas enteras
   presentationId?: string | null;
+  // POS-11: nombre y precio escritos, solo en productos especiales
+  freeName?: string | null;
+  freePrice?: number | null;
 }
 
 export interface SaleDetailRequest {

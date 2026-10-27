@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.SaleDetailRequest;
+import com.akhana.akhana_admin.dto.SaleItemAssignRequest;
 import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.PaymentMethod;
@@ -59,9 +60,31 @@ public class SaleController {
             @RequestParam(required = false) SaleType saleType,
             @RequestParam(required = false) PaymentMethod paymentMethod,
             @RequestParam(required = false) String createdBy,
+            @RequestParam(defaultValue = "false") boolean pendingAssignment,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(saleService.searchSales(from, to, status, saleType, paymentMethod, createdBy, page, size));
+        return ResponseEntity.ok(saleService.searchSales(from, to, status, saleType, paymentMethod, createdBy,
+                pendingAssignment, page, size));
+    }
+
+    // POS-12: whoever enters the sales history assigns an unidentified line once (P-33)
+    @PreAuthorize("hasAuthority('SALES_HISTORY')")
+    @PostMapping("/{id}/items/{itemId}/assign")
+    public ResponseEntity<SaleResponse> assignItem(
+            @PathVariable UUID id,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody SaleItemAssignRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(saleService.assignItem(id, itemId, request.productId(), extractUsername(authentication)));
+    }
+
+    @PreAuthorize("hasAuthority('SALES_HISTORY')")
+    @PostMapping("/{id}/items/{itemId}/close-unidentified")
+    public ResponseEntity<SaleResponse> closeUnidentified(
+            @PathVariable UUID id,
+            @PathVariable UUID itemId,
+            Authentication authentication) {
+        return ResponseEntity.ok(saleService.closeUnidentified(id, itemId, extractUsername(authentication)));
     }
 
     @PreAuthorize("hasAuthority('SALES_HISTORY')")

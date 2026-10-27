@@ -86,6 +86,23 @@ class ReportServiceTest {
     }
 
     @Test
+    @DisplayName("POS-12, POS-13: por asignar y de terceros van aparte; terceros no suma al total de la tienda")
+    void pendingAndThirdPartyApart() {
+        // One sale of 100: normal 50 (cost 30), pending 20 and Mami 30
+        stubRows(row("2026-07-17", "NORMAL", 1, "1.000", "100.00", "30.00", "20.00", "30.00"));
+
+        Row day = reportService.getSalesByDay(JULY_1, AUGUST_31).months().getFirst().days().getFirst();
+
+        assertEquals(new BigDecimal("50.00"), day.normalTotal());
+        assertEquals(new BigDecimal("30.00"), day.normalCost());
+        assertEquals(new BigDecimal("20.00"), day.normalProfit());
+        assertEquals(new BigDecimal("20.00"), day.pendingTotal());
+        assertEquals(new BigDecimal("30.00"), day.thirdPartyTotal());
+        assertEquals(new BigDecimal("70.00"), day.total());
+        assertEquals(new BigDecimal("20.00"), day.profit());
+    }
+
+    @Test
     @DisplayName("Un día solo con ventas al costo deja el margen vacío")
     void marginIsEmptyWithoutNormalSales() {
         stubRows(row("2026-07-17", "AL_COSTO", 1, "1.000", "104.00", "104.00"));
@@ -232,6 +249,20 @@ class ReportServiceTest {
         assertEquals(new BigDecimal("2.50"), bohemia.normalProfit());
         assertEquals(new BigDecimal("35.00"), report.totals().total());
         assertEquals(new BigDecimal("8.00"), report.totals().normalProfit());
+    }
+
+    @Test
+    @DisplayName("POS-12, POS-13: las líneas por asignar y de terceros no van a ningún proveedor")
+    void freeLinesOutOfSuppliers() {
+        stubLines(line("v1", "2026-07", "NORMAL", "100.00", ALMA, "Alma", "1", "50.00", "30.00"),
+                freeLine("v1", "2026-07", "100.00", BOHEMIA, "Bohemia", "1", "20.00", "0"),
+                freeLine("v1", "2026-07", "100.00", BOHEMIA, "Bohemia", "1", "30.00", "30.00"));
+
+        SalesBySupplierReportResponse report = reportService.getSalesBySupplier(JULY_1, AUGUST_31);
+
+        assertEquals(1, report.suppliers().size());
+        assertEquals(new BigDecimal("50.00"), report.suppliers().getFirst().totals().normalTotal());
+        assertEquals(new BigDecimal("20.00"), report.totals().normalProfit());
     }
 
     @Test
@@ -570,7 +601,14 @@ class ReportServiceTest {
     private static Object[] line(String sale, String month, String type, String saleTotal, UUID supplierId,
                                  String supplierName, String quantity, String subtotal, String cost) {
         return new Object[] {sale, month, type, new BigDecimal(saleTotal), supplierId, supplierName,
-                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost)};
+                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), true};
+    }
+
+    // POS-12, POS-13: a pending or third-party line, left out of the suppliers
+    private static Object[] freeLine(String sale, String month, String saleTotal, UUID supplierId, String supplierName,
+                                     String quantity, String subtotal, String cost) {
+        return new Object[] {sale, month, "NORMAL", new BigDecimal(saleTotal), supplierId, supplierName,
+                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), false};
     }
 
     private void stubRows(Object[]... rows) {
@@ -578,6 +616,12 @@ class ReportServiceTest {
     }
 
     private static Object[] row(String day, String type, long sales, String quantity, String total, String cost) {
-        return new Object[] {day, type, sales, new BigDecimal(quantity), new BigDecimal(total), new BigDecimal(cost)};
+        return row(day, type, sales, quantity, total, cost, "0", "0");
+    }
+
+    private static Object[] row(String day, String type, long sales, String quantity, String total, String cost,
+                                String pending, String thirdParty) {
+        return new Object[] {day, type, sales, new BigDecimal(quantity), new BigDecimal(total), new BigDecimal(cost),
+                new BigDecimal(pending), new BigDecimal(thirdParty)};
     }
 }

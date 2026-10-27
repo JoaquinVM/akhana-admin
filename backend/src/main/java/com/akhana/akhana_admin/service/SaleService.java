@@ -19,7 +19,14 @@ public interface SaleService {
     SaleResponse voidSale(UUID saleId, VoidSaleRequest request, String username);
 
     Page<SaleResponse> searchSales(LocalDate from, LocalDate to, SaleStatus status, SaleType saleType,
-                                   PaymentMethod paymentMethod, String createdBy, int page, int size);
+                                   PaymentMethod paymentMethod, String createdBy, boolean pendingAssignment,
+                                   int page, int size);
+
+    /** POS-12: the unidentified line takes the real product and its current cost, once. */
+    SaleResponse assignItem(UUID saleId, UUID itemId, UUID productId, String username);
+
+    /** POS-12: the unidentified line will never be identified; its cost stays 0. */
+    SaleResponse closeUnidentified(UUID saleId, UUID itemId, String username);
 
     List<String> getSellers();
 

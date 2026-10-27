@@ -22,6 +22,7 @@ public class CreditorServiceImpl implements CreditorService {
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar la devolución.";
+    static final String THIRD_PARTY_CATEGORY_MISSING = "No existe la categoría Pago a tercero; no se puede registrar la devolución.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String ALREADY_VOIDED_REPAYMENT = "La devolución ya está anulada.";
     static final String CLOSED_SESSION_REPAYMENT = "La devolución se hizo en una caja cerrada; no se puede anular.";
@@ -38,6 +39,8 @@ public class CreditorServiceImpl implements CreditorService {
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    private final ProductRepository productRepository;
+    private final SaleItemRepository saleItemRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -89,6 +92,7 @@ public class CreditorServiceImpl implements CreditorService {
         BigDecimal debt = debtOf(creditor);
         if (request.status() == CreditorStatus.INACTIVO && creditor.getStatus() != CreditorStatus.INACTIVO) {
             ensureNoDebt(creditor, debt);
+            ensureNoThirdPartyProduct(creditor);
         }
 
         creditor.setName(name);
@@ -109,6 +113,7 @@ public class CreditorServiceImpl implements CreditorService {
             throw new IllegalStateException(ALREADY_DELETED);
         }
         ensureNoDebt(creditor, debtOf(creditor));
+        ensureNoThirdPartyProduct(creditor);
         // Logical delete: the history stays visible (RG-03)
         creditor.setStatus(CreditorStatus.ELIMINADO);
         creditor.setDeletedBy(username);
@@ -129,15 +134,30 @@ public class CreditorServiceImpl implements CreditorService {
             items.add(new Item(p.getPaymentDate(), p.getCreatedAt(), new CreditorHistoryResponse.Entry(
                 CreditorHistoryResponse.EntryType.PAYMENT, p.getId(), p.getPaymentDate(), p.getAmount(),
                 p.getPurchase().getId(), p.getPurchase().getPurchaseNumber(), p.getPurchase().getSupplier().getName(),
-                null, null, null, voided, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), null),
+                null, null, null, null, null, null, voided, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), null),
                 voided ? ZERO : p.getAmount()));
+        }
+        // POS-13: one entry per sale with the person's lines, dated when the sale was made
+        Map<UUID, List<SaleItem>> linesBySale = new LinkedHashMap<>();
+        for (SaleItem line : saleItemRepository.findThirdPartyLinesByCreditorId(id)) {
+            linesBySale.computeIfAbsent(line.getSale().getId(), s -> new ArrayList<>()).add(line);
+        }
+        for (List<SaleItem> lines : linesBySale.values()) {
+            Sale s = lines.getFirst().getSale();
+            BigDecimal amount = lines.stream().map(SaleItem::getSubtotal).reduce(ZERO, BigDecimal::add);
+            boolean voided = s.getStatus() == SaleStatus.ANULADA;
+            items.add(new Item(s.getCreatedAt(), s.getCreatedAt(), new CreditorHistoryResponse.Entry(
+                CreditorHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), amount, null, null, null,
+                s.getId(), s.getSaleNumber(), null, null, null, null, voided, s.getVoidedBy(), s.getVoidedAt(),
+                s.getVoidReason(), null),
+                voided ? ZERO : amount));
         }
         for (CreditorRepayment r : creditorRepaymentRepository.findByCreditorId(id)) {
             boolean voided = r.getStatus() == CreditorRepaymentStatus.ANULADO;
             items.add(new Item(r.getRepaymentDate(), r.getCreatedAt(), new CreditorHistoryResponse.Entry(
                 CreditorHistoryResponse.EntryType.REPAYMENT, r.getId(), r.getRepaymentDate(), r.getAmount(),
-                null, null, null, r.getAccount().getId(), r.getAccount().getName(), r.getComment(),
-                voided, r.getVoidedBy(), r.getVoidedAt(), r.getVoidReason(), null),
+                null, null, null, null, null, r.getAccount().getId(), r.getAccount().getName(), r.getComment(),
+                r.getConcept(), voided, r.getVoidedBy(), r.getVoidedAt(), r.getVoidReason(), null),
                 voided ? ZERO : r.getAmount().negate()));
         }
         items.sort(Comparator.comparing(Item::date).thenComparing(Item::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
@@ -148,8 +168,8 @@ public class CreditorServiceImpl implements CreditorService {
             balance = balance.add(item.delta());
             CreditorHistoryResponse.Entry e = item.entry();
             entries.add(new CreditorHistoryResponse.Entry(e.type(), e.id(), e.date(), e.amount(), e.purchaseId(),
-                e.purchaseNumber(), e.supplierName(), e.accountId(), e.accountName(), e.comment(), e.voided(),
-                e.voidedBy(), e.voidedAt(), e.voidReason(), balance));
+                e.purchaseNumber(), e.supplierName(), e.saleId(), e.saleNumber(), e.accountId(), e.accountName(),
+                e.comment(), e.concept(), e.voided(), e.voidedBy(), e.voidedAt(), e.voidReason(), balance));
         }
         return new CreditorHistoryResponse(CreditorResponse.fromEntity(creditor, balance), entries);
     }
@@ -165,9 +185,13 @@ public class CreditorServiceImpl implements CreditorService {
             throw new IllegalArgumentException("La devolución supera la deuda con " + creditor.getName()
                 + " (Bs " + debt.toPlainString() + ").");
         }
+        // Purchases go back as Pedido (P-34) and third-party sales as Pago a tercero (POS-13)
+        CreditorRepaymentConcept concept = request.concept() != null ? request.concept() : CreditorRepaymentConcept.PURCHASE;
+        boolean thirdParty = concept == CreditorRepaymentConcept.THIRD_PARTY;
         FinancialCategory category = financialCategoryRepository
-            .findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_PAYMENT)
-            .orElseThrow(() -> new IllegalStateException(PAYMENT_CATEGORY_MISSING));
+            .findBySystemKeyAndDeletedAtIsNull(thirdParty
+                ? FinancialCategorySystemKey.THIRD_PARTY_PAYMENT : FinancialCategorySystemKey.PURCHASE_PAYMENT)
+            .orElseThrow(() -> new IllegalStateException(thirdParty ? THIRD_PARTY_CATEGORY_MISSING : PAYMENT_CATEGORY_MISSING));
 
         CashSession session = null;
         if (financialAccountRepository.existsByIdAndIsCashAccountTrue(request.accountId())) {
@@ -186,6 +210,7 @@ public class CreditorServiceImpl implements CreditorService {
             .amount(amount)
             .repaymentDate(now)
             .comment(comment)
+            .concept(concept)
             .status(CreditorRepaymentStatus.ACTIVO)
             .createdBy(username)
             .createdAt(now)
@@ -200,7 +225,7 @@ public class CreditorServiceImpl implements CreditorService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
-            .description("Devolución a " + creditor.getName())
+            .description((thirdParty ? "Pago a tercero a " : "Devolución a ") + creditor.getName())
             .notes(comment)
             .status(FinancialTransactionStatus.ACTIVO)
             .creditorRepaymentId(repayment.getId())
@@ -303,6 +328,15 @@ public class CreditorServiceImpl implements CreditorService {
             throw new IllegalStateException(creditor.getName() + " tiene una deuda de Bs " + debt.toPlainString()
                 + "; devuélvala antes de darla de baja.");
         }
+    }
+
+    // POS-13: the owner of a third-party product stays active while the product exists
+    private void ensureNoThirdPartyProduct(Creditor creditor) {
+        productRepository.findFirstByOwnerCreditorIdAndStatusNot(creditor.getId(), ProductStatus.ELIMINADO)
+            .ifPresent(product -> {
+                throw new IllegalStateException(creditor.getName() + " es dueña de '" + product.getName()
+                    + "'; dé de baja el producto primero.");
+            });
     }
 
     private static BigDecimal scale(BigDecimal value) {

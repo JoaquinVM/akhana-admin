@@ -63,6 +63,7 @@ public class QuickProductServiceImpl implements QuickProductService {
             for (UUID prodId : uniqueProductIds) {
                 Product product = productRepository.findById(prodId)
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
+                ProductServiceImpl.ensureNotSpecial(product);
                 if (product.getStatus() != ProductStatus.ELIMINADO) {
                     items.add(QuickProductGroupItem.builder()
                         .group(group)
@@ -108,6 +109,7 @@ public class QuickProductServiceImpl implements QuickProductService {
                 } else {
                     Product product = productRepository.findById(prodId)
                         .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
+                    ProductServiceImpl.ensureNotSpecial(product);
                     if (product.getStatus() != ProductStatus.ELIMINADO) {
                         group.getItems().add(QuickProductGroupItem.builder()
                             .group(group)

@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.repository;
 
 import com.akhana.akhana_admin.model.Product;
+import com.akhana.akhana_admin.model.ProductSpecialType;
 import com.akhana.akhana_admin.model.ProductStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,6 +39,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     List<Product> findByStatusOrderByNameAsc(@Param("status") ProductStatus status);
 
     boolean existsByCodeIgnoreCaseAndStatusNot(String code, ProductStatus status);
+
+    // POS-11: only one unidentified product that is not eliminated
+    boolean existsBySpecialTypeAndStatusNot(ProductSpecialType specialType, ProductStatus status);
+
+    // POS-13: a third-party product that keeps its owner from being deactivated
+    Optional<Product> findFirstByOwnerCreditorIdAndStatusNot(UUID ownerCreditorId, ProductStatus status);
 
     // CAT-06: every code, deleted ones included, so the import never reuses one
     @Query("SELECT p.code FROM Product p")

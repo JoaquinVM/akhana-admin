@@ -52,6 +52,11 @@
           <option [value]="seller">{{ seller }}</option>
         }
       </select>
+      <!-- POS-12: ventas con líneas sin identificar que esperan su producto -->
+      <label class="pending-filter">
+        <input type="checkbox" [checked]="pendingAssignment()" (change)="onPendingAssignment($any($event.target).checked)" />
+        Por asignar
+      </label>
       @if (hasFilters()) {
         <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">Limpiar filtros</button>
       }
@@ -100,5 +105,7 @@
     [isOpen]="detailSale() !== null"
     [saleId]="detailSale()?.id ?? null"
     [initialSale]="detailSale()"
+    [canAssign]="true"
+    (saleUpdated)="onSaleUpdated($event)"
     (close)="detailSale.set(null)" />
 </div>

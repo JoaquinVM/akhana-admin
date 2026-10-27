@@ -49,6 +49,7 @@ export class SalesHistoryComponent implements OnInit {
   saleType = signal<SaleType | ''>('');
   paymentMethod = signal<PaymentMethod | ''>('');
   createdBy = signal<string>('');
+  pendingAssignment = signal<boolean>(false);
   currentPage = signal<number>(0);
   totalPages = signal<number>(0);
   totalElements = signal<number>(0);
@@ -75,7 +76,8 @@ export class SalesHistoryComponent implements OnInit {
       status: status === 'ALL' ? null : status,
       saleType: this.saleType() || null,
       paymentMethod: this.paymentMethod() || null,
-      createdBy: this.createdBy() || null
+      createdBy: this.createdBy() || null,
+      pendingAssignment: this.pendingAssignment()
     }, page, this.pageSize).subscribe({
       next: response => {
         this.sales.set(response.content);
@@ -124,9 +126,21 @@ export class SalesHistoryComponent implements OnInit {
     this.loadSales();
   }
 
+  onPendingAssignment(value: boolean): void {
+    this.pendingAssignment.set(value);
+    this.loadSales();
+  }
+
+  // POS-12: al asignar la última línea la venta deja de estar por asignar
+  onSaleUpdated(sale: Sale): void {
+    if (this.pendingAssignment() && !(sale.items ?? []).some(i => i.assignmentStatus === 'POR_ASIGNAR')) {
+      this.loadSales(this.currentPage());
+    }
+  }
+
   hasFilters(): boolean {
     return this.statusFilter() !== 'ALL' || !!this.fromDate() || !!this.toDate()
-      || !!this.saleType() || !!this.paymentMethod() || !!this.createdBy();
+      || !!this.saleType() || !!this.paymentMethod() || !!this.createdBy() || this.pendingAssignment();
   }
 
   clearFilters(): void {
@@ -136,6 +150,7 @@ export class SalesHistoryComponent implements OnInit {
     this.saleType.set('');
     this.paymentMethod.set('');
     this.createdBy.set('');
+    this.pendingAssignment.set(false);
     this.loadSales();
   }
 

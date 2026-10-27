@@ -12,6 +12,7 @@ import {
   Product,
   ProductPresentation,
   activePresentations,
+  isSpecialProduct,
   presentationPrice
 } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
@@ -23,6 +24,7 @@ import { QuickProductsConfigModalComponent } from '../components/quick-products-
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
+import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
 
 // POS-10 / CAT-08: el precio de los productos por peso es por kilo («Otro peso»)
 export const WEIGHT_STEP_KG = 0.1;
@@ -41,7 +43,11 @@ export interface CartItem {
   unitDiscount: number;
   unitFinalPrice: number;
   subtotal: number;
+  // POS-11: línea libre de un producto especial, con el nombre escrito; cada una es una línea aparte
+  freeName?: string | null;
 }
+
+export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
 
 @Component({
   selector: 'app-register-sale',
@@ -52,7 +58,8 @@ export interface CartItem {
     QuickProductsConfigModalComponent,
     CheckoutModalComponent,
     ModalComponent,
-    PresentationPickerComponent
+    PresentationPickerComponent,
+    FreeLineFormComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -76,6 +83,10 @@ export class RegisterSaleComponent implements OnInit {
 
   // CAT-11: producto por kilo esperando que se elija su presentación
   pickerProduct = signal<Product | null>(null);
+
+  // POS-11: producto especial esperando su nombre y precio
+  freeLineProduct = signal<Product | null>(null);
+  private freeLineCount = 0;
 
   // Carrito de ventas
   cartItems = signal<CartItem[]>([]);
@@ -138,13 +149,18 @@ export class RegisterSaleComponent implements OnInit {
     return Math.max(0, Math.round((this.subtotalPostItems() - this.globalDiscount()) * 100) / 100);
   });
 
+  // POS-11: con líneas libres no hay descuento general
+  hasFreeLines = computed<boolean>(() => this.cartItems().some((it) => !!it.freeName));
+
   checkoutItems = computed<SaleItemRequest[]>(() => {
-    return this.cartItems().map((it) => ({
-      productId: it.product.id,
-      quantity: it.quantity,
-      discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined,
-      presentationId: it.presentation?.id
-    }));
+    return this.cartItems().map((it) => it.freeName
+      ? { productId: it.product.id, quantity: it.quantity, freeName: it.freeName, freePrice: it.unitPrice }
+      : {
+          productId: it.product.id,
+          quantity: it.quantity,
+          discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined,
+          presentationId: it.presentation?.id
+        });
   });
 
   ngOnInit(): void {
@@ -189,11 +205,21 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   lineName(item: CartItem): string {
+    if (item.freeName) return item.freeName;
     return item.presentation ? `${item.product.name} · ${item.presentation.name}` : item.product.name;
   }
 
   // CAT-11: un producto por kilo con presentaciones abre el selector; sin ellas entra como «Otro peso»
   addToCart(product: Product): void {
+    if (isSpecialProduct(product)) {
+      this.productSearchTerm.set('');
+      if (this.atCost()) {
+        this.errorMessage.set(AT_COST_NO_FREE_LINES);
+        return;
+      }
+      this.freeLineProduct.set(product);
+      return;
+    }
     if (this.isWeighted(product) && activePresentations(product).length > 0) {
       this.pickerProduct.set(product);
       this.productSearchTerm.set('');
@@ -212,6 +238,38 @@ export class RegisterSaleComponent implements OnInit {
 
   closePicker(): void {
     this.pickerProduct.set(null);
+  }
+
+  // POS-11: sin descuentos; el descuento general se quita al agregar una línea libre
+  onFreeLineConfirmed(line: FreeLine): void {
+    const product = this.freeLineProduct();
+    this.freeLineProduct.set(null);
+    if (!product) return;
+    this.freeLineCount += 1;
+    const newItem: CartItem = {
+      key: `${product.id}:free:${this.freeLineCount}`,
+      product,
+      presentation: null,
+      quantity: 1,
+      unitPrice: line.price,
+      unitDiscount: 0,
+      unitFinalPrice: line.price,
+      subtotal: line.price,
+      freeName: line.name
+    };
+    this.cartItems.update((items) => [...items, newItem]);
+    this.globalDiscount.set(0);
+    this.errorMessage.set(null);
+  }
+
+  closeFreeLine(): void {
+    this.freeLineProduct.set(null);
+  }
+
+  freeLineLabel(item: CartItem): string {
+    return item.product.specialType === 'THIRD_PARTY'
+      ? `De ${item.product.ownerCreditorName ?? 'tercero'}`
+      : 'Sin identificar';
   }
 
   private addLine(product: Product, presentation: ProductPresentation | null): void {
@@ -313,6 +371,10 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   updateGlobalDiscount(discount: number): void {
+    if (this.hasFreeLines()) {
+      this.globalDiscount.set(0);
+      return;
+    }
     const safeDiscount = Math.max(0, discount || 0);
     const maxAllowed = this.subtotalPostItems();
     if (safeDiscount > maxAllowed) {
@@ -346,6 +408,10 @@ export class RegisterSaleComponent implements OnInit {
 
   setAtCost(enabled: boolean): void {
     if (enabled) {
+      if (this.hasFreeLines()) {
+        this.errorMessage.set(AT_COST_NO_FREE_LINES);
+        return;
+      }
       const withoutCost = this.cartItems().find((it) => !this.hasCost(it.product));
       if (withoutCost) {
         this.errorMessage.set(this.zeroCostMessage(withoutCost.product));

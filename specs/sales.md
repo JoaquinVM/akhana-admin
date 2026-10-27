@@ -425,17 +425,20 @@ pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas c
 ---
 
 ### Tareas POS-11 a POS-13
-- [ ] Migración `V17__free_line_sales.sql`: `products.special_type` y `owner_creditor_id` con sus `CHECK` e índice
+- [x] Migración `V17__free_line_sales.sql`: `products.special_type` y `owner_creditor_id` con sus `CHECK` e índice
   único del sin identificar; `sale_items.free_line_type`, `free_name`, `assignment_status`, `assigned_by`,
   `assigned_at`, `creditor_id` con sus `CHECK`; categoría de sistema `THIRD_PARTY_PAYMENT` «Pago a tercero».
-- [ ] Productos: tipo y dueña al crear, sin cambio después, precios en 0; rechazo en productos rápidos, presentaciones,
+- [x] Productos: tipo y dueña al crear, sin cambio después, precios en 0; rechazo en productos rápidos, presentaciones,
   compras y consumos; baja de la dueña bloqueada.
-- [ ] Ventas: nombre y precio libres en `SaleItemRequest`, validaciones, costo según tipo, deuda al anular.
-- [ ] Asignación: `POST /api/sales/{id}/items/{itemId}/assign` y `/close-unidentified` (`SALES_HISTORY`), filtro
+- [x] Ventas: nombre y precio libres en `SaleItemRequest`, validaciones, costo según tipo, deuda al anular.
+- [x] Asignación: `POST /api/sales/{id}/items/{itemId}/assign` y `/close-unidentified` (`SALES_HISTORY`), filtro
   `pendingAssignment` en `GET /api/sales`.
-- [ ] Deudas: deuda e historial con las ventas de tercero; concepto de la devolución.
-- [ ] Reportes: columnas por asignar y de terceros en ventas por día, totales y Excel; proveedor sin esas líneas.
-- [ ] Frontend: formulario de Productos, línea libre en `/pos/sale`, detalle de venta con asignación, filtro en
+- [x] Deudas: deuda e historial con las ventas de tercero; concepto de la devolución.
+- [x] Reportes: columnas por asignar y de terceros en ventas por día, totales y Excel; proveedor sin esas líneas.
+- [x] Frontend: formulario de Productos, línea libre en `/pos/sale`, detalle de venta con asignación, filtro en
   `/sales`, historial y devolución en Deudas, columnas en Reportes.
-- [ ] Pruebas: `SaleServiceTest`, `ProductServiceTest`, `CreditorServiceTest`, `SaleRepositoryTest` (reportes),
-  `CreditorRepositoryTest` y las de frontend que se toquen.
+- [x] Pruebas: `SaleServiceTest`, `ProductServiceTest`, `CreditorServiceTest`, `SaleRepositoryTest` (reportes),
+  `CreditorRepositoryTest` y las de frontend que se toquen. Hechas también `SaleServiceFreeLineTest` y
+  `SaleItemRepositoryTest` (asignación una sola vez).
+- [ ] Probar en la app: crear los productos especiales, vender, asignar, pagar a Mami y revisar los reportes;
+  confirmar los supuestos (P-44).

@@ -415,4 +415,39 @@ describe('RegisterSaleComponent', () => {
       }));
     });
   });
+
+  describe('POS-11: línea libre', () => {
+    const mamiProduct: Product = {
+      ...mockProduct1, id: 'prod-mami', code: 'MAMI', name: 'Producto de Mami', buyPrice: 0, sellPrice: 0,
+      specialType: 'THIRD_PARTY', ownerCreditorId: 'cre-1', ownerCreditorName: 'Mami'
+    };
+
+    it('abre el formulario y agrega cada línea aparte con su nombre y precio', () => {
+      component.addToCart(mamiProduct);
+      expect(component.freeLineProduct()).toBe(mamiProduct);
+
+      component.onFreeLineConfirmed({ name: 'Mermelada de Mami', price: 30 });
+      component.addToCart(mamiProduct);
+      component.onFreeLineConfirmed({ name: 'Miel', price: 25.5 });
+
+      expect(component.cartItems().length).toBe(2);
+      expect(component.lineName(component.cartItems()[0])).toBe('Mermelada de Mami');
+      expect(component.totalAmount()).toBe(55.5);
+      expect(component.checkoutItems()[1]).toEqual({ productId: 'prod-mami', quantity: 1, freeName: 'Miel', freePrice: 25.5 });
+    });
+
+    it('quita el descuento general y no deja pasar a venta al costo', () => {
+      component.addToCart(mockProduct1);
+      component.updateGlobalDiscount(5);
+      component.addToCart(mamiProduct);
+      component.onFreeLineConfirmed({ name: 'Mermelada', price: 30 });
+
+      expect(component.globalDiscount()).toBe(0);
+      component.updateGlobalDiscount(5);
+      expect(component.globalDiscount()).toBe(0);
+      component.setAtCost(true);
+      expect(component.atCost()).toBe(false);
+      expect(component.errorMessage()).toBe('Una venta al costo no admite líneas libres.');
+    });
+  });
 });

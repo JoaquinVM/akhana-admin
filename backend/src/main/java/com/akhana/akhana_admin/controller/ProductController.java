@@ -24,7 +24,8 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES', 'CONSUMPTIONS')")
+    // SALES_HISTORY picks the real product of an unidentified line (POS-12)
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES', 'CONSUMPTIONS', 'SALES_HISTORY')")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts(
             @RequestParam(required = false) String search,

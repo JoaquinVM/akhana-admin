@@ -6,6 +6,8 @@ import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CreditorRepository;
+import com.akhana.akhana_admin.repository.SaleItemRepository;
 import com.akhana.akhana_admin.repository.CustomerRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
@@ -69,6 +71,12 @@ class SaleServiceTest {
     @Mock
     private ProductPriceChangeRepository priceChangeRepository;
 
+    @Mock
+    private SaleItemRepository saleItemRepository;
+
+    @Mock
+    private CreditorRepository creditorRepository;
+
     private SaleServiceImpl saleService;
 
     private CashSession activeSession;
@@ -82,7 +90,8 @@ class SaleServiceTest {
     void setUp() {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
-            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository));
+            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            saleItemRepository, creditorRepository);
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)
@@ -962,16 +971,16 @@ class SaleServiceTest {
     @Test
     @DisplayName("POS-09: el historial filtra por días de la tienda y limita el tamaño de página")
     void searchSalesUsesStoreDaysAndCapsPageSize() {
-        when(saleRepository.search(any(), any(), any(), any(), any(), any(), any()))
+        when(saleRepository.search(any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
             .thenReturn(Page.empty());
 
         saleService.searchSales(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 25),
-            SaleStatus.COMPLETADA, SaleType.AL_COSTO, PaymentMethod.CREDITO, " operador ", -1, 500);
+            SaleStatus.COMPLETADA, SaleType.AL_COSTO, PaymentMethod.CREDITO, " operador ", false, -1, 500);
 
         ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
         // Bolivia is UTC-4: the 1st starts at 04:00 UTC and the 25th ends at 04:00 UTC of the 26th
         verify(saleRepository).search(eq(Instant.parse("2026-10-01T04:00:00Z")), eq(Instant.parse("2026-10-26T04:00:00Z")),
-            eq(SaleStatus.COMPLETADA), eq(SaleType.AL_COSTO), eq(PaymentMethod.CREDITO), eq("operador"), page.capture());
+            eq(SaleStatus.COMPLETADA), eq(SaleType.AL_COSTO), eq(PaymentMethod.CREDITO), eq("operador"), eq(false), page.capture());
         assertThat(page.getValue().getPageNumber()).isZero();
         assertThat(page.getValue().getPageSize()).isEqualTo(100);
     }
@@ -980,7 +989,7 @@ class SaleServiceTest {
     @DisplayName("POS-09: rechaza un rango de fechas invertido")
     void searchSalesRejectsInvertedRange() {
         assertThatThrownBy(() -> saleService.searchSales(LocalDate.of(2026, 10, 26),
-                LocalDate.of(2026, 10, 1), null, null, null, null, 0, 20))
+                LocalDate.of(2026, 10, 1), null, null, null, null, false, 0, 20))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("La fecha desde no puede ser posterior a la fecha hasta.");
         verifyNoInteractions(saleRepository);
