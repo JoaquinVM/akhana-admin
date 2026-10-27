@@ -243,3 +243,199 @@ El sistema SHALL ofrecer en `/sales` (permiso `SALES_HISTORY`) el historial de v
 - **WHEN** se pulsa «Ver detalle» en una fila
 - **THEN** se abre el detalle de solo lectura con sus líneas, pagos y, si está anulada, la auditoría; el historial no ofrece «Anular»
 
+
+---
+
+## Línea libre, venta sin identificar y venta de terceros (POS-11 a POS-13)
+
+Spec del 27-10-2026, escrita con lo decidido al revisar la migración (P-42). Lo que el dueño no dijo y se resolvió
+aquí queda marcado como **supuesto** para confirmarlo al probar en la app.
+
+### Requirement: Productos especiales del catálogo (POS-11)
+El sistema SHALL distinguir en `products.special_type` los productos especiales: `UNIDENTIFIED` («Producto sin
+identificar») y `THIRD_PARTY` (producto de tercero, con su dueña en `products.owner_creditor_id`, una persona de
+Deudas, DEU-01). Los demás productos tienen `special_type` nulo. Un producto especial no lleva costo ni precio en el
+catálogo (se guardan en 0), se vende por unidad, no tiene presentaciones (CAT-11) ni inventario (CAT-05), y no se usa
+en productos rápidos, compras ni consumos. El tipo y la dueña se eligen al crear el producto y no cambian después
+(**supuesto**). Solo puede haber un «Producto sin identificar» no eliminado; de tercero, uno o más por persona.
+
+#### Scenario: Crear el producto sin identificar
+- **WHEN** en Productos se crea «Producto sin identificar» (código `SIN-IDENT`) con tipo «Sin identificar»
+- **THEN** se guarda con costo y precio 0, por unidad y sin presentaciones; el formulario oculta costo, precio,
+  utilidad, «Se vende por» y presentaciones, y el listado lo marca «Especial»
+
+#### Scenario: Crear el producto de Mami
+- **WHEN** se crea «Producto de Mami» con tipo «De tercero» y dueña Mami
+- **THEN** se guarda con `owner_creditor_id` de Mami; sin dueña activa se rechaza con «Elija la dueña del producto
+  de tercero.»
+
+#### Scenario: Segundo producto sin identificar
+- **WHEN** ya existe un producto sin identificar no eliminado y se crea otro
+- **THEN** se rechaza con «Ya existe un producto sin identificar.»
+
+#### Scenario: Cambiar el tipo
+- **WHEN** se edita un producto y se envía otro tipo u otra dueña
+- **THEN** se rechaza con «El tipo de producto y su dueña no se cambian después de crearlo.»
+
+#### Scenario: Usos que no aplican
+- **WHEN** se intenta poner un producto especial en un grupo de productos rápidos, en un pedido o en un consumo
+- **THEN** se rechaza con «'<producto>' es un producto especial: solo se vende en el POS con nombre y precio.»; las
+  pantallas no lo ofrecen
+
+#### Scenario: Dueña con productos de tercero
+- **WHEN** se da de baja (inactiva o eliminada) a una persona dueña de un producto de tercero no eliminado
+- **THEN** se rechaza con «<persona> es dueña de '<producto>'; dé de baja el producto primero.»
+
+---
+
+### Requirement: Línea libre en el POS (POS-11)
+El sistema SHALL pedir nombre y precio de venta, ambos obligatorios, al agregar un producto especial al carrito. La
+línea guarda el nombre escrito en `sale_items.product_name` y en `sale_items.free_name` (que no cambia aunque la línea
+se asigne después), el precio en `unit_price` y el tipo en `sale_items.free_line_type`. Cada vez que se agrega es una
+línea nueva (no suma a otra). La cantidad es entera.
+**Supuestos**: una línea libre no admite descuento por unidad (el precio escrito ya es el acordado) y una venta con
+líneas libres no admite descuento general, así el monto de cada línea es exacto para la deuda con la dueña y los
+reportes.
+
+#### Scenario: Agregar una línea libre
+- **WHEN** en `/pos/sale` se elige «Producto sin identificar» en el buscador
+- **THEN** se abre un formulario con Nombre y Precio (Bs); al confirmar «Granola de coco», Bs 25,00 entra la línea
+  «Granola de coco» 1 × Bs 25,00 con el distintivo «Sin identificar» (o «De Mami» si es de tercero)
+
+#### Scenario: Nombre o precio faltante
+- **WHEN** la venta llega con una línea de producto especial sin nombre, o con precio 0, negativo o con más de 2
+  decimales
+- **THEN** se rechaza con «Escriba el nombre de la línea libre.» o «El precio de '<nombre>' debe ser mayor a 0, con
+  hasta 2 decimales.» y no se guarda nada
+
+#### Scenario: Nombre o precio en un producto normal
+- **WHEN** una línea de un producto normal trae nombre o precio libre
+- **THEN** se rechaza con «Solo un producto especial lleva nombre y precio escritos.»
+
+#### Scenario: Descuentos con líneas libres
+- **WHEN** una línea libre trae descuento por unidad, o la venta tiene líneas libres y descuento general
+- **THEN** se rechaza con «Una línea libre no admite descuentos.» o «Una venta con líneas libres no admite descuento
+  general.»; el POS oculta esos descuentos
+
+#### Scenario: Venta al costo con línea libre
+- **WHEN** la venta es al costo (CON-02) y tiene una línea libre
+- **THEN** se rechaza con «Una venta al costo no admite líneas libres.»; con el interruptor encendido el POS no deja
+  agregarlas
+
+#### Scenario: Cobro
+- **WHEN** se cobra una venta con líneas libres
+- **THEN** el dinero entra a Caja o QR como cualquier venta (categoría Venta) y la caja la suma igual
+
+---
+
+### Requirement: Venta sin identificar y su asignación (POS-12)
+El sistema SHALL guardar la línea del «Producto sin identificar» con `sale_items.assignment_status = POR_ASIGNAR` y
+costo 0 pendiente (los reportes no la cuentan en la utilidad mientras esté por asignar). Desde el detalle de la venta
+en el historial (`/sales`, permiso `SALES_HISTORY`, P-33) se asigna una sola vez:
+- **Asignar producto**: se elige un producto normal activo que se vende por unidad; la línea toma su id, código,
+  nombre y costo actual; el monto vendido, la caja y los movimientos no cambian (única excepción a T-07).
+  **Supuesto**: no se asignan productos por kilo, porque la cantidad de la línea son unidades.
+- **Sin identificar definitivo**: la línea queda `SIN_IDENTIFICAR` con costo 0 (toda la venta es utilidad).
+
+Queda auditado quién y cuándo (`assigned_by`, `assigned_at`). Una venta anulada no se asigna. En la V2 la
+asignación descuenta el stock del producto elegido.
+
+#### Scenario: Asignar el producto real
+- **WHEN** se vendió «Granola de coco» 2 × Bs 25,00 sin identificar, después se crea «Granola coco 250 g» con costo
+  Bs 15,50 al registrar su pedido (COM-03), y en el historial se asigna la línea a ese producto
+- **THEN** la línea queda `ASIGNADO` con ese producto, su código, su nombre y costo Bs 15,50 (utilidad Bs 19,00);
+  conserva «Granola de coco» como nombre escrito, el total de la venta sigue en Bs 50,00 y la caja no cambia
+
+#### Scenario: Segunda asignación
+- **WHEN** se intenta asignar una línea que ya está asignada o cerrada como sin identificar definitivo
+- **THEN** se rechaza con «La línea ya fue asignada.»
+
+#### Scenario: Producto no válido para asignar
+- **WHEN** el producto elegido no está activo, es especial o se vende por kilo
+- **THEN** se rechaza con «Elija un producto activo que se venda por unidad.» o «'<producto>' es un producto
+  especial: solo se vende en el POS con nombre y precio.»
+
+#### Scenario: Sin identificar definitivo
+- **WHEN** se cierra la línea como sin identificar definitivo
+- **THEN** queda `SIN_IDENTIFICAR` con costo 0, el producto sigue siendo el especial y ya no aparece por asignar
+
+#### Scenario: Venta anulada
+- **WHEN** se intenta asignar una línea de una venta anulada
+- **THEN** se rechaza con «Una venta anulada no se asigna.»
+
+#### Scenario: Ventas por asignar en el historial
+- **WHEN** en `/sales` se marca el filtro «Por asignar»
+- **THEN** se listan solo las ventas completadas con al menos una línea por asignar; en el detalle cada línea por
+  asignar muestra «Por asignar» y las acciones «Asignar producto» y «Sin identificar definitivo»; las asignadas
+  muestran el nombre escrito, quién y cuándo
+
+---
+
+### Requirement: Venta de productos de terceros (POS-13)
+El sistema SHALL vender los productos de tercero con línea libre (POS-11) guardando en la línea su dueña
+(`sale_items.creditor_id`, copia de la del producto) y costo igual al precio (utilidad 0). La deuda con la persona
+(DEU-04) pasa a ser: pagos activos de pedidos hechos por ella + líneas de tercero suyas en ventas completadas −
+devoluciones activas. Se le paga con una devolución (DEU-03) cuyo concepto es «Pago a tercero» (nueva categoría de
+sistema de gasto, FIN-05) en vez de Pedido.
+
+#### Scenario: Venta de un producto de Mami
+- **WHEN** se vende «Mermelada de Mami» 2 × Bs 30,00 con el producto de Mami, en efectivo
+- **THEN** la línea queda con dueña Mami y costo Bs 30,00, entran Bs 60,00 a Caja como Venta y la deuda con Mami
+  sube Bs 60,00
+
+#### Scenario: Anulación de la venta
+- **WHEN** se anula esa venta (caja abierta)
+- **THEN** la deuda con Mami baja Bs 60,00; si ya se le devolvió de más y quedaría negativa se rechaza con «Ya se
+  devolvió a Mami parte de esta venta; anule primero la devolución.»
+
+#### Scenario: Historial de la persona
+- **WHEN** se abre el detalle de Mami en Deudas
+- **THEN** el historial muestra, junto a pagos de pedidos y devoluciones, cada venta con productos suyos («Venta
+  VTA-000123», monto de sus líneas) con el saldo después; las ventas anuladas se ven marcadas y no cuentan
+
+#### Scenario: Pago semanal a Mami
+- **WHEN** se le devuelven Bs 60,00 a Mami desde Caja con concepto «Pago a tercero»
+- **THEN** se crea la devolución y un gasto de Caja con la categoría Pago a tercero («Pago a tercero a Mami»), la
+  deuda baja Bs 60,00 y el efectivo esperado también; con concepto «Pedido» (por defecto) sigue como hasta hoy (P-34)
+
+---
+
+### Requirement: Reportes con ventas por asignar y de terceros (POS-12, POS-13)
+El sistema SHALL mostrar aparte, en ventas por día y en totales por mes, dos columnas nuevas:
+- **Por asignar**: lo vendido en líneas por asignar. Es venta de la tienda (suma al total), pero no entra en ventas
+  normales, costo ni utilidad hasta que se asigne; al asignarse pasa a las normales con su costo.
+- **Ventas de terceros**: lo vendido en líneas de tercero. No suma a las ventas ni a la utilidad de la tienda.
+
+Las normales son el total de la venta menos esas dos partes; su cantidad y costo no cuentan esas líneas. Una venta
+que solo tiene líneas de tercero no cuenta como venta normal. En ventas por proveedor no entran las líneas por asignar
+ni las de tercero (una asignada cuenta en el proveedor del producto asignado). Las líneas cerradas como sin
+identificar definitivo son normales con costo 0. Movimientos por categoría no cambia: la venta entra como Venta y el
+pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas columnas.
+
+#### Scenario: Día con las tres clases
+- **WHEN** un día hay una venta de Bs 100,00 con una línea normal de Bs 50,00 (costo Bs 30,00), una por asignar de
+  Bs 20,00 y una de Mami de Bs 30,00
+- **THEN** ventas normales Bs 50,00, costo Bs 30,00, utilidad Bs 20,00, por asignar Bs 20,00, ventas de terceros
+  Bs 30,00 y total del día (tienda) Bs 70,00
+
+#### Scenario: Después de asignar
+- **WHEN** la línea por asignar de Bs 20,00 se asigna a un producto de costo Bs 12,00
+- **THEN** el mismo día muestra ventas normales Bs 70,00, costo Bs 42,00, utilidad Bs 28,00 y por asignar Bs 0,00
+
+---
+
+### Tareas POS-11 a POS-13
+- [ ] Migración `V17__free_line_sales.sql`: `products.special_type` y `owner_creditor_id` con sus `CHECK` e índice
+  único del sin identificar; `sale_items.free_line_type`, `free_name`, `assignment_status`, `assigned_by`,
+  `assigned_at`, `creditor_id` con sus `CHECK`; categoría de sistema `THIRD_PARTY_PAYMENT` «Pago a tercero».
+- [ ] Productos: tipo y dueña al crear, sin cambio después, precios en 0; rechazo en productos rápidos, presentaciones,
+  compras y consumos; baja de la dueña bloqueada.
+- [ ] Ventas: nombre y precio libres en `SaleItemRequest`, validaciones, costo según tipo, deuda al anular.
+- [ ] Asignación: `POST /api/sales/{id}/items/{itemId}/assign` y `/close-unidentified` (`SALES_HISTORY`), filtro
+  `pendingAssignment` en `GET /api/sales`.
+- [ ] Deudas: deuda e historial con las ventas de tercero; concepto de la devolución.
+- [ ] Reportes: columnas por asignar y de terceros en ventas por día, totales y Excel; proveedor sin esas líneas.
+- [ ] Frontend: formulario de Productos, línea libre en `/pos/sale`, detalle de venta con asignación, filtro en
+  `/sales`, historial y devolución en Deudas, columnas en Reportes.
+- [ ] Pruebas: `SaleServiceTest`, `ProductServiceTest`, `CreditorServiceTest`, `SaleRepositoryTest` (reportes),
+  `CreditorRepositoryTest` y las de frontend que se toquen.
