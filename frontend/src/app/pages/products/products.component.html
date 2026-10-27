@@ -11,6 +11,7 @@
       <p class="page-subtitle">Gestión integral de artículos, márgenes comerciales, categorías y etiquetas.</p>
     </div>
     <div class="header-actions">
+      <button type="button" class="btn btn-outline" (click)="isImportModalOpen.set(true)">Importar</button>
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -641,7 +642,7 @@
               id="product-buy-price"
               type="number"
               step="0.01"
-              min="0.01"
+              min="0"
               class="form-control input-currency"
               [class.is-modified]="isFieldModified('buyPrice')"
               formControlName="buyPrice"
@@ -649,7 +650,7 @@
             />
           </div>
           @if (productForm.get('buyPrice')?.touched && productForm.get('buyPrice')?.errors) {
-            <span class="field-error">Ingresa un precio de compra válido mayor a 0.</span>
+            <span class="field-error">Ingresa un precio de compra válido (0 o más).</span>
           }
         </div>
 
@@ -739,6 +740,12 @@
       </div>
     </form>
   </app-modal>
+
+  <!-- CAT-06: importación desde la planilla -->
+  <app-product-import-modal
+    [isOpen]="isImportModalOpen()"
+    (close)="isImportModalOpen.set(false)"
+    (imported)="loadProducts()" />
 
   <!-- Modal Confirmación al Descartar Cambios -->
   <app-confirm-modal

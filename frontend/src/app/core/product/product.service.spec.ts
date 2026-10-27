@@ -140,4 +140,20 @@ describe('ProductService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('CAT-06: Revisar e Importar suben el archivo como multipart "file"', () => {
+    const file = new File(['x'], 'Productos.xlsx');
+
+    service.previewImport(file).subscribe();
+    const preview = httpTesting.expectOne('/api/products/import/preview');
+    expect(preview.request.method).toBe('POST');
+    expect((preview.request.body as FormData).get('file')).toBeInstanceOf(File);
+    preview.flush({});
+
+    service.importProducts(file).subscribe();
+    const save = httpTesting.expectOne('/api/products/import');
+    expect(save.request.method).toBe('POST');
+    expect(((save.request.body as FormData).get('file') as File).name).toBe('Productos.xlsx');
+    save.flush({});
+  });
 });

@@ -1,0 +1,124 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Importar productos"
+  subtitle="Hoja Productos de la planilla (Archivo → Descargar → Microsoft Excel)"
+  [closeOnBackdrop]="false"
+  size="xl"
+  (close)="onClose()">
+
+  <div class="import-file">
+    <label class="form-label" for="product-import-file">Archivo .xlsx</label>
+    <input
+      id="product-import-file"
+      type="file"
+      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      class="form-control"
+      [disabled]="isBusy()"
+      (change)="onFileSelected($event)" />
+    <p class="form-hint">
+      Columnas por nombre: Grupo, Proveedor, Nombre, Codigo, Costo y Precio Venta; Etiqueta y Se vende por son opcionales.
+    </p>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
+  }
+
+  @if (result(); as r) {
+    <section class="import-summary" aria-live="polite">
+      @if (isImported()) {
+        <p class="summary-title summary-done">Importación terminada.</p>
+      } @else {
+        <p class="summary-title">Revisión: todavía no se guardó nada.</p>
+      }
+      <div class="summary-grid">
+        <div class="summary-item"><span class="summary-value">{{ r.totalRows }}</span><span>filas leídas</span></div>
+        <div class="summary-item summary-ok">
+          <span class="summary-value">{{ r.importedCount }}</span>
+          <span>{{ isImported() ? 'productos importados' : 'productos a importar' }}</span>
+        </div>
+        <div class="summary-item summary-ok">
+          <span class="summary-value">{{ r.presentationCount }}</span>
+          <span>{{ isImported() ? 'presentaciones importadas' : 'presentaciones a importar' }}</span>
+        </div>
+        <div class="summary-item"><span class="summary-value">{{ r.existingCount }}</span><span>ya estaban en el sistema</span></div>
+        <div class="summary-item summary-bad"><span class="summary-value">{{ r.rejectedCount }}</span><span>rechazadas</span></div>
+        <div class="summary-item summary-warn"><span class="summary-value">{{ r.warningCount }}</span><span>con aviso</span></div>
+      </div>
+      @if (r.newCategories.length || r.newSuppliers.length || r.newTags.length) {
+        <ul class="summary-new">
+          @if (r.newCategories.length) {
+            <li><strong>Categorías nuevas ({{ r.newCategories.length }}):</strong> {{ r.newCategories.join(', ') }}</li>
+          }
+          @if (r.newSuppliers.length) {
+            <li><strong>Proveedores nuevos ({{ r.newSuppliers.length }}):</strong> {{ r.newSuppliers.join(', ') }}</li>
+          }
+          @if (r.newTags.length) {
+            <li><strong>Etiquetas nuevas ({{ r.newTags.length }}):</strong> {{ r.newTags.join(', ') }}</li>
+          }
+        </ul>
+      }
+    </section>
+
+    <div class="rows-toolbar">
+      <div class="filter-pill-group" role="tablist" aria-label="Filtrar filas">
+        <button type="button" role="tab" class="filter-pill" [class.active]="filter() === 'PENDING'"
+          [attr.aria-selected]="filter() === 'PENDING'" (click)="filter.set('PENDING')">Rechazadas y avisos</button>
+        <button type="button" role="tab" class="filter-pill" [class.active]="filter() === 'REJECTED'"
+          [attr.aria-selected]="filter() === 'REJECTED'" (click)="filter.set('REJECTED')">Rechazadas</button>
+        <button type="button" role="tab" class="filter-pill" [class.active]="filter() === 'WARNING'"
+          [attr.aria-selected]="filter() === 'WARNING'" (click)="filter.set('WARNING')">Con aviso</button>
+        <button type="button" role="tab" class="filter-pill" [class.active]="filter() === 'EXISTING'"
+          [attr.aria-selected]="filter() === 'EXISTING'" (click)="filter.set('EXISTING')">Ya existentes</button>
+      </div>
+      @if (r.rejectedCount > 0) {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="downloadRejected()">Descargar rechazadas (.xlsx)</button>
+      }
+    </div>
+
+    <div class="table-container rows-table">
+      <table class="table">
+        <thead>
+          <tr><th>Fila</th><th>Código</th><th>Nombre</th><th>Estado</th><th>Motivo</th></tr>
+        </thead>
+        <tbody>
+          @for (row of visibleRows(); track row.rowNumber) {
+            <tr>
+              <td>{{ row.rowNumber }}</td>
+              <td class="cell-code">{{ row.code }}</td>
+              <td>{{ row.name }}</td>
+              <td><span [class]="'row-status row-' + row.status.toLowerCase()">{{ statusLabels[row.status] }}</span></td>
+              <td>
+                @for (message of row.messages; track $index) {
+                  <div>{{ message }}</div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="table-empty">No hay filas con este filtro.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <div modal-footer class="form-actions">
+    <button type="button" class="btn btn-outline" (click)="onClose()" [disabled]="isBusy()">
+      {{ isImported() ? 'Cerrar' : 'Cancelar' }}
+    </button>
+    @if (!isImported()) {
+      <button type="button" class="btn btn-secondary" (click)="review()" [disabled]="!file() || isBusy()">
+        {{ isBusy() && !result() ? 'Revisando…' : 'Revisar' }}
+      </button>
+      <button type="button" class="btn btn-primary" (click)="import()" [disabled]="!canImport()">
+        @if (isBusy() && result()) {
+          <span>Importando…</span>
+        } @else if (result(); as r) {
+          <span>Importar {{ r.importedCount }} productos y {{ r.presentationCount }} presentaciones</span>
+        } @else {
+          <span>Importar</span>
+        }
+      </button>
+    }
+  </div>
+</app-modal>

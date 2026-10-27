@@ -138,7 +138,8 @@ public class ProductServiceImpl implements ProductService {
 
         Product saved = productRepository.save(product);
         // Presentations need the saved product (CAT-11)
-        List<String> warnings = presentationService.applyPresentations(saved, request.presentations(), null, currentUsername);
+        List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
+        warnings.addAll(presentationService.applyPresentations(saved, request.presentations(), null, currentUsername));
         return ProductResponse.fromEntity(saved, warnings);
     }
 
@@ -210,8 +211,9 @@ public class ProductServiceImpl implements ProductService {
         product.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
         product.setUpdatedAt(Instant.now());
 
-        List<String> warnings = presentationService.applyPresentations(product, request.presentations(),
-                previousSellPrice, currentUsername);
+        List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
+        warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
+                previousSellPrice, currentUsername));
         Product updated = productRepository.save(product);
         return ProductResponse.fromEntity(updated, warnings);
     }
@@ -265,6 +267,13 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         return new HashSet<>(foundTags);
+    }
+
+    static final String ZERO_COST_WARNING = "Costo 0: toda la venta cuenta como utilidad.";
+
+    // CAT-01: a cost of 0 is saved but warned about
+    static List<String> costWarnings(BigDecimal buyPrice) {
+        return buyPrice.signum() == 0 ? List.of(ZERO_COST_WARNING) : List.of();
     }
 
     static BigDecimal calculateFixedProfit(BigDecimal buyPrice, BigDecimal sellPrice) {

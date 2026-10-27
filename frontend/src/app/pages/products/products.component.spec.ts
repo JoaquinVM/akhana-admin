@@ -298,6 +298,29 @@ describe('ProductsComponent', () => {
     expect(component.products()).toContainEqual(newProd);
   });
 
+  it('CAT-01: acepta costo 0 y muestra el aviso que devuelve el servidor', () => {
+    component.openCreateModal();
+    component.productForm.patchValue({
+      code: 'BON-001', name: 'Lip care frutos rojos', categoryId: 'cat-1', supplierId: 'sup-1',
+      buyPrice: 0, sellPrice: 15
+    });
+    expect(component.productForm.get('buyPrice')?.valid).toBe(true);
+    expect(component.computedPercentageProfit()).toBe(0);
+
+    const warning = 'Costo 0: toda la venta cuenta como utilidad.';
+    mockProductService.createProduct.mockReturnValue(of({ ...mockProducts[0], id: 'bon', warnings: [warning] }));
+    component.saveProduct();
+
+    expect(mockProductService.createProduct).toHaveBeenCalledWith(expect.objectContaining({ buyPrice: 0 }));
+    expect(component.saveWarnings()).toEqual([warning]);
+  });
+
+  it('CAT-01: rechaza costo negativo en el formulario', () => {
+    component.openCreateModal();
+    component.productForm.patchValue({ buyPrice: -1 });
+    expect(component.productForm.get('buyPrice')?.valid).toBe(false);
+  });
+
   it('debe mostrar error devuelto por backend en caso de 409 Conflict por código o nombre duplicado', () => {
     component.openCreateModal();
     component.productForm.patchValue({

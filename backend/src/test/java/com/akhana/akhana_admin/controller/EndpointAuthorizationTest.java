@@ -23,9 +23,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -36,6 +38,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -57,6 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialSummaryController.class,
         FinancialTransactionController.class,
         ProductController.class,
+        ProductImportController.class,
         PurchaseController.class,
         QuickProductController.class,
         ReportController.class,
@@ -132,6 +136,8 @@ class EndpointAuthorizationTest {
             {"fullName":"Ana Rojas","username":"arojas","password":"password123","role":"OPERATOR"}""";
     private static final String UPDATE_USER = """
             {"fullName":"Ana Rojas","role":"OPERATOR"}""";
+    // Sent as a multipart "file" part instead of a JSON body (CAT-06)
+    private static final String XLSX_FILE = "<xlsx>";
 
     @Autowired
     private MockMvc mockMvc;
@@ -149,6 +155,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private FinancialSummaryService financialSummaryService;
     @MockitoBean private FinancialTransactionService financialTransactionService;
     @MockitoBean private ProductService productService;
+    @MockitoBean private ProductImportService productImportService;
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
     @MockitoBean private ReportService reportService;
@@ -201,6 +208,9 @@ class EndpointAuthorizationTest {
                 both(put, "/api/products/" + ID, PRODUCT),
                 both(patch, "/api/products/" + ID + "/status?status=INACTIVO", null),
                 both(delete, "/api/products/" + ID, null),
+                // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
+                both(post, "/api/products/import/preview", XLSX_FILE),
+                both(post, "/api/products/import", XLSX_FILE),
                 both(get, "/api/categories", null),
                 both(get, "/api/categories/" + ID, null),
                 both(post, "/api/categories", NAME_COLOR),
@@ -331,9 +341,14 @@ class EndpointAuthorizationTest {
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
     }
 
-    private MockHttpServletRequestBuilder call(Endpoint endpoint, String token) {
+    private RequestBuilder call(Endpoint endpoint, String token) {
         MockHttpServletRequestBuilder builder = request(endpoint.method(), endpoint.url())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        if (XLSX_FILE.equals(endpoint.body())) {
+            return multipart(endpoint.url())
+                    .file(new MockMultipartFile("file", "Productos.xlsx", null, new byte[]{1}))
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        }
         if (endpoint.body() != null) {
             builder.contentType(MediaType.APPLICATION_JSON).content(endpoint.body());
         }

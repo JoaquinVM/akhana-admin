@@ -39,6 +39,14 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     boolean existsByCodeIgnoreCaseAndStatusNot(String code, ProductStatus status);
 
+    // CAT-06: every code, deleted ones included, so the import never reuses one
+    @Query("SELECT p.code FROM Product p")
+    List<String> findAllCodes();
+
+    // CAT-06: [name, supplier name] of the products that block a name (not deleted)
+    @Query("SELECT p.name, s.name FROM Product p JOIN p.supplier s WHERE p.status <> :excludedStatus")
+    List<Object[]> findNamesWithSupplier(@Param("excludedStatus") ProductStatus excludedStatus);
+
     boolean existsByCodeIgnoreCaseAndStatusNotAndIdNot(String code, ProductStatus status, UUID id);
 
     boolean existsByNameIgnoreCaseAndStatusNot(String name, ProductStatus status);

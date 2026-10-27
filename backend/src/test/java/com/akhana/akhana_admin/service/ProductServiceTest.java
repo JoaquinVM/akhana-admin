@@ -176,6 +176,39 @@ class ProductServiceTest {
         assertThat(response.percentageProfit()).isEqualByComparingTo("25.00");
         assertThat(response.status()).isEqualTo(ProductStatus.ACTIVO);
         assertThat(response.saleUnit()).isEqualTo(SaleUnit.UNIT);
+        assertThat(response.warnings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("CAT-01: crea con costo 0, utilidad porcentual 0 y el aviso de costo 0")
+    void createProduct_ZeroCost_SavesWithWarning() {
+        ProductRequest request = new ProductRequest("BON-001", "Lip care frutos rojos", categoryId, supplierId,
+                null, null, new BigDecimal("0"), new BigDecimal("15.00"), ProductStatus.ACTIVO, null);
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductResponse response = productService.createProduct(request, "admin");
+
+        assertThat(response.buyPrice()).isEqualByComparingTo("0.00");
+        assertThat(response.fixedProfit()).isEqualByComparingTo("15.00");
+        assertThat(response.percentageProfit()).isEqualByComparingTo("0.00");
+        assertThat(response.warnings()).containsExactly("Costo 0: toda la venta cuenta como utilidad.");
+    }
+
+    @Test
+    @DisplayName("CAT-01: al editar a costo 0 también avisa")
+    void updateProduct_ZeroCost_Warns() {
+        ProductRequest request = new ProductRequest("PROD-001", "Té Matcha Ceremonial 100g", categoryId, supplierId,
+                null, null, BigDecimal.ZERO, new BigDecimal("50.00"), ProductStatus.ACTIVO, null);
+        when(productRepository.findByIdWithRelations(productId)).thenReturn(Optional.of(activeProduct));
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductResponse response = productService.updateProduct(productId, request, "admin");
+
+        assertThat(response.warnings()).containsExactly("Costo 0: toda la venta cuenta como utilidad.");
     }
 
     @Test

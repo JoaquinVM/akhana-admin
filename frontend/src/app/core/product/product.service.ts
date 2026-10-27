@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product, ProductRequest, ProductStatus } from './models/product.models';
+import { ProductImportResult } from './models/product-import.models';
 
 @Injectable({
   providedIn: 'root'
@@ -41,5 +42,20 @@ export class ProductService {
 
   deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // CAT-06: Revisar valida sin guardar; Importar vuelve a validar el mismo archivo y guarda
+  previewImport(file: File): Observable<ProductImportResult> {
+    return this.http.post<ProductImportResult>(`${this.apiUrl}/import/preview`, this.importForm(file));
+  }
+
+  importProducts(file: File): Observable<ProductImportResult> {
+    return this.http.post<ProductImportResult>(`${this.apiUrl}/import`, this.importForm(file));
+  }
+
+  private importForm(file: File): FormData {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return form;
   }
 }

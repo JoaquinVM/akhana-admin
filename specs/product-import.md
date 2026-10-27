@@ -37,7 +37,10 @@ renombrados, 3 con costo 0) y 99 filas rechazadas (las 57
 de la tabla y las 42 presentaciones, porque
 sus 14 bases se rechazan por precio por gramo). Con los 14 frutos secos marcados Gramo: 794
 productos y 42
-presentaciones. Los valores de la hoja leída por la API vienen redondeados por el formato de la celda (0,095 se ve
+presentaciones. Validado con el `.xlsx` real el 27-10-2026 sobre un catálogo vacío: el archivo ya tiene 880 filas (una
+más, válida), y da 781 productos (14 renombrados, 3 con costo 0) y las mismas 99 rechazadas; con Gramo, 795 productos,
+42 presentaciones y 43 rechazadas, guardados en menos de 1 s. Al repetirla, todo lo importado sale como ya existente
+(las 2 filas de código repetido también, porque su código ya está en el catálogo). Los valores de la hoja leída por la API vienen redondeados por el formato de la celda (0,095 se ve
 0,10), por eso se importa el `.xlsx` con los valores reales y no lo que muestra la pantalla.
 
 ## Permiso y pantalla
@@ -66,7 +69,8 @@ Cada fila se valida sola y contra las anteriores del archivo y los productos exi
 frena a las demás.
 
 - **Cuando** falta Grupo, Proveedor, Nombre, Codigo, Costo o Precio Venta **entonces** se rechaza con «Falta
-  <columna>.»
+  el grupo.», «Falta el proveedor.», «Falta el nombre.», «Falta el código.», «Falta el costo.» o «Falta el precio de
+  venta.» Una fila rechazada lista todos sus motivos.
 - **Cuando** Costo o Precio Venta no es un número **entonces** «<columna> no es un número: '<valor>'.» Se aceptan
   números de la celda y texto con punto o coma decimal.
 - **Cuando** Costo o Precio Venta tiene más de 2 decimales en su valor real (no el que muestra la celda)
@@ -81,7 +85,7 @@ frena a las demás.
 - **Cuando** el código ya existe en el catálogo (sin distinguir mayúsculas, incluidos inactivos y eliminados)
   **entonces** «Ya existe un producto con el código <código>.»; si se repite en una fila anterior del archivo,
   «El código ya está en la fila <n>.»
-- **Cuando** el nombre ya existe (catálogo o fila anterior) con otro proveedor **entonces** se importa como
+- **Cuando** el nombre ya existe (catálogo o fila anterior importable) con otro proveedor **entonces** se importa como
   «<nombre> (<proveedor>)» con el aviso «Nombre repetido: se guardó como …»; si ese nombre también existe, o el
   repetido es del mismo proveedor, se rechaza con «Ya existe un producto con el nombre <nombre>.» o «El nombre
   ya está en la fila <n>.»
@@ -89,7 +93,8 @@ frena a las demás.
 - **Cuando** Grupo no coincide con una categoría activa (sin distinguir mayúsculas ni espacios al borde)
   **entonces** se crea la categoría con color gris por defecto; lo mismo con Proveedor y Etiqueta. Una categoría,
   proveedor o etiqueta dada de baja no se reactiva: la fila se rechaza con «La categoría <nombre> está dada de
-  baja.»
+  baja.» Un proveedor inactivo cuenta como dado de baja (su nombre sigue ocupado). El proveedor nuevo recibe como
+  código su nombre en mayúsculas sin tildes (`DESCONOCIDA-4`), numerado si ya existe (`-2`).
 - **Cuando** Etiqueta está vacía **entonces** el producto queda sin etiquetas.
 - **Cuando** la fila se importa **entonces** el producto queda Activo, sin descripción, con auditoría del
   administrador que importó (RG de auditoría).
@@ -115,7 +120,8 @@ a la derecha, con el título «Se vende por» en la fila 1 (se busca por nombre,
   convertido a Bs por kilo tiene más de 2 decimales: '<valor>'.»
 - **Cuando** una fila por unidad tiene Precio Venta menor a Bs 1 **entonces** se rechaza con «Precio menor a
   Bs 1: si se vende por peso, marcar en Se vende por Gramo, 100 g o Kilo.» (protege de importar el precio por
-  gramo de Frutos Secos como precio por unidad).
+  gramo de Frutos Secos como precio por unidad). En ese caso no se informan además los decimales del costo por
+  gramo: marcar Gramo corrige los dos.
 - **Cuando** una fila por peso queda, ya convertida, con Precio Venta menor a Bs 10 por kilo **entonces** se
   rechaza con «Precio por kilo menor a Bs 10: revisar Se vende por (¿Gramo o 100 g?).»
 - **Cuando** se importa Arandano con Gramo (costo 95, precio 140 por kilo) **entonces** en el POS 100 g cuesta Bs 14,00 y
@@ -189,18 +195,19 @@ newCategories[], newSuppliers[], newTags[], rows: [{ rowNumber, code, name, stat
 
 ## Tareas
 
-- [ ] CAT-01 acepta costo 0: `ProductRequest` (`buyPrice` mayor o igual a 0, mensaje «El precio de compra no
+- [x] CAT-01 acepta costo 0: `ProductRequest` (`buyPrice` mayor o igual a 0, mensaje «El precio de compra no
   puede ser negativo.»), aviso «Costo 0: toda la venta cuenta como utilidad.» en la respuesta y en el formulario de
   Productos; pruebas en `ProductServiceTest` y en el spec de `products`.
-- [ ] `ProductImportService`: lectura del `.xlsx` con Apache POI (columnas por nombre), validación por fila con
+- [x] `ProductImportService`: lectura del `.xlsx` con Apache POI (columnas por nombre), validación por fila con
   los mensajes de arriba, alta de categorías, proveedores y etiquetas, presentaciones con las reglas de
   `ProductPresentationService`, guardado en una transacción.
-- [ ] `ProductImportController` con preview e import, con `@PreAuthorize` de `PRODUCTS`; prueba en `EndpointAuthorizationTest`.
-- [ ] Pruebas: `ProductImportServiceTest` con un `.xlsx` armado en la prueba (filas reales de la tabla de arriba:
+- [x] `ProductImportController` con preview e import, con `@PreAuthorize` de `PRODUCTS`; prueba en `EndpointAuthorizationTest`.
+- [x] Pruebas: `ProductImportServiceTest` con un `.xlsx` armado en la prueba (filas reales de la tabla de arriba:
   Arandano Kilo con sus 1/4, 1/2 y 1 libra, presentación sin base o con base rechazada o por unidad, Psylium por
   unidad, sin código, sin precio, costo 0, código y nombre repetidos, a pérdida,
   proveedor en otra mayúscula, repetir la importación).
-- [ ] Frontend: botón Importar en `pages/products`, modal con Revisar / Importar, resumen y tabla de rechazadas,
+- [x] Frontend: botón Importar en `pages/products`, modal con Revisar / Importar, resumen y tabla de rechazadas,
   descarga `.xlsx`; pruebas Vitest del servicio y del modal.
-- [ ] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin la columna «Se vende por», y 794 productos y 42 presentaciones con los 14 frutos secos en Gramo.
-- [ ] Actualizar `specs/requirements.md` (CAT-06, P-02, tablero).
+- [x] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin la columna «Se vende por», y 794 productos y 42 presentaciones con los 14 frutos secos en Gramo. Hecho el 27-10-2026 (781 y 795 por una fila nueva en la planilla; rechazadas iguales). También `ProductImportIntegrationTest` contra PostgreSQL.
+- [ ] Probar en la app: Revisar e Importar con el archivo real y descargar las rechazadas.
+- [x] Actualizar `specs/requirements.md` (CAT-06, P-02, tablero).

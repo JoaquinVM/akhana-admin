@@ -756,3 +756,10 @@
   margin: 0;
   padding-left: 1.1rem;
 }
+
+/* CAT-06: Importar junto a Nuevo Producto */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

@@ -32,7 +32,8 @@ public record ProductRequest(
     List<UUID> tagIds,
 
     @NotNull(message = "El precio de compra es obligatorio.")
-    @DecimalMin(value = "0.01", message = "El precio de compra debe ser mayor a 0.")
+    // CAT-01: 0 is allowed (bonuses without a known cost), with a warning in the response
+    @DecimalMin(value = "0.00", message = "El precio de compra no puede ser negativo.")
     BigDecimal buyPrice,
 
     @NotNull(message = "El precio de venta es obligatorio.")

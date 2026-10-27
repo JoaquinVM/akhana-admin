@@ -155,6 +155,21 @@ class ProductControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/products - 400 si el costo es negativo (CAT-01 acepta 0)")
+    void createProduct_NegativeCost_Returns400() throws Exception {
+        String body = """
+                {"code":"P-1","name":"Mani","categoryId":"%s","supplierId":"%s","buyPrice":-1.00,"sellPrice":2.00}
+                """.formatted(UUID.randomUUID(), UUID.randomUUID());
+
+        mockMvc.perform(post("/api/products")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El precio de compra no puede ser negativo."));
+    }
+
+    @Test
     @DisplayName("POST /api/products - 409 Conflict si el código o nombre ya existe")
     void createProduct_Duplicate_Returns409() throws Exception {
         String body = """

@@ -19,6 +19,7 @@ import { Tag } from '../../core/tag/models/tag.models';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
@@ -45,7 +46,8 @@ function suggestedDrafts(): PresentationDraft[] {
     ReactiveFormsModule,
     ConfirmModalComponent,
     AuditModalComponent,
-    ModalComponent
+    ModalComponent,
+    ProductImportModalComponent
   ],
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.css']
@@ -71,6 +73,8 @@ export class ProductsComponent implements OnInit {
 
   // Modales
   isFormModalOpen = signal<boolean>(false);
+  // CAT-06
+  isImportModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedProductId = signal<string | null>(null);
   formError = signal<string | null>(null);
@@ -110,7 +114,7 @@ export class ProductsComponent implements OnInit {
     supplierId: ['', [Validators.required]],
     description: ['', [Validators.maxLength(500)]],
     tagIds: [[] as string[]],
-    buyPrice: [null, [Validators.required, Validators.min(0.01)]],
+    buyPrice: [null, [Validators.required, Validators.min(0)]],
     sellPrice: [null, [Validators.required, Validators.min(0.01)]],
     status: ['ACTIVO'],
     saleUnit: ['UNIT']
