@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
@@ -30,6 +31,7 @@ public class ProductServiceImpl implements ProductService {
     private final SupplierRepository supplierRepository;
     private final TagRepository tagRepository;
     private final ProductPresentationService presentationService;
+    private final ProductPriceChangeRepository priceChangeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -137,6 +139,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
+        recordPriceChange(saved, null, null, product.getCreatedBy(), product.getCreatedAt());
         // Presentations need the saved product (CAT-11)
         List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
         warnings.addAll(presentationService.applyPresentations(saved, request.presentations(), null, currentUsername));
@@ -182,6 +185,7 @@ public class ProductServiceImpl implements ProductService {
         // Validar etiquetas
         Set<Tag> tags = resolveTags(request.tagIds());
 
+        BigDecimal previousBuyPrice = product.getBuyPrice();
         BigDecimal previousSellPrice = product.getSellPrice();
 
         // Recalcular utilidades
@@ -210,6 +214,10 @@ public class ProductServiceImpl implements ProductService {
 
         product.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
         product.setUpdatedAt(Instant.now());
+
+        if (previousBuyPrice.compareTo(buyPrice) != 0 || previousSellPrice.compareTo(sellPrice) != 0) {
+            recordPriceChange(product, previousBuyPrice, previousSellPrice, product.getUpdatedBy(), product.getUpdatedAt());
+        }
 
         List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
         warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
@@ -254,6 +262,21 @@ public class ProductServiceImpl implements ProductService {
         product.setDeletedAt(Instant.now());
 
         productRepository.save(product);
+    }
+
+    // CAT-07: cost and price changes from the catalog; null previous prices mean the product was just created
+    private void recordPriceChange(Product product, BigDecimal previousBuyPrice, BigDecimal previousSellPrice,
+                                   String username, Instant now) {
+        priceChangeRepository.save(ProductPriceChange.builder()
+                .productId(product.getId())
+                .previousBuyPrice(previousBuyPrice)
+                .newBuyPrice(product.getBuyPrice())
+                .previousSellPrice(previousSellPrice)
+                .newSellPrice(product.getSellPrice())
+                .source(PriceChangeSource.CATALOG)
+                .changedBy(username)
+                .changedAt(now)
+                .build());
     }
 
     private Set<Tag> resolveTags(List<UUID> tagIds) {

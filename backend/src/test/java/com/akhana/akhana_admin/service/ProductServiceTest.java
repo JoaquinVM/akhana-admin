@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,6 +42,8 @@ class ProductServiceTest {
     private TagRepository tagRepository;
     @Mock
     private ProductPresentationService presentationService;
+    @Mock
+    private ProductPriceChangeRepository priceChangeRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -209,6 +213,76 @@ class ProductServiceTest {
         ProductResponse response = productService.updateProduct(productId, request, "admin");
 
         assertThat(response.warnings()).containsExactly("Costo 0: toda la venta cuenta como utilidad.");
+    }
+
+    @Test
+    @DisplayName("CAT-07: crear un producto registra su costo y precio iniciales con origen CATALOG")
+    void createProduct_RecordsInitialPrices() {
+        ProductRequest request = new ProductRequest("PROD-002", "Té Chai Especial", categoryId, supplierId,
+                null, null, new BigDecimal("40"), new BigDecimal("50"), ProductStatus.ACTIVO, null);
+        UUID newId = UUID.randomUUID();
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
+            Product p = invocation.getArgument(0);
+            p.setId(newId);
+            return p;
+        });
+
+        productService.createProduct(request, "operador");
+
+        ArgumentCaptor<ProductPriceChange> captor = ArgumentCaptor.forClass(ProductPriceChange.class);
+        verify(priceChangeRepository).save(captor.capture());
+        ProductPriceChange change = captor.getValue();
+        assertThat(change.getProductId()).isEqualTo(newId);
+        assertThat(change.getSource()).isEqualTo(PriceChangeSource.CATALOG);
+        assertThat(change.getPreviousBuyPrice()).isNull();
+        assertThat(change.getPreviousSellPrice()).isNull();
+        assertThat(change.getNewBuyPrice()).isEqualByComparingTo("40.00");
+        assertThat(change.getNewSellPrice()).isEqualByComparingTo("50.00");
+        assertThat(change.getPurchaseId()).isNull();
+        assertThat(change.getPresentationId()).isNull();
+        assertThat(change.getChangedBy()).isEqualTo("operador");
+        assertThat(change.getChangedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("CAT-07: editar costo o precio registra el anterior y el nuevo con origen CATALOG")
+    void updateProduct_PriceChange_RecordsCatalogChange() {
+        ProductRequest request = new ProductRequest("PROD-001", "Té Matcha Ceremonial 100g", categoryId, supplierId,
+                null, null, new BigDecimal("40.00"), new BigDecimal("55.5"), ProductStatus.ACTIVO, null);
+        when(productRepository.findByIdWithRelations(productId)).thenReturn(Optional.of(activeProduct));
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        productService.updateProduct(productId, request, "operador");
+
+        ArgumentCaptor<ProductPriceChange> captor = ArgumentCaptor.forClass(ProductPriceChange.class);
+        verify(priceChangeRepository).save(captor.capture());
+        ProductPriceChange change = captor.getValue();
+        assertThat(change.getProductId()).isEqualTo(productId);
+        assertThat(change.getSource()).isEqualTo(PriceChangeSource.CATALOG);
+        assertThat(change.getPreviousBuyPrice()).isEqualByComparingTo("40.00");
+        assertThat(change.getNewBuyPrice()).isEqualByComparingTo("40.00");
+        assertThat(change.getPreviousSellPrice()).isEqualByComparingTo("50.00");
+        assertThat(change.getNewSellPrice()).isEqualByComparingTo("55.50");
+        assertThat(change.getChangedBy()).isEqualTo("operador");
+    }
+
+    @Test
+    @DisplayName("CAT-07: editar sin cambiar costo ni precio no registra nada")
+    void updateProduct_SamePrices_RecordsNothing() {
+        ProductRequest request = new ProductRequest("PROD-001", "Té Matcha renombrado", categoryId, supplierId,
+                null, null, new BigDecimal("40"), new BigDecimal("50.0"), ProductStatus.ACTIVO, null);
+        when(productRepository.findByIdWithRelations(productId)).thenReturn(Optional.of(activeProduct));
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(activeCategory));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(activeSupplier));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        productService.updateProduct(productId, request, "operador");
+
+        verifyNoInteractions(priceChangeRepository);
     }
 
     @Test

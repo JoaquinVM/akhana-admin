@@ -24,13 +24,14 @@ public class ProductPriceChange {
     @Column(name = "product_id", nullable = false, updatable = false)
     private UUID productId;
 
-    @Column(name = "previous_buy_price", nullable = false, updatable = false, precision = 12, scale = 2)
+    // Null previous prices mean the product was just created from the catalog (CAT-07)
+    @Column(name = "previous_buy_price", updatable = false, precision = 12, scale = 2)
     private BigDecimal previousBuyPrice;
 
     @Column(name = "new_buy_price", nullable = false, updatable = false, precision = 12, scale = 2)
     private BigDecimal newBuyPrice;
 
-    @Column(name = "previous_sell_price", nullable = false, updatable = false, precision = 12, scale = 2)
+    @Column(name = "previous_sell_price", updatable = false, precision = 12, scale = 2)
     private BigDecimal previousSellPrice;
 
     @Column(name = "new_sell_price", nullable = false, updatable = false, precision = 12, scale = 2)
