@@ -99,6 +99,13 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.REPORTS }
       },
       {
+        path: 'migration',
+        // FIN-11: se usa una sola vez, en carga diferida
+        loadComponent: () => import('./pages/migration/migration.component').then(m => m.MigrationComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.MIGRATION }
+      },
+      {
         path: 'products',
         component: ProductsComponent,
         canActivate: [permissionGuard],

@@ -41,7 +41,9 @@ public record PurchaseResponse(
     Instant voidedAt,
     String voidReason,
     List<PurchaseItemResponse> items,
-    List<PurchasePaymentResponse> payments
+    List<PurchasePaymentResponse> payments,
+    // FIN-11: migrated from the spreadsheet; it only accepts new payments
+    boolean historical
 ) {
     public static PurchaseResponse summary(Purchase purchase) {
         return of(purchase, null, List.of(), List.of());
@@ -83,7 +85,8 @@ public record PurchaseResponse(
             purchase.getVoidedAt(),
             purchase.getVoidReason(),
             items,
-            payments
+            payments,
+            purchase.isHistorical()
         );
     }
 }

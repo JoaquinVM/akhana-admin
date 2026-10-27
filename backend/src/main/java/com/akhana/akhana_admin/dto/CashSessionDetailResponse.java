@@ -26,5 +26,11 @@ public record CashSessionDetailResponse(
     BigDecimal difference,
     long salesCount,
     List<CashCutDto> cuts,
-    List<SaleResponse> sales
+    List<SaleResponse> sales,
+    // FIN-11: closed session of Cierre de Caja, with the amounts of the spreadsheet (null for other sessions)
+    boolean historical,
+    BigDecimal historicalOtherIncome,
+    BigDecimal historicalExpenses,
+    BigDecimal historicalOtherOutflow,
+    BigDecimal historicalInternalOutflow
 ) {}

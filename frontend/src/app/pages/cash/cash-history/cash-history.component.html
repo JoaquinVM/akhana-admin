@@ -91,6 +91,9 @@
               <tr>
                 <td>
                   <span class="session-tag">#{{ session.sessionNumber }}</span>
+                  @if (session.historical) {
+                    <span class="session-tag" title="Cierre de Caja de la planilla (FIN-11)">Histórico</span>
+                  }
                 </td>
                 <td>
                   <div class="user-date-cell">

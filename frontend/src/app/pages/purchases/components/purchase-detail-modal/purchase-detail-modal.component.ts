@@ -66,6 +66,8 @@ export class PurchaseDetailModalComponent {
   isVoiding = signal<boolean>(false);
 
   isActive = computed(() => this.purchase()?.status === 'REGISTRADO');
+  // FIN-11: un pedido histórico no se edita ni se anula; solo se le registran pagos
+  isEditable = computed(() => this.isActive() && !this.purchase()?.historical);
 
   canPay = computed(() => {
     const purchase = this.purchase();

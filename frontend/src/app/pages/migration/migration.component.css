@@ -1,0 +1,129 @@
+.migration-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.breadcrumb-separator {
+  color: #cbd5e1;
+}
+
+.breadcrumb-item.active {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111f0f;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: #545f73;
+}
+
+.card {
+  padding: 1.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.migration-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.summary-title {
+  margin: 0 0 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.summary-done { color: var(--color-success); }
+.summary-bad { color: var(--color-danger); }
+.cell-bad { color: var(--color-danger); font-weight: 600; }
+
+.summary-facts {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.section-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.rows-table {
+  max-height: 45vh;
+  overflow: auto;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.movements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}

@@ -5,5 +5,7 @@ public enum PaymentMethod {
     QR,
     MIXTO,
     // Whole at-cost sale on credit, nothing paid now (DEU-05)
-    CREDITO
+    CREDITO,
+    // Historical sale (FIN-11): no payments, its money is in the movements of Transacc.
+    HISTORICO
 }

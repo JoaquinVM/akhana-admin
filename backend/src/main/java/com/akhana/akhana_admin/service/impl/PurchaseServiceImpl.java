@@ -300,6 +300,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (purchase.getStatus() == PurchaseStatus.ANULADO) {
             throw new IllegalStateException(VOIDED_PURCHASE);
         }
+        if (purchase.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_PURCHASE);
+        }
         Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
             purchase.getPurchaseDate(), LocalDate.now(STORE_ZONE));
         purchase.setDeliveryType(delivery.type());
@@ -326,6 +329,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con ID: " + paymentId));
         if (payment.getStatus() == PurchasePaymentRecordStatus.ANULADO) {
             throw new IllegalStateException(ALREADY_VOIDED_PAYMENT);
+        }
+        if (payment.isHistorical()) {
+            throw new IllegalStateException("El pago es histórico (migrado de la planilla): no se puede anular.");
         }
 
         Instant now = Instant.now();
@@ -354,6 +360,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         Purchase purchase = lockPurchase(purchaseId);
         if (purchase.getStatus() == PurchaseStatus.ANULADO) {
             throw new IllegalStateException(ALREADY_VOIDED_PURCHASE);
+        }
+        if (purchase.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
 
         // Payments made by people: nothing is voided if any debt would go below 0 (DEU-02); people are locked
@@ -430,6 +439,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             .setScale(0, RoundingMode.CEILING)
             .setScale(2, RoundingMode.HALF_UP);
     }
+
+    // FIN-11: a historical purchase only accepts new payments while it has a balance (COM-08)
+    static final String HISTORICAL_PURCHASE = "El pedido es histórico (migrado de la planilla): solo se le pueden registrar pagos.";
 
     static String formatPurchaseNumber(long sequenceValue) {
         return String.format("PED-%06d", sequenceValue);

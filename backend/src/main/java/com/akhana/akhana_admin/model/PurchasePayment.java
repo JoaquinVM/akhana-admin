@@ -20,6 +20,10 @@ public class PurchasePayment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // FIN-11: import of the historical migration that created it; null for records of the system
+    @Column(name = "historical_import_id", updatable = false)
+    private UUID historicalImportId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchase_id", nullable = false)
     private Purchase purchase;
@@ -62,4 +66,9 @@ public class PurchasePayment {
 
     @Column(name = "void_reason", length = 500)
     private String voidReason;
+
+    /** FIN-11: imported from the spreadsheets; it cannot be voided or edited. */
+    public boolean isHistorical() {
+        return historicalImportId != null;
+    }
 }

@@ -99,4 +99,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     // Sale numbers come from a database sequence so concurrent sales never share one (T-06)
     @Query(value = "SELECT nextval('sale_number_seq')", nativeQuery = true)
     long nextSaleNumber();
+
+    // Historical sales have their own series and do not use the POS one (FIN-11)
+    @Query(value = "SELECT nextval('historical_sale_number_seq')", nativeQuery = true)
+    long nextHistoricalSaleNumber();
 }

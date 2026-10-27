@@ -83,7 +83,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     @Override
     @Transactional(readOnly = true)
     public CashOpeningProposalResponse getOpeningProposal() {
-        return cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA)
+        return cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA)
             .map(previous -> new CashOpeningProposalResponse(
                 previous.getClosingAmount().setScale(2, RoundingMode.HALF_UP), previous.getSessionNumber()))
             // First session: the balance of Caja, which holds its cutover balance (FIN-01)
@@ -206,7 +206,12 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getDifference(),
             sales.size(),
             cutDtos,
-            saleResponses
+            saleResponses,
+            session.isHistorical(),
+            session.getHistoricalOtherIncome(),
+            session.getHistoricalExpenses(),
+            session.getHistoricalOtherOutflow(),
+            session.getHistoricalInternalOutflow()
         );
     }
 
@@ -266,7 +271,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getTotalSales(),
             session.getExpectedCash(),
             session.getDifference(),
-            salesCount
+            salesCount,
+            session.isHistorical()
         );
     }
 }

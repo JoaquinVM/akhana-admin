@@ -50,6 +50,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String INITIAL_BALANCE_EDIT = "El saldo inicial de una cuenta no se puede editar.";
     static final String CLOSED_SESSION_VOID = "No se pueden anular movimientos de una caja cerrada; corríjalos en la caja actual.";
     static final String PURCHASE_MOVEMENT = "Los movimientos de un pedido se gestionan desde Compras.";
+    static final String HISTORICAL_MOVEMENT = "El movimiento es histórico (migrado de la planilla): no se puede editar ni anular.";
     static final String DEBT_MOVEMENT = "Los movimientos de una deuda se gestionan desde Deudas.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
     static final String CASH_TRANSFER_SAME_ACCOUNT = "Elige una cuenta distinta de Caja para el ingreso o retiro.";
@@ -224,6 +225,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(PURCHASE_MOVEMENT);
         }
 
+        if (tx.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_MOVEMENT);
+        }
+
         if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
             throw new IllegalStateException(DEBT_MOVEMENT);
         }
@@ -292,6 +297,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         }
         if (tx.getPurchaseId() != null) {
             throw new IllegalStateException(PURCHASE_MOVEMENT);
+        }
+
+        if (tx.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_MOVEMENT);
         }
 
         if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
@@ -372,6 +381,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
         if (tx.getPurchaseId() != null) {
             throw new IllegalStateException(PURCHASE_MOVEMENT);
+        }
+
+        if (tx.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_MOVEMENT);
         }
 
         if (tx.getCreditorRepaymentId() != null || tx.getCustomerCollectionId() != null) {
@@ -524,6 +537,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .purchaseId(tx.getPurchaseId())
                 .creditorRepaymentId(tx.getCreditorRepaymentId())
                 .customerCollectionId(tx.getCustomerCollectionId())
+                .historical(tx.isHistorical())
                 .cashSessionId(tx.getCashSessionId())
                 .sourceAccount(sourceSummary)
                 .destinationAccount(destSummary)

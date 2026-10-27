@@ -58,6 +58,8 @@ export interface PurchasePayment {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
+  // FIN-11: pago migrado de la planilla, sin movimiento de dinero (P-43)
+  historical?: boolean;
 }
 
 export interface Purchase {
@@ -86,6 +88,8 @@ export interface Purchase {
   voidReason: string | null;
   items: PurchaseItem[];
   payments: PurchasePayment[];
+  // FIN-11: migrado de la planilla; solo admite pagos mientras tenga saldo
+  historical?: boolean;
 }
 
 export interface PurchaseItemRequest {

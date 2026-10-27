@@ -39,6 +39,8 @@ export interface Consumption {
   voidReason: string | null;
   // Vacío en el listado; el detalle trae las líneas
   items: ConsumptionItem[];
+  // FIN-11: migrado de la planilla; no se anula ni se edita
+  historical?: boolean;
 }
 
 export interface ConsumptionItemRequest {

@@ -79,7 +79,8 @@ class CashSessionControllerTest {
             BigDecimal.ZERO,
             new BigDecimal("100.00"),
             null,
-            0
+            0,
+            false
         );
 
         User mockUser = User.builder()
@@ -159,7 +160,8 @@ class CashSessionControllerTest {
             new BigDecimal("50.00"),
             new BigDecimal("150.00"),
             BigDecimal.ZERO,
-            1
+            1,
+            false
         );
 
         when(cashSessionService.closeCurrentSession(any(CloseCashRequest.class), any())).thenReturn(closedSummary);
@@ -214,7 +216,12 @@ class CashSessionControllerTest {
             null,
             0,
             Collections.emptyList(),
-            Collections.emptyList()
+            Collections.emptyList(),
+            false,
+            null,
+            null,
+            null,
+            null
         );
 
         when(cashSessionService.getSessionDetail(sessionId)).thenReturn(detailResponse);

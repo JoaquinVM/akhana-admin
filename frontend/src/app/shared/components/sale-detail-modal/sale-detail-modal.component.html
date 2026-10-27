@@ -41,7 +41,7 @@
 
         <div class="info-field">
           <span class="field-label">Sesión de caja</span>
-          <span class="field-value session-badge">Sesión #{{ sale.sessionNumber != null ? sale.sessionNumber : '—' }}</span>
+          <span class="field-value session-badge">{{ sale.historical ? 'Histórico (planilla)' : 'Sesión #' + (sale.sessionNumber != null ? sale.sessionNumber : '—') }}</span>
         </div>
 
         @if (sale.saleType === 'AL_COSTO') {

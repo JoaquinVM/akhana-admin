@@ -1,0 +1,191 @@
+<div class="migration-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Finanzas</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Migración</span>
+      </nav>
+      <h1 class="page-title">Migración histórica</h1>
+      <p class="page-subtitle">
+        Carga una sola vez el historial de las dos planillas hasta la fecha de corte. Los registros quedan marcados
+        «Histórico»: cuentan en los reportes, no en los saldos ni en las cajas.
+      </p>
+    </div>
+  </header>
+
+  <section class="card migration-form">
+    <div class="form-row">
+      <label class="form-label" for="migration-recaudaciones">Akhana Recaudaciones (.xlsx)</label>
+      <input id="migration-recaudaciones" type="file" class="form-control"
+             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+             [disabled]="isBusy() || !!result()?.imported" (change)="onFileSelected('recaudaciones', $event)" />
+      <p class="form-hint">Hojas Ventas, Transacc., Cierre de Caja, Consumos, Detalle Pedidos y Productos.</p>
+    </div>
+    <div class="form-row">
+      <label class="form-label" for="migration-pedidos">Akhana Pedidos (.xlsx)</label>
+      <input id="migration-pedidos" type="file" class="form-control"
+             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+             [disabled]="isBusy() || !!result()?.imported" (change)="onFileSelected('pedidos', $event)" />
+      <p class="form-hint">Hoja Pedidos, con las columnas Proveedor y Monto pagado agregadas.</p>
+    </div>
+    <div class="form-row form-row-date">
+      <label class="form-label" for="migration-cutoff">Fecha de corte</label>
+      <input id="migration-cutoff" type="date" class="form-control" [value]="cutoffDate()"
+             [disabled]="isBusy() || !!result()?.imported" (change)="onCutoffChange($event)" />
+      <p class="form-hint">El último día que se migra; el sistema registra desde el día siguiente.</p>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="review()" [disabled]="!canReview() || !!result()?.imported">
+        {{ isBusy() && !confirmOpen() ? 'Revisando…' : 'Revisar' }}
+      </button>
+      <button type="button" class="btn btn-primary" (click)="askImport()" [disabled]="!canImport()">Importar</button>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
+  }
+
+  @if (result(); as r) {
+    <section class="card" aria-live="polite">
+      @if (r.imported) {
+        <p class="summary-title summary-done">Migración terminada: el historial hasta el {{ r.cutoffDate }} quedó cargado.</p>
+      } @else if (r.rejected.length > 0) {
+        <p class="summary-title summary-bad">
+          Revisión: {{ r.rejected.length }} filas rechazadas. Se corrigen en la planilla y se revisa de nuevo; no se guardó nada.
+        </p>
+      } @else {
+        <p class="summary-title">Revisión sin rechazadas: todavía no se guardó nada.</p>
+      }
+
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr><th>Hoja</th><th class="num">Leídas</th><th class="num">{{ r.imported ? 'Importadas' : 'A importar' }}</th>
+              <th class="num">Rechazadas</th><th class="num">Posteriores al corte</th></tr>
+          </thead>
+          <tbody>
+            @for (sheet of r.sheets; track sheet.sheet) {
+              <tr>
+                <td>{{ sheet.sheet }}</td>
+                <td class="num">{{ sheet.read }}</td>
+                <td class="num">{{ sheet.toImport }}</td>
+                <td class="num" [class.cell-bad]="sheet.rejected > 0">{{ sheet.rejected }}</td>
+                <td class="num">{{ sheet.afterCutoff }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="summary-facts">
+        <li><strong>Líneas por asignar (POS-12):</strong> {{ r.unassignedLines }} por Bs {{ r.unassignedTotal | number:'1.2-2' }}</li>
+        @for (debt of r.thirdPartyDebts; track debt.creditorName) {
+          <li><strong>Deuda inicial con {{ debt.creditorName }} (POS-13):</strong> Bs {{ debt.amount | number:'1.2-2' }}</li>
+        } @empty {
+          <li><strong>Deuda inicial con terceros:</strong> ninguna</li>
+        }
+      </ul>
+    </section>
+
+    @if (r.rejected.length > 0) {
+      <section class="card">
+        <div class="section-toolbar">
+          <h2 class="section-title">Rechazadas</h2>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="downloadRejected()">Descargar rechazadas (.xlsx)</button>
+        </div>
+        <div class="table-container rows-table">
+          <table class="table">
+            <thead><tr><th>Hoja</th><th class="num">Fila</th><th>Motivo</th></tr></thead>
+            <tbody>
+              @for (row of r.rejected; track row.sheet + row.rowNumber) {
+                <tr>
+                  <td>{{ row.sheet }}</td>
+                  <td class="num">{{ row.rowNumber }}</td>
+                  <td>
+                    @for (message of row.messages; track $index) {
+                      <div>{{ message }}</div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (r.notices.length > 0) {
+      <section class="card">
+        <h2 class="section-title">Avisos (no impiden importar)</h2>
+        <div class="table-container rows-table">
+          <table class="table">
+            <thead><tr><th>Hoja</th><th class="num">Fila</th><th>Aviso</th></tr></thead>
+            <tbody>
+              @for (row of r.notices; track row.sheet + row.rowNumber) {
+                <tr><td>{{ row.sheet }}</td><td class="num">{{ row.rowNumber }}</td><td>{{ row.messages.join(' ') }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <section class="card">
+      <h2 class="section-title">Totales por mes</h2>
+      <p class="form-hint">Para comparar con las tablas dinámicas. Ventas incluye lo por asignar; de terceros y al costo van aparte.</p>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr><th>Mes</th><th class="num">Ventas</th><th class="num">Utilidad</th><th class="num">Por asignar</th>
+              <th class="num">Al costo</th><th class="num">De terceros</th><th class="num">Consumos</th></tr>
+          </thead>
+          <tbody>
+            @for (month of r.months; track month.month) {
+              <tr>
+                <td>{{ month.month }}</td>
+                <td class="num">{{ month.sales | number:'1.2-2' }}</td>
+                <td class="num">{{ month.profit | number:'1.2-2' }}</td>
+                <td class="num">{{ month.unassigned | number:'1.2-2' }}</td>
+                <td class="num">{{ month.atCost | number:'1.2-2' }}</td>
+                <td class="num">{{ month.thirdParty | number:'1.2-2' }}</td>
+                <td class="num">{{ month.consumptions | number:'1.2-2' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="table-empty">Sin ventas ni consumos.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Movimientos por categoría y mes</h2>
+      <div class="movements-grid">
+        @for (group of movementsByMonth(); track group.month) {
+          <div class="table-container">
+            <table class="table">
+              <thead><tr><th>{{ group.month }}</th><th class="num">Bs</th></tr></thead>
+              <tbody>
+                @for (movement of group.movements; track movement.concept) {
+                  <tr><td>{{ movement.concept }}</td><td class="num">{{ movement.amount | number:'1.2-2' }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <app-confirm-modal
+    [isOpen]="confirmOpen()"
+    title="¿Importar el historial?"
+    message="Se guardan todas las ventas, movimientos, cajas, consumos y pedidos hasta la fecha de corte. Se hace una sola vez y no se puede repetir."
+    confirmText="Importar"
+    variant="warning"
+    [isLoading]="isBusy()"
+    (confirm)="confirmImport()"
+    (cancel)="confirmOpen.set(false)" />
+</div>

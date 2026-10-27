@@ -103,7 +103,8 @@ class SaleControllerTest {
             SaleType.NORMAL,
             null,
             null,
-            BigDecimal.ZERO
+            BigDecimal.ZERO,
+            false
         );
 
         when(jwtService.isTokenValid(AUTH_TOKEN, "admin")).thenReturn(true);
@@ -173,7 +174,8 @@ class SaleControllerTest {
             SaleType.NORMAL,
             null,
             null,
-            BigDecimal.ZERO
+            BigDecimal.ZERO,
+            false
         );
 
         when(saleService.voidSale(eq(saleId), any(VoidSaleRequest.class), eq("admin"))).thenReturn(voidedResponse);

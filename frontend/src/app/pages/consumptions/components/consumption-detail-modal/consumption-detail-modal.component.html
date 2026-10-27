@@ -63,7 +63,9 @@
 
       <div class="detail-footer">
         <p class="audit">Registrado por {{ c.createdBy }} el {{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
-        @if (isActive()) {
+        @if (c.historical) {
+          <span class="hint">Histórico: migrado de la planilla.</span>
+        } @else if (isActive()) {
           <button type="button" class="btn btn-danger btn-sm" (click)="openVoid()">Anular consumo</button>
         }
       </div>

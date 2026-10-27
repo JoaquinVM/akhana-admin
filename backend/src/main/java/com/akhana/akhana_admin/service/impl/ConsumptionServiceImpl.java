@@ -138,6 +138,9 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         if (consumption.getStatus() == ConsumptionStatus.ANULADO) {
             throw new IllegalStateException(ALREADY_VOIDED);
         }
+        if (consumption.isHistorical()) {
+            throw new IllegalStateException("El consumo es histórico (migrado de la planilla): no se puede anular.");
+        }
         // No money to revert, so it does not depend on the cash session
         consumption.setStatus(ConsumptionStatus.ANULADO);
         consumption.setVoidedBy(username);

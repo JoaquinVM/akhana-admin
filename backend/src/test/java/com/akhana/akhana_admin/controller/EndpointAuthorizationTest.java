@@ -59,6 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialCategoryController.class,
         FinancialSummaryController.class,
         FinancialTransactionController.class,
+        MigrationController.class,
         ProductController.class,
         ProductImportController.class,
         PurchaseController.class,
@@ -138,6 +139,8 @@ class EndpointAuthorizationTest {
             {"fullName":"Ana Rojas","role":"OPERATOR"}""";
     // Sent as a multipart "file" part instead of a JSON body (CAT-06)
     private static final String XLSX_FILE = "<xlsx>";
+    // The two spreadsheets and the cutoff date of the historical migration (FIN-11)
+    private static final String MIGRATION_FILES = "<migration>";
 
     @Autowired
     private MockMvc mockMvc;
@@ -154,6 +157,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private FinancialCategoryService financialCategoryService;
     @MockitoBean private FinancialSummaryService financialSummaryService;
     @MockitoBean private FinancialTransactionService financialTransactionService;
+    @MockitoBean private MigrationService migrationService;
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private PurchaseService purchaseService;
@@ -311,6 +315,8 @@ class EndpointAuthorizationTest {
                 adminOnly(get, "/api/reports/transactions-by-category/export", null),
                 adminOnly(get, "/api/reports/totals/export", null),
                 adminOnly(get, "/api/reports/consumptions/export", null),
+                adminOnly(post, "/api/migration/preview", MIGRATION_FILES),
+                adminOnly(post, "/api/migration", MIGRATION_FILES),
                 // Usuarios
                 adminOnly(get, "/api/users", null),
                 adminOnly(get, "/api/users/" + ID, null),
@@ -349,6 +355,13 @@ class EndpointAuthorizationTest {
         if (XLSX_FILE.equals(endpoint.body())) {
             return multipart(endpoint.url())
                     .file(new MockMultipartFile("file", "Productos.xlsx", null, new byte[]{1}))
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        }
+        if (MIGRATION_FILES.equals(endpoint.body())) {
+            return multipart(endpoint.url())
+                    .file(new MockMultipartFile("recaudaciones", "Akhana Recaudaciones.xlsx", null, new byte[]{1}))
+                    .file(new MockMultipartFile("pedidos", "Akhana Pedidos.xlsx", null, new byte[]{1}))
+                    .param("cutoffDate", "2026-10-26")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         }
         if (endpoint.body() != null) {

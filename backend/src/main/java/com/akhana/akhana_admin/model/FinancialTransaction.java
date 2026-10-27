@@ -20,6 +20,10 @@ public class FinancialTransaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // FIN-11: import of the historical migration that created it; null for records of the system
+    @Column(name = "historical_import_id", updatable = false)
+    private UUID historicalImportId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private FinancialTransactionType type;
@@ -106,5 +110,10 @@ public class FinancialTransaction {
         if (status == null) {
             status = FinancialTransactionStatus.ACTIVO;
         }
+    }
+
+    /** FIN-11: imported from the spreadsheets; it cannot be voided or edited. */
+    public boolean isHistorical() {
+        return historicalImportId != null;
     }
 }

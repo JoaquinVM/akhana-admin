@@ -38,7 +38,9 @@ public record SaleResponse(
     SaleType saleType,
     UUID customerId,
     String customerName,
-    BigDecimal creditAmount
+    BigDecimal creditAmount,
+    // FIN-11: migrated from the spreadsheet, without cash session or payments
+    boolean historical
 ) {
     public SaleResponse(
         UUID id,
@@ -76,7 +78,8 @@ public record SaleResponse(
             SaleType.NORMAL,
             null,
             null,
-            BigDecimal.ZERO
+            BigDecimal.ZERO,
+            false
         );
     }
 
@@ -124,7 +127,8 @@ public record SaleResponse(
             sale.getSaleType(),
             sale.getCustomer() != null ? sale.getCustomer().getId() : null,
             sale.getCustomer() != null ? sale.getCustomer().getName() : null,
-            sale.getCreditAmount()
+            sale.getCreditAmount(),
+            sale.isHistorical()
         );
     }
 }

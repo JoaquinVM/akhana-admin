@@ -29,6 +29,8 @@ public class FinancialTransactionResponse {
     private UUID purchaseId;
     private UUID creditorRepaymentId;
     private UUID customerCollectionId;
+    // FIN-11: migrated from Transacc.; it does not count in the balances and cannot be edited or voided
+    private boolean historical;
 
     private AccountSummary sourceAccount;
     private AccountSummary destinationAccount;

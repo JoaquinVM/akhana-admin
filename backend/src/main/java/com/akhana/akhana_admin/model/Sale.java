@@ -22,11 +22,16 @@ public class Sale {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // FIN-11: import of the historical migration that created it; null for records of the system
+    @Column(name = "historical_import_id", updatable = false)
+    private UUID historicalImportId;
+
     @Column(name = "sale_number", nullable = false, length = 50)
     private String saleNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cash_session_id", nullable = false)
+    // Null only for historical sales (FIN-11)
+    @JoinColumn(name = "cash_session_id")
     private CashSession cashSession;
 
     @Enumerated(EnumType.STRING)
@@ -110,4 +115,9 @@ public class Sale {
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SaleItem> items = new ArrayList<>();
+
+    /** FIN-11: imported from the spreadsheets; it cannot be voided or edited. */
+    public boolean isHistorical() {
+        return historicalImportId != null;
+    }
 }

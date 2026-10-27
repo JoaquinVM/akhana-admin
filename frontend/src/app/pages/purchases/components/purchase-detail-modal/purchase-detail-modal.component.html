@@ -32,6 +32,9 @@
         <div><span class="label">Pagado</span><strong>Bs {{ p.paidAmount | number:'1.2-2' }}</strong></div>
         <div><span class="label">Saldo</span><strong class="balance">Bs {{ p.balance | number:'1.2-2' }}</strong></div>
       </div>
+      @if (p.historical) {
+        <p class="hint">Histórico: migrado de la planilla. Sus pagos no movieron dinero (ya están en Transacc.); solo se le registran pagos nuevos.</p>
+      }
       @if (p.consignment) {
         <p class="hint">Pedido en consignación.</p>
       }
@@ -87,7 +90,7 @@
           @if (p.deliveryDate) {
             <span class="hint">{{ p.deliveryStatus === 'ENTREGADO' ? 'entregado el' : 'estimado para el' }} {{ p.deliveryDate | date:'dd/MM/yyyy' }}</span>
           }
-          @if (isActive()) {
+          @if (isEditable()) {
             <button type="button" class="btn btn-ghost btn-sm" (click)="startDeliveryEdit()">Cambiar entrega</button>
           }
         </div>
@@ -152,7 +155,10 @@
                   </td>
                   <td class="text-right">Bs {{ payment.amount | number:'1.2-2' }}</td>
                   <td class="text-right">
-                    @if (isActive() && payment.status === 'ACTIVO') {
+                    @if (payment.historical) {
+                      <span class="hint">Histórico</span>
+                    }
+                    @if (isActive() && payment.status === 'ACTIVO' && !payment.historical) {
                       <button type="button" class="btn btn-ghost btn-sm btn-void" (click)="openVoid(payment)">Anular</button>
                     }
                   </td>
@@ -216,7 +222,7 @@
 
       <div class="detail-footer">
         <p class="audit">Registrado por {{ p.createdBy }} el {{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
-        @if (isActive()) {
+        @if (isEditable()) {
           <button type="button" class="btn btn-danger btn-sm" (click)="openVoid('PURCHASE')">Anular pedido</button>
         }
       </div>

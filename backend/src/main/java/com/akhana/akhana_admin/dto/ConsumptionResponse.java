@@ -23,7 +23,9 @@ public record ConsumptionResponse(
     String voidedBy,
     Instant voidedAt,
     String voidReason,
-    List<ConsumptionItemResponse> items
+    List<ConsumptionItemResponse> items,
+    // FIN-11: migrated from the spreadsheet
+    boolean historical
 ) {
     public static ConsumptionResponse summary(Consumption consumption) {
         return of(consumption, List.of());
@@ -47,7 +49,8 @@ public record ConsumptionResponse(
             consumption.getVoidedBy(),
             consumption.getVoidedAt(),
             consumption.getVoidReason(),
-            items
+            items,
+            consumption.isHistorical()
         );
     }
 }

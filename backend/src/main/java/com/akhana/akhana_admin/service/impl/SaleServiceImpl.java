@@ -351,6 +351,9 @@ public class SaleServiceImpl implements SaleService {
         if (sale.getStatus() == SaleStatus.ANULADA) {
             throw new IllegalStateException("La venta ya ha sido anulada previamente.");
         }
+        if (sale.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_SALE);
+        }
 
         CashSession session = openSession
             .filter(open -> open.getId().equals(sale.getCashSession().getId()))
@@ -562,6 +565,8 @@ public class SaleServiceImpl implements SaleService {
     static BigDecimal packWeight(BigDecimal packs, ProductPresentation presentation) {
         return packs.multiply(presentation.getWeightKg()).setScale(3, RoundingMode.HALF_UP);
     }
+
+    static final String HISTORICAL_SALE = "La venta es histórica (migrada de la planilla): no se puede anular.";
 
     static String formatSaleNumber(long sequenceValue) {
         return String.format("VTA-%06d", sequenceValue);

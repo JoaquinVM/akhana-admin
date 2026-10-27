@@ -31,7 +31,8 @@ public interface CashSessionRepository extends JpaRepository<CashSession, UUID> 
 
     List<CashSession> findAllByOrderByOpenedAtDesc();
 
-    Optional<CashSession> findFirstByStatusOrderByClosedAtDesc(CashSessionStatus status);
+    // Historical sessions (FIN-11) are left out: the first session of the system proposes the balance of Caja
+    Optional<CashSession> findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus status);
 
     @Query("SELECT DISTINCT cs FROM CashSession cs " +
            "LEFT JOIN FETCH cs.cuts " +

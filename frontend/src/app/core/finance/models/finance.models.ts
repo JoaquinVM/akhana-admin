@@ -83,6 +83,8 @@ export interface FinancialTransaction {
   // Gasto de una devolución a una persona (DEU-03): se gestiona desde Deudas
   creditorRepaymentId?: string | null;
   cashSessionId?: string;
+  // FIN-11: migrado de Transacc.; no cuenta en los saldos ni se edita o anula
+  historical?: boolean;
   sourceAccount: AccountSummary;
   destinationAccount?: AccountSummary;
   category?: CategorySummary;

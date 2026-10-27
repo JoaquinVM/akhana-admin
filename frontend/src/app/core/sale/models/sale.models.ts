@@ -8,7 +8,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   EFECTIVO: 'Efectivo',
   QR: 'QR',
   MIXTO: 'Mixto',
-  CREDITO: 'Crédito'
+  CREDITO: 'Crédito',
+  HISTORICO: 'Histórico'
 };
 
 // POS-09: filtros del historial; un método incluye las ventas que lo usaron (Efectivo y QR incluyen Mixto,

@@ -31,12 +31,15 @@ export class SalesTableComponent {
   }
 
   canVoid(sale: Sale): boolean {
-    return sale.status !== 'ANULADA' && !this.voidBlockedReason();
+    return sale.status !== 'ANULADA' && !sale.historical && !this.voidBlockedReason();
   }
 
   voidTitle(sale: Sale): string {
     if (sale.status === 'ANULADA') {
       return 'Esta venta ya se encuentra anulada';
+    }
+    if (sale.historical) {
+      return 'Venta histórica de la planilla: no se anula';
     }
     return this.voidBlockedReason() ?? 'Anular venta';
   }

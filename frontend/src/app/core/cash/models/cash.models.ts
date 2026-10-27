@@ -1,6 +1,7 @@
 export type CashSessionStatus = 'ABIERTA' | 'CERRADA';
 // CREDITO: venta al costo toda a crédito, sin pago en el momento (DEU-05)
-export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO' | 'CREDITO';
+// HISTORICO: venta migrada de la planilla, sin pagos; su dinero está en los movimientos (FIN-11)
+export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO' | 'CREDITO' | 'HISTORICO';
 // CON-02: toda la venta es normal o al costo (precio = costo, sin utilidad)
 export type SaleType = 'NORMAL' | 'AL_COSTO';
 export type SaleStatus = 'COMPLETADA' | 'ANULADA';
@@ -59,7 +60,8 @@ export type SaleItemAssignmentStatus = 'POR_ASIGNAR' | 'ASIGNADO' | 'SIN_IDENTIF
 export interface Sale {
   id: string;
   saleNumber: string;
-  cashSessionId: string;
+  // Null en las ventas históricas (FIN-11)
+  cashSessionId: string | null;
   sessionNumber?: number | null;
   status?: SaleStatus;
   subtotalAmount?: number;
@@ -84,6 +86,8 @@ export interface Sale {
   customerName?: string | null;
   // Parte de la venta que queda por cobrar al cliente (DEU-05)
   creditAmount?: number;
+  // FIN-11: migrado de la planilla; no se anula ni se edita
+  historical?: boolean;
 }
 
 export interface CashSessionSummary {
@@ -104,11 +108,18 @@ export interface CashSessionSummary {
   expectedCash: number;
   difference?: number | null;
   salesCount: number;
+  // FIN-11: caja de la hoja Cierre de Caja
+  historical?: boolean;
 }
 
 export interface CashSessionDetail extends CashSessionSummary {
   cuts: CashCutItem[];
   sales: Sale[];
+  // FIN-11: montos de la planilla que el sistema calcula de los movimientos (null en las demás cajas)
+  historicalOtherIncome?: number | null;
+  historicalExpenses?: number | null;
+  historicalOtherOutflow?: number | null;
+  historicalInternalOutflow?: number | null;
 }
 
 export const BOLIVIAN_DENOMINATIONS: readonly number[] = [

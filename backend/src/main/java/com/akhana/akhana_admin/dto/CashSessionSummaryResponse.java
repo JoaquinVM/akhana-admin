@@ -23,5 +23,7 @@ public record CashSessionSummaryResponse(
     BigDecimal totalSales,
     BigDecimal expectedCash,
     BigDecimal difference,
-    long salesCount
+    long salesCount,
+    // FIN-11: closed session of Cierre de Caja
+    boolean historical
 ) {}

@@ -22,6 +22,23 @@ public class CashSession {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // FIN-11: import of the historical migration that created it; null for records of the system
+    @Column(name = "historical_import_id", updatable = false)
+    private UUID historicalImportId;
+
+    // FIN-11: amounts of Cierre de Caja that the system otherwise computes from movements; null for other sessions
+    @Column(name = "historical_other_income", precision = 12, scale = 2)
+    private BigDecimal historicalOtherIncome;
+
+    @Column(name = "historical_expenses", precision = 12, scale = 2)
+    private BigDecimal historicalExpenses;
+
+    @Column(name = "historical_other_outflow", precision = 12, scale = 2)
+    private BigDecimal historicalOtherOutflow;
+
+    @Column(name = "historical_internal_outflow", precision = 12, scale = 2)
+    private BigDecimal historicalInternalOutflow;
+
     @Column(name = "session_number", insertable = false, updatable = false)
     private Long sessionNumber;
 
@@ -81,4 +98,9 @@ public class CashSession {
     @OneToMany(mappedBy = "cashSession", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Sale> sales = new ArrayList<>();
+
+    /** FIN-11: imported from the spreadsheets; it cannot be voided or edited. */
+    public boolean isHistorical() {
+        return historicalImportId != null;
+    }
 }

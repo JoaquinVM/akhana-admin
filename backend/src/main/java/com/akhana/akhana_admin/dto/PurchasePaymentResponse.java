@@ -25,7 +25,9 @@ public record PurchasePaymentResponse(
     Instant createdAt,
     String voidedBy,
     Instant voidedAt,
-    String voidReason
+    String voidReason,
+    // FIN-11: migrated without a movement (P-43)
+    boolean historical
 ) {
     public static PurchasePaymentResponse fromEntity(PurchasePayment payment) {
         FinancialAccount account = payment.getAccount();
@@ -45,7 +47,8 @@ public record PurchasePaymentResponse(
             payment.getCreatedAt(),
             payment.getVoidedBy(),
             payment.getVoidedAt(),
-            payment.getVoidReason()
+            payment.getVoidReason(),
+            payment.isHistorical()
         );
     }
 }

@@ -110,7 +110,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-10: propone como monto inicial el cierre de la caja anterior")
     void getOpeningProposal_returnsPreviousClosing() {
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.5")));
 
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
@@ -122,7 +122,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-10: sin caja anterior ni cuenta Caja propone 0.00")
     void getOpeningProposal_noPreviousSession_returnsZero() {
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.empty());
 
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
@@ -134,7 +134,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("FIN-01: la primera caja propone el saldo al corte de Caja")
     void getOpeningProposal_noPreviousSession_returnsCashBalance() {
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.empty());
         when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(FinancialAccount.builder()
             .isCashAccount(true).currentBalance(new BigDecimal("7637.9")).build()));
@@ -149,7 +149,7 @@ class CashSessionServiceTest {
     @DisplayName("CAJ-10: abrir con el monto propuesto no exige comentario")
     void openSession_withProposedAmount_noCommentNeeded() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.50")));
         when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -164,7 +164,7 @@ class CashSessionServiceTest {
     @DisplayName("CAJ-10: abrir con un monto distinto al cierre anterior sin comentario se rechaza")
     void openSession_changedAmountWithoutComment_throws() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.50")));
 
         assertThatThrownBy(() -> cashSessionService.openSession(
@@ -179,7 +179,7 @@ class CashSessionServiceTest {
     @DisplayName("CAJ-10: abrir con un monto distinto al cierre anterior y comentario se acepta")
     void openSession_changedAmountWithComment_succeeds() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
-        when(cashSessionRepository.findFirstByStatusOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.50")));
         when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

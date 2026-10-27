@@ -24,6 +24,10 @@ public class Consumption {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // FIN-11: import of the historical migration that created it; null for records of the system
+    @Column(name = "historical_import_id", updatable = false)
+    private UUID historicalImportId;
+
     @Column(name = "consumption_number", nullable = false, length = 50, updatable = false)
     private String consumptionNumber;
 
@@ -64,4 +68,9 @@ public class Consumption {
     @OrderBy("id")
     @Builder.Default
     private List<ConsumptionItem> items = new ArrayList<>();
+
+    /** FIN-11: imported from the spreadsheets; it cannot be voided or edited. */
+    public boolean isHistorical() {
+        return historicalImportId != null;
+    }
 }

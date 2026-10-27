@@ -216,6 +216,12 @@ export class SaleDetailModalComponent {
         label: 'QR',
         amount: sale.amountQr ?? 0
       });
+    } else if (sale.paymentMethod === 'HISTORICO') {
+      // FIN-11: sin pagos; el dinero de ese día está en los movimientos migrados
+      list.push({
+        label: 'Histórico (dinero en Transacc.)',
+        amount: sale.totalAmount
+      });
     } else if (sale.paymentMethod !== 'CREDITO') {
       list.push({
         label: sale.paymentMethod || 'Otro',
