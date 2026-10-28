@@ -197,6 +197,7 @@ class MigrationIntegrationTest {
                 sale(DAY, nut, 250, "Nuez", 52.5, null, 0.13),
                 sale(DAY, unit, 1, "Producto", 10, "Mami precio costo", 10.0),
                 sale(DAY, unit, 1, "Producto", 15, "Regalo Ali", 10.0),
+                sale(DAY, unit, 1, "Producto", 10, "Mami rompió precio costo", 10.0),
                 sale(AFTER, unit, 1, "Producto", 15, null, 10.0)),
             transacc(
                 new Object[]{"Gasto", "julio", DAY, "Pan", -100, expenseCategory, accountA, null, null},
@@ -235,16 +236,22 @@ class MigrationIntegrationTest {
                 assertThat(debt.amount()).isEqualByComparingTo("50.00");
             });
         var ventas = preview.sheets().stream().filter(s -> s.sheet().equals("Ventas")).findFirst().orElseThrow();
-        assertThat(ventas.read()).isEqualTo(8);
-        assertThat(ventas.toImport()).isEqualTo(7);
+        assertThat(ventas.read()).isEqualTo(9);
+        assertThat(ventas.toImport()).isEqualTo(8);
         assertThat(ventas.afterCutoff()).isEqualTo(1);
         var july = preview.months().getFirst();
-        // Normal: 30 + 23 + 90 + 52.50; profit of 30 - 20, 90 - 0.454 x 129.87 and 52.50 - 0.25 x 130
-        assertThat(july.sales()).isEqualByComparingTo("195.50");
-        assertThat(july.profit()).isEqualByComparingTo("61.04");
-        assertThat(july.atCost()).isEqualByComparingTo("10.00");
+        // Normal: 30 + 23 + 90 + 52.50 + 15 of the gift without «precio costo»; profit of 30 - 20, 90 - 0.454 x 129.87,
+        // 52.50 - 0.25 x 130 and 15 - 10
+        assertThat(july.sales()).isEqualByComparingTo("210.50");
+        assertThat(july.profit()).isEqualByComparingTo("66.04");
+        // P-39: «Mami precio costo» and the breakage marked «precio costo» are at-cost sales, not consumptions
+        assertThat(july.atCost()).isEqualByComparingTo("20.00");
         assertThat(july.thirdParty()).isEqualByComparingTo("50.00");
-        assertThat(july.consumptions()).isEqualByComparingTo("20.00");
+        assertThat(july.consumptions()).isEqualByComparingTo("10.00");
+        assertThat(preview.notices()).singleElement().satisfies(notice -> {
+            assertThat(notice.sheet()).isEqualTo("Ventas");
+            assertThat(notice.messages().getFirst()).contains("Regalo Ali", "precio costo");
+        });
 
         MigrationResponse result = migrationService.importHistory("Akhana Recaudaciones.xlsx", validRecaudaciones(),
             "Akhana Pedidos.xlsx", validPedidos(), CUTOFF, "it-migration");
@@ -263,8 +270,8 @@ class MigrationIntegrationTest {
             assertThat(s.get("cash_session_id")).isNull();
         });
         assertThat(sales.get(0).get("sale_type")).isEqualTo("NORMAL");
-        assertThat((BigDecimal) sales.get(0).get("total_amount")).isEqualByComparingTo("245.50");
-        assertThat((BigDecimal) sales.get(1).get("total_amount")).isEqualByComparingTo("10.00");
+        assertThat((BigDecimal) sales.get(0).get("total_amount")).isEqualByComparingTo("260.50");
+        assertThat((BigDecimal) sales.get(1).get("total_amount")).isEqualByComparingTo("20.00");
 
         UUID normal = (UUID) sales.get(0).get("id");
         Map<String, Object> pound = jdbc.queryForMap(
@@ -291,9 +298,9 @@ class MigrationIntegrationTest {
             BigDecimal.class, mamiName);
         assertThat(debt).isEqualByComparingTo("50.00");
 
-        // Consumptions: the Consumos row and the gift of Ventas
-        assertThat(jdbc.queryForList("SELECT comment FROM consumptions WHERE historical_import_id = ? ORDER BY comment",
-            String.class, importId)).containsExactlyInAnyOrder("Regalo Ali", null);
+        // Consumptions: only the Consumos row; gifts and breakages are sales (P-39)
+        assertThat(jdbc.queryForList("SELECT comment FROM consumptions WHERE historical_import_id = ?",
+            String.class, importId)).containsExactly((String) null);
 
         // Movements: historical, outside the balances and the opening balance lock (FIN-01, FIN-08)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM financial_transactions WHERE historical_import_id = ?",

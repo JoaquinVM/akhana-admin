@@ -217,9 +217,13 @@ está en Transacc. como ingresos Venta.
   decimales: es historia.
 - **Cuando** el comentario dice «precio costo» **entonces** la fila va a la venta `AL_COSTO` de ese día (CON-02,
   P-39).
-- **Cuando** el comentario empieza con «Regalo» o dice «rompió» («Regalo Ali», «Mami rompió») **entonces** la
-  fila va a la venta `AL_COSTO` de ese día, como «precio costo»: quien regala o rompe pagó el costo (P-39, cambiado
-  el 28-10-2026; hoy se migra como consumo, tarea pendiente abajo).
+- **Cuando** un regalo o una rotura dice «precio costo» («Regalo Ali precio costo», «Mami rompio precio costo»)
+  **entonces** la fila va a la venta `AL_COSTO` de ese día: quien regala o rompe pagó el costo (P-39, 28-10-2026).
+  Las 4 filas de la planilla (25-08 fila 2247; 21-09 filas 3870, 3872 y 3873; Bs 126) se corrigieron así en la
+  planilla el 28-10-2026; la hoja Consumos no tenía ninguna.
+- **Cuando** el comentario empieza con «Regalo» o dice «rompió» sin «precio costo» **entonces** la fila entra como
+  venta normal y Revisar muestra el aviso «<comentario> parece un regalo o una rotura: entra como venta normal. Si
+  se pagó al costo, agregar «precio costo» al comentario (P-39).»
 - **Cuando** la fila no tiene código **entonces** la línea va al «Producto sin identificar» con el nombre y el
   precio de la fila, costo 0 pendiente y estado por asignar (POS-12); se asigna después desde el historial de
   ventas. Si falta crear ese producto: «Falta crear el «Producto sin identificar» en Productos (POS-12).»
@@ -379,8 +383,9 @@ Construcción (rama `feat/migration`, 27-10-2026):
 - [x] Validar con los `.xlsx` reales (arriba).
 - [ ] Marca «Histórico» en Finanzas → Transacciones: `transactions.component.html` es muy grande; se divide antes
   de tocarlo. Mientras tanto el servidor rechaza editar o anular un movimiento histórico con su mensaje.
-- [ ] Regalos y roturas a la venta al costo (P-39, 28-10-2026): en `MigrationServiceImpl` las filas «Regalo…» y
-  «…rompió» van a la venta `AL_COSTO` del día en vez de a Consumos; ajustar `MigrationIntegrationTest` (caso
-  regalo) y el resumen de la pantalla.
+- [x] Regalos y roturas a la venta al costo (P-39, 28-10-2026, rama `feat/migration-gifts`): las 4 filas de la
+  planilla llevan «precio costo» en el comentario; en `MigrationServiceImpl` la regla «Regalo…»/«…rompió» →
+  Consumos se cambió por un aviso en Revisar. `MigrationIntegrationTest` cubre el regalo sin «precio costo» (aviso
+  y venta normal) y la rotura con «precio costo» (venta al costo). La pantalla no cambia: los avisos ya se muestran.
 - [ ] El día de la salida: vaciar la última fila del Cierre (borrador) antes de descargar el `.xlsx`, importar
   productos (CAT-06), cargar saldos al corte (FIN-01), revisar e importar.

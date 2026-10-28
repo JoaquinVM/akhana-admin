@@ -371,20 +371,13 @@ public class MigrationServiceImpl implements MigrationService {
             String name = row.text("name");
             String comment = row.text("comment");
             String normalizedComment = normalize(comment);
-            // P-39: gifts and breakages are consumptions; «precio costo» goes to the at-cost sale of the day
+            // P-39: «precio costo» goes to the at-cost sale of the day; gifts and breakages are at-cost sales too, marked
+            // in the spreadsheet with «precio costo», so one without it only gets a notice
             boolean giftOrBreakage = normalizedComment.startsWith("regalo") || normalizedComment.contains("rompi");
             boolean atCost = normalizedComment.contains("precio costo");
 
             if (!errors.isEmpty()) {
                 analysis.accept(VENTAS, row, errors);
-                continue;
-            }
-            if (giftOrBreakage) {
-                ConsumptionItem item = consumptionItem(analysis, code, quantity, cost, errors);
-                if (analysis.accept(VENTAS, row, errors)) {
-                    analysis.consumptions.add(new ConsumptionDraft(date, null, truncate(comment, 500), item));
-                    analysis.month(date).consumptions = analysis.month(date).consumptions.add(item.getSubtotal());
-                }
                 continue;
             }
 
@@ -421,6 +414,10 @@ public class MigrationServiceImpl implements MigrationService {
             }
             if (!analysis.accept(VENTAS, row, errors)) {
                 continue;
+            }
+            if (giftOrBreakage && !atCost) {
+                analysis.notices.add(new RowMessage(VENTAS, row.rowNumber(), List.of("«" + comment + "» parece un regalo "
+                    + "o una rotura: entra como venta normal. Si se pagó al costo, agregar «precio costo» al comentario (P-39).")));
             }
             SaleType type = atCost ? SaleType.AL_COSTO : SaleType.NORMAL;
             analysis.sales.computeIfAbsent(new SaleKey(date, type), k -> new ArrayList<>()).add(item);
