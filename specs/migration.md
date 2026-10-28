@@ -174,7 +174,7 @@ trae `historical`.
 - **Cuando** se pide un reporte (FIN-10, CON-03) **entonces** los registros históricos cuentan igual que los del
   sistema.
 - **Cuando** se mira un registro histórico **entonces** se ve marcado «Histórico» (historial de ventas, detalle de
-  venta, historial de cajas, detalle de pedido y de consumo) y no se puede anular ni editar; el servidor lo
+  venta, historial de cajas, detalle de pedido y de consumo, Finanzas → Transacciones) y no se puede anular ni editar; el servidor lo
   rechaza con «La venta es histórica (migrada de la planilla): no se puede anular.» o el mensaje equivalente
   del consumo, el movimiento, el pedido o el pago. Un pedido histórico con saldo sí admite pagos nuevos.
 - **Cuando** se numera una venta histórica **entonces** usa su propia serie (`HIS-000001`) y no consume la

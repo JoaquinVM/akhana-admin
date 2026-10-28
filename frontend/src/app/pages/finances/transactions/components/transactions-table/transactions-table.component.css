@@ -185,6 +185,18 @@
   color: #991b1b;
 }
 
+.historical-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #2e5b27;
+  background: rgba(46, 91, 39, 0.08);
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  margin-left: 0.35rem;
+  white-space: nowrap;
+}
+
 .cell-actions {
   white-space: nowrap;
 }

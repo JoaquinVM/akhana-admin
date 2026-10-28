@@ -70,6 +70,9 @@
               <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
                 {{ tx.status }}
               </span>
+              @if (tx.historical) {
+                <span class="historical-tag" title="Movimiento de la planilla (FIN-11): no se edita ni se anula">Histórico</span>
+              }
             </td>
             <td class="text-right cell-actions">
               @if (tx.saleId) {
@@ -85,7 +88,7 @@
                   </svg>
                   <span class="btn-text">Venta</span>
                 </button>
-              } @else if (tx.status === 'ACTIVO') {
+              } @else if (canModify(tx)) {
                 <!-- Transacción manual activa: Editar y Anular -->
                 <button
                   type="button"

@@ -318,6 +318,47 @@ describe('TransactionsComponent', () => {
     expect(component.transactionToVoid()).toBeNull();
   });
 
+  it('no debe permitir anular ni editar un movimiento histórico (FIN-11)', () => {
+    const historicalTx: FinancialTransaction = { ...mockTransactions[0], id: 'tx-his', historical: true };
+
+    component.openVoidModal(historicalTx);
+    component.openEditModal(historicalTx);
+
+    expect(component.isVoidModalOpen()).toBe(false);
+    expect(component.activeModalType()).toBeNull();
+  });
+
+  it('debe mostrar el modal de ingreso con su texto al abrirlo', () => {
+    component.openIncomeModal();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Registrar Ingreso Manual');
+    expect(text).toContain('Nota: La cuenta Caja no admite ingresos manuales directos.');
+    expect(fixture.nativeElement.querySelector('#inc-acc')).not.toBeNull();
+  });
+
+  it('debe mostrar el modal de transferencia con origen y destino', () => {
+    component.openTransferModal();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#trf-src')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#trf-dst')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#trf-cat')).toBeNull();
+  });
+
+  it('debe actualizar el filtro y recargar al cambiar el estado', () => {
+    mockTransactionService.getTransactions.mockClear();
+    const select = fixture.nativeElement.querySelector('#filter-status') as HTMLSelectElement;
+    select.value = 'ANULADO';
+    select.dispatchEvent(new Event('change'));
+
+    expect(component.selectedStatus()).toBe('ANULADO');
+    expect(mockTransactionService.getTransactions).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'ANULADO' })
+    );
+  });
+
   it('debe abrir modal de detalle de venta al consultar transacción con saleId', () => {
     component.openSaleDetail('sale-101');
 

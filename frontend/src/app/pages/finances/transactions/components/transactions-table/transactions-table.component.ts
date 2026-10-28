@@ -17,4 +17,9 @@ export class TransactionsTableComponent {
   editRequested = output<FinancialTransaction>();
   voidRequested = output<FinancialTransaction>();
   auditRequested = output<FinancialTransaction>();
+
+  // Los movimientos históricos (FIN-11) no se editan ni se anulan; el servidor también los rechaza
+  canModify(tx: FinancialTransaction): boolean {
+    return tx.status === 'ACTIVO' && !tx.historical;
+  }
 }

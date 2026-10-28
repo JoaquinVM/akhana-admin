@@ -280,6 +280,7 @@ export class TransactionsComponent implements OnInit {
   }
 
   openEditModal(tx: FinancialTransaction): void {
+    if (tx.historical) return;
     this.modalFormError.set(null);
     this.selectedTransactionForEdit.set(tx);
     this.editForm.reset({
@@ -437,7 +438,7 @@ export class TransactionsComponent implements OnInit {
   // --- Anulación ---
 
   openVoidModal(tx: FinancialTransaction): void {
-    if (tx.status === 'ANULADO' || tx.saleId) return;
+    if (tx.status === 'ANULADO' || tx.saleId || tx.historical) return;
     this.transactionToVoid.set(tx);
     this.voidReason.set('');
     this.voidError.set(null);
