@@ -9,8 +9,9 @@ Decisiones del 27-10-2026 con el dueño (P-40 a P-42, P-45 a P-47): la planilla 
 la migración sea mecánica, y lo que no tiene producto entra con los productos especiales de POS-12 y POS-13. Moneda
 Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 y CAT-11.
 
-Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Falta hacer las
-correcciones en la planilla y correrla el día de la salida.
+Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Correcciones en la
+planilla hechas el 27-10-2026 salvo las filas de Ventas sin código, HOJITA y el borrador del Cierre; falta
+correrla el día de la salida.
 
 ## Qué se migra y qué no
 
@@ -20,9 +21,9 @@ correcciones en la planilla y correrla el día de la salida.
 | Transacc. | Recaudaciones | Movimientos históricos de Caja, Bisa y Efectivo | Desde el 04-05. Única fuente de dinero histórico (P-43). |
 | Cierre de Caja | Recaudaciones | Cajas históricas cerradas | Desde el 04-05. No generan ajustes (CAJ-09). |
 | Conteo | Recaudaciones | No se migra | No tiene fechas: son los 3 bloques del conteo del día en curso, no un historial. |
-| Pedidos | Pedidos | Pedidos con envío, estado de pago y entrega | 515 pedidos desde abril. Los que tienen saldo quedan por pagar (COM-08). |
+| Pedidos | Pedidos | Pedidos con envío, estado de pago y entrega | 517 pedidos desde abril (al 27-10). Los que tienen saldo quedan por pagar (COM-08). |
 | Detalle Pedidos | Recaudaciones | Líneas de los pedidos | Solo desde el pedido 342 (01-09); los anteriores entran sin líneas (P-45). |
-| Consumos | Recaudaciones | Consumos al costo (CON-01) | Con código y costo unitario agregados por el dueño (P-40). |
+| Consumos | Recaudaciones | Consumos al costo (CON-01) | Desde el 04-05, con código y costo unitario (P-40). |
 | Productos | Recaudaciones | Ya importada con CAT-06 | La migración solo lee «Se vende por» (CAT-08). |
 | HOJITA | Recaudaciones | No se migra | Lo pendiente se pasa antes a las otras hojas (P-41). |
 | Resumen, Resumen Ventas, Diario, Resumen Transacc. | Recaudaciones | No se migran | Las calcula el sistema (FIN-10); sirven para validar. |
@@ -32,24 +33,44 @@ correcciones en la planilla y correrla el día de la salida.
 Antes de migrar se corrige la planilla, con ayuda de Claude (excepción a «la planilla no se modifica» de
 CAT-06). Hay que hacer antes una copia de respaldo de las dos planillas.
 
+Hechas el 27-10-2026 con el dueño, con copia de respaldo previa de las dos planillas: consumos (P-40), hoja
+Consumos completa, Cierre igual a Ventas, columnas Proveedor y Monto pagado en Pedidos y los arreglos de la
+validación. Las filas de Transacc. cambiaron de número (se quitaron 59 gastos Consumo y se agregó un Sobrante):
+los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42), HOJITA
+(P-41) y el borrador del Cierre (abajo).
+
 ### Consumos anotados como venta (P-40)
 
-Hasta julio de 2026 un consumo se anotaba como venta (el producto sumaba al total de ventas del día) y se sacaba
-el mismo monto de Caja como gasto Consumo en Transacc., a precio de venta. Del 17 al 28-07 el mismo consumo
-también está en la hoja Consumos.
+Hasta julio de 2026 un consumo se anotaba como venta en efectivo y se sacaba el mismo monto de Caja como gasto
+Consumo en Transacc., a precio de venta. Al corregir se vio que desde el 17-07 el consumo no está en la hoja
+Ventas: solo inflaba el Total del Cierre y el «Ventas» Caja de Transacc. (antes del 17-07 no hay hoja Ventas).
 
-- **Cuando** un gasto Consumo de Transacc. corresponde a un producto anotado en Ventas el mismo día **entonces**
-  se corrige en las cuatro hojas a la vez: en Ventas se baja la cantidad (o se quita la fila); en Transacc. se
-  quita el gasto; en Cierre de Caja se bajan las ventas y los gastos del día por el mismo monto (la caja final y
-  el conteo no cambian); en Consumos se agrega la fila con fecha, código, cantidad y costo unitario, si no estaba.
-- **Cuando** el consumo ya está en la hoja Consumos (17 a 28-07) **entonces** no se agrega de nuevo: solo se
-  quitan la venta y el gasto.
-- **Cuando** no se encuentra la venta que le corresponde a un gasto Consumo **entonces** queda en una lista
-  aparte para que el dueño decida.
-- **Cuando** termina la corrección **entonces** cada consumo está solo en la hoja Consumos y cada fila de esa hoja
-  tiene código y costo unitario (columnas nuevas **Codigo** y **Costo unitario**; la de «para quién» se titula
-  **Para quien**).
-- El almuerzo no es consumo: sigue como gasto Comida (P-37).
+- **Cuando** hay un gasto Consumo en Transacc. **entonces** se corrige en tres hojas: en Transacc. se quita el
+  gasto y se baja el «Ventas» Caja del día por el mismo monto; en Cierre de Caja se bajan el Total y los Gastos
+  por el mismo monto (Resultado, caja final y sobrante no cambian); en Consumos se agrega la fila con fecha,
+  cantidad, descripción, código y costo unitario, si no estaba. La hoja Ventas no se toca. Ningún saldo cambia.
+- **Cuando** el consumo ya está en la hoja Consumos (17 a 23-07) **entonces** no se agrega de nuevo.
+- Hecho: 59 gastos (Bs 1.006): 7 desde el 17-07 que ya estaban en Consumos y 52 del 04-05 al 13-07 (Bs 907),
+  pasados a Consumos con el código y el costo que confirmó el dueño (53 filas, el del 15-06 dividido en barras y
+  Frombombones; el Acualite, producto que ya no existe, como `MAN-LAT`). Costo unitario: el del catálogo al
+  27-10, salvo la Alulosa (77). Transacc. ya no tiene la categoría Consumo.
+- El almuerzo no es consumo (P-37): los dos «Almuerzo» de Transacc. anotados como Consumo pasaron a Comida, y el
+  almuerzo del 12-10 de la hoja Consumos se quitó.
+- La hoja Consumos tiene 141 filas del 04-05 al 26-10, todas con **Codigo** y **Costo unitario**; la columna de
+  «para quién» se titula **Para quien**. La cuarta columna (precio en los consumos de octubre) queda sin título.
+
+### Cierre igual a la hoja Ventas
+
+El Total del Cierre se obtenía sumando la hoja Ventas. Hecho: desde el 17-07 coinciden todos los días.
+
+- **Cuando** el Total del Cierre no coincide con la suma de Ventas del día **entonces** el Total pasa a ser la
+  suma de Ventas; en Transacc. el «Ventas» Caja se iguala al nuevo Efectivo y el «Sobrante» al nuevo sobrante
+  (se agrega la fila si no había). La caja final contada no cambia: la diferencia queda en el sobrante.
+- **Cuando** el día no se contó (caja final con la fórmula `=J`, igual al Resultado) **entonces** la caja final se
+  mueve sola y la diferencia cae en el sobrante del siguiente día que sí se contó.
+- Corregidos 8 días: 17-07, 20-07, 29-07, 03-08 (no contado; pasa al 04-08), 04-08, 11-08, 14-08 y 30-09.
+- Hay días «No se cerró» con la caja final escrita a mano en vez de `=J` (25-05, 01-06, varios de junio):
+  correctos hoy, pero un cambio de su Total no pasaría al día siguiente.
 
 ### Filas de Ventas sin código (P-42)
 
@@ -73,20 +94,30 @@ borraron productos de la hoja Productos. Al 26-10 son 327 filas.
   En los pedidos con líneas puede quedar vacía: se usa el Provedor de Detalle Pedidos.
 - **Cuando** un pedido está «A Cuenta» **entonces** el dueño anota en la columna nueva **Monto pagado** cuánto se
   pagó; el resto queda por pagar.
+- Hecho: columnas **Proveedor**, **Monto pagado** y **Revisar proveedor** (notas de la propuesta) al final de la
+  hoja; todos los pedidos tienen proveedor, confirmado por el dueño. «Belvida» es Belen; Mandala e Impostor se
+  unieron en **Minoli** (también en Productos y Detalle Pedidos). Monto pagado de los «A Cuenta»: 118 → 1.000,
+  349 → 542, 483 → 144.
+- **Cuando** un pedido se pagó en partes con estados distintos (pagado y consignación) **entonces** cada parte
+  lleva su número: la migración arma un pedido por COD. La parte en consignación del 91 es el 523.
+- **Cuando** un pedido no tiene Monto o tiene Monto 0 **entonces** se quita (la migración exige Monto mayor a 0)
+  y se anota en el pedido relacionado si hace falta. Quitados: 10, 11 y 12 (de antes de la planilla, los pagó
+  Mami, sin monto ni movimiento), 105 (no se cobró; nota en el 216), 205 (su monto está en el 235; nota ahí) y
+  340 (Nutrabol, nunca se pagará).
 
-### Otros arreglos encontrados al validar con la planilla del 26-10
+### Otros arreglos encontrados al validar
 
-- Transacc.: los «Ventas QR» del 21, 22, 23 y 26-10 (filas 1527, 1536, 1551, 1564) tienen el monto en
-  Comentarios y no en Monto, y la fila 1554 tampoco tiene monto; la fila 122 usa la categoría «Otro» en un
-  ingreso; las filas 1567, 1568 y 1572 son notas sin fecha, tipo ni cuenta.
-- Cierre de Caja: la fila 146 es el borrador del día siguiente (sin fecha ni caja final).
-- Pedidos: el pedido 91 está dos veces; la fila 520 (Boni Pastas dentales) no tiene número; 3 pedidos sin Monto y
-  2 con Monto 0; 3 dicen «Pagado» en Estado de Entrega.
-- Códigos que no están en la hoja Productos: 9 en Ventas (`COL=PAN-SG`, `Crema Dental Surtido`…) y 14 líneas de
-  Detalle Pedidos (`BRI-*`, `ORI-SRO-*`, `TNA-MIE-ABE-350GR`, `DES-HAR-COC-500GR`): se corrige el código o se
-  importa el producto con CAT-06.
-- En Finanzas → Categorías deben existir las categorías de Transacc. (Otro gasto, Consumo, Otro Ingreso,
-  Utilidad, Envio, Devolucion…). «Venta» usa la categoría de ventas del sistema aunque se llame «Ventas».
+Hechos: los «Ventas QR» de octubre tienen el monto en Monto y no quedan filas sin fecha, monto o cuenta; en
+Transacc. «Leches Impostor» (16-05) es Otro Ingreso, los traspasos de QR a Mami (27-06, 02-07) son Otro gasto,
+las Tucumanas del 02-06 son −13 (con el Sobrante y los Gastos del Cierre de ese día ajustados) y se corrigió el
+Tipo de dos filas; en Pedidos Boni tiene número, todos los pedidos están Entregados; los
+códigos de Ventas y Detalle Pedidos existen en Productos (se agregó `TNA-MIE-ABE-350GR`).
+
+- Cierre de Caja: la última fila es el borrador del día siguiente (sin fecha ni caja final) y la migración la
+  rechaza («Falta la fecha»). Pendiente decidir: vaciarla el día del corte antes de descargar el `.xlsx`, o que
+  la migración ignore las filas del Cierre sin fecha ni caja final (cambio de código).
+- En Finanzas → Categorías deben existir las categorías de Transacc. (Otro gasto, Otro Ingreso, Utilidad,
+  Envio, Devolucion…). «Venta» usa la categoría de ventas del sistema aunque se llame «Ventas».
 
 ### HOJITA (P-41)
 
