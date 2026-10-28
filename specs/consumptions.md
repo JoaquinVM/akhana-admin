@@ -13,8 +13,9 @@ Dos cosas distintas que hoy la planilla mezcla:
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 (un producto
 por unidad solo acepta enteros, con el mismo mensaje que en ventas y compras). Nada se edita: se anula con motivo
-(RG-03) y quién y cuándo los pone el servidor (RG-02). Las preguntas abiertas de este módulo son P-35 a P-40
-(sección 5.1 de `specs/requirements.md`); los escenarios usan el supuesto de cada una.
+(RG-03) y quién y cuándo los pone el servidor (RG-02). Las preguntas de este módulo, P-35 a P-40, están respondidas
+(sección 5.2 de `specs/requirements.md`; P-35 a P-39 revisadas con el dueño el 28-10-2026). P-39 cambió el supuesto:
+regalos y roturas son ventas al costo y la venta al costo lleva comentario opcional (tareas pendientes al final).
 
 ## Lo que muestra la planilla (validación del 25-10-2026)
 
@@ -27,8 +28,8 @@ Revisadas las hojas Consumos, HOJITA, Ventas, Transacc. y Productos de *Akhana R
 | 17 a 28-07: «Agua alcalina 2L» en la hoja Consumos y como gasto Consumo en Transacc. | El mismo consumo está en las dos hojas. | Con la corrección previa queda solo en la hoja Consumos, que tendrá código y costo unitario (P-40, 27-10-2026). |
 | 12 a 22-10: «Almuerzo» Bs 28 en la hoja Consumos | El almuerzo también está como gasto Comida de Caja («Almuerzo Ali −28»). | No es un consumo: sigue como gasto de caja Comida (P-37). |
 | 25-09 y 28-09: «Aceite orgánico Borges», «Brownie vegano» con comentario «Mami precio costo» (hoja Ventas, utilidad 0) | Venta en el día con precio = costo, mezclada con las ventas normales. | Venta al costo pagada en el momento, separada en los reportes (CON-02, CON-03, P-39). |
-| 21-09: «Manteca corporal», «Mono grande» con «Regalo Ali»; 25-08 «Mermeladas Frutilla» con «Mami rompió» (utilidad 0) | Se anotan como venta al costo. | Regalo y rotura son consumos con comentario (P-39); la rotura será merma en la V2 (INV-02). |
-| 22-10: «Fit Mit Tia Neida −579» Otro gasto de Caja; 23-10: «Fit Mit Tia Neida 579» Otro Ingreso a Caja | Akhana paga a un proveedor mercadería para Tía Neida y ella la devuelve después. Pasa unas 10 veces desde junio (Green Leaf 700, Granel 360, Aceite de almendras 161…). | Supuesto P-38: Tía Neida es la tienda amiga; la mercadería entra como pedido de Akhana y sale como venta al costo a crédito; su pago es un cobro (DEU-06). |
+| 21-09: «Manteca corporal», «Mono grande» con «Regalo Ali»; 25-08 «Mermeladas Frutilla» con «Mami rompió» (utilidad 0) | Se anotan como venta al costo. | Quien regala o rompe paga el costo: venta al costo pagada en el momento, con el comentario (P-39, 28-10-2026). |
+| 22-10: «Fit Mit Tia Neida −579» Otro gasto de Caja; 23-10: «Fit Mit Tia Neida 579» Otro Ingreso a Caja | Akhana paga a un proveedor mercadería para Tía Neida y ella la devuelve después. Pasa unas 10 veces desde junio (Green Leaf 700, Granel 360, Aceite de almendras 161…). | Confirmado (P-38, 28-10-2026): Tía Neida es la tienda amiga; la mercadería entra como pedido de Akhana y sale como venta al costo a crédito; su pago es un cobro (DEU-06). |
 | 14-10: «Citrato de magnesio (Nerdia)» × 2 a Bs 120 con «tia neida» (costo Bs 115) | Venta normal con descuento, no al costo. | Venta normal; no hay crédito fuera de la venta al costo (P-12). |
 
 ## Permiso
@@ -62,12 +63,12 @@ en ese momento (`buy_price`), y subtotal = cantidad × costo. Total = suma de l�
   eliminado.»; un producto inactivo se acepta (puede quedar en la tienda aunque ya no se venda).
 - **Cuando** el producto tiene costo 0 **entonces** se acepta con advertencia en pantalla («Este producto no
   tiene costo registrado; el consumo vale Bs 0,00.»).
-- **Cuando** se indica quién consumió (supuesto P-36) **entonces** se guarda como texto libre opcional
+- **Cuando** se indica quién consumió (P-36, confirmado el 28-10-2026) **entonces** se guarda como texto libre opcional
   («Para quién», ej. Ali) y se ve en el listado.
-- **Cuando** es un regalo o una rotura (supuesto P-39) **entonces** se registra como consumo con el comentario
-  («Regalo Ali», «Mami rompió»).
+- **Cuando** es un regalo o una rotura **entonces** no es un consumo: quien regala o rompe paga el costo y se
+  registra como venta al costo con el comentario «Regalo Ali» o «Mami rompió» (CON-02; P-39, cambiado el 28-10-2026).
 - **Cuando** se quiere registrar un almuerzo **entonces** no se busca en Consumos: el almuerzo no es un producto
-  del catálogo y sigue siendo un gasto de caja Comida en el POS (supuesto P-37).
+  del catálogo y sigue siendo un gasto de caja Comida en el POS (P-37, confirmado el 28-10-2026).
 
 ### Listado y anulación
 
@@ -96,7 +97,12 @@ numeración `VTA-000001` (POS-06), los pagos y la anulación (POS-07) de cualqui
   cualquier venta (FIN-07), con la categoría Venta, y el efectivo suma al esperado (CAJ-03).
 - **Cuando** no hay caja abierta **entonces** se rechaza como toda venta (CAJ-01).
 - **Cuando** la venta al costo es a cualquier persona (ej. Mami) pagada en el momento **entonces** se acepta sin
-  cliente (supuesto P-39); el cliente solo es obligatorio si hay crédito.
+  cliente (P-39, confirmado el 28-10-2026); el cliente solo es obligatorio si hay crédito.
+- **Cuando** se escribe un comentario (P-39, 28-10-2026) **entonces** se guarda con la venta (`sales.description`,
+  opcional, hasta el largo que ya admite) y se ve en el detalle y en el historial: «Mami precio costo».
+- **Cuando** el 25-08 Mami rompe 1 Mermeladas Frutilla y paga su costo en efectivo **entonces** es una venta al
+  costo pagada en el momento con el comentario «Mami rompió»: entra el costo a Caja como Venta y la utilidad es 0.
+  Lo mismo un regalo («Regalo Ali»): quien regala paga el costo. No se registran en Consumos.
 - **Cuando** se anula con motivo con su caja abierta **entonces** se anulan sus ingresos como hoy (POS-07).
 - **Cuando** se mira en el historial o en el detalle (POS-08, POS-09) **entonces** se ve marcada «Al costo» y el
   historial filtra por tipo de venta.
@@ -124,7 +130,7 @@ parte a crédito (`sales.credit_amount`, por defecto 0). Cobrado en el momento +
   venta a <cliente>; anule primero el cobro.»
 - Bloqueo: caja, cliente, cuentas (T-14). El cliente se bloquea para que el saldo por cobrar no cambie a la vez.
 
-### Encargos de la tienda amiga (supuesto P-38)
+### Encargos de la tienda amiga (P-38, confirmado el 28-10-2026)
 
 Hoy Akhana paga a un proveedor mercadería para Tía Neida («Fit Mit Tia Neida −579», Otro gasto) y ella la
 devuelve («Fit Mit Tia Neida 579», Otro Ingreso). En el sistema eso son tres registros que ya existen:
@@ -135,7 +141,8 @@ devuelve («Fit Mit Tia Neida 579», Otro Ingreso). En el sistema eso son tres r
 
 - **Cuando** se sigue ese camino **entonces** los reportes por categoría muestran Pedido −579 y Venta +579 donde
   la planilla muestra Otro gasto −579 y Otro Ingreso +579: para la comparación de la fase 2 hay que mirar el
-  total, no la categoría. Queda anotado en P-38.
+  total, no la categoría. El dueño lo confirmó el 28-10-2026: prefiere los tres pasos para ver cuánto debe Tía
+  Neida y de qué, en vez de un Otro gasto y un Otro Ingreso sueltos (P-38).
 
 ## CON-03 · Reportes separados
 
@@ -153,7 +160,8 @@ Se construyen con los reportes (FIN-10); aquí solo se fija qué separan.
   utilidad menos los consumos del mes.
 - **Cuando** una venta al costo, un consumo o un cobro está anulado **entonces** no cuenta.
 - **Cuando** se comparan los reportes con la planilla en la fase 2 **entonces** la línea Consumo no coincide en
-  monto (la planilla usa el precio de venta, el sistema el costo, P-35); se comparan cantidades por producto.
+  monto (la planilla usa el precio de venta, el sistema el costo; P-35, confirmado el 28-10-2026); se comparan
+  cantidades por producto.
 
 ## CON-04 · Salidas de stock (V2)
 
@@ -190,6 +198,14 @@ Consumos (se puede construir ya):
 Hecho el 25-10-2026: migración `V11__consumptions.sql` (estados `REGISTRADO` y `ANULADO`; «Para quién» en
 `consumed_for`). El texto del listado busca en número, para quién, comentario y nombre de producto de las líneas.
 La ruta `/consumptions` se carga en diferido porque el bundle inicial del frontend está en el límite de 1 MB.
+
+Cambios por P-39 (28-10-2026, pendientes):
+
+- [ ] Venta al costo con comentario opcional: campo «Comentario» en el cobro (`checkout-modal`) con el interruptor
+  «Venta al costo» encendido, enviado en `description` (el backend ya lo recibe en `SaleDetailRequest`); se ve en
+  el detalle y el texto del historial lo busca. Pruebas en `SaleServiceTest` y el spec del componente.
+- [ ] Regalos y roturas como venta al costo en la migración (tarea en `specs/migration.md`) y en la comparación de
+  la fase 2 (`specs/reports.md`).
 
 Venta al costo y crédito (junto con las cuentas por cobrar de `specs/debts.md`):
 

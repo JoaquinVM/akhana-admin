@@ -26,7 +26,7 @@ Hallazgos que cambian cómo se compara en la fase 2:
 | Días sin ventas (19-07, 26-07) | No aparecen en la tabla. | Tampoco aparecen: solo días con al menos una venta activa. |
 | 31-08 Cant 437, 20-10 Cant 572 | Los productos por peso se anotan en gramos (o en unidades sueltas) y se suman con las unidades. | La cantidad de un producto por peso está en kilos (0,100 por 100 g). La columna Cantidad no coincide con la planilla esos días: se comparan Total y Utilidad. |
 | Total de la hoja Ventas | Precio × cantidad por línea; los descuentos se anotan bajando el precio unitario. | Total = total cobrado de la venta (después de descuentos por unidad y general), lo pagado en el momento más la parte a crédito. |
-| «Mami precio costo» (25-09, 28-09), «Regalo Ali» (21-09), «Mami rompió» (25-08) | Filas de la hoja Ventas con utilidad 0, mezcladas con las normales. | La venta al costo va en sus propias columnas (CON-03); regalos y roturas son consumos (P-39) y no están en ventas. Para comparar: Total planilla = normales + al costo + regalos y roturas al costo. |
+| «Mami precio costo» (25-09, 28-09), «Regalo Ali» (21-09), «Mami rompió» (25-08) | Filas de la hoja Ventas con utilidad 0, mezcladas con las normales. | La venta al costo va en sus propias columnas (CON-03); regalos y roturas también son ventas al costo (P-39, 28-10-2026). Para comparar: Total planilla = normales + al costo. |
 | Fila sin proveedor de Resumen Ventas (Bs 8.809,50) | Productos sin proveedor en la hoja Ventas. | En el sistema todo producto tiene proveedor (`products.supplier_id` obligatorio): esas ventas solo pueden llegar con la importación (FIN-11), que debe asignarles un proveedor o dejarlas en «Sin proveedor». |
 | Transferencias (8-10 «Retiro Caja 3000», categoría Retiro caja, Caja → Efectivo; «Prestamo Joaco 115», Otro) | Una sola fila en positivo con la categoría, así que Retiro caja y Deposito suman como si fueran ingresos. | Las transferencias van en un bloque aparte por cuenta de origen y destino; no suman en ingresos ni gastos porque no cambian el saldo consolidado. Para comparar: Retiro caja de la planilla = transferencias Caja → Efectivo del mes. |
 | Categoría Envio (oct, «Santa Trinidad Envio −25») y «Envio activaloe −50» como Pedido | El envío está a veces en Envio y a veces en Pedido. | El envío de un pedido es Transporte (P-24); Pedido no incluye envíos. Para comparar, sumar Envio y los envíos anotados como Pedido. |
@@ -72,9 +72,9 @@ Reemplaza Resumen Ventas Diario. Una fila por día con ventas, agrupadas por mes
   resultado se redondea a 2 decimales; la utilidad del día es total − costo ya redondeado. Los subtotales del mes
   y el total del rango suman las filas de los días, para que la tabla cuadre a la vista. El margen es utilidad ÷
   total de las normales × 100, con 2 decimales, y queda vacío si el total de las normales es 0.
-- **Cuando** se comparan en la fase 2 **entonces** el Total del día del sistema más los regalos y roturas al costo
-  de ese día es igual al Total de la planilla, y la Utilidad de las normales a su Utilidad (los regalos tienen
-  utilidad 0 en la planilla). La Cantidad solo se compara en días sin productos por peso.
+- **Cuando** se comparan en la fase 2 **entonces** el Total del día del sistema (normales + al costo, con los
+  regalos y roturas como ventas al costo, P-39 del 28-10-2026) es igual al Total de la planilla, y la Utilidad de
+  las normales a su Utilidad (las ventas al costo tienen utilidad 0 en las dos). La Cantidad solo se compara en días sin productos por peso.
 
 ## FIN-10 · Ventas por proveedor y mes (con CON-03)
 
@@ -160,7 +160,7 @@ transferencias y el consumo.
   de productos y el total al costo, y por proveedor y mes la cantidad y el total al costo de sus productos.
 - **Cuando** un consumo está anulado **entonces** no cuenta.
 - **Cuando** se compara con la hoja Consumos en la fase 2 **entonces** se comparan cantidades por producto, no
-  montos: la planilla los anota a precio de venta (P-35).
+  montos: la planilla los anota a precio de venta (P-35, confirmado el 28-10-2026).
 - Hecho el 26-10-2026: `GET /api/reports/consumptions?from=&to=` (mismo rango y validaciones que ventas por día)
   toma los consumos `REGISTRADO` por `consumption_date`. Por día: cantidad de consumos, cantidad de productos (suma
   de las cantidades de sus líneas, kilos en los productos por peso) y total al costo (`total_amount`); subtotal por
@@ -234,3 +234,5 @@ hasta hoy.
   `consumptions-report.component.spec.ts`.
 - [x] Exportar a Excel los cinco reportes (26-10-2026). Suite completa del backend al cerrar el módulo.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.
+- [ ] Después de pasar regalos y roturas a la venta al costo en la migración (P-39, `specs/migration.md`): revisar
+  que ventas por día de agosto y septiembre den el Total de la planilla sin sumar consumos aparte.

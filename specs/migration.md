@@ -217,8 +217,9 @@ está en Transacc. como ingresos Venta.
   decimales: es historia.
 - **Cuando** el comentario dice «precio costo» **entonces** la fila va a la venta `AL_COSTO` de ese día (CON-02,
   P-39).
-- **Cuando** el comentario empieza con «Regalo» o dice «rompió» («Regalo Ali», «Mami rompió») **entonces** se migra
-  como consumo con ese comentario y el costo de la fila, no como venta (P-39).
+- **Cuando** el comentario empieza con «Regalo» o dice «rompió» («Regalo Ali», «Mami rompió») **entonces** la
+  fila va a la venta `AL_COSTO` de ese día, como «precio costo»: quien regala o rompe pagó el costo (P-39, cambiado
+  el 28-10-2026; hoy se migra como consumo, tarea pendiente abajo).
 - **Cuando** la fila no tiene código **entonces** la línea va al «Producto sin identificar» con el nombre y el
   precio de la fila, costo 0 pendiente y estado por asignar (POS-12); se asigna después desde el historial de
   ventas. Si falta crear ese producto: «Falta crear el «Producto sin identificar» en Productos (POS-12).»
@@ -238,7 +239,10 @@ está en Transacc. como ingresos Venta.
 
 ## FIN-11 · Movimientos (Transacc.)
 
-Transacc. es la única fuente de movimientos de dinero históricos (P-43).
+Transacc. es la única fuente de movimientos de dinero históricos (P-43, confirmado el 28-10-2026). Los pagos de
+los pedidos históricos no se vinculan con su gasto Pedido de Transacc.: el dueño prefirió no emparejarlos (la fecha
+de pago no siempre coincide y un vínculo equivocado es peor que ninguno), pero pidió revisar antes de importar que
+coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su movimiento (COM-05).
 
 - **Cuando** una fila es Ingreso, Gasto, Retiro o Ajuste **entonces** se crea un movimiento histórico en su
   cuenta (Caja, Bisa o Efectivo, por nombre) con su fecha, descripción, monto y categoría (FIN-05). El signo del
@@ -307,7 +311,8 @@ Transacc. es la única fuente de movimientos de dinero históricos (P-43).
 - **Cuando** se importa **entonces** todo se guarda en una sola transacción: si algo falla, no queda nada a
   medias.
 - **Cuando** termina **entonces** los reportes de cualquier mes migrado coinciden con las tablas dinámicas,
-  salvo las diferencias conocidas: consumos al costo y fuera de las ventas (P-35, P-40), costos completados en
+  salvo las diferencias conocidas: consumos al costo y fuera de las ventas (P-35, P-40; regalos y roturas siguen
+  en las ventas, como venta al costo, P-39), costos completados en
   las filas sin código (P-42) y ventas de Mami fuera de las ventas de la tienda (POS-13).
 
 ### Validación con la planilla del 26-10 (sin corregir)
@@ -333,7 +338,7 @@ julio −4.034), y en octubre los montos coinciden uno a uno salvo 5.
 Antes de construir:
 
 - [x] Construir POS-11 a POS-13 (spec en `specs/sales.md`): la migración usa sus productos especiales.
-- [x] Validar con la planilla P-43: los montos coinciden en total; queda el supuesto (arriba).
+- [x] Validar con la planilla P-43: los montos coinciden en total; supuesto confirmado el 28-10-2026 (arriba).
 - [x] Validar con la planilla los nombres de columnas de cada hoja, la cuenta de destino de una transferencia
   (columna Cuenta Destino) y cómo se reconoce un regalo o una rotura en Ventas (comentario).
 
@@ -347,6 +352,10 @@ Correcciones en la planilla (con el dueño, en otra sesión):
 - [ ] Columna Proveedor en Pedidos (Claude propone, el dueño confirma) y Monto pagado en los pedidos A Cuenta.
 - [ ] Arreglos de «Otros arreglos encontrados» y categorías faltantes en Finanzas.
 - [x] HOJITA vaciada en las otras hojas (27-10-2026).
+- [ ] Antes de importar (P-43, 28-10-2026): comparar por mes los pagos de Pedidos (Fecha pago, Monto o Monto
+  pagado, Tipo Pago) con los gastos Pedido de Transacc. (fecha, monto, cuenta) y listar los que no tienen par;
+  revisar con el dueño las diferencias (total 3.755,42, mayo +6.767, julio −4.034 y los 5 montos de octubre) y
+  corregir en la planilla lo que sea error. Sin cambio de código: los pagos históricos siguen sin vínculo.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` hecho por Mami (DEU-02).
 
 Construcción (rama `feat/migration`, 27-10-2026):
@@ -370,5 +379,8 @@ Construcción (rama `feat/migration`, 27-10-2026):
 - [x] Validar con los `.xlsx` reales (arriba).
 - [ ] Marca «Histórico» en Finanzas → Transacciones: `transactions.component.html` es muy grande; se divide antes
   de tocarlo. Mientras tanto el servidor rechaza editar o anular un movimiento histórico con su mensaje.
+- [ ] Regalos y roturas a la venta al costo (P-39, 28-10-2026): en `MigrationServiceImpl` las filas «Regalo…» y
+  «…rompió» van a la venta `AL_COSTO` del día en vez de a Consumos; ajustar `MigrationIntegrationTest` (caso
+  regalo) y el resumen de la pantalla.
 - [ ] El día de la salida: vaciar la última fila del Cierre (borrador) antes de descargar el `.xlsx`, importar
   productos (CAT-06), cargar saldos al corte (FIN-01), revisar e importar.
