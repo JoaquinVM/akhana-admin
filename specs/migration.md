@@ -85,6 +85,13 @@ borraron productos de la hoja Productos. Al 26-10 son 327 filas.
   del producto especial de Mami (POS-13).
 - **Cuando** no se puede identificar **entonces** queda sin código y entra como venta sin identificar (POS-12).
 - El Excel de costos del sistema anterior es un archivo de trabajo: no va al repositorio.
+- Propuesta del 27-10-2026 (pendiente de aprobar por el dueño; la planilla no se tocó): 269 grupos en el archivo de
+  trabajo «Revision P-42 filas sin codigo.xlsx». El Excel anterior (`query_11`) solo trae nombre, costo y precio de
+  venta: su costo se usa cuando el producto y el precio coinciden; si no, el del catálogo. Resultado: 95 grupos
+  seguros (138 filas), 50 por revisar (54) y 124 sin identificar (135). Unos 25 de los sin identificar tienen costo
+  en el Excel anterior pero no están en Productos (Magnesio Total 5, Vitabiosa, Café Chulumani…): el dueño decide si
+  se agregan a Productos o entran sin identificar. Los de granel por gramo (Cayú, Arándano) piden además pasar la
+  Cant a gramos. Falta que el dueño indique los productos de terceros (Mami).
 
 ### Pedidos (P-45 a P-47)
 
@@ -123,6 +130,11 @@ códigos de Ventas y Detalle Pedidos existen en Productos (se agregó `TNA-MIE-A
 
 - **Cuando** HOJITA tiene algo que no está en Consumos, Pedidos o Transacc. **entonces** se pasa a esas hojas
   antes de migrar.
+- Revisada el 27-10-2026 (12-10 a 27-10): los consumos están en Consumos, los pedidos en Pedidos y los gastos y
+  retiros en Transacc. (la devolución a Mami de 2.039,25 del 27-10 son los pedidos 517, 519 y 520). Pendiente con el
+  dueño: Orégano 390 del 13-10 («Tía Neyda pagó por QR») no está en Pedidos ni Transacc.; el almuerzo de 28 del
+  12-10 no está en Transacc.; el pedido 487 (Savia Herbolarita 122) está «Pagado» en HOJITA y «Por Pagar» en Pedidos,
+  sin gasto en Transacc. El taxi de Mami es Envio el 21-10 y Transporte el 27-10.
 
 ## Permiso y pantalla
 
