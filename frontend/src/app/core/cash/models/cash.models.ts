@@ -40,6 +40,8 @@ export interface SaleItem {
   finalUnitPrice: number;
   quantity: number;
   subtotal: number;
+  // Cómo se vende el producto: una línea por kilo sin presentación muestra kilos y precio por kilo
+  saleUnit?: 'UNIT' | 'KILOGRAM' | null;
   // CAT-11: copia de la presentación vendida y los kilos de la línea
   presentationId?: string | null;
   presentationName?: string | null;

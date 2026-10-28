@@ -9,7 +9,7 @@ Moneda Bs, montos con escala 2 `HALF_UP`; pesos en kilos con hasta 3 decimales (
 Hecho el 26-10-2026 en la rama `feat/product-presentations`: migración `V15__product_presentations.sql`,
 `ProductPresentationService`, ventas, consumos y reportes con presentación, selector compartido
 `shared/components/presentation-picker` (POS en un modal, Consumos en línea) y sección Presentaciones en el
-formulario de Productos. No se probó todavía en la app con datos reales, solo con pruebas automáticas.
+formulario de Productos. Probado en la app el 28-10-2026 con la Nuez pelada real de la planilla (ver Tareas).
 
 ## Por qué
 
@@ -169,8 +169,16 @@ juntos, y el aviso de precios fijos depende del precio por kilo que se guarda en
 - [x] Frontend: sección Presentaciones en el formulario de Productos; selector en el POS (`register-sale`, sin
   tocar `pos.component.html`) y en el formulario de Consumos; detalle de venta y consumo; botones fijos quitados;
   pruebas Vitest en `register-sale`, `consumption-form-modal` y `products`.
-- [ ] Probar en la app con un producto real (Nuez pelada): crear presentaciones, vender 1/2 libra, venta al costo,
-  consumo, y ver el reporte de ventas por día.
+- [x] Probar en la app con un producto real (28-10-2026, rama `feat/app-checks`): Nuez pelada `FSE-NUE` con los
+  valores de la planilla (0,13 y 0,21 Bs/g = 130 y 210 por kilo) y 1/4, 1/2 y 1 libra a Bs 23, 45 y 90. El
+  formulario propuso 100 g y 1/2 libra y calculó precio y costo como la tabla de arriba; el selector del POS las
+  ordenó por peso; 2 × 1/2 libra entró como una línea de Bs 90,00 (0,454 kg) y «Otro peso» 0,300 kg a Bs 63,00
+  (VTA-000137); la venta al costo de 1/2 libra cobró Bs 29,51 (VTA-000138); el consumo guardó 1 u (0,227 kg) a
+  Bs 29,51 (CON-000050); ventas por día sumó 0,454 + 0,300 kg y el costo 59,02 + 39,00. Hallazgos corregidos:
+  - El detalle de venta mostraba la línea de «Otro peso» como «0.3» y «Bs 210.00», sin kilos: la línea de la
+    respuesta trae ahora `saleUnit` del producto (como Consumos) y el detalle muestra «0.300 kg» y «Bs 210.00/kg».
+    Pruebas en `SaleServiceTest` y `sale-detail-modal`.
+  - El listado de Productos mostraba el precio por kilo sin unidad: ahora «Bs 210.00/kg» y «Bs 130.00/kg».
 - [x] Actualizar `specs/sales.md` (POS-10) y `specs/requirements.md` (CAT-08, CAT-11, POS-10, tablero).
 - [ ] Retomar `specs/product-import.md` (rama `feat/product-import`): las filas de libras de frutos secos pasan a
   ser presentaciones de su producto base.

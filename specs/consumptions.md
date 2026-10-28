@@ -216,8 +216,12 @@ Cambios por P-39 y P-49 (28-10-2026):
   cliente»; el cliente se puede elegir aunque se pague en el momento y, al poner crédito sin cliente, se propone el
   único activo (con varios hay que elegir). La venta pagada en el momento con cliente aparece en su historial como
   «pagada» sin cambiar el saldo (`SaleRepository.findSalesByCustomerId`, `customer-detail-modal`). Pruebas en
-  `checkout-modal`, `customer-detail-modal`, `CustomerServiceTest` y `CustomerRepositoryTest`. Falta probarlo en la
-  app.
+  `checkout-modal`, `customer-detail-modal`, `CustomerServiceTest` y `CustomerRepositoryTest`. Probado en la app el
+  28-10-2026 (rama `feat/app-checks`): el cobro abre con «Sin cliente»; con Tía Neida elegida y todo pagado se
+  registró VTA-000136, «pagada» en su historial sin cambiar el saldo; «Todo a crédito» sin cliente propone a Tía
+  Neida y, si se vuelve a «Sin cliente», avisa «Elija un cliente activo para la venta a crédito.» y no deja
+  confirmar. Hallazgo corregido: el comentario del formulario de Consumos sugería «Ej. Regalo Ali, Mami rompió»,
+  que desde P-39 son ventas al costo; ahora dice «Ej. Muestra para clientes».
 
 Venta al costo y crédito (junto con las cuentas por cobrar de `specs/debts.md`):
 

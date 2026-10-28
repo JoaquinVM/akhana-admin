@@ -177,6 +177,29 @@ describe('SaleDetailModalComponent', () => {
     expect(text).toContain('Mami precio costo');
   });
 
+  it('CAT-11: la bolsita muestra sus kilos y «Otro peso» los kilos y el precio por kilo', async () => {
+    const nut = { productId: 'prod-nut', productName: 'Nuez pelada', productCode: 'FSE-NUE', discountPerUnit: 0, saleUnit: 'KILOGRAM' as const };
+    saleServiceMock.getSaleById.mockReturnValue(of({
+      ...mockCompletedSale,
+      items: [
+        { ...nut, id: 'item-bag', unitPrice: 45, finalUnitPrice: 45, quantity: 2, subtotal: 90,
+          presentationId: 'pres-1', presentationName: '1/2 libra', presentationWeightKg: 0.227, weightKg: 0.454 },
+        { ...nut, id: 'item-weight', unitPrice: 210, finalUnitPrice: 210, quantity: 0.3, subtotal: 63 }
+      ]
+    }));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('saleId', 'sale-125');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('(0.454 kg)');
+    expect(text).toContain('Bs 45.00');
+    expect(text).not.toContain('Bs 45.00/kg');
+    expect(text).toContain('0.300 kg');
+    expect(text).toContain('Bs 210.00/kg');
+  });
+
   it('debe mostrar la sección de información de anulación para ventas con estado ANULADA', async () => {
     saleServiceMock.getSaleById.mockReturnValue(of(mockVoidedSale));
     fixture.componentRef.setInput('isOpen', true);

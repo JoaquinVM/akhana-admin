@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.dto;
 import com.akhana.akhana_admin.model.ProductSpecialType;
 import com.akhana.akhana_admin.model.SaleItem;
 import com.akhana.akhana_admin.model.SaleItemAssignmentStatus;
+import com.akhana.akhana_admin.model.SaleUnit;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,6 +19,8 @@ public record SaleItemResponse(
     BigDecimal finalUnitPrice,
     BigDecimal quantity,
     BigDecimal subtotal,
+    // How the product is sold, so a weight line without presentation shows kilos and the price per kilo
+    SaleUnit saleUnit,
     // CAT-11: copy of the presentation sold and the kilos of the line; null for other lines
     UUID presentationId,
     String presentationName,
@@ -43,6 +46,7 @@ public record SaleItemResponse(
             item.getFinalUnitPrice(),
             item.getQuantity(),
             item.getSubtotal(),
+            item.getProduct() != null ? item.getProduct().getSaleUnit() : null,
             item.getPresentation() != null ? item.getPresentation().getId() : null,
             item.getPresentationName(),
             item.getPresentationWeightKg(),

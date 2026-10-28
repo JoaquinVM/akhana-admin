@@ -240,6 +240,9 @@ Deudas con personas (se puede construir ya):
   (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: `core/debt`, `pages/debts` (pestaña Personas con detalle e historial, devolución y anulación),
   origen persona en el pago y en el formulario de pedidos, menú Deudas.
+- [x] Probar P-48 en la app (28-10-2026, rama `feat/app-checks`): Mami con Bs 30,00 de sus ventas sin pagar y el
+  pedido PED-000071 (Bs 17,00) pagado por ella. «Devolver» propuso «Pago a tercero» por Bs 30,00; registrado desde
+  Caja, propuso «Pedido» por Bs 17,00; registrado desde Bisa, la deuda quedó en 0. Sin hallazgos.
 
 Cuentas por cobrar (junto con o después de CON-02):
 
@@ -254,3 +257,5 @@ Cuentas por cobrar (junto con o después de CON-02):
   `FinancialTransactionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: pestaña Clientes con detalle e historial, cobro (solo Caja o la cuenta QR) y anulación; crédito y
   cliente en el pago de la venta al costo del POS (26-10-2026). `PaymentAccountResponse` suma `qrAccount`.
+- [x] Probar P-49 en la app (28-10-2026, rama `feat/app-checks`): VTA-000136 a Tía Neida pagada en efectivo aparece
+  en su historial como «pagada» y su saldo sigue en Bs 17,00 (DEU-07).

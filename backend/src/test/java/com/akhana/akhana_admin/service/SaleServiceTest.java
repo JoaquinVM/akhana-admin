@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.service;
 
 import com.akhana.akhana_admin.dto.SaleDetailRequest;
 import com.akhana.akhana_admin.dto.SaleItemRequest;
+import com.akhana.akhana_admin.dto.SaleItemResponse;
 import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.*;
@@ -646,6 +647,19 @@ class SaleServiceTest {
         assertThat(item.getPresentationName()).isEqualTo("1/2 libra");
         assertThat(item.getPresentationWeightKg()).isEqualByComparingTo("0.227");
         assertThat(sale.getTotalAmount()).isEqualByComparingTo("90.00");
+    }
+
+    @Test
+    @DisplayName("CAT-11: la línea de «Otro peso» informa que se vende por kilo para mostrar kg y /kg")
+    void shouldReportSaleUnitOfWeightLineWithoutPresentation() {
+        nutPresentation("1/2 libra", "0.227", "45.00", true);
+        SaleItem otherWeight = SaleItem.builder().product(product1).productName("Nuez pelada")
+            .unitPrice(new BigDecimal("210.00")).quantity(new BigDecimal("0.300")).subtotal(new BigDecimal("63.00")).build();
+
+        SaleItemResponse response = SaleItemResponse.fromEntity(otherWeight);
+
+        assertThat(response.saleUnit()).isEqualTo(SaleUnit.KILOGRAM);
+        assertThat(response.weightKg()).isNull();
     }
 
     @Test

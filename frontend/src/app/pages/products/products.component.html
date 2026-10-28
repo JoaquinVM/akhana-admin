@@ -213,11 +213,11 @@
                   <div class="price-stack">
                     <div class="price-stack-row">
                       <span class="price-badge-label sell">Venta</span>
-                      <span class="price-val font-semibold">Bs {{ product.sellPrice | number:'1.2-2' }}</span>
+                      <span class="price-val font-semibold">Bs {{ product.sellPrice | number:'1.2-2' }}{{ product.saleUnit === 'KILOGRAM' ? '/kg' : '' }}</span>
                     </div>
                     <div class="price-stack-row">
                       <span class="price-badge-label buy">Compra</span>
-                      <span class="price-val price-val-subtle">Bs {{ product.buyPrice | number:'1.2-2' }}</span>
+                      <span class="price-val price-val-subtle">Bs {{ product.buyPrice | number:'1.2-2' }}{{ product.saleUnit === 'KILOGRAM' ? '/kg' : '' }}</span>
                     </div>
                   </div>
                   }
