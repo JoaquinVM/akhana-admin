@@ -10,8 +10,8 @@ la migración sea mecánica, y lo que no tiene producto entra con los productos 
 Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 y CAT-11.
 
 Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Correcciones en la
-planilla hechas el 27-10-2026 (HOJITA cerrada) salvo las filas de Ventas sin código y el borrador del Cierre; falta
-correrla el día de la salida.
+planilla hechas el 27-10-2026 (HOJITA cerrada) salvo las filas de Ventas sin código; falta correrla el día de la salida,
+vaciando antes la última fila del Cierre (borrador).
 
 ## Qué se migra y qué no
 
@@ -36,8 +36,8 @@ CAT-06). Hay que hacer antes una copia de respaldo de las dos planillas.
 Hechas el 27-10-2026 con el dueño, con copia de respaldo previa de las dos planillas: consumos (P-40), hoja
 Consumos completa, Cierre igual a Ventas, columnas Proveedor y Monto pagado en Pedidos y los arreglos de la
 validación. Las filas de Transacc. cambiaron de número (se quitaron 59 gastos Consumo y se agregó un Sobrante):
-los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42) y el
-borrador del Cierre (abajo); HOJITA (P-41) quedó cerrada.
+los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42); el
+borrador del Cierre se vacía el día de la salida (abajo); HOJITA (P-41) quedó cerrada.
 
 ### Consumos anotados como venta (P-40)
 
@@ -121,8 +121,8 @@ Tipo de dos filas; en Pedidos Boni tiene número, todos los pedidos están Entre
 códigos de Ventas y Detalle Pedidos existen en Productos (se agregó `TNA-MIE-ABE-350GR`).
 
 - Cierre de Caja: la última fila es el borrador del día siguiente (sin fecha ni caja final) y la migración la
-  rechaza («Falta la fecha»). Pendiente decidir: vaciarla el día del corte antes de descargar el `.xlsx`, o que
-  la migración ignore las filas del Cierre sin fecha ni caja final (cambio de código).
+  rechaza («Falta la fecha»). Decidido el 28-10-2026 con el dueño: el día de la salida se vacía esa última fila
+  antes de descargar el `.xlsx`; la migración no cambia.
 - En Finanzas → Categorías deben existir las categorías de Transacc. (Otro gasto, Otro Ingreso, Utilidad,
   Envio, Devolucion…). «Venta» usa la categoría de ventas del sistema aunque se llame «Ventas».
 
@@ -370,4 +370,5 @@ Construcción (rama `feat/migration`, 27-10-2026):
 - [x] Validar con los `.xlsx` reales (arriba).
 - [ ] Marca «Histórico» en Finanzas → Transacciones: `transactions.component.html` es muy grande; se divide antes
   de tocarlo. Mientras tanto el servidor rechaza editar o anular un movimiento histórico con su mensaje.
-- [ ] El día de la salida: importar productos (CAT-06), cargar saldos al corte (FIN-01), revisar e importar.
+- [ ] El día de la salida: vaciar la última fila del Cierre (borrador) antes de descargar el `.xlsx`, importar
+  productos (CAT-06), cargar saldos al corte (FIN-01), revisar e importar.
