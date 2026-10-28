@@ -1,0 +1,163 @@
+<app-modal
+  [isOpen]="isOpen()"
+  [title]="texts().title"
+  [subtitle]="texts().subtitle"
+  [size]="'md'"
+  (close)="close.emit()">
+
+  <form [formGroup]="form()" (ngSubmit)="submitted.emit()" class="action-form">
+    @if (error()) {
+      <div class="alert alert-danger" role="alert">
+        <span>{{ error() }}</span>
+      </div>
+    }
+
+    @if (mode() === 'TRANSFERENCIA') {
+      <div class="form-group">
+        <label for="trf-src" class="form-label">
+          <span>Cuenta de Origen <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="trf-src"
+          class="form-control"
+          formControlName="sourceAccountId"
+          [class.is-invalid]="isInvalid('sourceAccountId')">
+          <option value="" disabled>Selecciona cuenta de origen</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (isInvalid('sourceAccountId')) {
+          <span class="invalid-feedback">La cuenta de origen es obligatoria.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="trf-dst" class="form-label">
+          <span>Cuenta de Destino <span class="required-mark">*</span></span>
+        </label>
+        <select
+          id="trf-dst"
+          class="form-control"
+          formControlName="destinationAccountId"
+          [class.is-invalid]="isInvalid('destinationAccountId')">
+          <option value="" disabled>Selecciona cuenta de destino</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (isInvalid('destinationAccountId')) {
+          <span class="invalid-feedback">La cuenta de destino es obligatoria.</span>
+        }
+      </div>
+    } @else {
+      <div class="form-group">
+        <label [for]="texts().idPrefix + '-acc'" class="form-label">
+          <span>{{ texts().accountLabel }} <span class="required-mark">*</span></span>
+        </label>
+        <select
+          [id]="texts().idPrefix + '-acc'"
+          class="form-control"
+          formControlName="accountId"
+          [class.is-invalid]="isInvalid('accountId')">
+          <option value="" disabled>Selecciona una cuenta</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} ({{ texts().balanceLabel }}: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+          }
+        </select>
+        @if (isInvalid('accountId')) {
+          <span class="invalid-feedback">{{ texts().accountRequired }}</span>
+        }
+        @if (texts().accountHint) {
+          <span class="form-hint">{{ texts().accountHint }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label [for]="texts().idPrefix + '-cat'" class="form-label">
+          <span>{{ texts().categoryLabel }} <span class="required-mark">*</span></span>
+        </label>
+        <select
+          [id]="texts().idPrefix + '-cat'"
+          class="form-control"
+          formControlName="categoryId"
+          [class.is-invalid]="isInvalid('categoryId')">
+          <option value="" disabled>Selecciona una categoría</option>
+          @for (cat of categories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+        @if (isInvalid('categoryId')) {
+          <span class="invalid-feedback">{{ texts().categoryRequired }}</span>
+        }
+      </div>
+    }
+
+    <div class="form-row">
+      <div class="form-group">
+        <label [for]="texts().idPrefix + '-amount'" class="form-label">
+          <span>Monto (Bs.) <span class="required-mark">*</span></span>
+        </label>
+        <input
+          [id]="texts().idPrefix + '-amount'"
+          type="number"
+          step="0.01"
+          min="0.01"
+          class="form-control"
+          formControlName="amount"
+          placeholder="0.00"
+          [class.is-invalid]="isInvalid('amount')" />
+        @if (isInvalid('amount')) {
+          <span class="invalid-feedback">
+            @if (hasError('amount', 'required')) {
+              El monto es obligatorio.
+            } @else if (hasError('amount', 'min')) {
+              El monto debe ser mayor a 0.
+            }
+          </span>
+        }
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label [for]="texts().idPrefix + '-desc'" class="form-label">
+        <span>Descripción <span class="required-mark">*</span></span>
+      </label>
+      <input
+        [id]="texts().idPrefix + '-desc'"
+        type="text"
+        class="form-control"
+        formControlName="description"
+        [attr.placeholder]="texts().descriptionPlaceholder || null"
+        maxlength="255"
+        [class.is-invalid]="isInvalid('description')" />
+      @if (isInvalid('description')) {
+        <span class="invalid-feedback">
+          @if (hasError('description', 'required')) {
+            La descripción es obligatoria.
+          } @else if (hasError('description', 'maxlength')) {
+            La descripción no puede exceder 255 caracteres.
+          }
+        </span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label [for]="texts().idPrefix + '-notes'" class="form-label">Notas Adicionales (Opcional)</label>
+      <textarea
+        [id]="texts().idPrefix + '-notes'"
+        class="form-control"
+        formControlName="notes"
+        rows="2"
+        [attr.placeholder]="texts().notesPlaceholder || null"></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="close.emit()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+        @if (isSubmitting()) { <span>Guardando...</span> } @else { <span>{{ texts().submitLabel }}</span> }
+      </button>
+    </div>
+  </form>
+</app-modal>

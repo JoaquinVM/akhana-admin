@@ -1,0 +1,137 @@
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="zen-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Cuenta Origen</th>
+          <th>Destino</th>
+          <th>Categoría</th>
+          <th>Descripción</th>
+          <th class="text-right">Monto</th>
+          <th>Estado</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (tx of transactions(); track tx.id) {
+          <tr [class.row-voided]="tx.status === 'ANULADO'">
+            <td class="cell-date">
+              {{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}
+            </td>
+            <td>
+              <span class="tx-badge" [class]="'badge-type-' + tx.type.toLowerCase()">
+                {{ tx.type }}
+              </span>
+            </td>
+            <td>
+              <span class="account-tag">
+                <span class="dot" [style.background-color]="tx.sourceAccount.color"></span>
+                <span>{{ tx.sourceAccount.name }}</span>
+              </span>
+            </td>
+            <td>
+              @if (tx.destinationAccount) {
+                <span class="account-tag">
+                  <span class="dot" [style.background-color]="tx.destinationAccount.color"></span>
+                  <span>{{ tx.destinationAccount.name }}</span>
+                </span>
+              } @else {
+                <span class="text-muted">-</span>
+              }
+            </td>
+            <td>
+              @if (tx.category) {
+                <span class="category-color-pill" [title]="tx.category.name">
+                  <span class="color-dot" [style.backgroundColor]="tx.category.color || '#2E5B27'"></span>
+                  <span class="pill-text">{{ tx.category.name }}</span>
+                </span>
+              } @else {
+                <span class="text-muted">-</span>
+              }
+            </td>
+            <td class="cell-desc">
+              <div class="desc-content">
+                <span class="desc-main">{{ tx.description }}</span>
+                @if (tx.notes) {
+                  <span class="desc-notes">{{ tx.notes }}</span>
+                }
+              </div>
+            </td>
+            <td class="text-right cell-amount"
+                [class.positive]="tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO' || tx.type === 'SALDO_INICIAL'"
+                [class.negative]="tx.type === 'GASTO_MANUAL'">
+              @if (tx.type === 'GASTO_MANUAL') { - }
+              @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
+              Bs. {{ tx.amount | number:'1.2-2' }}
+            </td>
+            <td>
+              <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
+                {{ tx.status }}
+              </span>
+            </td>
+            <td class="text-right cell-actions">
+              @if (tx.saleId) {
+                <!-- Venta POS: Ver detalle modal -->
+                <button
+                  type="button"
+                  class="btn-action btn-sale-detail"
+                  (click)="saleDetailRequested.emit(tx.saleId)"
+                  title="Ver Detalle de Venta POS">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span class="btn-text">Venta</span>
+                </button>
+              } @else if (tx.status === 'ACTIVO') {
+                <!-- Transacción manual activa: Editar y Anular -->
+                <button
+                  type="button"
+                  class="btn-action btn-edit"
+                  (click)="editRequested.emit(tx)"
+                  title="Editar descripción o notas">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-action btn-void"
+                  (click)="voidRequested.emit(tx)"
+                  title="Anular transacción">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                  </svg>
+                </button>
+              }
+
+              <!-- Auditoría disponible para todos -->
+              <button
+                type="button"
+                class="btn-action btn-audit"
+                (click)="auditRequested.emit(tx)"
+                title="Ver auditoría completa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" class="empty-cell">
+              <p>No se encontraron transacciones financieras con los filtros seleccionados.</p>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

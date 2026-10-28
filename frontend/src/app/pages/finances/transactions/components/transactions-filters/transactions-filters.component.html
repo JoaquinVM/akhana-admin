@@ -1,0 +1,97 @@
+<section class="filters-card">
+  <div class="filters-grid">
+    <div class="filter-field">
+      <label for="filter-start" class="filter-label">Desde</label>
+      <input
+        id="filter-start"
+        type="date"
+        class="filter-input"
+        [value]="startDate()"
+        (input)="startDate.set($any($event.target).value); filterChange.emit()" />
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-end" class="filter-label">Hasta</label>
+      <input
+        id="filter-end"
+        type="date"
+        class="filter-input"
+        [value]="endDate()"
+        (input)="endDate.set($any($event.target).value); filterChange.emit()" />
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-type" class="filter-label">Tipo</label>
+      <select
+        id="filter-type"
+        class="filter-select"
+        [value]="selectedType()"
+        (change)="selectedType.set($any($event.target).value); filterChange.emit()">
+        <option value="">Todos los tipos</option>
+        <option value="INGRESO_MANUAL">Ingreso Manual</option>
+        <option value="GASTO_MANUAL">Gasto Manual</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+        <option value="VENTA_INGRESO">Ventas POS</option>
+        <option value="SALDO_INICIAL">Saldo Inicial</option>
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-account" class="filter-label">Cuenta</label>
+      <select
+        id="filter-account"
+        class="filter-select"
+        [value]="selectedAccountId()"
+        (change)="selectedAccountId.set($any($event.target).value); filterChange.emit()">
+        <option value="">Todas las cuentas</option>
+        @for (acc of accounts(); track acc.id) {
+          <option [value]="acc.id">{{ acc.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-category" class="filter-label">Categoría</label>
+      <select
+        id="filter-category"
+        class="filter-select"
+        [value]="selectedCategoryId()"
+        (change)="selectedCategoryId.set($any($event.target).value); filterChange.emit()">
+        <option value="">Todas las categorías</option>
+        @for (cat of categories(); track cat.id) {
+          <option [value]="cat.id">{{ cat.name }} ({{ cat.type }})</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-status" class="filter-label">Estado</label>
+      <select
+        id="filter-status"
+        class="filter-select"
+        [value]="selectedStatus()"
+        (change)="selectedStatus.set($any($event.target).value); filterChange.emit()">
+        <option value="">Todos los estados</option>
+        <option value="ACTIVO">Activos</option>
+        <option value="ANULADO">Anulados</option>
+      </select>
+    </div>
+
+    <div class="filter-field search-field">
+      <label for="filter-search" class="filter-label">Buscar</label>
+      <input
+        id="filter-search"
+        type="text"
+        class="filter-input"
+        placeholder="Descripción o notas..."
+        [value]="searchTerm()"
+        (input)="searchTerm.set($any($event.target).value); filterChange.emit()" />
+    </div>
+
+    <div class="filter-actions">
+      <button type="button" class="btn btn-secondary btn-reset" (click)="filtersReset.emit()" title="Restablecer filtros">
+        Limpiar
+      </button>
+    </div>
+  </div>
+</section>

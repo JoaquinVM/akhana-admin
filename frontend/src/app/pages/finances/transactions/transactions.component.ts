@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
   FinancialAccount,
   FinancialCategory,
@@ -14,19 +14,26 @@ import {
 import { FinancialAccountService } from '../../../core/finance/financial-account.service';
 import { FinancialCategoryService } from '../../../core/finance/financial-category.service';
 import { FinancialTransactionService } from '../../../core/finance/financial-transaction.service';
-import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
 import { SaleDetailModalComponent } from '../../../shared/components/sale-detail-modal/sale-detail-modal.component';
+import { TransactionsFiltersComponent } from './components/transactions-filters/transactions-filters.component';
+import { TransactionsTableComponent } from './components/transactions-table/transactions-table.component';
+import { TransactionFormModalComponent } from './components/transaction-form-modal/transaction-form-modal.component';
+import { TransactionEditModalComponent } from './components/transaction-edit-modal/transaction-edit-modal.component';
+import { TransactionVoidModalComponent } from './components/transaction-void-modal/transaction-void-modal.component';
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    ModalComponent,
     AuditModalComponent,
-    SaleDetailModalComponent
+    SaleDetailModalComponent,
+    TransactionsFiltersComponent,
+    TransactionsTableComponent,
+    TransactionFormModalComponent,
+    TransactionEditModalComponent,
+    TransactionVoidModalComponent
   ],
   templateUrl: './transactions.component.html',
   styleUrls: ['./transactions.component.css']
