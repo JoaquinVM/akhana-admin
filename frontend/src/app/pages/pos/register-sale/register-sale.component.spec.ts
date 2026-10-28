@@ -344,7 +344,7 @@ describe('RegisterSaleComponent', () => {
     component.openCheckoutModal();
     expect(component.isCheckoutModalOpen()).toBe(true);
 
-    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0 });
+    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0, comment: '' });
 
     expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
       paymentMethod: 'EFECTIVO',
@@ -404,7 +404,7 @@ describe('RegisterSaleComponent', () => {
     it('envía tipo, cliente y crédito al registrar', () => {
       component.addToCart(mockProduct1);
       component.setAtCost(true);
-      component.submitSale({ paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 10 });
+      component.submitSale({ paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 10, comment: '' });
 
       expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
         saleType: 'AL_COSTO',
@@ -412,6 +412,17 @@ describe('RegisterSaleComponent', () => {
         customerId: 'cus-1',
         creditAmount: 10,
         description: 'Venta al costo POS (CREDITO)'
+      }));
+    });
+
+    it('P-39: el comentario reemplaza la descripción automática', () => {
+      component.addToCart(mockProduct1);
+      component.setAtCost(true);
+      component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 10, amountQr: 0, amountReceived: 10, customerId: null, creditAmount: 0, comment: 'Mami precio costo' });
+
+      expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({
+        saleType: 'AL_COSTO',
+        description: 'Mami precio costo'
       }));
     });
   });
@@ -436,15 +447,28 @@ describe('RegisterSaleComponent', () => {
       expect(component.checkoutItems()[1]).toEqual({ productId: 'prod-mami', quantity: 1, freeName: 'Miel', freePrice: 25.5 });
     });
 
-    it('quita el descuento general y no deja pasar a venta al costo', () => {
+    it('P-44: el descuento general se mantiene y se limita al subtotal de los productos normales', () => {
       component.addToCart(mockProduct1);
       component.updateGlobalDiscount(5);
       component.addToCart(mamiProduct);
       component.onFreeLineConfirmed({ name: 'Mermelada', price: 30 });
 
+      expect(component.globalDiscount()).toBe(5);
+      expect(component.totalAmount()).toBe(45);
+
+      component.updateGlobalDiscount(25);
+      expect(component.globalDiscount()).toBe(20);
+      expect(component.errorMessage()).toBe('El descuento general no puede superar el subtotal de los productos normales (Bs 20.00).');
+      expect(component.totalAmount()).toBe(30);
+
+      component.removeFromCart(component.cartItems()[0].key);
+      expect(component.onlyFreeLines()).toBe(true);
       expect(component.globalDiscount()).toBe(0);
-      component.updateGlobalDiscount(5);
-      expect(component.globalDiscount()).toBe(0);
+    });
+
+    it('no deja pasar a venta al costo', () => {
+      component.addToCart(mamiProduct);
+      component.onFreeLineConfirmed({ name: 'Mermelada', price: 30 });
       component.setAtCost(true);
       expect(component.atCost()).toBe(false);
       expect(component.errorMessage()).toBe('Una venta al costo no admite líneas libres.');

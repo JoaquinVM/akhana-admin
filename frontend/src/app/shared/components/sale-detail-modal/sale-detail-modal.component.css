@@ -511,6 +511,11 @@
   color: #64748b;
 }
 
+.assign-confirm {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 .assign-search {
   padding: 0.375rem 0.5rem;
   border: 1px solid #cbd5e1;

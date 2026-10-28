@@ -295,8 +295,8 @@ se asigne después), el precio en `unit_price` y el tipo en `sale_items.free_lin
 línea nueva (no suma a otra). La cantidad es entera.
 **Decidido con el dueño (P-44, 28-10-2026)**: una línea libre no admite descuento por unidad (el precio escrito ya es
 el acordado). Una venta con líneas libres **sí** admite descuento general, pero se reparte solo entre las líneas
-normales: la línea libre queda con su monto exacto para la deuda con la dueña y los reportes. Hasta construirlo, el
-servidor rechaza el descuento general (comportamiento anterior, abajo).
+normales: la línea libre queda con su monto exacto para la deuda con la dueña y los reportes. Hecho el 28-10-2026
+(rama `feat/free-line-discount`): la venta no guarda el reparto; lo calcula el reporte por proveedor.
 
 #### Scenario: Agregar una línea libre
 - **WHEN** en `/pos/sale` se elige «Producto sin identificar» en el buscador
@@ -317,17 +317,18 @@ servidor rechaza el descuento general (comportamiento anterior, abajo).
 - **WHEN** una línea libre trae descuento por unidad
 - **THEN** se rechaza con «Una línea libre no admite descuentos.»; el POS oculta ese descuento en la línea
 
-#### Scenario: Descuento general con líneas libres (P-44, 28-10-2026, pendiente)
+#### Scenario: Descuento general con líneas libres (P-44, 28-10-2026)
 - **WHEN** una venta tiene 2 Roquin a Bs 4,00 (Bs 8,00), 1 Aceite de coco a Bs 125,00 y la línea libre «Mermelada de
   Mami» Bs 30,00, con descuento general de Bs 5,00
 - **THEN** se acepta: el descuento general no puede superar el subtotal de las líneas normales (Bs 133,00) y se
-  reparte solo entre ellas en proporción a su subtotal (para los reportes por proveedor); la línea de Mami queda en
-  Bs 30,00, la deuda con Mami sube Bs 30,00 y el total de la venta es Bs 158,00
+  reparte solo entre ellas en proporción a su subtotal (para los reportes por proveedor: Bs 0,30 y Bs 4,70); la línea
+  de Mami queda en Bs 30,00, la deuda con Mami sube Bs 30,00 y el total de la venta es Bs 158,00. Una línea libre
+  asignada después (POS-12) también conserva su monto exacto en su proveedor
 
 #### Scenario: Descuento general mayor que las líneas normales
 - **WHEN** el descuento general supera el subtotal de las líneas normales (o la venta solo tiene líneas libres)
 - **THEN** se rechaza con «El descuento general no puede superar el subtotal de los productos normales (Bs <monto>).»;
-  con solo líneas libres el POS oculta el descuento general
+  el POS lo limita a ese subtotal con el mismo aviso y, con solo líneas libres, oculta el descuento general
 
 #### Scenario: Venta al costo con línea libre
 - **WHEN** la venta es al costo (CON-02) y tiene una línea libre
@@ -356,7 +357,9 @@ asignación descuenta el stock del producto elegido.
 - **WHEN** se vendió «Granola de coco» 2 × Bs 25,00 sin identificar, después se crea «Granola coco 250 g» con costo
   Bs 15,50 al registrar su pedido (COM-03), y en el historial se asigna la línea a ese producto
 - **THEN** la línea queda `ASIGNADO` con ese producto, su código, su nombre y costo Bs 15,50 (utilidad Bs 19,00);
-  conserva «Granola de coco» como nombre escrito, el total de la venta sigue en Bs 50,00 y la caja no cambia
+  conserva «Granola de coco» como nombre escrito, el total de la venta sigue en Bs 50,00 y la caja no cambia. Antes de
+  asignar el detalle pide confirmar («Asignar a <código> · <producto>, costo Bs <costo>. No se puede deshacer.»), igual
+  que el sin identificar definitivo (hallazgo de la prueba del 28-10-2026)
 
 #### Scenario: Segunda asignación
 - **WHEN** se intenta asignar una línea que ya está asignada o cerrada como sin identificar definitivo
@@ -452,11 +455,21 @@ pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas c
 - [x] Pruebas: `SaleServiceTest`, `ProductServiceTest`, `CreditorServiceTest`, `SaleRepositoryTest` (reportes),
   `CreditorRepositoryTest` y las de frontend que se toquen. Hechas también `SaleServiceFreeLineTest` y
   `SaleItemRepositoryTest` (asignación una sola vez).
-- [ ] Probar en la app: crear los productos especiales, vender, asignar, pagar a Mami y revisar los reportes.
-  Supuestos de P-44 respondidos el 28-10-2026: sin descuento por unidad en la línea libre, asignación solo a
-  productos por unidad y tipo y dueña fijos se confirman; el descuento general cambia (tarea siguiente).
-- [ ] Descuento general con líneas libres (P-44, 28-10-2026): en `SaleServiceImpl` quitar el rechazo, limitar el
-  descuento al subtotal de las líneas normales y repartirlo solo entre ellas; el reparto por línea de los reportes
-  por proveedor (`ReportServiceImpl`) ya excluye las líneas libres, revisar que use la misma base; en el POS
-  mostrar el descuento general salvo que todas las líneas sean libres. Pruebas en `SaleServiceFreeLineTest`,
-  `ReportServiceTest` y el spec del carrito. Probar antes en la app lo ya construido.
+- [x] Probar en la app (28-10-2026): «Producto sin identificar» y «Producto de Mami» creados; venta VTA-000133 con
+  Mami 2 × Bs 30,00, «Granola de coco» sin identificar Bs 25,00 y un producto normal; filtro «Por asignar» y
+  asignación desde el historial; deuda con Mami Bs 60,00 y devolución desde Caja con concepto «Pago a tercero»
+  (gasto de la categoría Pago a tercero, deuda Bs 0,00); reportes del día: normales Bs 52,00 con la línea asignada,
+  de terceros Bs 60,00 fuera del total, proveedor igual a las normales, movimientos Venta 112 y Pago a tercero −60.
+  Supuestos de P-44 confirmados por el dueño el 28-10-2026.
+  Hallazgos: (1) asignar se hacía con un clic sin confirmar: corregido, ahora pide confirmar; (2) un producto
+  especial pide categoría y proveedor, que no usa (P-50); (3) la devolución propone el concepto Pedido aunque la
+  deuda venga de ventas de tercero (P-48). La tabla del detalle tiene alto fijo con scroll: al asignar, la última
+  línea queda abajo del panel (no es un error).
+- [x] Descuento general con líneas libres (P-44, 28-10-2026, rama `feat/free-line-discount`): `SaleServiceImpl`
+  limita el descuento al subtotal de las líneas normales (tras sus descuentos por unidad); `findReportLines` trae si
+  la línea es libre y `ReportServiceImpl` reparte el descuento solo entre las demás (la libre, asignada o no, queda
+  exacta); ventas por día ya calculaba las normales como total − por asignar − terceros. En el POS el descuento
+  general se muestra salvo que todas las líneas sean libres y se limita al subtotal de las normales. Probado en la
+  app (VTA-000134: Kefir Bs 27,00 + Mami Bs 30,00 − Bs 5,00 = Bs 52,00, deuda +Bs 30,00, proveedor = normales).
+  Pruebas en `SaleServiceFreeLineTest`, `ReportServiceTest`, `SaleRepositoryTest`, `register-sale` y
+  `sale-detail-modal`.

@@ -14,6 +14,8 @@ export interface CheckoutPayment {
   // Venta al costo (CON-02, DEU-05): cliente opcional, obligatorio con crédito
   customerId: string | null;
   creditAmount: number;
+  // P-39: comentario opcional de la venta al costo («Mami precio costo»); vacío si no hay
+  comment: string;
 }
 
 @Component({
@@ -47,6 +49,7 @@ export class CheckoutModalComponent implements OnChanges {
   amountReceived = signal<number>(0);
   customerId = signal<string | null>(null);
   creditAmount = signal<number>(0);
+  comment = signal<string>('');
 
   totalAmount = computed<number>(() => this.total());
 
@@ -120,6 +123,7 @@ export class CheckoutModalComponent implements OnChanges {
     // En la V1 el único cliente es la tienda amiga: se propone si es el único activo
     if (changes['isOpen'] && this.isOpen) {
       this.creditAmount.set(0);
+      this.comment.set('');
       this.customerId.set(this.customers.length === 1 ? this.customers[0].id : null);
       this.setPaymentMethod(this.paymentMethod());
     }
@@ -192,8 +196,9 @@ export class CheckoutModalComponent implements OnChanges {
     }
     const customerId = this.atCost() ? this.customerId() : null;
     const creditAmount = this.atCost() ? this.creditAmount() : 0;
+    const comment = this.atCost() ? this.comment().trim() : '';
     if (this.isFullCredit()) {
-      this.confirmed.emit({ paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId, creditAmount });
+      this.confirmed.emit({ paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId, creditAmount, comment });
       return;
     }
     const method = this.paymentMethod();
@@ -203,7 +208,8 @@ export class CheckoutModalComponent implements OnChanges {
       amountQr: this.amountQr(),
       amountReceived: this.amountReceived(),
       customerId,
-      creditAmount
+      creditAmount,
+      comment
     });
   }
 

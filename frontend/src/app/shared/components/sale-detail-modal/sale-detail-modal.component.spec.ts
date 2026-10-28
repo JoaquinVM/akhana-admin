@@ -165,6 +165,18 @@ describe('SaleDetailModalComponent', () => {
     expect(component.getPaymentMethodsList(full)).toEqual([{ label: 'Crédito', amount: 120 }]);
   });
 
+  it('P-39: muestra el comentario de la venta al costo', async () => {
+    saleServiceMock.getSaleById.mockReturnValue(of({ ...mockCompletedSale, saleType: 'AL_COSTO', description: 'Mami precio costo' }));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('saleId', 'sale-125');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Concepto');
+    expect(text).toContain('Mami precio costo');
+  });
+
   it('debe mostrar la sección de información de anulación para ventas con estado ANULADA', async () => {
     saleServiceMock.getSaleById.mockReturnValue(of(mockVoidedSale));
     fixture.componentRef.setInput('isOpen', true);
@@ -260,6 +272,25 @@ describe('SaleDetailModalComponent', () => {
       fixture.detectChanges();
       expect(text()).toContain('Asignar producto');
       expect(text()).toContain('Sin identificar definitivo');
+    });
+
+    it('elegir un producto pide confirmar antes de asignar', async () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('saleId', 'sale-125');
+      fixture.componentRef.setInput('canAssign', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.startAssignment(pendingSale.items![0]);
+      component.chooseProduct({ id: 'prod-gra', code: 'GRA-250', name: 'Granola coco 250 g', buyPrice: 15.5 } as any);
+      fixture.detectChanges();
+
+      expect(saleServiceMock.assignItem).not.toHaveBeenCalled();
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).toContain('Asignar a GRA-250 · Granola coco 250 g, costo Bs 15.50. No se puede deshacer.');
+
+      component.cancelAssignment();
+      expect(component.chosenProduct()).toBeNull();
     });
 
     it('al asignar muestra la venta actualizada y la emite', async () => {

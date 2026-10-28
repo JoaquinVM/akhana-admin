@@ -149,8 +149,17 @@ export class RegisterSaleComponent implements OnInit {
     return Math.max(0, Math.round((this.subtotalPostItems() - this.globalDiscount()) * 100) / 100);
   });
 
-  // POS-11: con líneas libres no hay descuento general
   hasFreeLines = computed<boolean>(() => this.cartItems().some((it) => !!it.freeName));
+
+  // P-44: el descuento general se reparte solo entre las líneas normales; con solo líneas libres no hay
+  onlyFreeLines = computed<boolean>(() => this.cartItems().length > 0 && this.cartItems().every((it) => !!it.freeName));
+
+  normalSubtotal = computed<number>(() => {
+    const raw = this.cartItems()
+      .filter((it) => !it.freeName)
+      .reduce((sum, it) => sum + it.quantity * it.unitPrice - it.quantity * it.unitDiscount, 0);
+    return Math.max(0, Math.round(raw * 100) / 100);
+  });
 
   checkoutItems = computed<SaleItemRequest[]>(() => {
     return this.cartItems().map((it) => it.freeName
@@ -240,7 +249,7 @@ export class RegisterSaleComponent implements OnInit {
     this.pickerProduct.set(null);
   }
 
-  // POS-11: sin descuentos; el descuento general se quita al agregar una línea libre
+  // POS-11: la línea libre no lleva descuento por unidad ni entra en el descuento general (P-44)
   onFreeLineConfirmed(line: FreeLine): void {
     const product = this.freeLineProduct();
     this.freeLineProduct.set(null);
@@ -258,7 +267,6 @@ export class RegisterSaleComponent implements OnInit {
       freeName: line.name
     };
     this.cartItems.update((items) => [...items, newItem]);
-    this.globalDiscount.set(0);
     this.errorMessage.set(null);
   }
 
@@ -365,20 +373,18 @@ export class RegisterSaleComponent implements OnInit {
       })
     );
 
-    if (this.globalDiscount() > this.subtotalPostItems()) {
-      this.globalDiscount.set(this.subtotalPostItems());
+    if (this.globalDiscount() > this.normalSubtotal()) {
+      this.globalDiscount.set(this.normalSubtotal());
     }
   }
 
   updateGlobalDiscount(discount: number): void {
-    if (this.hasFreeLines()) {
-      this.globalDiscount.set(0);
-      return;
-    }
     const safeDiscount = Math.max(0, discount || 0);
-    const maxAllowed = this.subtotalPostItems();
+    const maxAllowed = this.normalSubtotal();
     if (safeDiscount > maxAllowed) {
-      this.errorMessage.set(`El descuento general no puede superar el subtotal de Bs ${maxAllowed.toFixed(2)}.`);
+      this.errorMessage.set(this.hasFreeLines()
+        ? `El descuento general no puede superar el subtotal de los productos normales (Bs ${maxAllowed.toFixed(2)}).`
+        : `El descuento general no puede superar el subtotal de Bs ${maxAllowed.toFixed(2)}.`);
       this.globalDiscount.set(maxAllowed);
       return;
     }
@@ -388,8 +394,8 @@ export class RegisterSaleComponent implements OnInit {
 
   removeFromCart(key: string): void {
     this.cartItems.update((items) => items.filter((it) => it.key !== key));
-    if (this.globalDiscount() > this.subtotalPostItems()) {
-      this.globalDiscount.set(this.subtotalPostItems());
+    if (this.globalDiscount() > this.normalSubtotal()) {
+      this.globalDiscount.set(this.normalSubtotal());
     }
   }
 
@@ -501,8 +507,9 @@ export class RegisterSaleComponent implements OnInit {
       amountCash: payment.amountCash,
       amountQr: payment.amountQr,
       amountReceived: payment.amountReceived,
+      // P-39: el comentario de la venta al costo reemplaza la descripción automática
       description: this.atCost()
-        ? `Venta al costo POS (${payment.paymentMethod})`
+        ? payment.comment || `Venta al costo POS (${payment.paymentMethod})`
         : `Venta POS (${payment.paymentMethod})`,
       saleType: this.atCost() ? 'AL_COSTO' : 'NORMAL',
       customerId: this.atCost() ? payment.customerId : null,

@@ -37,6 +37,8 @@ export class SaleDetailModalComponent {
   assigningItemId = signal<string | null>(null);
   closingItemId = signal<string | null>(null);
   assignSearch = signal<string>('');
+  // Producto elegido, a confirmar antes de asignar: la asignación no se deshace
+  chosenProduct = signal<Product | null>(null);
   assignableProducts = signal<Product[]>([]);
   assignError = signal<string | null>(null);
   isAssigning = signal<boolean>(false);
@@ -122,6 +124,7 @@ export class SaleDetailModalComponent {
     this.assigningItemId.set(item.id ?? null);
     this.closingItemId.set(null);
     this.assignSearch.set('');
+    this.chosenProduct.set(null);
     this.assignError.set(null);
     if (this.assignableProducts().length === 0) {
       this.injector.get(ProductService).getProducts(undefined, 'ACTIVO').subscribe({
@@ -142,6 +145,12 @@ export class SaleDetailModalComponent {
     this.assigningItemId.set(null);
     this.closingItemId.set(null);
     this.assignSearch.set('');
+    this.chosenProduct.set(null);
+    this.assignError.set(null);
+  }
+
+  chooseProduct(product: Product): void {
+    this.chosenProduct.set(product);
     this.assignError.set(null);
   }
 

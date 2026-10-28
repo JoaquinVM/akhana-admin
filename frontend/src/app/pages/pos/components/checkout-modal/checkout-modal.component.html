@@ -58,6 +58,18 @@
           </div>
         </div>
 
+        <div class="checkout-field-row">
+          <label class="checkout-field-label" for="checkoutComment">Comentario:</label>
+          <input
+            id="checkoutComment"
+            type="text"
+            maxlength="255"
+            class="form-control"
+            placeholder="Opcional, ej. Mami precio costo"
+            [ngModel]="comment()"
+            (ngModelChange)="comment.set($event)" />
+        </div>
+
         @if (hasCredit() && !customerId()) {
           <div class="checkout-alert-error">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">

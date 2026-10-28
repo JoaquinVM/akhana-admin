@@ -66,7 +66,7 @@ public class SaleServiceImpl implements SaleService {
     static final String FREE_NAME_REQUIRED = "Escriba el nombre de la línea libre.";
     static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";
     static final String FREE_LINE_NO_DISCOUNT = "Una línea libre no admite descuentos.";
-    static final String FREE_LINES_NO_GLOBAL_DISCOUNT = "Una venta con líneas libres no admite descuento general.";
+    static final String GLOBAL_DISCOUNT_OVER_NORMAL_LINES = "El descuento general no puede superar el subtotal de los productos normales (Bs %s).";
     static final String AT_COST_NO_FREE_LINES = "Una venta al costo no admite líneas libres.";
     static final String ALREADY_ASSIGNED = "La línea ya fue asignada.";
     static final String VOIDED_SALE_ASSIGNMENT = "Una venta anulada no se asigna.";
@@ -179,26 +179,33 @@ public class SaleServiceImpl implements SaleService {
         }
 
         // Free lines have no discount, so their subtotal is the gross amount
+        BigDecimal freeLinesTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         for (SaleItem item : saleItems) {
             if (item.getFreeLineType() != null) {
-                subtotalGross = subtotalGross.add(item.getSubtotal());
+                freeLinesTotal = freeLinesTotal.add(item.getSubtotal());
             }
         }
+        subtotalGross = subtotalGross.add(freeLinesTotal);
 
         BigDecimal subtotalPostItems = subtotalGross.subtract(discountItemsTotal).setScale(2, RoundingMode.HALF_UP);
         BigDecimal globalDiscount = request.globalDiscountAmount() != null 
             ? request.globalDiscountAmount().setScale(2, RoundingMode.HALF_UP) 
             : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-        // POS-11: each free line's amount is exact for the owner's debt and the reports
-        if (hasFreeLines && globalDiscount.signum() != 0) {
-            throw new IllegalArgumentException(FREE_LINES_NO_GLOBAL_DISCOUNT);
-        }
-
         if (atCost && globalDiscount.signum() != 0) {
             throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
         }
-        if (globalDiscount.compareTo(BigDecimal.ZERO) < 0 || globalDiscount.compareTo(subtotalPostItems) > 0) {
+        if (globalDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El descuento general no puede ser negativo ni superar el total de la venta.");
+        }
+        // P-44: the general discount only applies to the normal lines, so each free line keeps its exact amount
+        // for the owner's debt and the reports
+        BigDecimal normalLinesTotal = subtotalPostItems.subtract(freeLinesTotal);
+        if (hasFreeLines && globalDiscount.compareTo(normalLinesTotal) > 0) {
+            throw new IllegalArgumentException(String.format(GLOBAL_DISCOUNT_OVER_NORMAL_LINES,
+                normalLinesTotal.toPlainString().replace('.', ',')));
+        }
+        if (globalDiscount.compareTo(subtotalPostItems) > 0) {
             throw new IllegalArgumentException("El descuento general no puede ser negativo ni superar el total de la venta.");
         }
 

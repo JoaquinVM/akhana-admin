@@ -196,9 +196,10 @@ class SaleRepositoryTest {
         assertEquals("20", plain(day[6]));
         assertEquals("45", plain(day[7]));
 
-        List<Boolean> normal = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
-                .stream().filter(row -> sale.equals(row[0])).map(row -> (Boolean) row[9]).sorted().toList();
-        assertEquals(List.of(false, false, true), normal);
+        List<String> normalAndFree = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+                .stream().filter(row -> sale.equals(row[0])).map(row -> row[9] + "/" + row[10]).sorted().toList();
+        // P-44: the free flag keeps the free lines out of the general discount
+        assertEquals(List.of("false/true", "false/true", "true/false"), normalAndFree);
 
         assertEquals(List.of(seller + "-F1"), saleRepository.search(FROM, TO, null, null, null, seller, true,
                 PageRequest.of(0, 10)).stream().map(s -> s.getSaleNumber()).toList());

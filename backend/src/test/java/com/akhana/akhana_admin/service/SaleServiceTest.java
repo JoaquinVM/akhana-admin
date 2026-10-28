@@ -747,6 +747,24 @@ class SaleServiceTest {
     }
 
     @Test
+    @DisplayName("P-39: la venta al costo pagada en el momento, sin cliente, guarda su comentario")
+    void atCostSaleKeepsItsComment() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        List<Sale> saved = captureSavedSales();
+
+        SaleResponse response = saleService.registerSale(new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), BigDecimal.ONE, BigDecimal.ZERO)), BigDecimal.ZERO,
+            PaymentMethod.EFECTIVO, null, null, new BigDecimal("12.50"), "  Mami precio costo ", SaleType.AL_COSTO,
+            null, null), "cajero");
+
+        assertThat(saved.get(0).getDescription()).isEqualTo("Mami precio costo");
+        assertThat(saved.get(0).getCustomer()).isNull();
+        assertThat(response.description()).isEqualTo("Mami precio costo");
+    }
+
+    @Test
     @DisplayName("CON-02: la venta al costo rechaza descuentos por unidad y generales")
     void atCostSaleRejectsDiscounts() {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));

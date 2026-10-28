@@ -51,6 +51,14 @@
           </div>
         }
 
+        <!-- P-39: el comentario de la venta al costo («Mami precio costo») -->
+        @if (sale.saleType === 'AL_COSTO' && sale.description) {
+          <div class="info-field">
+            <span class="field-label">Concepto</span>
+            <span class="field-value">{{ sale.description }}</span>
+          </div>
+        }
+
         @if (sale.customerName) {
           <div class="info-field">
             <span class="field-label">Cliente</span>
@@ -172,19 +180,29 @@
                     <td colspan="5">
                       <div class="assign-panel">
                         <span class="assign-hint">La línea toma el producto elegido y su costo actual; el monto vendido y la caja no cambian. Se hace una sola vez.</span>
-                        <input type="search" class="assign-search" placeholder="Buscar producto por nombre o código"
-                               [value]="assignSearch()" (input)="assignSearch.set($any($event.target).value)" />
-                        @for (product of assignResults(); track product.id) {
-                          <button type="button" class="assign-option" [disabled]="isAssigning()"
-                                  (click)="assignTo(sale, item, product)">
-                            <span>{{ product.code }} · {{ product.name }}</span>
-                            <span class="product-code">Costo Bs {{ product.buyPrice | number:'1.2-2' }}</span>
-                          </button>
+                        @if (chosenProduct(); as chosen) {
+                          <span class="assign-confirm">Asignar a {{ chosen.code }} · {{ chosen.name }}, costo Bs {{ chosen.buyPrice | number:'1.2-2' }}. No se puede deshacer.</span>
+                          @if (assignError()) {
+                            <span class="assign-error">{{ assignError() }}</span>
+                          }
+                          <div class="assign-actions">
+                            <button type="button" class="btn-link" [disabled]="isAssigning()" (click)="assignTo(sale, item, chosen)">Confirmar</button>
+                            <button type="button" class="btn-link muted" (click)="chosenProduct.set(null)">Elegir otro</button>
+                          </div>
+                        } @else {
+                          <input type="search" class="assign-search" placeholder="Buscar producto por nombre o código"
+                                 [value]="assignSearch()" (input)="assignSearch.set($any($event.target).value)" />
+                          @for (product of assignResults(); track product.id) {
+                            <button type="button" class="assign-option" (click)="chooseProduct(product)">
+                              <span>{{ product.code }} · {{ product.name }}</span>
+                              <span class="product-code">Costo Bs {{ product.buyPrice | number:'1.2-2' }}</span>
+                            </button>
+                          }
+                          @if (assignError()) {
+                            <span class="assign-error">{{ assignError() }}</span>
+                          }
+                          <button type="button" class="btn-link muted" (click)="cancelAssignment()">Cancelar</button>
                         }
-                        @if (assignError()) {
-                          <span class="assign-error">{{ assignError() }}</span>
-                        }
-                        <button type="button" class="btn-link muted" (click)="cancelAssignment()">Cancelar</button>
                       </div>
                     </td>
                   </tr>

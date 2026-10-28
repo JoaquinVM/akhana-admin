@@ -201,9 +201,14 @@ La ruta `/consumptions` se carga en diferido porque el bundle inicial del fronte
 
 Cambios por P-39 (28-10-2026, pendientes):
 
-- [ ] Venta al costo con comentario opcional: campo «Comentario» en el cobro (`checkout-modal`) con el interruptor
-  «Venta al costo» encendido, enviado en `description` (el backend ya lo recibe en `SaleDetailRequest`); se ve en
-  el detalle y el texto del historial lo busca. Pruebas en `SaleServiceTest` y el spec del componente.
+- [x] Venta al costo con comentario opcional (28-10-2026, rama `feat/free-line-discount`): campo «Comentario» en el
+  cobro (`checkout-modal`) con el interruptor «Venta al costo» encendido; si se escribe reemplaza la descripción
+  automática («Venta al costo POS (EFECTIVO)») en `description`, hasta 255 caracteres (`@Size` en
+  `SaleDetailRequest`). Se ve en la columna Concepto del listado del POS y del historial y como «Concepto» en el
+  detalle de la venta al costo. El historial no tiene búsqueda por texto, así que no hay nada que buscar. Probado en
+  la app (VTA-000135 sin cliente, «Mami precio costo»). Hallazgo: el cobro propone el único cliente activo (Tía
+  Neida) también para una venta pagada en el momento; hay que cambiarlo a «Sin cliente» a mano (P-49). Pruebas en
+  `SaleServiceTest`, `checkout-modal`, `register-sale` y `sale-detail-modal`.
 - [ ] Regalos y roturas como venta al costo en la migración (tarea en `specs/migration.md`) y en la comparación de
   la fase 2 (`specs/reports.md`).
 

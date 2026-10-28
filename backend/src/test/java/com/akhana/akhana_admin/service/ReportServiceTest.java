@@ -266,6 +266,36 @@ class ReportServiceTest {
     }
 
     @Test
+    @DisplayName("P-44: con líneas libres el descuento general se reparte solo entre las normales")
+    void generalDiscountSkipsFreeLines() {
+        // 2 Roquin (8.00) + Aceite de coco (125.00) + Mermelada de Mami (30.00), general discount 5.00: total 158.00.
+        // Shares 5 x 8 / 133 = 0.30 and 5 x 125 / 133 = 4.70; the Mami line keeps its 30.00
+        stubLines(line("v1", "2026-07", "NORMAL", "158.00", ALMA, "Alma", "2", "8.00", "6.00"),
+                freeLine("v1", "2026-07", "158.00", BOHEMIA, "Bohemia", "1", "30.00", "30.00"),
+                line("v1", "2026-07", "NORMAL", "158.00", BOHEMIA, "Bohemia", "1", "125.00", "100.00"));
+
+        SalesBySupplierReportResponse report = reportService.getSalesBySupplier(JULY_1, AUGUST_31);
+
+        assertEquals(new BigDecimal("7.70"), report.suppliers().get(0).totals().normalTotal());
+        assertEquals(new BigDecimal("120.30"), report.suppliers().get(1).totals().normalTotal());
+        assertEquals(new BigDecimal("128.00"), report.totals().normalTotal());
+    }
+
+    @Test
+    @DisplayName("P-44: una línea asignada cuenta en su proveedor con su monto exacto, sin descuento general")
+    void assignedLineKeepsItsAmount() {
+        stubLines(line("v1", "2026-07", "NORMAL", "70.00", ALMA, "Alma", "1", "60.00", "40.00"),
+                assignedLine("v1", "2026-07", "70.00", BOHEMIA, "Bohemia", "1", "20.00", "12.00"));
+
+        SalesBySupplierReportResponse report = reportService.getSalesBySupplier(JULY_1, AUGUST_31);
+
+        assertEquals(new BigDecimal("50.00"), report.suppliers().get(0).totals().normalTotal());
+        assertEquals(new BigDecimal("20.00"), report.suppliers().get(1).totals().normalTotal());
+        assertEquals(new BigDecimal("8.00"), report.suppliers().get(1).totals().normalProfit());
+        assertEquals(new BigDecimal("70.00"), report.totals().normalTotal());
+    }
+
+    @Test
     @DisplayName("Las ventas al costo van aparte y no bajan el margen del proveedor")
     void atCostSalesDoNotLowerTheMargin() {
         stubLines(line("n1", "2026-07", "NORMAL", "100.00", BOHEMIA, "Bohemia", "1", "100.00", "60.00"),
@@ -601,14 +631,21 @@ class ReportServiceTest {
     private static Object[] line(String sale, String month, String type, String saleTotal, UUID supplierId,
                                  String supplierName, String quantity, String subtotal, String cost) {
         return new Object[] {sale, month, type, new BigDecimal(saleTotal), supplierId, supplierName,
-                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), true};
+                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), true, false};
     }
 
     // POS-12, POS-13: a pending or third-party line, left out of the suppliers
     private static Object[] freeLine(String sale, String month, String saleTotal, UUID supplierId, String supplierName,
                                      String quantity, String subtotal, String cost) {
         return new Object[] {sale, month, "NORMAL", new BigDecimal(saleTotal), supplierId, supplierName,
-                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), false};
+                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), false, true};
+    }
+
+    // POS-12: a free line already assigned to a product, counted in its supplier
+    private static Object[] assignedLine(String sale, String month, String saleTotal, UUID supplierId,
+                                         String supplierName, String quantity, String subtotal, String cost) {
+        return new Object[] {sale, month, "NORMAL", new BigDecimal(saleTotal), supplierId, supplierName,
+                new BigDecimal(quantity), new BigDecimal(subtotal), new BigDecimal(cost), true, true};
     }
 
     private void stubRows(Object[]... rows) {

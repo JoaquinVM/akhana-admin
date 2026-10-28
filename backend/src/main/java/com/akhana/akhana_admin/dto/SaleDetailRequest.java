@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,6 +32,8 @@ public record SaleDetailRequest(
     @DecimalMin(value = "0.00", message = "El monto recibido no puede ser negativo")
     BigDecimal amountReceived,
 
+    // P-39: the at-cost sale's optional comment («Mami precio costo») travels here
+    @Size(max = 255, message = "El comentario no debe superar los 255 caracteres.")
     String description,
 
     // Null means NORMAL (CON-02)

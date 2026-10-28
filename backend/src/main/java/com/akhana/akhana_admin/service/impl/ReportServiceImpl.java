@@ -104,10 +104,14 @@ public class ReportServiceImpl implements ReportService {
 
         Map<SupplierKey, Map<String, SupplierSums>> bySupplier = new HashMap<>();
         for (List<Object[]> lines : sales.values()) {
-            List<BigDecimal> lineTotals = lineTotalsAfterGeneralDiscount(
-                lines.stream().map(line -> (BigDecimal) line[7]).toList(), (BigDecimal) lines.getFirst()[3]);
-            for (int i = 0; i < lines.size(); i++) {
-                Object[] line = lines.get(i);
+            // P-44: free lines (POS-11) keep their exact amount; the general discount goes only to the other lines
+            List<BigDecimal> discounted = lineTotalsAfterGeneralDiscount(
+                lines.stream().filter(line -> !isFreeLine(line)).map(line -> (BigDecimal) line[7]).toList(),
+                ((BigDecimal) lines.getFirst()[3]).subtract(lines.stream().filter(ReportServiceImpl::isFreeLine)
+                    .map(line -> (BigDecimal) line[7]).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            int next = 0;
+            for (Object[] line : lines) {
+                BigDecimal lineTotal = isFreeLine(line) ? (BigDecimal) line[7] : discounted.get(next++);
                 // Pending and third-party lines are not sales of a supplier (POS-12, POS-13)
                 if (!Boolean.TRUE.equals(line[9])) {
                     continue;
@@ -118,10 +122,10 @@ public class ReportServiceImpl implements ReportService {
                 BigDecimal quantity = (BigDecimal) line[6];
                 if (SaleType.AL_COSTO.name().equals(line[2])) {
                     month.atCostQuantity = month.atCostQuantity.add(quantity);
-                    month.atCostTotal = month.atCostTotal.add(lineTotals.get(i));
+                    month.atCostTotal = month.atCostTotal.add(lineTotal);
                 } else {
                     month.normalQuantity = month.normalQuantity.add(quantity);
-                    month.normalTotal = month.normalTotal.add(lineTotals.get(i));
+                    month.normalTotal = month.normalTotal.add(lineTotal);
                     month.normalCost = month.normalCost.add((BigDecimal) line[8]);
                 }
             }
@@ -305,6 +309,10 @@ public class ReportServiceImpl implements ReportService {
         }
         totals.set(largest, totals.get(largest).subtract(discount.subtract(spread)));
         return totals;
+    }
+
+    private static boolean isFreeLine(Object[] line) {
+        return Boolean.TRUE.equals(line[10]);
     }
 
     private static BigDecimal money(BigDecimal value) {

@@ -161,18 +161,44 @@ class SaleServiceFreeLineTest {
     }
 
     @Test
-    @DisplayName("POS-11: líneas libres sin descuentos ni en venta al costo")
+    @DisplayName("POS-11: líneas libres sin descuento por unidad ni en venta al costo")
     void freeLinesWithoutDiscountsOrAtCost() {
         SaleItemRequest discounted = new SaleItemRequest(unidentified.getId(), BigDecimal.ONE, new BigDecimal("1.00"),
             null, "Té", new BigDecimal("10"));
         assertThatThrownBy(() -> saleService.registerSale(cashSale(null, discounted), "op"))
             .hasMessage("Una línea libre no admite descuentos.");
         assertThatThrownBy(() -> saleService.registerSale(cashSale(new BigDecimal("1.00"), free(unidentified, "1", "Té", "10")), "op"))
-            .hasMessage("Una venta con líneas libres no admite descuento general.");
+            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 0,00).");
         SaleDetailRequest atCost = new SaleDetailRequest(List.of(free(mamiProduct, "1", "Té", "10")), null,
             PaymentMethod.EFECTIVO, null, null, null, null, SaleType.AL_COSTO, null, null);
         assertThatThrownBy(() -> saleService.registerSale(atCost, "op"))
             .hasMessage("Una venta al costo no admite líneas libres.");
+    }
+
+    @Test
+    @DisplayName("P-44: el descuento general se acepta hasta el subtotal de las líneas normales y la de Mami queda exacta")
+    void generalDiscountOnlyOverNormalLines() {
+        saleService.registerSale(cashSale(new BigDecimal("5.00"), new SaleItemRequest(normal.getId(), new BigDecimal("2"), null),
+            free(mamiProduct, "1", "Mermelada de Mami", "30")), "operador");
+
+        Sale sale = registeredSale();
+        assertThat(sale.getSubtotalAmount()).isEqualByComparingTo("80.00");
+        assertThat(sale.getGlobalDiscountAmount()).isEqualByComparingTo("5.00");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("75.00");
+        SaleItem mamiLine = sale.getItems().get(1);
+        assertThat(mamiLine.getSubtotal()).isEqualByComparingTo("30.00");
+        assertThat(mamiLine.getUnitCost()).isEqualByComparingTo("30.00");
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("175.00");
+    }
+
+    @Test
+    @DisplayName("P-44: un descuento general mayor que las líneas normales se rechaza")
+    void generalDiscountOverNormalLinesRejected() {
+        SaleItemRequest discountedNormal = new SaleItemRequest(normal.getId(), new BigDecimal("2"), new BigDecimal("1.00"));
+        assertThatThrownBy(() -> saleService.registerSale(cashSale(new BigDecimal("48.01"), discountedNormal,
+            free(mamiProduct, "1", "Mermelada de Mami", "30")), "op"))
+            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 48,00).");
+        verify(saleRepository, never()).save(any());
     }
 
     @Test

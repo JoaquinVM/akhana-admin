@@ -111,7 +111,7 @@ describe('CheckoutModalComponent', () => {
     component.onCashPortionChange(8);
     component.handleConfirm();
     expect(emitted).toHaveBeenCalledWith({
-      paymentMethod: 'MIXTO', amountCash: 8, amountQr: 12, amountReceived: 8, customerId: null, creditAmount: 0
+      paymentMethod: 'MIXTO', amountCash: 8, amountQr: 12, amountReceived: 8, customerId: null, creditAmount: 0, comment: ''
     });
 
     emitted.mockClear();
@@ -152,7 +152,7 @@ describe('CheckoutModalComponent', () => {
       component.confirmed.subscribe(emitted);
       component.handleConfirm();
       expect(emitted).toHaveBeenCalledWith({
-        paymentMethod: 'QR', amountCash: 0, amountQr: 40, amountReceived: 0, customerId: 'cus-1', creditAmount: 80
+        paymentMethod: 'QR', amountCash: 0, amountQr: 40, amountReceived: 0, customerId: 'cus-1', creditAmount: 80, comment: ''
       });
     });
 
@@ -165,7 +165,7 @@ describe('CheckoutModalComponent', () => {
       component.confirmed.subscribe(emitted);
       component.handleConfirm();
       expect(emitted).toHaveBeenCalledWith({
-        paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 579
+        paymentMethod: 'CREDITO', amountCash: 0, amountQr: 0, amountReceived: 0, customerId: 'cus-1', creditAmount: 579, comment: ''
       });
     });
 
@@ -189,9 +189,21 @@ describe('CheckoutModalComponent', () => {
       expect(component.changeGiven()).toBe(30);
     });
 
-    it('una venta normal ignora cliente y crédito', () => {
+    it('P-39: envía el comentario de la venta al costo sin espacios', () => {
+      openAtCost(25, []);
+      component.setPaymentMethod('EFECTIVO');
+      component.comment.set('  Mami precio costo ');
+
+      const emitted = vi.fn();
+      component.confirmed.subscribe(emitted);
+      component.handleConfirm();
+      expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: null, comment: 'Mami precio costo' }));
+    });
+
+    it('una venta normal ignora cliente, crédito y comentario', () => {
       openAtCost(50);
       component.onCreditChange(20);
+      component.comment.set('No va');
       component.atCostInput = false;
 
       expect(component.amountDue()).toBe(50);
@@ -199,7 +211,7 @@ describe('CheckoutModalComponent', () => {
       component.confirmed.subscribe(emitted);
       component.setPaymentMethod('EFECTIVO');
       component.handleConfirm();
-      expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: null, creditAmount: 0, amountCash: 50 }));
+      expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: null, creditAmount: 0, amountCash: 50, comment: '' }));
     });
   });
 });
