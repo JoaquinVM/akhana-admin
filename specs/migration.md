@@ -10,7 +10,7 @@ la migración sea mecánica, y lo que no tiene producto entra con los productos 
 Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 y CAT-11.
 
 Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Correcciones en la
-planilla hechas el 27-10-2026 salvo las filas de Ventas sin código, HOJITA y el borrador del Cierre; falta
+planilla hechas el 27-10-2026 (HOJITA cerrada) salvo las filas de Ventas sin código y el borrador del Cierre; falta
 correrla el día de la salida.
 
 ## Qué se migra y qué no
@@ -36,8 +36,8 @@ CAT-06). Hay que hacer antes una copia de respaldo de las dos planillas.
 Hechas el 27-10-2026 con el dueño, con copia de respaldo previa de las dos planillas: consumos (P-40), hoja
 Consumos completa, Cierre igual a Ventas, columnas Proveedor y Monto pagado en Pedidos y los arreglos de la
 validación. Las filas de Transacc. cambiaron de número (se quitaron 59 gastos Consumo y se agregó un Sobrante):
-los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42), HOJITA
-(P-41) y el borrador del Cierre (abajo).
+los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42) y el
+borrador del Cierre (abajo); HOJITA (P-41) quedó cerrada.
 
 ### Consumos anotados como venta (P-40)
 
@@ -130,11 +130,16 @@ códigos de Ventas y Detalle Pedidos existen en Productos (se agregó `TNA-MIE-A
 
 - **Cuando** HOJITA tiene algo que no está en Consumos, Pedidos o Transacc. **entonces** se pasa a esas hojas
   antes de migrar.
-- Revisada el 27-10-2026 (12-10 a 27-10): los consumos están en Consumos, los pedidos en Pedidos y los gastos y
-  retiros en Transacc. (la devolución a Mami de 2.039,25 del 27-10 son los pedidos 517, 519 y 520). Pendiente con el
-  dueño: Orégano 390 del 13-10 («Tía Neyda pagó por QR») no está en Pedidos ni Transacc.; el almuerzo de 28 del
-  12-10 no está en Transacc.; el pedido 487 (Savia Herbolarita 122) está «Pagado» en HOJITA y «Por Pagar» en Pedidos,
-  sin gasto en Transacc. El taxi de Mami es Envio el 21-10 y Transporte el 27-10.
+- **Cuando** un pedido lo pagó una persona y todavía se le debe **entonces** queda «Por Pagar» en la hoja Pedidos
+  (la migración solo importa pagos desde Caja o Bisa y no crea deudas con personas, P-16) y, después de migrar, se
+  registra en el sistema el pago del pedido hecho por esa persona (DEU-02): sin movimiento de dinero, deja la deuda
+  con ella, que se salda con una devolución (DEU-03).
+- Cerrada el 27-10-2026 con el dueño (12-10 a 27-10): los consumos están en Consumos, los pedidos en Pedidos y los
+  gastos y retiros en Transacc. (la devolución a Mami de 2.039,25 del 27-10 son los pedidos 517, 519 y 520). Se
+  agregó el almuerzo del 12-10 (28, Comida) con el sobrante del día ajustado de −37 a −9 en Transacc. y en el Cierre;
+  el taxi de Mami es Envio el 21-10 y el 27-10. Orégano 390 del 13-10 («Tía Neyda pagó por QR») se ignora: no fue
+  de la tienda. El pedido 487 (Savia Herbolarita, 122) lo pagó Mami y se le debe: queda «Por Pagar» y después de
+  migrar se registra como pagado por Mami (DEU-02).
 
 ## Permiso y pantalla
 
@@ -341,7 +346,8 @@ Correcciones en la planilla (con el dueño, en otra sesión):
   marcadas.
 - [ ] Columna Proveedor en Pedidos (Claude propone, el dueño confirma) y Monto pagado en los pedidos A Cuenta.
 - [ ] Arreglos de «Otros arreglos encontrados» y categorías faltantes en Finanzas.
-- [ ] HOJITA vaciada en las otras hojas.
+- [x] HOJITA vaciada en las otras hojas (27-10-2026).
+- [ ] Después de migrar: registrar el pago de `PED-H00487` hecho por Mami (DEU-02).
 
 Construcción (rama `feat/migration`, 27-10-2026):
 
