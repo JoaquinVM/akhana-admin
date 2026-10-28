@@ -27,9 +27,9 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     long countByCashSessionId(UUID cashSessionId);
 
-    // Sales with a part on credit to a customer, voided included, for the receivables history (DEU-07)
-    @Query("SELECT s FROM Sale s WHERE s.customer.id = :customerId AND s.creditAmount > 0 ORDER BY s.createdAt")
-    List<Sale> findCreditSalesByCustomerId(@Param("customerId") UUID customerId);
+    // At-cost sales of a customer, on credit or paid at once (P-49), voided included, for its history (DEU-07)
+    @Query("SELECT s FROM Sale s WHERE s.customer.id = :customerId ORDER BY s.createdAt")
+    List<Sale> findSalesByCustomerId(@Param("customerId") UUID customerId);
 
     // Sales history (POS-09). A method matches every sale that used it: Efectivo and QR include the mixed ones,
     // Crédito includes the partly-on-credit ones; Mixto matches only mixed sales

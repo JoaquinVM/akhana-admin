@@ -411,7 +411,8 @@ sistema de gasto, FIN-05) en vez de Pedido.
 #### Scenario: Pago semanal a Mami
 - **WHEN** se le devuelven Bs 60,00 a Mami desde Caja con concepto «Pago a tercero»
 - **THEN** se crea la devolución y un gasto de Caja con la categoría Pago a tercero («Pago a tercero a Mami»), la
-  deuda baja Bs 60,00 y el efectivo esperado también; con concepto «Pedido» (por defecto) sigue como hasta hoy (P-34)
+  deuda baja Bs 60,00 y el efectivo esperado también; con concepto «Pedido» sigue como hasta hoy (P-34). El
+  concepto propuesto es «Pago a tercero» mientras quede pendiente de sus ventas, por ese monto (P-48, `debts.md`)
 
 ---
 
@@ -465,6 +466,10 @@ pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas c
   especial pide categoría y proveedor, que no usa (P-50); (3) la devolución propone el concepto Pedido aunque la
   deuda venga de ventas de tercero (P-48). La tabla del detalle tiene alto fijo con scroll: al asignar, la última
   línea queda abajo del panel (no es un error).
+  Respondidas el 28-10-2026 (rama `feat/open-questions-v1`): P-50, los productos especiales siguen con categoría y
+  proveedor obligatorios y se les ponen reales (los de Mami: Inciensos y Sagrada Madre), sin cambio de código;
+  P-48, la devolución propone «Pago a tercero» por lo pendiente de sus ventas (`creditor-detail-modal`, prueba en su
+  spec). Falta probar P-48 en la app.
 - [x] Descuento general con líneas libres (P-44, 28-10-2026, rama `feat/free-line-discount`): `SaleServiceImpl`
   limita el descuento al subtotal de las líneas normales (tras sus descuentos por unidad); `findReportLines` trae si
   la línea es libre y `ReportServiceImpl` reparte el descuento solo entre las demás (la libre, asignada o no, queda

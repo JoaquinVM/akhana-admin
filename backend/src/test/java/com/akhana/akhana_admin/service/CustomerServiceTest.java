@@ -88,7 +88,7 @@ class CustomerServiceTest {
             return k;
         });
         when(customerCollectionRepository.findByCustomerId(neida.getId())).thenReturn(collections);
-        when(saleRepository.findCreditSalesByCustomerId(neida.getId())).thenReturn(creditSales);
+        when(saleRepository.findSalesByCustomerId(neida.getId())).thenReturn(creditSales);
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(inv -> {
             FinancialTransaction tx = inv.getArgument(0);
             if (tx.getId() == null) {
@@ -306,5 +306,22 @@ class CustomerServiceTest {
         assertThat(history.entries().get(0).saleNumber()).isEqualTo("VTA-000100");
         assertThat(history.entries().get(2).accountName()).isEqualTo("Caja");
         assertThat(history.customer().balance()).isEqualByComparingTo("79.00");
+    }
+
+    @Test
+    @DisplayName("P-49: la venta al costo pagada en el momento aparece en el historial sin cambiar el saldo")
+    void paidAtCostSaleInHistory() {
+        Instant d1 = Instant.parse("2026-10-22T15:00:00Z");
+        creditSale("VTA-000100", "100.00", "100.00", d1);
+        creditSale("VTA-000102", "25.00", "0.00", d1.plusSeconds(3600)).setPaymentMethod(PaymentMethod.EFECTIVO);
+
+        CustomerHistoryResponse history = customerService.getHistory(neida.getId());
+
+        assertThat(history.entries()).hasSize(2);
+        CustomerHistoryResponse.Entry paid = history.entries().get(1);
+        assertThat(paid.amount()).isEqualByComparingTo("0.00");
+        assertThat(paid.saleTotal()).isEqualByComparingTo("25.00");
+        assertThat(paid.balanceAfter()).isEqualByComparingTo("100.00");
+        assertThat(history.customer().balance()).isEqualByComparingTo("100.00");
     }
 }

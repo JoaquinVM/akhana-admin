@@ -81,12 +81,33 @@ export class CreditorDetailModalComponent {
   private setHistory(history: CreditorHistory): void {
     this.history.set(history);
     this.repaymentAccountId.set('');
-    this.repaymentAmount.set(history.creditor.debt > 0 ? history.creditor.debt : null);
     this.repaymentComment.set('');
-    // POS-13: si solo vende productos suyos, se propone «Pago a tercero»
-    const hasSales = history.entries.some(e => e.type === 'SALE');
-    const hasPayments = history.entries.some(e => e.type === 'PAYMENT');
-    this.repaymentConcept.set(hasSales && !hasPayments ? 'THIRD_PARTY' : 'PURCHASE');
+    // P-48: primero se propone pagarle lo pendiente de sus ventas (Pago a tercero), después lo de pedidos
+    const debt = history.creditor.debt;
+    const thirdPartyPending = Math.min(this.pendingThirdParty(history), debt);
+    if (thirdPartyPending > 0) {
+      this.repaymentConcept.set('THIRD_PARTY');
+      this.repaymentAmount.set(thirdPartyPending);
+    } else {
+      this.repaymentConcept.set('PURCHASE');
+      this.repaymentAmount.set(debt > 0 ? debt : null);
+    }
+  }
+
+  // Ventas de sus productos menos lo ya devuelto como Pago a tercero; los anulados no cuentan
+  private pendingThirdParty(history: CreditorHistory): number {
+    const cents = history.entries
+      .filter(e => !e.voided)
+      .reduce((sum, e) => {
+        if (e.type === 'SALE') {
+          return sum + Math.round(e.amount * 100);
+        }
+        if (e.type === 'REPAYMENT' && e.concept === 'THIRD_PARTY') {
+          return sum - Math.round(e.amount * 100);
+        }
+        return sum;
+      }, 0);
+    return cents / 100;
   }
 
   registerRepayment(): void {

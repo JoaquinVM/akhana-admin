@@ -1,5 +1,5 @@
 <app-modal [isOpen]="!!customerId()" [title]="history()?.customer?.name || 'Cliente'"
-           subtitle="Ventas al costo a crédito y cobros" size="lg" (close)="onClose()">
+           subtitle="Ventas al costo y cobros" size="lg" (close)="onClose()">
   @if (isLoading() && !history()) {
     <p class="hint">Cargando historial…</p>
   }
@@ -35,7 +35,12 @@
                 <td>
                   @if (entry.type === 'SALE') {
                     <span class="entry-title">Venta al costo {{ entry.saleNumber }}</span>
-                    <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · a crédito Bs {{ entry.amount | number:'1.2-2' }}</span>
+                    @if (entry.amount > 0) {
+                      <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · a crédito Bs {{ entry.amount | number:'1.2-2' }}</span>
+                    } @else {
+                      <!-- P-49: pagada en el momento, no cambia el saldo -->
+                      <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · pagada</span>
+                    }
                   } @else {
                     <span class="entry-title">Cobro a {{ entry.accountName }}</span>
                     @if (entry.comment) {
@@ -47,7 +52,11 @@
                   }
                 </td>
                 <td class="text-right">
-                  {{ entry.type === 'SALE' ? '+' : '−' }} Bs {{ entry.amount | number:'1.2-2' }}
+                  @if (entry.type === 'SALE' && entry.amount === 0) {
+                    Pagada
+                  } @else {
+                    {{ entry.type === 'SALE' ? '+' : '−' }} Bs {{ entry.amount | number:'1.2-2' }}
+                  }
                 </td>
                 <td class="text-right">Bs {{ entry.balanceAfter | number:'1.2-2' }}</td>
                 <td class="text-right">

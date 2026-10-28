@@ -81,6 +81,7 @@ class CustomerRepositoryTest {
         insertSale(session, "AL_COSTO", "CREDITO", neida, "579.00", "579.00", "COMPLETADA");
         insertSale(session, "AL_COSTO", "QR", neida, "120.00", "80.00", "COMPLETADA");
         insertSale(session, "AL_COSTO", "CREDITO", neida, "60.00", "60.00", "ANULADA");
+        insertSale(session, "AL_COSTO", "EFECTIVO", neida, "25.00", "0.00", "COMPLETADA");
         insertCollection(neida, account, "500.00", "ACTIVO");
         insertCollection(neida, account, "40.00", "ANULADO");
 
@@ -91,7 +92,7 @@ class CustomerRepositoryTest {
                 .map(row -> (BigDecimal) row[1])
                 .findFirst().orElseThrow();
         assertEquals(0, new BigDecimal("159.00").compareTo(fromList));
-        assertEquals(3, saleRepository.findCreditSalesByCustomerId(neida).size());
+        assertEquals(4, saleRepository.findSalesByCustomerId(neida).size());
         assertEquals(2, customerCollectionRepository.findByCustomerId(neida).size());
     }
 

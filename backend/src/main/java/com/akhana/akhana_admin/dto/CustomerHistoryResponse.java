@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * History of a customer (DEU-07): sales with a part on credit and collections, oldest first, each with the
- * receivable after it. Voided entries keep the previous balance.
+ * History of a customer (DEU-07): its at-cost sales (on credit, or paid at once with credit 0, P-49) and
+ * collections, oldest first, each with the receivable after it. Voided entries keep the previous balance.
  */
 public record CustomerHistoryResponse(CustomerResponse customer, List<Entry> entries) {
 
@@ -17,7 +17,7 @@ public record CustomerHistoryResponse(CustomerResponse customer, List<Entry> ent
         EntryType type,
         UUID id,
         Instant date,
-        // SALE: the part on credit; COLLECTION: the amount collected
+        // SALE: the part on credit (0 if paid at once); COLLECTION: the amount collected
         BigDecimal amount,
         // SALE
         UUID saleId,

@@ -123,10 +123,11 @@ public class CustomerServiceImpl implements CustomerService {
     public CustomerHistoryResponse getHistory(UUID id) {
         Customer customer = findCustomer(id);
 
-        // Credit sales raise the receivable and collections lower it; both by server date (T-18)
+        // Credit sales raise the receivable and collections lower it; both by server date (T-18).
+        // A sale paid at once (credit 0, P-49) is listed as paid and keeps the balance
         record Item(Instant date, Instant createdAt, CustomerHistoryResponse.Entry entry, BigDecimal delta) {}
         List<Item> items = new ArrayList<>();
-        for (Sale s : saleRepository.findCreditSalesByCustomerId(id)) {
+        for (Sale s : saleRepository.findSalesByCustomerId(id)) {
             boolean voided = s.getStatus() == SaleStatus.ANULADA;
             items.add(new Item(s.getCreatedAt(), s.getCreatedAt(), new CustomerHistoryResponse.Entry(
                 CustomerHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), s.getCreditAmount(),

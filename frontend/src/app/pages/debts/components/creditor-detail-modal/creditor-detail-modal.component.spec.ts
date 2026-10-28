@@ -51,6 +51,32 @@ describe('CreditorDetailModalComponent', () => {
     expect(component.canRepay()).toBe(true);
   });
 
+  it('P-48: con ventas suyas pendientes propone Pago a tercero por ese monto', () => {
+    const sale = (id: string, amount: number, voided = false): CreditorHistoryEntry => ({
+      ...repayment, type: 'SALE', id, amount, saleId: id, saleNumber: 'VTA-000133', accountId: null, accountName: null,
+      concept: null, voided
+    });
+    creditorService.getHistory.mockReturnValue(of({
+      creditor: { ...history.creditor, debt: 182 },
+      entries: [
+        { ...history.entries[0], amount: 122 },
+        sale('s-1', 60),
+        sale('s-2', 40),
+        sale('s-3', 25, true),
+        { ...repayment, id: 'rep-2', amount: 40, concept: 'THIRD_PARTY' }
+      ]
+    }));
+    fixture.componentRef.setInput('refreshKey', 1);
+    fixture.detectChanges();
+    expect(component.repaymentConcept()).toBe('THIRD_PARTY');
+    expect(component.repaymentAmount()).toBe(60);
+  });
+
+  it('P-48: sin ventas pendientes propone Pedido por toda la deuda', () => {
+    expect(component.repaymentConcept()).toBe('PURCHASE');
+    expect(component.repaymentAmount()).toBe(150);
+  });
+
   it('DEU-04: vuelve a cargar cuando cambia la clave de refresco', () => {
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();

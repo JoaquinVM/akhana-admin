@@ -132,11 +132,34 @@ describe('CheckoutModalComponent', () => {
       open(total);
     }
 
-    it('propone el único cliente activo y empieza sin crédito', () => {
+    it('P-49: propone «Sin cliente» y empieza sin crédito', () => {
       openAtCost(120);
-      expect(component.customerId()).toBe('cus-1');
+      expect(component.customerId()).toBeNull();
       expect(component.creditAmount()).toBe(0);
       expect(component.amountDue()).toBe(120);
+    });
+
+    it('P-49: al dar crédito propone el único cliente activo; con varios hay que elegir', () => {
+      openAtCost(120);
+      component.onCreditChange(80);
+      expect(component.customerId()).toBe('cus-1');
+
+      openAtCost(120, [neida, { id: 'cus-2', name: 'Otra', balance: 0 }]);
+      component.onCreditChange(80);
+      expect(component.customerId()).toBeNull();
+      expect(component.isPaymentValid()).toBe(false);
+    });
+
+    it('P-49: pagada en el momento puede llevar cliente sin crédito', () => {
+      openAtCost(25);
+      component.setPaymentMethod('EFECTIVO');
+      component.onCustomerChange('cus-1');
+      expect(component.isPaymentValid()).toBe(true);
+
+      const emitted = vi.fn();
+      component.confirmed.subscribe(emitted);
+      component.handleConfirm();
+      expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: 'cus-1', creditAmount: 0, amountCash: 25 }));
     });
 
     it('parte por QR y parte a crédito: el pago cubre solo lo que se paga ahora', () => {

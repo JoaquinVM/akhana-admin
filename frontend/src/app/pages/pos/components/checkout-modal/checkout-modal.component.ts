@@ -120,11 +120,11 @@ export class CheckoutModalComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     // Al abrir se reinician los montos con el método elegido la última vez; sin crédito.
-    // En la V1 el único cliente es la tienda amiga: se propone si es el único activo
+    // P-49: la venta al costo es para cualquiera, así que se propone «Sin cliente»
     if (changes['isOpen'] && this.isOpen) {
       this.creditAmount.set(0);
       this.comment.set('');
-      this.customerId.set(this.customers.length === 1 ? this.customers[0].id : null);
+      this.customerId.set(null);
       this.setPaymentMethod(this.paymentMethod());
     }
   }
@@ -182,6 +182,10 @@ export class CheckoutModalComponent implements OnChanges {
     const parsed = val !== null && !isNaN(val) ? Number(val) : 0;
     const credit = Math.max(0, Math.min(this.totalAmount(), Math.round(parsed * 100) / 100));
     this.creditAmount.set(credit);
+    // P-49: al dar crédito sin cliente elegido se propone el único cliente activo
+    if (credit > 0 && !this.customerId() && this.customers.length === 1) {
+      this.customerId.set(this.customers[0].id);
+    }
     // Un método que no sea de pago (CREDITO) nunca queda elegido en las pestañas
     this.setPaymentMethod(this.paymentMethod() === 'CREDITO' ? 'EFECTIVO' : this.paymentMethod());
   }

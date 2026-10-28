@@ -98,6 +98,20 @@ describe('CustomerDetailModalComponent', () => {
     expect(changed).toHaveBeenCalled();
   });
 
+  it('P-49: la venta al costo pagada en el momento se ve como pagada', () => {
+    customerService.getHistory.mockReturnValue(of({
+      ...history,
+      entries: [{ ...history.entries[0], id: 'sale-2', amount: 0, saleId: 'sale-2', saleNumber: 'VTA-000135', saleTotal: 25,
+        balanceAfter: 0 }]
+    }));
+    fixture.componentRef.setInput('refreshKey', 1);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Venta al costo VTA-000135');
+    expect(text).toContain('Total Bs 25.00 · pagada');
+    expect(text).not.toContain('a crédito');
+  });
+
   it('DEU-07: «Ver venta» emite el id de la venta', () => {
     const opened = vi.fn();
     component.openSale.subscribe(opened);

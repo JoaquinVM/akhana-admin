@@ -94,6 +94,11 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
   (`GASTO_MANUAL`) en Bisa con la categoría Pedido (P-34), descripción
   «Devolución a Mami», vinculado a la devolución (`financial_transactions.creditor_repayment_id`); baja el saldo
   de Bisa y la deuda con Mami.
+- **Cuando** se abre «Devolver» a Mami, que pagó el pedido 487 (Bs 122,00) y vendió productos suyos por Bs 60,00
+  (POS-13), **entonces** se propone concepto «Pago a tercero» por Bs 60,00: lo pendiente de sus ventas (ventas
+  activas − devoluciones activas con Pago a tercero, sin pasar la deuda). Registrada esa, la próxima vez se propone
+  «Pedido» por Bs 122,00. Las dos partes suman a la misma deuda; no se descuentan entre sí. Quien registra puede
+  cambiar monto y concepto (P-48, 28-10-2026).
 - **Cuando** se devuelve desde Caja **entonces** exige caja abierta («Los movimientos de la cuenta Caja
   requieren una caja abierta.»), el gasto se vincula a ella y baja el efectivo esperado (CAJ-03,
   `ExpectedCashCalculator`, como un gasto de Caja).
@@ -189,9 +194,11 @@ abierta, o la cuenta QR), fecha y comentario.
 ## DEU-07 · Saldos por cobrar por cliente
 
 - **Cuando** se abre la pestaña Clientes **entonces** se ve cada cliente con su saldo por cobrar y el total.
-- **Cuando** se abre el detalle de la tienda amiga **entonces** se ve su historial en orden de fecha: ventas a
-  crédito (fecha, número `VTA-000123`, total, parte a crédito) y cobros (fecha, cuenta, monto, comentario), con el
+- **Cuando** se abre el detalle de la tienda amiga **entonces** se ve su historial en orden de fecha: ventas al
+  costo (fecha, número `VTA-000123`, total, parte a crédito) y cobros (fecha, cuenta, monto, comentario), con el
   saldo después de cada uno. Los anulados se ven marcados, con su motivo, y no cuentan.
+- **Cuando** una venta al costo con cliente se pagó toda en el momento **entonces** aparece en su historial como
+  «pagada» (total, sin parte a crédito) y no cambia el saldo (P-49, 28-10-2026).
 - Desde el detalle se registra un cobro (DEU-06) y se abre el detalle de cada venta (POS-08).
 
 ## Categorías de sistema
@@ -213,7 +220,7 @@ como fila de sistema (T-17). Los reportes distinguen devoluciones y cobros por s
 | POST | `/api/creditors/{id}/repayments/{repaymentId}/void` | Anular devolución (DEU-03) |
 | GET | `/api/customers?status=&search=` | Clientes con su saldo (DEU-07); también `POS` |
 | POST / PUT / DELETE | `/api/customers[/{id}]` | Alta, edición y baja lógica de clientes (DEU-05) |
-| GET | `/api/customers/{id}/history` | Ventas a crédito y cobros con saldo (DEU-07) |
+| GET | `/api/customers/{id}/history` | Ventas al costo (a crédito o pagadas) y cobros con saldo (DEU-07, P-49) |
 | POST | `/api/customers/{id}/collections` | Registrar cobro (DEU-06) |
 | POST | `/api/customers/{id}/collections/{collectionId}/void` | Anular cobro (DEU-06) |
 | GET | `/api/debts/accounts` | Cuentas activas para devolver o cobrar |

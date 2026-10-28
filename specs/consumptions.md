@@ -199,7 +199,7 @@ Hecho el 25-10-2026: migración `V11__consumptions.sql` (estados `REGISTRADO` y 
 `consumed_for`). El texto del listado busca en número, para quién, comentario y nombre de producto de las líneas.
 La ruta `/consumptions` se carga en diferido porque el bundle inicial del frontend está en el límite de 1 MB.
 
-Cambios por P-39 (28-10-2026, pendientes):
+Cambios por P-39 y P-49 (28-10-2026):
 
 - [x] Venta al costo con comentario opcional (28-10-2026, rama `feat/free-line-discount`): campo «Comentario» en el
   cobro (`checkout-modal`) con el interruptor «Venta al costo» encendido; si se escribe reemplaza la descripción
@@ -207,10 +207,17 @@ Cambios por P-39 (28-10-2026, pendientes):
   `SaleDetailRequest`). Se ve en la columna Concepto del listado del POS y del historial y como «Concepto» en el
   detalle de la venta al costo. El historial no tiene búsqueda por texto, así que no hay nada que buscar. Probado en
   la app (VTA-000135 sin cliente, «Mami precio costo»). Hallazgo: el cobro propone el único cliente activo (Tía
-  Neida) también para una venta pagada en el momento; hay que cambiarlo a «Sin cliente» a mano (P-49). Pruebas en
+  Neida) también para una venta pagada en el momento; hay que cambiarlo a «Sin cliente» a mano (P-49, resuelta abajo). Pruebas en
   `SaleServiceTest`, `checkout-modal`, `register-sale` y `sale-detail-modal`.
-- [ ] Regalos y roturas como venta al costo en la migración (tarea en `specs/migration.md`) y en la comparación de
+- [x] Regalos y roturas como venta al costo en la migración (tarea en `specs/migration.md`) y en la comparación de
   la fase 2 (`specs/reports.md`).
+
+- [x] Cliente en el cobro (P-49, 28-10-2026, rama `feat/open-questions-v1`): `checkout-modal` propone «Sin
+  cliente»; el cliente se puede elegir aunque se pague en el momento y, al poner crédito sin cliente, se propone el
+  único activo (con varios hay que elegir). La venta pagada en el momento con cliente aparece en su historial como
+  «pagada» sin cambiar el saldo (`SaleRepository.findSalesByCustomerId`, `customer-detail-modal`). Pruebas en
+  `checkout-modal`, `customer-detail-modal`, `CustomerServiceTest` y `CustomerRepositoryTest`. Falta probarlo en la
+  app.
 
 Venta al costo y crédito (junto con las cuentas por cobrar de `specs/debts.md`):
 
