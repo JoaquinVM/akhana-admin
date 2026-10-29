@@ -8,7 +8,7 @@
   font-family: var(--font-body);
 }
 
-/* Encabezado */
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -70,7 +70,7 @@
   height: 18px;
 }
 
-/* Filtros y Buscador */
+/* Filters and search */
 .filters-card {
   display: flex;
   align-items: center;
@@ -151,7 +151,7 @@
   white-space: nowrap;
 }
 
-/* Tabla de Productos - Estilos Específicos de Columnas */
+/* Products table: column styles */
 .product-code {
   font-family: var(--font-mono, monospace);
   font-size: 0.8125rem;
@@ -175,7 +175,7 @@
   color: #0f172a;
 }
 
-/* POS-11: producto especial, se vende con nombre y precio escritos */
+/* POS-11: special product, sold with a typed name and price */
 .special-badge {
   align-self: flex-start;
   font-family: var(--font-body);
@@ -266,7 +266,7 @@
   white-space: nowrap;
 }
 
-/* Precios agrupados (Venta y Compra) */
+/* Grouped prices (sell and buy) */
 .price-stack {
   display: flex;
   flex-direction: column;
@@ -316,7 +316,7 @@
   white-space: nowrap;
 }
 
-/* Densidad visual compacta para la tabla de productos */
+/* Compact products table */
 .table thead th,
 :host .table thead th {
   padding: 0.75rem 0.875rem;
@@ -359,7 +359,7 @@
   color: #991b1b;
 }
 
-/* Botones de acción en tabla */
+/* Table action buttons */
 .btn-audit:hover {
   color: #2563eb;
   background-color: #eff6ff;
@@ -389,7 +389,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* Formulario */
+/* Form */
 .form-row {
   display: flex;
   gap: 1rem;
@@ -538,7 +538,7 @@
   background-color: #f1f5f9;
 }
 
-/* Multiselect de Etiquetas */
+/* Tag multiselect */
 .tags-multiselect-container {
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
@@ -604,7 +604,7 @@
   width: 220px;
 }
 
-/* Precios y Utilidades */
+/* Prices and profit */
 .prices-row {
   background: #f8fafc;
   padding: 0.75rem;
@@ -714,7 +714,7 @@
   }
 }
 
-/* CAT-11: presentaciones del producto por kilo */
+/* CAT-11: presentations of the product by kilo */
 .presentations-section {
   display: flex;
   flex-direction: column;
@@ -769,7 +769,7 @@
   padding-left: 1.1rem;
 }
 
-/* CAT-06: Importar junto a Nuevo Producto */
+/* CAT-06: Importar next to Nuevo Producto */
 .header-actions {
   display: flex;
   flex-wrap: wrap;

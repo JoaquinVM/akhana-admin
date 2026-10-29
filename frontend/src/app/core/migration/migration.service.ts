@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MigrationFiles, MigrationResult } from './models/migration.models';
 
-// FIN-11: Revisar no guarda nada; Importar vuelve a validar y guarda todo o nada
+// FIN-11: Revisar saves nothing; Importar validates again and saves all or nothing
 @Injectable({
   providedIn: 'root'
 })

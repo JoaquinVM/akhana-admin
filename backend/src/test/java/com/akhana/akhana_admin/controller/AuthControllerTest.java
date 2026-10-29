@@ -59,7 +59,7 @@ class AuthControllerTest {
     void login_Success() throws Exception {
         UUID userId = UUID.randomUUID();
         String fakeToken = "eyJhbGciOiJIUzI1NiJ9.fake.jwt.token";
-        LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMINISTRATOR, "Authentication successful");
+        LoginResponse response = new LoginResponse(fakeToken, userId, "admin", Role.ADMINISTRATOR, "Sesión iniciada.");
 
         when(authService.login(any(LoginRequest.class), anyString())).thenReturn(response);
 
@@ -78,7 +78,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.id").value(userId.toString()))
             .andExpect(jsonPath("$.username").value("admin"))
             .andExpect(jsonPath("$.role").value("ADMINISTRATOR"))
-            .andExpect(jsonPath("$.message").value("Authentication successful"));
+            .andExpect(jsonPath("$.message").value("Sesión iniciada."));
     }
 
     @Test
@@ -99,7 +99,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/login - Usa la IP de la conexión e ignora X-Forwarded-For sin proxy configurado")
     void login_UsesRemoteAddressNotForwardedHeader() throws Exception {
         when(authService.login(any(LoginRequest.class), anyString()))
-            .thenReturn(new LoginResponse("t", UUID.randomUUID(), "admin", Role.ADMINISTRATOR, "Authentication successful"));
+            .thenReturn(new LoginResponse("t", UUID.randomUUID(), "admin", Role.ADMINISTRATOR, "Sesión iniciada."));
 
         mockMvc.perform(post("/api/auth/login")
                 .with(request -> { request.setRemoteAddr("203.0.113.10"); return request; })
@@ -115,7 +115,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/login - Retorna 401 Unauthorized cuando las credenciales son incorrectas")
     void login_Unauthorized_InvalidCredentials() throws Exception {
         when(authService.login(any(LoginRequest.class), anyString()))
-            .thenThrow(new AuthenticationFailedException("Invalid username or password"));
+            .thenThrow(new AuthenticationFailedException("Usuario o contraseña incorrectos."));
 
         String jsonPayload = """
             {
@@ -129,7 +129,7 @@ class AuthControllerTest {
                 .content(jsonPayload))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
-            .andExpect(jsonPath("$.message").value("Invalid username or password"));
+            .andExpect(jsonPath("$.message").value("Usuario o contraseña incorrectos."));
     }
 
     @Test
@@ -179,7 +179,7 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/auth/me"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
-            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+            .andExpect(jsonPath("$.message").value("La sesión no es válida o venció; vuelva a iniciar sesión."));
     }
 
     @Test
@@ -193,7 +193,7 @@ class AuthControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
-            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+            .andExpect(jsonPath("$.message").value("La sesión no es válida o venció; vuelva a iniciar sesión."));
     }
 
     private User authenticate(String token, boolean mustChangePassword) {
@@ -240,7 +240,7 @@ class AuthControllerTest {
                     { "currentPassword": "initial-pass", "newPassword": "short" }
                     """))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 8 y 100 caracteres"));
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 8 y 100 caracteres."));
 
         verify(authService, never()).changePassword(any(), any());
     }

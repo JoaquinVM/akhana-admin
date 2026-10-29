@@ -19,6 +19,7 @@ import {
   paymentSourceName
 } from '../../../../core/purchase/models/purchase.models';
 import { Creditor } from '../../../../core/debt/models/debt.models';
+import { formatBs } from '../../../../shared/utils/money';
 
 @Component({
   selector: 'app-purchase-detail-modal',
@@ -32,10 +33,10 @@ export class PurchaseDetailModalComponent {
 
   purchaseId = input<string | null>(null);
   accounts = input<PaymentAccount[]>([]);
-  // Personas activas que pueden pagar un pedido por el negocio (DEU-02)
+  // Active people who can pay a purchase for the business (DEU-02)
   creditors = input<Creditor[]>([]);
 
-  // Emite el pedido actualizado tras un pago, un cambio de entrega o una anulación, para refrescar el listado
+  // Emits the updated purchase after a payment, a delivery change or a void, to refresh the list
   updated = output<Purchase>();
   close = output<void>();
 
@@ -61,13 +62,13 @@ export class PurchaseDetailModalComponent {
   deliveryError = signal<string | null>(null);
   isSavingDelivery = signal<boolean>(false);
 
-  // COM-09: anulación del pedido (voidTarget = 'PURCHASE') o de un pago
+  // COM-09: void of the purchase (voidTarget = 'PURCHASE') or of a payment
   voidTarget = signal<'PURCHASE' | PurchasePayment | null>(null);
   voidError = signal<string | null>(null);
   isVoiding = signal<boolean>(false);
 
   isActive = computed(() => this.purchase()?.status === 'REGISTRADO');
-  // FIN-11: un pedido histórico no se edita ni se anula; solo se le registran pagos
+  // FIN-11: a historical purchase is never edited or voided; it only takes payments
   isEditable = computed(() => this.isActive() && !this.purchase()?.historical);
 
   canPay = computed(() => {
@@ -91,9 +92,9 @@ export class PurchaseDetailModalComponent {
     }
     if (target) {
       if (target.creditorName) {
-        return `Se anula el pago de Bs ${target.amount.toFixed(2)} hecho por ${target.creditorName} y baja la deuda con esa persona.`;
+        return `Se anula el pago de ${formatBs(target.amount)} hecho por ${target.creditorName} y baja la deuda con esa persona.`;
       }
-      return `Se anula el pago de Bs ${target.amount.toFixed(2)} desde ${target.accountName} y la cuenta recupera el monto.`;
+      return `Se anula el pago de ${formatBs(target.amount)} desde ${target.accountName} y la cuenta recupera el monto.`;
     }
     return '';
   });
@@ -109,7 +110,7 @@ export class PurchaseDetailModalComponent {
     });
   }
 
-  // Un pago hecho por una persona no mueve dinero: la nota va en el movimiento de la cuenta
+  // A payment made by a person moves no money: the note goes on the account movement
   paysFromAccount = computed(() => this.paymentSource().startsWith('account:'));
   paysFromCash = computed(() => !!this.accounts().find((a) => 'account:' + a.id === this.paymentSource())?.cashAccount);
 
@@ -153,7 +154,7 @@ export class PurchaseDetailModalComponent {
     this.paymentNotes.set('');
   }
 
-  // COM-03: hubo diferencia entre el costo de la línea y el registrado al comprar
+  // COM-03: the line cost differed from the registered one when buying
   costChanged(item: Purchase['items'][number]): boolean {
     return item.unitCost !== item.previousUnitCost;
   }

@@ -23,7 +23,7 @@ import {
   paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
 
-// COM-03: qué precio de venta toma el producto si se actualiza su costo
+// COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
 
 export interface PurchaseLineDraft {
@@ -51,7 +51,7 @@ export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-// Fecha local (yyyy-MM-dd) para el campo de fecha del pedido
+// Local date (yyyy-MM-dd) for the purchase date field
 export function todayIso(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -74,7 +74,7 @@ export class PurchaseFormModalComponent {
   isOpen = input<boolean>(false);
   suppliers = input<Supplier[]>([]);
   accounts = input<PaymentAccount[]>([]);
-  // Personas activas que pueden pagar el pedido por el negocio (DEU-02)
+  // Active people who can pay the purchase for the business (DEU-02)
   creditors = input<Creditor[]>([]);
 
   saved = output<Purchase>();
@@ -92,7 +92,7 @@ export class PurchaseFormModalComponent {
   deliveryType = signal<DeliveryType>('EN_TIENDA');
   deliveryStatus = signal<DeliveryStatus>('PENDIENTE');
   deliveryDate = signal<string>('');
-  // Pago inicial opcional (COM-05, DEU-02): 'account:<id>' o 'creditor:<id>'; vacío, sin pago
+  // Optional first payment (COM-05, DEU-02): 'account:<id>' or 'creditor:<id>'; empty, no payment
   initialPaymentSource = signal<string>('');
   initialPaymentAmount = signal<number | null>(null);
   lines = signal<PurchaseLineDraft[]>([]);
@@ -112,7 +112,7 @@ export class PurchaseFormModalComponent {
 
   activeSuppliers = computed(() => this.suppliers().filter(s => s.status === 'ACTIVO'));
 
-  // Coincidencias del buscador: primero los productos del proveedor del pedido
+  // Search matches: the purchase supplier's products first
   productMatches = computed(() => {
     const term = this.productSearch().trim().toLowerCase();
     if (term.length === 0) {
@@ -167,7 +167,7 @@ export class PurchaseFormModalComponent {
 
   private loadProducts(): void {
     this.productService.getProducts().subscribe({
-      // POS-11: los productos especiales no se compran
+      // POS-11: special products are not purchased
       next: products => this.products.set(products.filter(p => !isSpecialProduct(p))),
       error: () => this.formError.set('No se pudo cargar el catálogo de productos.')
     });
@@ -181,7 +181,7 @@ export class PurchaseFormModalComponent {
     return round2((Number(line.quantity) || 0) * (Number(line.unitCost) || 0));
   }
 
-  // COM-03: alerta cuando el costo de la línea difiere del costo registrado
+  // COM-03: alert when the line cost differs from the registered cost
   costDiffers(line: PurchaseLineDraft): boolean {
     return round2(Number(line.unitCost) || 0) !== round2(line.product.buyPrice);
   }
@@ -249,7 +249,7 @@ export class PurchaseFormModalComponent {
     });
   }
 
-  // Precio de venta que se envía: null mantiene el actual
+  // Sell price sent: null keeps the current one
   chosenSellPrice(line: PurchaseLineDraft): number | null {
     if (line.priceChoice === 'SUGGESTED') {
       return line.suggestion?.suggestedSellPrice ?? null;
@@ -260,7 +260,7 @@ export class PurchaseFormModalComponent {
     return null;
   }
 
-  // --- Producto nuevo desde una línea (COM-03) ---
+  // --- New product from a line (COM-03) ---
 
   openNewProduct(): void {
     if (!this.supplierId()) {

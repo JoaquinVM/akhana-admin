@@ -113,22 +113,22 @@ export class FinancialTransactionService {
     );
   }
 
-  /** Anula un gasto de la caja abierta desde el POS (permiso de pantalla POS). */
+  /** Voids an expense of the open session from the POS (POS screen permission). */
   voidCashExpense(id: string, request?: VoidFinancialTransactionRequest): Observable<FinancialTransaction> {
     return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-expense/${id}/void`, request || {});
   }
 
-  /** Cuentas distintas de Caja para ingresos y retiros desde el POS (CAJ-08). */
+  /** Accounts other than Caja for cash ins and outs from the POS (CAJ-08). */
   getCashTransferAccounts(): Observable<CashTransferAccount[]> {
     return this.http.get<CashTransferAccount[]>(`${this.apiUrl}/cash-transfer/accounts`);
   }
 
-  /** Registra un ingreso o retiro de caja como transferencia entre Caja y otra cuenta (CAJ-08). */
+  /** Registers a cash in or out as a transfer between Caja and another account (CAJ-08). */
   createCashTransfer(request: CashTransferRequest): Observable<FinancialTransaction> {
     return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-transfer`, request);
   }
 
-  /** Anula un ingreso o retiro de la caja abierta desde el POS. */
+  /** Voids a cash in or out of the open session from the POS. */
   voidCashTransfer(id: string, request: VoidFinancialTransactionRequest): Observable<FinancialTransaction> {
     return this.http.post<FinancialTransaction>(`${this.apiUrl}/cash-transfer/${id}/void`, request);
   }

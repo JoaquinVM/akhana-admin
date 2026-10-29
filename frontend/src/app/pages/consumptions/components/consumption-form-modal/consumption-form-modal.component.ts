@@ -11,14 +11,14 @@ import { PresentationPickerComponent } from '../../../../shared/components/prese
 
 export interface ConsumptionLineDraft {
   product: Product;
-  // CAT-11: con presentación la cantidad son bolsitas enteras
+  // CAT-11: with a presentation the quantity is whole packs
   presentation: ProductPresentation | null;
   quantity: number;
 }
 
 const MAX_MATCHES = 8;
 
-// CON-01: el costo lo pone el servidor con el buy_price del producto; aquí solo se muestra como referencia
+// CON-01: the server sets the cost from the product's buy_price; here it is only shown for reference
 @Component({
   selector: 'app-consumption-form-modal',
   standalone: true,
@@ -30,7 +30,7 @@ export class ConsumptionFormModalComponent {
   private readonly consumptionService = inject(ConsumptionService);
 
   isOpen = input<boolean>(false);
-  // Catálogo sin eliminados: un producto inactivo puede consumirse
+  // Catalog without deleted products: an inactive product can be consumed
   products = input<Product[]>([]);
 
   saved = output<Consumption>();
@@ -43,7 +43,7 @@ export class ConsumptionFormModalComponent {
   comment = signal<string>('');
   lines = signal<ConsumptionLineDraft[]>([]);
   productSearch = signal<string>('');
-  // CAT-11: producto por kilo esperando que se elija su presentación
+  // CAT-11: product by kilo waiting for its presentation
   pickerProduct = signal<Product | null>(null);
 
   formError = signal<string | null>(null);
@@ -86,7 +86,7 @@ export class ConsumptionFormModalComponent {
     return product.saleUnit === 'KILOGRAM';
   }
 
-  // «Otro peso»: kilos; por unidad o presentación: enteros
+  // «Otro peso»: kilos; by unit or presentation: whole numbers
   isWeightLine(line: ConsumptionLineDraft): boolean {
     return this.isWeighted(line.product) && !line.presentation;
   }
@@ -95,19 +95,19 @@ export class ConsumptionFormModalComponent {
     return line.presentation ? `${line.product.id}:${line.presentation.id}` : line.product.id;
   }
 
-  // Con presentación, el costo por kilo se aplica a los kilos de las bolsitas, como el servidor (CAT-11)
+  // With a presentation, the cost per kilo applies to the packs' kilos, like the server (CAT-11)
   lineSubtotal(line: ConsumptionLineDraft): number {
     const quantity = Number(line.quantity) || 0;
     const kilos = line.presentation ? Math.round(quantity * line.presentation.weightKg * 1000) / 1000 : quantity;
     return round2(kilos * (line.product.buyPrice || 0));
   }
 
-  // Advertencia: un producto sin costo registrado vale Bs 0,00
+  // Warning: a product without a registered cost is worth Bs 0,00
   hasNoCost(line: ConsumptionLineDraft): boolean {
     return !(line.product.buyPrice > 0);
   }
 
-  // CAT-11: un producto por kilo con presentaciones abre el selector; sin ellas entra como «Otro peso»
+  // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
   addProduct(product: Product): void {
     this.productSearch.set('');
     if (this.isWeighted(product) && activePresentations(product).length > 0) {
@@ -125,7 +125,7 @@ export class ConsumptionFormModalComponent {
     }
   }
 
-  // El mismo producto (y presentación) dos veces suma la cantidad, como el POS (POS-01)
+  // The same product (and presentation) twice adds up the quantity, like the POS (POS-01)
   private addLine(product: Product, presentation: ProductPresentation | null): void {
     const draft: ConsumptionLineDraft = { product, presentation, quantity: 0 };
     const index = this.lines().findIndex(l => this.lineKey(l) === this.lineKey(draft));

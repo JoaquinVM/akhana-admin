@@ -8,7 +8,7 @@
   font-family: var(--font-body);
 }
 
-/* Encabezado */
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -70,7 +70,7 @@
   height: 18px;
 }
 
-/* Filtros y Buscador */
+/* Filters and search */
 .filters-card {
   display: flex;
   align-items: center;
@@ -141,7 +141,7 @@
   white-space: nowrap;
 }
 
-/* Alertas */
+/* Alerts */
 .alert {
   display: flex;
   align-items: center;
@@ -167,7 +167,7 @@
   margin-bottom: 1rem;
 }
 
-/* Tabla */
+/* Table */
 .table-container {
   background: #ffffff;
   border: 1px solid var(--border-light);
@@ -212,7 +212,7 @@
   background-color: #f8fafc;
 }
 
-/* Celdas específicas */
+/* Specific cells */
 .user-name-cell {
   display: flex;
   align-items: center;
@@ -282,7 +282,7 @@
   font-style: italic;
 }
 
-/* Botones de acción en tabla */
+/* Table action buttons */
 .table-actions {
   display: flex;
   align-items: center;
@@ -326,7 +326,7 @@
   border-color: #fecaca;
 }
 
-/* Paginación */
+/* Pagination */
 .pagination-container {
   display: flex;
   align-items: center;
@@ -369,7 +369,7 @@
   cursor: not-allowed;
 }
 
-/* Estados de tabla */
+/* Table states */
 .table-state-container {
   display: flex;
   flex-direction: column;
@@ -420,7 +420,7 @@
   color: #64748b;
 }
 
-/* Formulario en Modales */
+/* Forms in modals */
 .form-row {
   display: flex;
   gap: 1rem;
@@ -495,7 +495,7 @@
   margin-top: 0.25rem;
 }
 
-/* Detección de Cambios */
+/* Change detection */
 .field-modified-badge {
   font-size: 0.6875rem;
   font-weight: 600;
@@ -518,7 +518,7 @@
   padding: 0.75rem;
 }
 
-/* Matriz de Permisos */
+/* Permissions matrix */
 .permissions-section {
   margin-top: 1rem;
   margin-bottom: 1.5rem;
@@ -595,7 +595,7 @@
   cursor: pointer;
 }
 
-/* Acciones Footer Modal */
+/* Modal footer actions */
 .modal-footer-actions {
   display: flex;
   align-items: center;

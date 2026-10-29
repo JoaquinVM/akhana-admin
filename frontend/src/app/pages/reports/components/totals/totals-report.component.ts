@@ -6,7 +6,7 @@ import { ReportService } from '../../../../core/report/report.service';
 import { TotalsReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
 
-// FIN-10 / CON-03: totales de ventas y utilidad por mes, con los consumos al costo y la utilidad menos consumos
+// FIN-10 / CON-03: sales and profit totals per month, with consumptions at cost and profit minus consumptions
 @Component({
   selector: 'app-totals-report',
   standalone: true,
@@ -24,7 +24,7 @@ export class TotalsReportComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
-    // Sin fechas el servidor propone el mes en curso hasta hoy y las devuelve para los filtros
+    // Without dates the server proposes the current month up to today and returns them for the filters
     this.load();
   }
 

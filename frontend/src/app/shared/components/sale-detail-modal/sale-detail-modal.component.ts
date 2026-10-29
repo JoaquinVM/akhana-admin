@@ -20,24 +20,24 @@ export interface PaymentMethodItem {
 })
 export class SaleDetailModalComponent {
   private readonly saleService = inject(SaleService);
-  // POS-12: el catálogo solo se pide al asignar, desde el historial
+  // POS-12: the catalog is only fetched when assigning, from the history
   private readonly injector = inject(Injector);
 
   isOpen = input<boolean>(false);
   saleId = input<string | null>(null);
   initialSale = input<Sale | null>(null);
-  // POS-12: solo el historial de ventas asigna las líneas sin identificar
+  // POS-12: only the sales history assigns unidentified lines
   canAssign = input<boolean>(false);
 
   close = output<void>();
-  // POS-12: la venta después de asignar una línea, para refrescar el listado
+  // POS-12: the sale after assigning a line, to refresh the list
   saleUpdated = output<Sale>();
 
-  // POS-12: línea que se está asignando y productos que se pueden elegir (activos, normales, por unidad)
+  // POS-12: line being assigned and the products that can be chosen (active, normal, by unit)
   assigningItemId = signal<string | null>(null);
   closingItemId = signal<string | null>(null);
   assignSearch = signal<string>('');
-  // Producto elegido, a confirmar antes de asignar: la asignación no se deshace
+  // Chosen product, to confirm before assigning: the assignment cannot be undone
   chosenProduct = signal<Product | null>(null);
   assignableProducts = signal<Product[]>([]);
   assignError = signal<string | null>(null);
@@ -70,7 +70,7 @@ export class SaleDetailModalComponent {
           this.errorMessage.set(null);
         }
       } else {
-        // Al cerrar se libera la memoria de la venta consultada
+        // Closing releases the sale that was being viewed
         this.cancelAssignment();
         this.currentSale.set(null);
         this.isLoading.set(false);
@@ -90,7 +90,7 @@ export class SaleDetailModalComponent {
       },
       error: (err) => {
         console.error('Error al cargar detalle de venta:', err);
-        // Si fallara la red y disponemos de initialSale, usamos initial como fallback
+        // If the network fails and there is an initialSale, use it as fallback
         if (this.initialSale() && this.initialSale()?.id === id) {
           this.currentSale.set(this.initialSale());
           this.isLoading.set(false);
@@ -154,7 +154,7 @@ export class SaleDetailModalComponent {
     this.assignError.set(null);
   }
 
-  /** Utilidad que tendrá la línea con el costo actual del producto elegido (POS-12): lo cobrado − costo × cantidad. */
+  /** Profit the line will have with the chosen product's current cost (POS-12): amount charged − cost × quantity. */
   assignmentProfit(item: SaleItem, product: Product): number {
     const cost = Math.round((product.buyPrice || 0) * (item.quantity || 1) * 100) / 100;
     return Math.round(((item.subtotal || 0) - cost) * 100) / 100;
@@ -232,7 +232,7 @@ export class SaleDetailModalComponent {
         amount: sale.amountQr ?? 0
       });
     } else if (sale.paymentMethod === 'HISTORICO') {
-      // FIN-11: sin pagos; el dinero de ese día está en los movimientos migrados
+      // FIN-11: without payments; that day's money is in the migrated movements
       list.push({
         label: 'Histórico (dinero en Transacc.)',
         amount: sale.totalAmount
@@ -243,7 +243,7 @@ export class SaleDetailModalComponent {
         amount: sale.totalAmount
       });
     }
-    // DEU-05: la parte que quedó por cobrar al cliente
+    // DEU-05: the part left to collect from the customer
     if ((sale.creditAmount ?? 0) > 0) {
       list.push({
         label: 'Crédito',

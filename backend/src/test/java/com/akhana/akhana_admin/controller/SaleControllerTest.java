@@ -196,6 +196,44 @@ class SaleControllerTest {
     }
 
     @Test
+    @DisplayName("RG-03: el motivo de anulación de una venta sigue la misma regla que las demás anulaciones")
+    void voidReasonRules() throws Exception {
+        when(saleService.voidSale(eq(saleId), any(VoidSaleRequest.class), eq("admin"))).thenReturn(sampleResponse);
+
+        // A short reason is accepted, as in purchases, debts and finances
+        mockMvc.perform(post("/api/sales/{id}/void", saleId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"voidReason\": \"error\"}"))
+            .andExpect(status().isOk());
+
+        // A blank reason gives one message, not one per broken rule
+        mockMvc.perform(post("/api/sales/{id}/void", saleId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"voidReason\": \"\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("El motivo de anulación es obligatorio."));
+    }
+
+    @Test
+    @DisplayName("Un cuerpo ilegible o un parámetro inválido responden un mensaje en español, sin detalles técnicos")
+    void unreadableBodyAndBadParameter() throws Exception {
+        mockMvc.perform(post("/api/sales")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentMethod\": \"TARJETA\", \"items\": []}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Los datos enviados no son válidos; revise el formulario e intente de nuevo."));
+
+        mockMvc.perform(get("/api/sales")
+                .param("from", "abc")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("El valor de «from» no es válido."));
+    }
+
+    @Test
     @DisplayName("GET /api/sales - Debe listar ventas paginadas con filtros (POS-09)")
     void shouldListSales() throws Exception {
         when(saleService.searchSales(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 26), SaleStatus.ANULADA,

@@ -36,7 +36,7 @@ export class CloseCashModalComponent {
 
   activeMode = signal<'ARQUEO' | 'DIRECTO'>('ARQUEO');
 
-  // Señales de reactividad para cortes
+  // Count per bill and coin
   cutsData = signal<CutRow[]>(
     this.denominations.map((denom) => ({
       denomination: denom,
@@ -45,7 +45,7 @@ export class CloseCashModalComponent {
     }))
   );
 
-  // Subconjuntos ordenados para presentación en 2 columnas sin scroll
+  // Bills and coins, shown in two columns
   billCuts = computed(() => this.cutsData().filter((r) => r.denomination >= 10));
   coinCuts = computed(() => this.cutsData().filter((r) => r.denomination < 10));
 
@@ -68,13 +68,14 @@ export class CloseCashModalComponent {
 
   enteredClosingAmount = signal<number>(0);
 
-  // Cálculo reactivo de totales de cortes
+  // Total of the count
   totalCuts = computed(() => {
     return Math.round((this.subtotalBills() + this.subtotalCoins()) * 100) / 100;
   });
 
+  // Rounded to cents so an exact count reads as 0, never as a float remainder
   difference = computed(() => {
-    return this.enteredClosingAmount() - this.expectedCash();
+    return Math.round((this.enteredClosingAmount() - this.expectedCash()) * 100) / 100;
   });
 
   constructor() {
@@ -129,7 +130,7 @@ export class CloseCashModalComponent {
       )
     );
 
-    // Si está en modo arqueo, sincroniza automáticamente el monto de cierre
+    // In detailed mode the count is the closing amount
     if (this.activeMode() === 'ARQUEO') {
       this.applyCutsToClosingAmount();
     }
@@ -167,8 +168,9 @@ export class CloseCashModalComponent {
     const val = this.form.value;
     const closingAmount = Number(val.closingAmount);
 
-    // Preparar cortes si se utilizó la herramienta (si al menos uno tiene cantidad > 0)
-    const activeCuts: CashCutItem[] = this.cutsData()
+    // CAJ-04: the cuts go only with the detailed count, whose total is the closing amount; a direct amount
+    // never travels with a count that does not add up to it
+    const activeCuts: CashCutItem[] = this.activeMode() !== 'ARQUEO' ? [] : this.cutsData()
       .filter((r) => r.cashQuantity > 0 || r.reserveQuantity > 0)
       .map((r) => ({
         denomination: r.denomination,

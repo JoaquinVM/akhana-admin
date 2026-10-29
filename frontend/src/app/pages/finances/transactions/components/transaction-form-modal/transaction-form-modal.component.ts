@@ -67,7 +67,7 @@ const TEXTS: Record<TransactionFormMode, TransactionFormTexts> = {
   }
 };
 
-// Modal de alta de ingreso, gasto o transferencia; el padre es dueño del formulario y lo envía
+// Modal to add an income, expense or transfer; the parent owns the form and submits it
 @Component({
   selector: 'app-transaction-form-modal',
   standalone: true,
@@ -94,7 +94,7 @@ export class TransactionFormModalComponent {
     return !!control?.touched && !!control?.invalid;
   }
 
-  /** Un gasto o una transferencia que sale de Caja muestra el aviso de efectivo esperado (CAJ-03). */
+  /** An expense or transfer leaving Caja shows the expected cash warning (CAJ-03). */
   isCashOutflow(): boolean {
     if (this.mode() === 'INGRESO') return false;
     const field = this.mode() === 'TRANSFERENCIA' ? 'sourceAccountId' : 'accountId';

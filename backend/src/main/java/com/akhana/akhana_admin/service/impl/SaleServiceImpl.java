@@ -58,6 +58,7 @@ public class SaleServiceImpl implements SaleService {
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
     static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
     static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
+    static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.";
     static final String AT_COST_NO_DISCOUNTS = "Una venta al costo no admite descuentos.";
     static final String CREDIT_ONLY_AT_COST = "Solo una venta al costo puede quedar a crédito.";
     static final String CREDIT_CUSTOMER_REQUIRED = "Elija un cliente activo para la venta a crédito.";
@@ -66,7 +67,7 @@ public class SaleServiceImpl implements SaleService {
     static final String FREE_NAME_REQUIRED = "Escriba el nombre de la línea libre.";
     static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";
     static final String FREE_LINE_NO_DISCOUNT = "Una línea libre no admite descuentos.";
-    static final String GLOBAL_DISCOUNT_OVER_NORMAL_LINES = "El descuento general no puede superar el subtotal de los productos normales (Bs %s).";
+    static final String GLOBAL_DISCOUNT_OVER_NORMAL_LINES = "El descuento general no puede superar el subtotal de los productos normales (%s).";
     static final String AT_COST_NO_FREE_LINES = "Una venta al costo no admite líneas libres.";
     static final String ALREADY_ASSIGNED = "La línea ya fue asignada.";
     static final String VOIDED_SALE_ASSIGNMENT = "Una venta anulada no se asigna.";
@@ -203,7 +204,7 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal normalLinesTotal = subtotalPostItems.subtract(freeLinesTotal);
         if (hasFreeLines && globalDiscount.compareTo(normalLinesTotal) > 0) {
             throw new IllegalArgumentException(String.format(GLOBAL_DISCOUNT_OVER_NORMAL_LINES,
-                normalLinesTotal.toPlainString().replace('.', ',')));
+                StoreFormat.money(normalLinesTotal)));
         }
         if (globalDiscount.compareTo(subtotalPostItems) > 0) {
             throw new IllegalArgumentException("El descuento general no puede ser negativo ni superar el total de la venta.");
@@ -249,8 +250,9 @@ public class SaleServiceImpl implements SaleService {
             changeGiven = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         } else if (paymentMethod == PaymentMethod.MIXTO) {
             BigDecimal cashPortion = request.amountCash() != null ? request.amountCash().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            if (cashPortion.compareTo(BigDecimal.ZERO) < 0 || cashPortion.compareTo(paidNow) > 0) {
-                throw new IllegalArgumentException("En pago mixto, la porción en efectivo debe estar entre 0 y el total.");
+            // POS-04: a mixed payment has both parts; all in one is Efectivo or QR
+            if (cashPortion.signum() <= 0 || cashPortion.compareTo(paidNow) >= 0) {
+                throw new IllegalArgumentException(MIXED_NEEDS_BOTH);
             }
             amountCash = cashPortion;
             amountQr = paidNow.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
@@ -322,7 +324,7 @@ public class SaleServiceImpl implements SaleService {
 
         Sale savedSale = saleRepository.save(sale);
 
-        // Actualizar métricas acumuladas de la caja activa
+        // Update the running totals of the open session
         session.setTotalSalesCash(session.getTotalSalesCash().add(amountCash));
         session.setTotalSalesQr(session.getTotalSalesQr().add(amountQr));
         session.setTotalSales(session.getTotalSales().add(totalAmount));
@@ -330,7 +332,7 @@ public class SaleServiceImpl implements SaleService {
 
         cashSessionRepository.save(session);
 
-        // Generar movimientos financieros automáticos por venta
+        // The sale's automatic money movements (FIN-07)
         if (cashAccount != null) {
             recordSaleIncome(cashAccount, salesCategory, amountCash, savedSale, "Efectivo", username);
         }
@@ -399,7 +401,7 @@ public class SaleServiceImpl implements SaleService {
         sale.setVoidedBy(username);
         sale.setVoidReason(voidReason);
 
-        // Revertir acumuladores financieros de la caja abierta
+        // Revert the running totals of the open session
         session.setTotalSalesCash(session.getTotalSalesCash().subtract(sale.getAmountCash()));
         session.setTotalSalesQr(session.getTotalSalesQr().subtract(sale.getAmountQr()));
         session.setTotalSales(session.getTotalSales().subtract(sale.getTotalAmount()));
@@ -408,7 +410,7 @@ public class SaleServiceImpl implements SaleService {
         cashSessionRepository.save(session);
         Sale updatedSale = saleRepository.save(sale);
 
-        // Anular transacciones financieras generadas por la venta
+        // Void the money movements of the sale
         List<FinancialTransaction> relatedTxs = financialTransactionRepository.findBySaleId(saleId);
         Set<UUID> accountIds = relatedTxs.stream()
             .filter(tx -> tx.getSourceAccount() != null)
@@ -593,8 +595,8 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");
         }
         // Dates are store days (America/La_Paz); "to" includes the whole day
-        Instant fromInstant = from != null ? from.atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant() : NO_FROM;
-        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant() : NO_TO;
+        Instant fromInstant = from != null ? from.atStartOfDay(StoreFormat.STORE_ZONE).toInstant() : NO_FROM;
+        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant() : NO_TO;
         String seller = createdBy != null && !createdBy.isBlank() ? createdBy.trim() : null;
         PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE),
             Sort.by(Sort.Direction.DESC, "createdAt"));

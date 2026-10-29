@@ -65,7 +65,7 @@ export class TransactionsComponent implements OnInit {
   modalFormError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
 
-  // Modal Anulación
+  // Void modal
   isVoidModalOpen = signal<boolean>(false);
   transactionToVoid = signal<FinancialTransaction | null>(null);
   voidReason = signal<string>('');
@@ -76,7 +76,7 @@ export class TransactionsComponent implements OnInit {
   isSaleDetailOpen = signal<boolean>(false);
   selectedSaleId = signal<string | null>(null);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
@@ -112,13 +112,13 @@ export class TransactionsComponent implements OnInit {
     categoryId: ['']
   });
 
-  // Cuentas disponibles para ingreso manual (excluye Caja física)
+  // Accounts available for manual incomes (Caja left out)
   incomeEligibleAccounts = computed(() => {
     return this.accounts().filter(acc => !acc.isCashAccount);
   });
 
-  // Categorías de ingreso y gasto para registrar a mano: sin las que registra el sistema (Pedido, Pago a tercero,
-  // Ajuste, ventas); el formulario no elige ninguna de antemano
+  // Income and expense categories for manual entries: without those the system records (Pedido, Pago a tercero,
+  // Ajuste, sales); the form does not preselect any
   incomeCategories = computed(() => {
     return this.categories().filter(c => c.type === 'INGRESO' && c.manualEntryAllowed !== false);
   });
@@ -138,9 +138,9 @@ export class TransactionsComponent implements OnInit {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    // Primer día del mes actual (YYYY-MM-01)
+    // First day of the current month (YYYY-MM-01)
     this.startDate.set(`${year}-${month}-01`);
-    // Día actual (YYYY-MM-DD)
+    // Today (YYYY-MM-DD)
     this.endDate.set(`${year}-${month}-${day}`);
   }
 
@@ -209,7 +209,7 @@ export class TransactionsComponent implements OnInit {
     const month = Number(parts[1]);
     const day = Number(parts[2]);
     if (!year || !month || !day) return undefined;
-    // Inicio del día local: 00:00:00.000 convertido a UTC Instant ISO
+    // Start of the local day: 00:00:00.000 as a UTC ISO instant
     const start = new Date(year, month - 1, day, 0, 0, 0, 0);
     return isNaN(start.getTime()) ? undefined : start.toISOString();
   }
@@ -222,7 +222,7 @@ export class TransactionsComponent implements OnInit {
     const month = Number(parts[1]);
     const day = Number(parts[2]);
     if (!year || !month || !day) return undefined;
-    // Final del día local: 23:59:59.999 convertido a UTC Instant ISO
+    // End of the local day: 23:59:59.999 as a UTC ISO instant
     const end = new Date(year, month - 1, day, 23, 59, 59, 999);
     return isNaN(end.getTime()) ? undefined : end.toISOString();
   }
@@ -241,7 +241,7 @@ export class TransactionsComponent implements OnInit {
     this.loadTransactions();
   }
 
-  // --- Apertura de Modales ---
+  // --- Opening modals ---
 
   openIncomeModal(): void {
     this.modalFormError.set(null);
@@ -436,7 +436,7 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
-  // --- Anulación ---
+  // --- Void ---
 
   openVoidModal(tx: FinancialTransaction): void {
     if (tx.status === 'ANULADO' || tx.saleId || tx.historical) return;
@@ -478,7 +478,7 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
-  // --- Detalle de Venta ---
+  // --- Sale detail ---
 
   openSaleDetail(saleId: string): void {
     this.selectedSaleId.set(saleId);
@@ -490,7 +490,7 @@ export class TransactionsComponent implements OnInit {
     this.selectedSaleId.set(null);
   }
 
-  // --- Auditoría ---
+  // --- Audit ---
 
   openAuditModal(tx: FinancialTransaction): void {
     this.auditModalSubtitle.set(`${tx.type} - ${tx.description}`);

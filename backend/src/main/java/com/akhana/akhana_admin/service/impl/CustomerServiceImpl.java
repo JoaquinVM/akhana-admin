@@ -172,7 +172,7 @@ public class CustomerServiceImpl implements CustomerService {
         BigDecimal balance = balanceOf(customer);
         if (amount.compareTo(balance) > 0) {
             throw new IllegalArgumentException("El cobro supera el saldo por cobrar de " + customer.getName()
-                + " (Bs " + balance.toPlainString() + ").");
+                + " (" + StoreFormat.money(balance) + ").");
         }
         FinancialCategory category = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
             .orElseThrow(() -> new IllegalStateException(SALES_CATEGORY_MISSING));
@@ -298,8 +298,8 @@ public class CustomerServiceImpl implements CustomerService {
     // DEU-05: a customer with a receivable cannot be deactivated or deleted
     private static void ensureNoBalance(Customer customer, BigDecimal balance) {
         if (balance.signum() > 0) {
-            throw new IllegalStateException(customer.getName() + " tiene un saldo por cobrar de Bs "
-                + balance.toPlainString() + ".");
+            throw new IllegalStateException(customer.getName() + " tiene un saldo por cobrar de "
+                + StoreFormat.money(balance) + ".");
         }
     }
 

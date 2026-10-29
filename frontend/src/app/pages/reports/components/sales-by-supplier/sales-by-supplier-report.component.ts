@@ -6,7 +6,7 @@ import { ReportService } from '../../../../core/report/report.service';
 import { SalesBySupplierReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
 
-// FIN-10 / CON-03: ventas por proveedor actual del producto y mes; reemplaza Resumen Ventas
+// FIN-10 / CON-03: sales by the product's current supplier and month; replaces Resumen Ventas
 @Component({
   selector: 'app-sales-by-supplier-report',
   standalone: true,
@@ -24,7 +24,7 @@ export class SalesBySupplierReportComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // La búsqueda solo filtra la vista; el total del rango sigue siendo el de todos los proveedores
+  // The search only filters the view; the range total is still that of all suppliers
   suppliers = computed(() => {
     const term = this.search().trim().toLowerCase();
     const suppliers = this.report()?.suppliers ?? [];
@@ -34,7 +34,7 @@ export class SalesBySupplierReportComponent implements OnInit {
   readonly monthLabel = monthLabel;
 
   ngOnInit(): void {
-    // Sin fechas el servidor propone el mes en curso hasta hoy y las devuelve para los filtros
+    // Without dates the server proposes the current month up to today and returns them for the filters
     this.load();
   }
 

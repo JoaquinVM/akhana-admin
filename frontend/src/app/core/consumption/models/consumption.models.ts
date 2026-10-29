@@ -1,6 +1,6 @@
 import { SaleUnit } from '../../product/models/product.models';
 
-// CON-01: consumo interno valorado al costo; no mueve dinero
+// CON-01: internal consumption valued at cost; it moves no money
 export type ConsumptionStatus = 'REGISTRADO' | 'ANULADO';
 
 export const CONSUMPTION_STATUS_LABELS: Record<ConsumptionStatus, string> = {
@@ -17,7 +17,7 @@ export interface ConsumptionItem {
   quantity: number;
   unitCost: number;
   subtotal: number;
-  // CAT-11: copia de la presentación consumida y los kilos de la línea
+  // CAT-11: copy of the consumed presentation and the line's kilos
   presentationId?: string | null;
   presentationName?: string | null;
   presentationWeightKg?: number | null;
@@ -37,9 +37,9 @@ export interface Consumption {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
-  // Vacío en el listado; el detalle trae las líneas
+  // Empty in the list; the detail brings the lines
   items: ConsumptionItem[];
-  // FIN-11: migrado de la planilla; no se anula ni se edita
+  // FIN-11: migrated from the spreadsheet; never voided or edited
   historical?: boolean;
 }
 
@@ -50,7 +50,7 @@ export interface ConsumptionItemRequest {
 }
 
 export interface ConsumptionRequest {
-  // null: hoy (hora de Bolivia)
+  // null: today (Bolivia time)
   consumptionDate: string | null;
   consumedFor: string | null;
   comment: string | null;

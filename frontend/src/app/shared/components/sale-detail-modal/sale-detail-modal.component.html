@@ -22,7 +22,7 @@
   } @else if (currentSale(); as sale) {
     <div class="sale-detail-container">
       
-      <!-- 1. Información General -->
+      <!-- 1. General information -->
       <div class="general-info-card">
         <div class="info-field">
           <span class="field-label">N.º de venta</span>
@@ -51,7 +51,7 @@
           </div>
         }
 
-        <!-- P-39: el comentario de la venta al costo («Mami precio costo») -->
+        <!-- P-39: the at-cost sale comment («Mami precio costo») -->
         @if (sale.saleType === 'AL_COSTO' && sale.description) {
           <div class="info-field">
             <span class="field-label">Concepto</span>
@@ -78,7 +78,7 @@
         </div>
       </div>
 
-      <!-- 2. Información de Anulación (Condicional si la venta está ANULADA) -->
+      <!-- 2. Void information (only when the sale is ANULADA) -->
       @if (sale.status === 'ANULADA') {
         <div class="void-info-box">
           <div class="void-info-header">
@@ -106,7 +106,7 @@
         </div>
       }
 
-      <!-- 3. Tabla de Productos -->
+      <!-- 3. Products table -->
       <div class="products-section">
         <div class="section-header">
           <h4 class="section-title">Productos</h4>
@@ -133,7 +133,7 @@
                       @if (item.productCode) {
                         <span class="product-code">{{ item.productCode }}</span>
                       }
-                      <!-- POS-11 a POS-13: línea libre, su asignación y la dueña -->
+                      <!-- POS-11 to POS-13: free line, its assignment and the owner -->
                       @if (freeLineLabel(item); as label) {
                         <span class="free-line-badge" [class.pending]="item.assignmentStatus === 'POR_ASIGNAR'">{{ label }}</span>
                       }
@@ -152,7 +152,7 @@
                     </div>
                   </td>
                   <td style="text-align: right">
-                    <!-- CAT-11: bolsitas y sus kilos; «Otro peso», kilos con 3 decimales -->
+                    <!-- CAT-11: packs and their kilos; «Otro peso», kilos with 3 decimals -->
                     @if (item.weightKg) {
                       <span class="quantity-value">{{ item.quantity | number:'1.0-0' }}</span>
                       <span class="product-code">({{ item.weightKg | number:'1.3-3' }} kg)</span>
@@ -236,10 +236,10 @@
         </div>
       </div>
 
-      <!-- 4. Resumen de Descuentos, Totales y Métodos de Pago -->
+      <!-- 4. Discounts, totals and payment methods -->
       <div class="financials-grid">
         
-        <!-- Métodos de pago -->
+        <!-- Payment methods -->
         <div class="payment-methods-block">
           <h4 class="section-title">Métodos de pago</h4>
           <div class="payment-card">
@@ -276,7 +276,7 @@
           </div>
         </div>
 
-        <!-- Resumen de totales y descuentos -->
+        <!-- Totals and discounts summary -->
         <div class="totals-block">
           <h4 class="section-title">Resumen de venta</h4>
           <div class="totals-card">

@@ -14,6 +14,6 @@ import lombok.NoArgsConstructor;
 public class VoidFinancialTransactionRequest {
 
     @NotBlank(message = "El motivo de anulación es obligatorio.")
-    @Size(max = 500, message = "El motivo de anulación no puede exceder 500 caracteres")
+    @Size(max = 500, message = "El motivo de anulación no puede exceder 500 caracteres.")
     private String voidReason;
 }

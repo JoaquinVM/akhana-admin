@@ -64,7 +64,7 @@ describe('CashTransfersComponent', () => {
       direction: 'RETIRO', accountId: 'acc-efe', amount: 120, comment: 'Depósito al banco'
     });
     expect(component.isFormVisible()).toBe(false);
-    expect(changed).toHaveBeenCalledWith('Retiro de caja de Bs. 120.00 registrado exitosamente.');
+    expect(changed).toHaveBeenCalledWith('Retiro de caja de Bs 120,00 registrado exitosamente.');
   });
 
   it('no envía el formulario sin comentario', () => {

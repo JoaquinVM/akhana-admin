@@ -27,7 +27,7 @@ import { ProductImportModalComponent } from './product-import-modal/product-impo
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
-// CAT-11: fila editable de la sección Presentaciones; las reglas las valida el servidor
+// CAT-11: editable row of the Presentaciones section; the server validates the rules
 export interface PresentationDraft {
   id: string | null;
   name: string;
@@ -65,12 +65,12 @@ export class ProductsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Estados Reactivos con Signals
+  // State as signals
   products = signal<Product[]>([]);
   categories = signal<Category[]>([]);
   suppliers = signal<Supplier[]>([]);
   tags = signal<Tag[]>([]);
-  // POS-13: personas activas que pueden ser dueñas de un producto de tercero
+  // POS-13: active people who can own a third-party product
   creditors = signal<Creditor[]>([]);
   readonly specialTypeLabels = SPECIAL_TYPE_LABELS;
 
@@ -90,27 +90,27 @@ export class ProductsComponent implements OnInit {
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
 
-  // CAT-11: presentaciones del producto por kilo y avisos del último guardado
+  // CAT-11: presentations of the product by kilo and warnings of the last save
   presentations = signal<PresentationDraft[]>([]);
   private originalPresentations = signal<string>('[]');
   saveWarnings = signal<string[]>([]);
   readonly maxActivePresentations = MAX_ACTIVE_PRESENTATIONS;
 
-  // Desplegables de selectores personalizados en formulario
+  // Custom select dropdowns in the form
   isCategoryDropdownOpen = signal<boolean>(false);
   isSupplierDropdownOpen = signal<boolean>(false);
   isStatusDropdownOpen = signal<boolean>(false);
   isTagDropdownOpen = signal<boolean>(false);
 
-  // Modal Confirmación al Descartar Cambios
+  // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
 
-  // Modal Confirmación de Eliminación
+  // Delete confirmation modal
   isConfirmDeleteOpen = signal<boolean>(false);
   productToDelete = signal<Product | null>(null);
   isDeleting = signal<boolean>(false);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
@@ -126,7 +126,7 @@ export class ProductsComponent implements OnInit {
     sellPrice: [null, [Validators.required, Validators.min(0.01)]],
     status: ['ACTIVO'],
     saleUnit: ['UNIT'],
-    // POS-11: '' es un producto normal; el tipo y la dueña solo se eligen al crear
+    // POS-11: '' is a normal product; type and owner are only chosen on create
     specialType: [''],
     ownerCreditorId: ['']
   });
@@ -137,7 +137,7 @@ export class ProductsComponent implements OnInit {
     return !!this.productForm.get('specialType')?.value;
   });
 
-  // Al editar, la dueña puede estar inactiva y no venir en la lista
+  // When editing, the owner may be inactive and missing from the list
   hasOwnerOption(): boolean {
     const id = this.productForm.get('ownerCreditorId')?.value;
     return this.creditors().some((c) => c.id === id);
@@ -153,7 +153,7 @@ export class ProductsComponent implements OnInit {
     return this.productForm.get('specialType')?.value === 'THIRD_PARTY';
   });
 
-  // Lista de productos filtrada y ordenada por Nombre A-Z
+  // Products filtered and sorted by name A-Z
   filteredProducts = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const statusFilter = this.selectedStatusFilter();
@@ -180,7 +180,7 @@ export class ProductsComponent implements OnInit {
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   });
 
-  // Cálculo reactivo de utilidad fija
+  // Fixed profit, computed
   computedFixedProfit = computed<number>(() => {
     this.formVersion();
     const buy = Number(this.productForm.get('buyPrice')?.value) || 0;
@@ -189,7 +189,7 @@ export class ProductsComponent implements OnInit {
     return Number((sell - buy).toFixed(2));
   });
 
-  // Cálculo reactivo de utilidad porcentual
+  // Percentage profit, computed
   computedPercentageProfit = computed<number>(() => {
     this.formVersion();
     const buy = Number(this.productForm.get('buyPrice')?.value) || 0;
@@ -199,7 +199,7 @@ export class ProductsComponent implements OnInit {
     return Number(((profit / buy) * 100).toFixed(2));
   });
 
-  // Categoría actualmente seleccionada en el formulario
+  // Category selected in the form
   selectedCategoryObject = computed<Category | null>(() => {
     this.formVersion();
     const catId = this.productForm.get('categoryId')?.value;
@@ -207,7 +207,7 @@ export class ProductsComponent implements OnInit {
     return this.categories().find(c => c.id === catId) || null;
   });
 
-  // Proveedor actualmente seleccionado en el formulario
+  // Supplier selected in the form
   selectedSupplierObject = computed<Supplier | null>(() => {
     this.formVersion();
     const supId = this.productForm.get('supplierId')?.value;
@@ -215,27 +215,27 @@ export class ProductsComponent implements OnInit {
     return this.suppliers().find(s => s.id === supId) || null;
   });
 
-  // Estado actualmente seleccionado en el formulario
+  // Status selected in the form
   selectedStatusValue = computed<ProductStatus>(() => {
     this.formVersion();
     return (this.productForm.get('status')?.value as ProductStatus) || 'ACTIVO';
   });
 
-  // Etiquetas actualmente seleccionadas en el formulario
+  // Tags selected in the form
   selectedTagsObjects = computed<Tag[]>(() => {
     this.formVersion();
     const tagIds: string[] = this.productForm.get('tagIds')?.value || [];
     return this.tags().filter(t => tagIds.includes(t.id));
   });
 
-  // Etiquetas disponibles para añadir (no seleccionadas aún y activas)
+  // Tags that can be added (active and not selected yet)
   availableTagsObjects = computed<Tag[]>(() => {
     this.formVersion();
     const selectedIds: string[] = this.productForm.get('tagIds')?.value || [];
     return this.tags().filter(t => t.status !== 'ELIMINADO' && !selectedIds.includes(t.id));
   });
 
-  // Detección reactiva de cambios sin guardar
+  // Unsaved changes detection
   hasFormChanges = computed<boolean>(() => {
     this.formVersion();
     const val = this.productForm.value;
@@ -288,7 +288,7 @@ export class ProductsComponent implements OnInit {
         this.formVersion.update(v => v + 1);
       });
 
-    // CAT-11: al pasar a Kilo sin presentaciones se proponen 100 g y 1/2 libra
+    // CAT-11: switching to Kilo without presentations proposes 100 g and 1/2 libra
     this.productForm.get('saleUnit')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((unit) => {
@@ -297,7 +297,7 @@ export class ProductsComponent implements OnInit {
         }
       });
 
-    // POS-11: al elegir un tipo especial los precios quedan en 0 y se vende por unidad
+    // POS-11: choosing a special type sets the prices to 0 and sale by unit
     this.productForm.get('specialType')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((type) => this.applySpecialType(type));
@@ -327,7 +327,7 @@ export class ProductsComponent implements OnInit {
       next: (data) => this.creditors.set(data),
       error: () => this.creditors.set([])
     });
-    // Cargar categorías no eliminadas
+    // Load the non-deleted categories
     this.categoryService.getCategories(undefined, 'ACTIVO').subscribe({
       next: (data) => this.categories.set(data),
       error: () => console.warn('Error al cargar categorías para productos.')
@@ -376,7 +376,7 @@ export class ProductsComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
-  // --- Identificación de Campos Modificados ---
+  // --- Modified fields ---
 
   isFieldModified(fieldName: string): boolean {
     this.formVersion();
@@ -402,7 +402,7 @@ export class ProductsComponent implements OnInit {
     return currentVal !== origVal;
   }
 
-  // --- Selección de Categoría, Proveedor, Estado y Etiquetas ---
+  // --- Category, supplier, status and tag selection ---
 
   closeAllDropdowns(): void {
     this.isCategoryDropdownOpen.set(false);
@@ -480,7 +480,7 @@ export class ProductsComponent implements OnInit {
     }
   }
 
-  // --- Apertura y Cierre de Modales ---
+  // --- Opening and closing modals ---
 
   openCreateModal(): void {
     this.isEditing.set(false);
@@ -663,7 +663,7 @@ export class ProductsComponent implements OnInit {
     this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, [field]: parsed } : p)));
   }
 
-  // Una nueva se quita de la lista; una guardada se desactiva, nunca se borra
+  // A new one is removed from the list; a saved one is deactivated, never deleted
   removePresentation(index: number): void {
     const draft = this.presentations()[index];
     if (!draft.id) {
@@ -677,7 +677,7 @@ export class ProductsComponent implements OnInit {
     this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, active } : p)));
   }
 
-  // Vista previa; el servidor recalcula. Sin precio fijo: peso x precio por kilo
+  // Preview; the server recomputes. Without a fixed price: weight x price per kilo
   presentationPricePreview(draft: PresentationDraft): number | null {
     if (draft.fixedPrice) return draft.fixedPrice;
     const sell = Number(this.productForm.get('sellPrice')?.value) || 0;
@@ -699,7 +699,7 @@ export class ProductsComponent implements OnInit {
     }));
   }
 
-  // --- Eliminación Lógica ---
+  // --- Logical delete ---
 
   openDeleteModal(product: Product): void {
     if (product.status === 'ELIMINADO') return;
@@ -736,7 +736,7 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  // --- Auditoría ---
+  // --- Audit ---
 
   openAuditModal(product: Product): void {
     this.auditModalSubtitle.set(`${product.code} - ${product.name}`);

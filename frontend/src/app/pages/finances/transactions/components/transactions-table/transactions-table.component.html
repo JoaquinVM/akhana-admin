@@ -64,7 +64,7 @@
                 [class.negative]="tx.type === 'GASTO_MANUAL'">
               @if (tx.type === 'GASTO_MANUAL') { - }
               @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
-              Bs. {{ tx.amount | number:'1.2-2' }}
+              Bs {{ tx.amount | number:'1.2-2' }}
             </td>
             <td>
               <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
@@ -76,7 +76,7 @@
             </td>
             <td class="text-right cell-actions">
               @if (tx.saleId) {
-                <!-- Venta POS: Ver detalle modal -->
+                <!-- POS sale: detail modal -->
                 <button
                   type="button"
                   class="btn-action btn-sale-detail"
@@ -89,7 +89,7 @@
                   <span class="btn-text">Venta</span>
                 </button>
               } @else if (canModify(tx)) {
-                <!-- Transacción manual activa: Editar y Anular -->
+                <!-- Active manual movement: edit and void -->
                 <button
                   type="button"
                   class="btn-action btn-edit"
@@ -113,7 +113,7 @@
                 </button>
               }
 
-              <!-- Auditoría disponible para todos -->
+              <!-- Audit for every status -->
               <button
                 type="button"
                 class="btn-action btn-audit"

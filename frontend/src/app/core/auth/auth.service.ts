@@ -64,7 +64,7 @@ export class AuthService {
     );
   }
 
-  // El servidor invalida los tokens anteriores al cambio y devuelve uno nuevo para seguir en esta sesión
+  // The server invalidates the tokens issued before the change and returns a new one to stay in this session
   changePassword(request: ChangePasswordRequest): Observable<{ token: string }> {
     return this.http.post<{ token: string }>(this.CHANGE_PASSWORD_URL, request).pipe(
       tap((response) => {
@@ -123,7 +123,7 @@ export class AuthService {
       const userRaw = localStorage.getItem(this.USER_KEY);
       if (token && userRaw) {
         const user = JSON.parse(userRaw) as UserSession;
-        // Sesiones guardadas antes de los roles Operador/Administrador traen claves viejas: se vuelve a ingresar
+        // Sessions saved before the Operador/Administrador roles carry old keys: sign in again
         return KNOWN_ROLES.includes(user.role) ? user : null;
       }
     } catch {

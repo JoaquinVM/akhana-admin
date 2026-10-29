@@ -40,8 +40,10 @@ public class CashSessionController {
     @PreAuthorize("hasAuthority('POS')")
     @GetMapping("/current")
     public ResponseEntity<CashSessionSummaryResponse> getCurrentSession() {
-        CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
-        return ResponseEntity.ok(response);
+        // 204 when the cash is closed: an expected state, not an error
+        return cashSessionService.findCurrentSession()
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PreAuthorize("hasAuthority('POS')")

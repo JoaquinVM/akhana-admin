@@ -22,7 +22,7 @@ public class CreditorServiceImpl implements CreditorService {
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar la devolución.";
-    static final String THIRD_PARTY_OVER_PENDING = "El Pago a tercero supera lo pendiente de las ventas de %s (Bs %s); registre el resto con el concepto Pedido.";
+    static final String THIRD_PARTY_OVER_PENDING = "El Pago a tercero supera lo pendiente de las ventas de %s (%s); registre el resto con el concepto Pedido.";
     static final String THIRD_PARTY_CATEGORY_MISSING = "No existe la categoría Pago a tercero; no se puede registrar la devolución.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String ALREADY_VOIDED_REPAYMENT = "La devolución ya está anulada.";
@@ -190,7 +190,7 @@ public class CreditorServiceImpl implements CreditorService {
         BigDecimal debt = debtOf(creditor);
         if (amount.compareTo(debt) > 0) {
             throw new IllegalArgumentException("La devolución supera la deuda con " + creditor.getName()
-                + " (Bs " + debt.toPlainString() + ").");
+                + " (" + StoreFormat.money(debt) + ").");
         }
         // Purchases go back as Pedido (P-34) and third-party sales as Pago a tercero (POS-13)
         CreditorRepaymentConcept concept = request.concept() != null ? request.concept() : CreditorRepaymentConcept.PURCHASE;
@@ -200,7 +200,7 @@ public class CreditorServiceImpl implements CreditorService {
             BigDecimal pending = scale(creditorRepository.computeThirdPartyPending(creditor.getId())).max(ZERO);
             if (amount.compareTo(pending) > 0) {
                 throw new IllegalArgumentException(String.format(THIRD_PARTY_OVER_PENDING, creditor.getName(),
-                    pending.toPlainString()));
+                    StoreFormat.money(pending)));
             }
         }
         FinancialCategory category = financialCategoryRepository
@@ -337,7 +337,7 @@ public class CreditorServiceImpl implements CreditorService {
     // DEU-01: a person with a debt cannot be deactivated or deleted
     private static void ensureNoDebt(Creditor creditor, BigDecimal debt) {
         if (debt.signum() > 0) {
-            throw new IllegalStateException(creditor.getName() + " tiene una deuda de Bs " + debt.toPlainString()
+            throw new IllegalStateException(creditor.getName() + " tiene una deuda de " + StoreFormat.money(debt)
                 + "; devuélvala antes de darla de baja.");
         }
     }

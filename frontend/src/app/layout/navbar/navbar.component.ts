@@ -18,7 +18,7 @@ export class NavbarComponent implements OnInit {
   readonly cashService = inject(CashService);
   readonly roleLabel = roleLabel;
 
-  // Navegación filtrada reactivamente según los permisos del usuario activo
+  // Menu filtered by the permissions of the signed-in user
   readonly visibleNavGroups = computed<NavGroup[]>(() => {
     if (typeof this.authService.permissions === 'function') {
       this.authService.permissions();
@@ -36,8 +36,11 @@ export class NavbarComponent implements OnInit {
     return this.visibleNavGroups();
   }
 
-  // Control estricto de menú desplegable único
+  // Only one dropdown open at a time
   openGroupId = signal<string | null>(null);
+
+  // Narrow screens (the operator's phone): the menu folds behind a button
+  mobileMenuOpen = signal<boolean>(false);
 
   isCashOpen = computed(() => {
     const session = this.cashService.currentSession();
@@ -45,10 +48,10 @@ export class NavbarComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Cargar estado de sesión de caja compartida si no se ha cargado aún
+    // Load the shared cash session state for the POS badge
     this.cashService.getCurrentSession().subscribe({
       error: () => {
-        // En caso de error o sin caja activa, currentSession permanece null (Cerrada)
+        // On error or without an open session, currentSession stays null (closed)
       }
     });
   }
@@ -77,18 +80,44 @@ export class NavbarComponent implements OnInit {
     );
   }
 
+  // Hover opens a group on a wide screen; in the folded menu only taps count (touch also fires mouse events)
   openGroup(groupId: string): void {
+    if (!this.mobileMenuOpen()) {
+      this.openGroupId.set(groupId);
+    }
+  }
+
+  // Touch screens have no hover: in the folded menu a tap opens or closes the group; on a wide screen the
+  // click keeps open the group the hover already opened
+  toggleGroup(groupId: string): void {
+    if (this.mobileMenuOpen() && this.openGroupId() === groupId) {
+      this.openGroupId.set(null);
+      return;
+    }
     this.openGroupId.set(groupId);
   }
 
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((open) => !open);
+    this.openGroupId.set(null);
+  }
+
   closeGroup(groupId: string): void {
-    if (this.openGroupId() === groupId) {
+    if (!this.mobileMenuOpen() && this.openGroupId() === groupId) {
+      this.openGroupId.set(null);
+    }
+  }
+
+  // Leaving the bar with the mouse closes the dropdown, not the folded menu
+  onNavLeave(): void {
+    if (!this.mobileMenuOpen()) {
       this.openGroupId.set(null);
     }
   }
 
   closeAllMenus(): void {
     this.openGroupId.set(null);
+    this.mobileMenuOpen.set(false);
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }

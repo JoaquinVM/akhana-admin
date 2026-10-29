@@ -65,4 +65,40 @@ describe('CloseCashModalComponent', () => {
     expect(emittedResult.closingAmount).toBe(150);
     expect(emittedResult.closingComment).toBe('Cierre correcto');
   });
+
+  it('CAJ-04: con conteo directo no se envían los cortes cargados antes', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    component.cutsData.update((rows) => rows.map((r) => (r.denomination === 100 ? { ...r, cashQuantity: 1 } : r)));
+    component.applyCutsToClosingAmount();
+
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 3600 });
+    component.onSubmit();
+
+    expect(emitted.closingAmount).toBe(3600);
+    expect(emitted.cuts).toBeUndefined();
+  });
+
+  it('CAJ-04: en arqueo se envían los cortes con su total como monto', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    component.cutsData.update((rows) => rows.map((r) => (r.denomination === 0.5 ? { ...r, cashQuantity: 3, reserveQuantity: 1 } : r)));
+    component.applyCutsToClosingAmount();
+    component.onSubmit();
+
+    expect(emitted.closingAmount).toBe(2);
+    expect(emitted.cuts).toEqual([{ denomination: 0.5, cashQuantity: 3, reserveQuantity: 1, subtotal: 2 }]);
+  });
+
+  it('CAJ-05: la diferencia se redondea al centavo y el faltante se muestra sin doble signo', () => {
+    fixture.componentRef.setInput('expectedCash', 0.3);
+    component.form.patchValue({ closingAmount: 0.1 + 0.2 });
+    expect(component.difference()).toBe(0);
+
+    component.form.patchValue({ closingAmount: 0.2 });
+    fixture.detectChanges();
+    expect(component.difference()).toBe(-0.1);
+    expect(fixture.nativeElement.textContent).toContain('Faltante: Bs 0.10');
+  });
 });

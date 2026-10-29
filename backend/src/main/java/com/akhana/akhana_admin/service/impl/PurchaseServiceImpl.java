@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -21,8 +20,8 @@ import java.util.*;
 @Transactional
 public class PurchaseServiceImpl implements PurchaseService {
 
-    static final ZoneId STORE_ZONE = ZoneId.of("America/La_Paz");
 
+    static final String COST_SCALE = "El costo unitario de '%s' admite hasta 2 decimales.";
     static final String NO_ITEMS = "El pedido debe tener al menos una línea.";
     static final String FUTURE_DATE = "La fecha del pedido no puede ser futura.";
     static final String SHIPPING_ACCOUNT_REQUIRED = "Indique la cuenta con la que se pagó el envío.";
@@ -122,7 +121,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El proveedor '" + supplier.getName() + "' no está activo.");
         }
 
-        LocalDate today = LocalDate.now(STORE_ZONE);
+        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
         LocalDate purchaseDate = request.purchaseDate() != null ? request.purchaseDate() : today;
         if (purchaseDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);
@@ -146,6 +145,10 @@ public class PurchaseServiceImpl implements PurchaseService {
             BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
             if (itemReq.unitCost() == null || itemReq.unitCost().signum() < 0) {
                 throw new IllegalArgumentException("El costo unitario de '" + product.getName() + "' no puede ser negativo.");
+            }
+            // Like the catalog prices, a cost has at most 2 decimals; it is not rounded silently
+            if (itemReq.unitCost().stripTrailingZeros().scale() > 2) {
+                throw new IllegalArgumentException(String.format(COST_SCALE, product.getName()));
             }
             BigDecimal unitCost = itemReq.unitCost().setScale(2, RoundingMode.HALF_UP);
             BigDecimal subtotal = unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP);
@@ -269,7 +272,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
         BigDecimal balance = purchase.getBalance();
         if (amount.compareTo(balance) > 0) {
-            throw new IllegalArgumentException("El pago supera el saldo pendiente del pedido (Bs " + balance.toPlainString() + ").");
+            throw new IllegalArgumentException("El pago supera el saldo pendiente del pedido (" + StoreFormat.money(balance) + ").");
         }
 
         Instant now = Instant.now();
@@ -314,7 +317,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
         Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
-            purchase.getPurchaseDate(), LocalDate.now(STORE_ZONE));
+            purchase.getPurchaseDate(), LocalDate.now(StoreFormat.STORE_ZONE));
         purchase.setDeliveryType(delivery.type());
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());

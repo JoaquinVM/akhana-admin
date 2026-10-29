@@ -119,6 +119,14 @@ El sistema SHALL permitir calcular el monto de cierre a través de una matriz de
 - **WHEN** el usuario ingresa manualmente el monto de cierre sin llenar la tabla de cortes
 - **THEN** el sistema acepta el monto de cierre directo sin exigir el desglose de denominaciones
 
+#### Scenario: Cortes que no suman el monto contado (segunda revisión, 29-10-2026)
+- **WHEN** se cierra con cortes (por ejemplo un billete de Bs 100) y un monto contado distinto de su suma (Bs 3.500,00)
+- **THEN** el servidor rechaza el cierre con «Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrija el conteo o deje los cortes vacíos.» y la caja sigue abierta. Un corte que no es billete ni moneda boliviana o uno repetido también se rechaza; las filas en 0 no se guardan. En la pantalla, «Conteo Global Directo» ya no envía los cortes cargados antes: solo el arqueo detallado los envía, con su total como monto. La diferencia del modal se redondea al centavo y el faltante se muestra sin doble signo («Faltante: Bs 50,00»). Pruebas en `CashSessionServiceTest` y `close-cash-modal.component.spec.ts`.
+
+#### Scenario: Consulta de la caja actual sin caja abierta
+- **WHEN** el POS o la barra de navegación piden `GET /api/cash-sessions/current` y no hay caja abierta
+- **THEN** el servidor responde 204 sin cuerpo (no un 404) y la pantalla la toma como caja cerrada, sin errores en la consola. Pruebas en `CashSessionControllerTest` y `cash.service.spec.ts`.
+
 ### Requirement: Cálculo y visualización de diferencia de caja
 El sistema SHALL calcular y mostrar automáticamente la diferencia entre el monto de cierre y el monto esperado en efectivo antes de confirmar el cierre de la caja.
 

@@ -24,7 +24,7 @@ public class FinancialAccountResponse {
     // FIN-01: the cutover balance can still be entered (no other movements, and for Caja no cash session yet)
     private Boolean openingBalanceEditable;
 
-    // Auditoría
+    // Audit
     private String createdBy;
     private Instant createdAt;
     private String updatedBy;

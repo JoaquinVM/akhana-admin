@@ -24,7 +24,7 @@ public class FinancialCategoryResponse {
     // False for the categories a manual movement cannot use (Pedido, Pago a tercero, Ajuste, ventas)
     private boolean manualEntryAllowed;
 
-    // Auditoría
+    // Audit
     private String createdBy;
     private Instant createdAt;
     private String updatedBy;

@@ -12,8 +12,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   HISTORICO: 'Histórico'
 };
 
-// POS-09: filtros del historial; un método incluye las ventas que lo usaron (Efectivo y QR incluyen Mixto,
-// Crédito incluye las ventas al costo con una parte a crédito)
+// POS-09: history filters; a method includes the sales that used it (Efectivo and QR include Mixto,
+// Crédito includes the at-cost sales partly on credit)
 export interface SaleFilters {
   from?: string | null;
   to?: string | null;
@@ -21,7 +21,7 @@ export interface SaleFilters {
   saleType?: SaleType | null;
   paymentMethod?: PaymentMethod | null;
   createdBy?: string | null;
-  // POS-12: solo ventas con líneas por asignar
+  // POS-12: only sales with lines pending assignment
   pendingAssignment?: boolean;
 }
 
@@ -29,9 +29,9 @@ export interface SaleItemRequest {
   productId: string;
   quantity: number;
   discountPerUnit?: number;
-  // CAT-11: con presentación la cantidad son bolsitas enteras
+  // CAT-11: with a presentation the quantity is whole packs
   presentationId?: string | null;
-  // POS-11: nombre y precio escritos, solo en productos especiales
+  // POS-11: typed name and price, only for special products
   freeName?: string | null;
   freePrice?: number | null;
 }
@@ -44,7 +44,7 @@ export interface SaleDetailRequest {
   amountQr?: number;
   amountReceived?: number;
   description?: string;
-  // CON-02 / DEU-05: sin saleType la venta es NORMAL; el crédito exige cliente activo
+  // CON-02 / DEU-05: without saleType the sale is NORMAL; credit requires an active customer
   saleType?: SaleType;
   customerId?: string | null;
   creditAmount?: number;

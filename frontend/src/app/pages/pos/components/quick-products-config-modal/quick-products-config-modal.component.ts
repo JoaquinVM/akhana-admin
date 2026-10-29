@@ -29,7 +29,7 @@ export class QuickProductsConfigModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.productService.getProducts(undefined, 'ACTIVO').subscribe({
-      // POS-11: los productos especiales piden nombre y precio, no van a productos rápidos
+      // POS-11: special products ask for name and price; they are not quick products
       next: (products) => this.catalogProducts.set(products.filter((p) => !isSpecialProduct(p))),
       error: () => this.catalogProducts.set([])
     });

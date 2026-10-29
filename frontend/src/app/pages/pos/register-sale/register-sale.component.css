@@ -119,7 +119,7 @@
   height: 14px;
 }
 
-/* Layout de 2 Columnas */
+/* Two-column layout */
 .sale-workspace-grid {
   display: grid;
   grid-template-columns: 1.25fr 1fr;
@@ -133,7 +133,7 @@
   }
 }
 
-/* Columna Izquierda */
+/* Left column */
 .catalog-column {
   display: flex;
   flex-direction: column;
@@ -262,7 +262,7 @@
   color: #ffffff;
 }
 
-/* Card de Productos Rápidos */
+/* Quick products card */
 .quick-products-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -426,7 +426,7 @@
   font-size: 0.8125rem;
 }
 
-/* Columna Derecha */
+/* Right column */
 .checkout-column {
   display: flex;
   flex-direction: column;
@@ -581,7 +581,7 @@
   appearance: textfield;
 }
 
-/* Eliminar flechas/spinners por defecto del navegador en el control de cantidad */
+/* Hide the browser's number spinners in the quantity control */
 .qty-input::-webkit-outer-spin-button,
 .qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -784,7 +784,7 @@
   appearance: textfield;
 }
 
-/* Eliminar flechas/spinners por defecto del navegador en descuento total */
+/* Hide the browser's number spinners in the general discount */
 .global-discount-input-wrap input::-webkit-outer-spin-button,
 .global-discount-input-wrap input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -813,7 +813,7 @@
   color: var(--primary-color, #2e5b27);
 }
 
-/* Botón de Cobro en el Carrito */
+/* Cart checkout button */
 .cart-checkout-actions {
   padding: 0.85rem 1.15rem 1.15rem;
 }
@@ -842,7 +842,7 @@
   height: 18px;
 }
 
-/* CON-02: interruptor de venta al costo */
+/* CON-02: at-cost sale switch */
 .at-cost-toggle {
   display: flex;
   flex-wrap: wrap;
@@ -870,7 +870,7 @@
   opacity: 0.85;
 }
 
-/* POS-11: línea libre (producto sin identificar o de tercero) */
+/* POS-11: free line (unidentified or third-party product) */
 .free-line-badge {
   display: inline-block;
   font-size: 0.6875rem;

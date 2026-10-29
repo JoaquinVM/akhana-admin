@@ -18,7 +18,7 @@ export class CreditorService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/creditors';
 
-  // Sin estado: activas e inactivas (sin eliminadas)
+  // Without status: active and inactive (deleted left out)
   getCreditors(status: CreditorStatus | null = null, search?: string): Observable<Creditor[]> {
     let params = new HttpParams();
     if (status) {
@@ -54,7 +54,7 @@ export class CreditorService {
     return this.http.post<CreditorHistory>(`${this.apiUrl}/${id}/repayments/${repaymentId}/void`, request);
   }
 
-  // Cuentas para devolver, sin pasar por Finanzas
+  // Accounts to repay from, without going through Finanzas
   getAccounts(): Observable<DebtAccount[]> {
     return this.http.get<DebtAccount[]>('/api/debts/accounts');
   }

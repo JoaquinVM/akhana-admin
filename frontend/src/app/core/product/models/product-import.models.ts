@@ -1,4 +1,4 @@
-// CAT-06: resultado de Revisar o Importar la hoja Productos
+// CAT-06: result of Revisar or Importar of the Productos sheet
 export type ProductImportRowStatus = 'IMPORTED' | 'EXISTING' | 'REJECTED' | 'WARNING';
 
 export interface ProductImportRow {
@@ -19,6 +19,6 @@ export interface ProductImportResult {
   newCategories: string[];
   newSuppliers: string[];
   newTags: string[];
-  // Solo las ya existentes, rechazadas y con aviso
+  // Only existing, rejected and warned rows
   rows: ProductImportRow[];
 }

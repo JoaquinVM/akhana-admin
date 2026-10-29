@@ -330,7 +330,7 @@ public class ReportServiceImpl implements ReportService {
     private record Range(LocalDate from, LocalDate to) {
 
         static Range of(LocalDate from, LocalDate to) {
-            LocalDate end = to != null ? to : LocalDate.now(PurchaseServiceImpl.STORE_ZONE);
+            LocalDate end = to != null ? to : LocalDate.now(StoreFormat.STORE_ZONE);
             LocalDate start = from != null ? from : end.withDayOfMonth(1);
             if (start.isAfter(end)) {
                 throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");
@@ -342,11 +342,11 @@ public class ReportServiceImpl implements ReportService {
         }
 
         Instant fromInstant() {
-            return from.atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant();
+            return from.atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
         }
 
         Instant toInstant() {
-            return to.plusDays(1).atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant();
+            return to.plusDays(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
         }
     }
 

@@ -75,21 +75,21 @@ public class FinancialTransaction {
     @Column(name = "customer_collection_id", updatable = false)
     private UUID customerCollectionId;
 
-    // Auditoría de registro (independiente de transactionDate)
+    // Creation audit (apart from transactionDate)
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    // Auditoría de modificación
+    // Update audit
     @Column(name = "updated_by", length = 100)
     private String updatedBy;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    // Auditoría de anulación
+    // Void audit
     @Column(name = "voided_at")
     private Instant voidedAt;
 

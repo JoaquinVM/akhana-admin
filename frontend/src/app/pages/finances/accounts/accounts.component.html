@@ -1,5 +1,5 @@
 <div class="accounts-page">
-  <!-- Encabezado de página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -22,11 +22,11 @@
     </div>
   </header>
 
-  <!-- Banner de Resumen / Saldo Consolidado -->
+  <!-- Summary banner / consolidated balance -->
   <section class="summary-banner">
     <div class="banner-stat">
       <span class="stat-label">Saldo Total Consolidado</span>
-      <span class="stat-value">Bs. {{ totalBalance() | number:'1.2-2' }}</span>
+      <span class="stat-value">Bs {{ totalBalance() | number:'1.2-2' }}</span>
     </div>
     <div class="banner-divider"></div>
     <div class="banner-stat">
@@ -35,7 +35,7 @@
     </div>
   </section>
 
-  <!-- Mensajes de Error y Loading -->
+  <!-- Error and loading messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <span>{{ errorMessage() }}</span>
@@ -48,7 +48,7 @@
       <p>Cargando cuentas financieras...</p>
     </div>
   } @else {
-    <!-- Grid de Cuentas -->
+    <!-- Accounts grid -->
     <div class="accounts-grid">
       @for (account of accounts(); track account.id) {
         <article class="account-card" [style.--account-color]="account.color">
@@ -71,13 +71,13 @@
             <div class="balance-display">
               <span class="balance-label">Saldo Actual</span>
               <span class="balance-amount" [class.negative]="account.currentBalance < 0">
-                Bs. {{ account.currentBalance | number:'1.2-2' }}
+                Bs {{ account.currentBalance | number:'1.2-2' }}
               </span>
             </div>
 
             <div class="balance-meta">
               <span class="meta-label">Saldo Inicial:</span>
-              <span class="meta-value">Bs. {{ account.initialBalance | number:'1.2-2' }}</span>
+              <span class="meta-value">Bs {{ account.initialBalance | number:'1.2-2' }}</span>
             </div>
           </div>
 
@@ -137,7 +137,7 @@
     </div>
   }
 
-  <!-- Modal Crear/Editar Cuenta -->
+  <!-- Create/edit account modal -->
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Cuenta Financiera' : 'Nueva Cuenta Financiera'"
@@ -166,7 +166,7 @@
         }
       </div>
 
-      <!-- Color Picker Component -->
+      <!-- Color picker -->
       <div class="form-group">
         <app-color-picker
           formControlName="color"
@@ -217,7 +217,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal Saldo al corte (FIN-01) -->
+  <!-- Cutover balance modal (FIN-01) -->
   <app-modal
     [isOpen]="isOpeningBalanceModalOpen()"
     [title]="'Saldo al corte: ' + (accountForOpeningBalance()?.name || '')"
@@ -265,7 +265,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal Movimientos de Cuenta -->
+  <!-- Account movements modal -->
   <app-modal
     [isOpen]="isMovementsModalOpen()"
     [title]="'Movimientos: ' + (selectedAccountForMovements()?.name || '')"
@@ -306,7 +306,7 @@
                   </td>
                   <td class="cell-desc">{{ tx.description }}</td>
                   <td class="cell-amount" [class.negative]="tx.type === 'GASTO_MANUAL'">
-                    Bs. {{ tx.amount | number:'1.2-2' }}
+                    Bs {{ tx.amount | number:'1.2-2' }}
                   </td>
                   <td>
                     <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
@@ -322,7 +322,7 @@
     </div>
   </app-modal>
 
-  <!-- Modal Confirmación de Eliminación -->
+  <!-- Delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDeleteModalOpen()"
     title="¿Eliminar cuenta financiera?"

@@ -350,6 +350,23 @@ class SaleServiceTest {
     }
 
     @Test
+    @DisplayName("POS-04: un pago mixto con todo en efectivo o todo en QR se rechaza")
+    void shouldRejectMixedPaymentWithOnePart() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        for (String cash : List.of("0.00", "40.00")) {
+            SaleDetailRequest req = new SaleDetailRequest(
+                List.of(new SaleItemRequest(product1.getId(), new BigDecimal("2"), BigDecimal.ZERO)),
+                BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal(cash), null, new BigDecimal(cash), null);
+            assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.");
+        }
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
     @DisplayName("Debe anular transacciones financieras asociadas al anular venta")
     void shouldVoidFinancialIncomeTransactionsOnSaleVoid() {
         cashAcc.setCurrentBalance(new BigDecimal("150.00"));

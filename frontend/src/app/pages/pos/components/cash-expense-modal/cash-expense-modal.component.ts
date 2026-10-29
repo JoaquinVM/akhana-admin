@@ -7,10 +7,11 @@ import { FinancialTransactionService } from '../../../../core/finance/financial-
 import { FinancialCategory } from '../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
+import { formatBs } from '../../../../shared/utils/money';
 
 /**
- * Gasto de caja del turno (comida, transporte…): sale de Caja con una categoría de gasto. Solo ofrece las
- * categorías que admiten movimientos manuales: Pedido, Pago a tercero y Ajuste los registra el sistema.
+ * Cash expense of the shift (food, transport…): leaves Caja with an expense category. It only offers the
+ * categories that take manual movements: Pedido, Pago a tercero and Ajuste are recorded by the system.
  */
 @Component({
   selector: 'app-cash-expense-modal',
@@ -37,7 +38,7 @@ export class CashExpenseModalComponent {
   }
 
   @Output() close = new EventEmitter<void>();
-  /** Emite el mensaje de éxito después de registrar el gasto. */
+  /** Emits the success message after registering the expense. */
   @Output() saved = new EventEmitter<string>();
 
   categories = signal<FinancialCategory[]>([]);
@@ -55,7 +56,7 @@ export class CashExpenseModalComponent {
 
   private load(): void {
     this.error.set(null);
-    // Sin categoría elegida de antemano: quien registra la elige (antes se proponía la primera, «Ajuste»)
+    // No category preselected: whoever registers picks it (the first one, «Ajuste», used to be proposed)
     this.form.reset({ categoryId: '', amount: null, description: '', notes: '' });
     this.categoryService.getCategories('GASTO').subscribe({
       next: (cats) => this.categories.set(cats.filter((c) => c.manualEntryAllowed)),
@@ -79,7 +80,7 @@ export class CashExpenseModalComponent {
     }).subscribe({
       next: (tx) => {
         this.isLoading.set(false);
-        this.saved.emit(`Gasto de caja de Bs. ${tx.amount.toFixed(2)} registrado exitosamente.`);
+        this.saved.emit(`Gasto de caja de ${formatBs(tx.amount)} registrado exitosamente.`);
       },
       error: (err) => {
         this.isLoading.set(false);

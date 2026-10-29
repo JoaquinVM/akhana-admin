@@ -8,8 +8,8 @@ import {
 } from '../../../core/product/models/product.models';
 
 /**
- * CAT-11: al elegir un producto por kilo se elige su presentación (de menor a mayor peso) u «Otro peso».
- * Emite la presentación elegida, o null para «Otro peso» (kilos a mano).
+ * CAT-11: choosing a product by kilo asks for its presentation (lightest first) or «Otro peso».
+ * Emits the chosen presentation, or null for «Otro peso» (kilos typed by hand).
  */
 @Component({
   selector: 'app-presentation-picker',
@@ -20,7 +20,7 @@ import {
 })
 export class PresentationPickerComponent {
   product = input.required<Product>();
-  // Venta al costo: se muestra peso x costo por kilo; en consumos, el costo
+  // At-cost sale: shows weight x cost per kilo; in consumptions, the cost
   priceMode = input<'price' | 'atCost' | 'cost'>('price');
 
   picked = output<ProductPresentation | null>();

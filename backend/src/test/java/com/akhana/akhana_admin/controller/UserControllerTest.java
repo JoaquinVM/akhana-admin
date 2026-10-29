@@ -111,7 +111,7 @@ class UserControllerTest {
         mockMvc.perform(get("/api/users")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + OPERATOR_TOKEN))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("No tiene permiso para realizar esta acción"));
+                .andExpect(jsonPath("$.message").value("No tiene permiso para realizar esta acción."));
     }
 
     @Test

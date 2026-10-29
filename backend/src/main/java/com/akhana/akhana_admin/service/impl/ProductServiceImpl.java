@@ -92,31 +92,31 @@ public class ProductServiceImpl implements ProductService {
         String code = request.code().trim();
         String name = request.name().trim();
 
-        // Validación exclusiva en Backend de unicidad de código (excluye ELIMINADO)
+        // Code unique among the non-deleted (RG-04)
         if (productRepository.existsByCodeIgnoreCaseAndStatusNot(code, ProductStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe un producto activo o inactivo con el código especificado.");
         }
 
-        // Validación exclusiva en Backend de unicidad de nombre (excluye ELIMINADO)
+        // Name unique among the non-deleted (RG-04)
         if (productRepository.existsByNameIgnoreCaseAndStatusNot(name, ProductStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe un producto activo o inactivo con el nombre especificado.");
         }
 
-        // Validar existencia de categoría (no eliminada)
+        // The category must exist and not be deleted
         Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("La categoría especificada no existe con ID: " + request.categoryId()));
         if (category.getStatus() == CategoryStatus.ELIMINADO) {
             throw new IllegalStateException("No se puede asociar una categoría en estado ELIMINADO.");
         }
 
-        // Validar existencia de proveedor (no eliminado)
+        // The supplier must exist and not be deleted
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("El proveedor especificado no existe con ID: " + request.supplierId()));
         if (supplier.getStatus() == SupplierStatus.ELIMINADO) {
             throw new IllegalStateException("No se puede asociar un proveedor en estado ELIMINADO.");
         }
 
-        // Validar y asociar etiquetas
+        // Validate and attach the tags
         Set<Tag> tags = resolveTags(request.tagIds());
 
         // POS-11: a special product has no cost or price in the catalog and is sold by unit
@@ -135,7 +135,7 @@ public class ProductServiceImpl implements ProductService {
                     .orElseThrow(() -> new IllegalArgumentException(OWNER_REQUIRED));
         }
 
-        // Cálculo automático de utilidades
+        // Profit is computed, never typed (CAT-02)
         BigDecimal buyPrice = specialType != null ? ZERO : request.buyPrice().setScale(2, RoundingMode.HALF_UP);
         BigDecimal sellPrice = specialType != null ? ZERO : requireSellPrice(request.sellPrice());
         BigDecimal fixedProfit = calculateFixedProfit(buyPrice, sellPrice);
@@ -194,31 +194,31 @@ public class ProductServiceImpl implements ProductService {
         String code = request.code().trim();
         String name = request.name().trim();
 
-        // Validación de unicidad de código excluyendo el actual y eliminados
+        // Code unique among the other non-deleted products
         if (productRepository.existsByCodeIgnoreCaseAndStatusNotAndIdNot(code, ProductStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otro producto activo o inactivo con el código especificado.");
         }
 
-        // Validación de unicidad de nombre excluyendo el actual y eliminados
+        // Name unique among the other non-deleted products
         if (productRepository.existsByNameIgnoreCaseAndStatusNotAndIdNot(name, ProductStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otro producto activo o inactivo con el nombre especificado.");
         }
 
-        // Validar categoría
+        // Validate the category
         Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("La categoría especificada no existe con ID: " + request.categoryId()));
         if (category.getStatus() == CategoryStatus.ELIMINADO) {
             throw new IllegalStateException("No se puede asociar una categoría en estado ELIMINADO.");
         }
 
-        // Validar proveedor
+        // Validate the supplier
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("El proveedor especificado no existe con ID: " + request.supplierId()));
         if (supplier.getStatus() == SupplierStatus.ELIMINADO) {
             throw new IllegalStateException("No se puede asociar un proveedor en estado ELIMINADO.");
         }
 
-        // Validar etiquetas
+        // Validate the tags
         Set<Tag> tags = resolveTags(request.tagIds());
 
         BigDecimal previousBuyPrice = product.getBuyPrice();
@@ -294,7 +294,7 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalStateException("El producto ya se encuentra en estado ELIMINADO.");
         }
 
-        // Eliminación lógica obligatoria
+        // Logical delete only (RG-01)
         product.setStatus(ProductStatus.ELIMINADO);
         product.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         product.setDeletedAt(Instant.now());

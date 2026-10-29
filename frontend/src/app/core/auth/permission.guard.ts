@@ -14,15 +14,15 @@ export const permissionGuard: CanActivateFn = (
     return router.createUrlTree(['/login']);
   }
 
-  // Clave de permiso de la pantalla definida en app.routes.ts (PERMISSIONS); el backend exige la misma en sus endpoints
+  // Screen permission key set in app.routes.ts (PERMISSIONS); the backend requires the same one on its endpoints
   const requiredPermission = route.data['permission'] as PermissionKey | undefined;
 
-  // Si la ruta no especifica permiso requerido o si el usuario cuenta con él
+  // The route needs no permission, or the user has it
   if (!requiredPermission || authService.hasPermission(requiredPermission)) {
     return true;
   }
 
-  // Si no tiene el permiso requerido, buscar la primera ruta permitida según la jerarquía del sistema
+  // Without the required permission, go to the first allowed route in menu order
   for (const group of NAVIGATION_CONFIG) {
     for (const child of group.children) {
       if (child.permissionKey && authService.hasPermission(child.permissionKey)) {
@@ -33,6 +33,6 @@ export const permissionGuard: CanActivateFn = (
     }
   }
 
-  // Si no tiene permisos en ninguna sección del sistema, redirigir a vista sin permisos
+  // Without permission for any screen, go to the no-access view
   return router.createUrlTree(['/unauthorized']);
 };

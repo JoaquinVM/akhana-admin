@@ -63,8 +63,8 @@ describe('CashService', () => {
 
   it('debe obtener la sesión actual y actualizar el signal currentSession', () => {
     service.getCurrentSession().subscribe((session) => {
-      expect(session.status).toBe('ABIERTA');
-      expect(session.openingAmount).toBe(150.0);
+      expect(session?.status).toBe('ABIERTA');
+      expect(session?.openingAmount).toBe(150.0);
     });
 
     const req = httpTesting.expectOne('/api/cash-sessions/current');
@@ -72,6 +72,18 @@ describe('CashService', () => {
     req.flush(mockSession);
 
     expect(service.currentSession()).toEqual(mockSession);
+  });
+
+  it('sin caja abierta el servidor responde 204 y currentSession queda en null', () => {
+    service.currentSession.set(mockSession);
+    let result: unknown = 'sin respuesta';
+    service.getCurrentSession().subscribe((session) => (result = session));
+
+    httpTesting.expectOne('/api/cash-sessions/current').flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(result).toBeNull();
+    expect(service.currentSession()).toBeNull();
+    expect(service.isLoadingCurrent()).toBe(false);
   });
 
   it('debe abrir una nueva sesión y actualizar currentSession', () => {

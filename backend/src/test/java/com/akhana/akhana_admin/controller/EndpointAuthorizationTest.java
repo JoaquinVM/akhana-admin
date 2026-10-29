@@ -387,7 +387,7 @@ class EndpointAuthorizationTest {
             assertThat(result.andReturn().getResponse().getStatus()).as(endpoint.toString()).isBetween(200, 299);
         } else {
             result.andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.message").value("No tiene permiso para realizar esta acción"));
+                    .andExpect(jsonPath("$.message").value("No tiene permiso para realizar esta acción."));
         }
     }
 

@@ -19,17 +19,17 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CashTransferRequest {
 
-    @NotNull(message = "Indica si es un ingreso o un retiro de caja")
+    @NotNull(message = "Indica si es un ingreso o un retiro de caja.")
     private CashTransferDirection direction;
 
-    @NotNull(message = "La cuenta es obligatoria")
+    @NotNull(message = "La cuenta es obligatoria.")
     private UUID accountId;
 
-    @NotNull(message = "El monto es obligatorio")
-    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0")
+    @NotNull(message = "El monto es obligatorio.")
+    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0.")
     private BigDecimal amount;
 
-    @NotBlank(message = "El comentario es obligatorio")
-    @Size(max = 500, message = "El comentario no puede exceder 500 caracteres")
+    @NotBlank(message = "El comentario es obligatorio.")
+    @Size(max = 500, message = "El comentario no puede exceder 500 caracteres.")
     private String comment;
 }

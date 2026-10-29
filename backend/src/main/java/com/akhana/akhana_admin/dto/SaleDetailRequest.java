@@ -13,23 +13,23 @@ import java.util.List;
 import java.util.UUID;
 
 public record SaleDetailRequest(
-    @NotEmpty(message = "La venta debe contener al menos un producto")
+    @NotEmpty(message = "La venta debe contener al menos un producto.")
     @Valid
     List<SaleItemRequest> items,
 
-    @DecimalMin(value = "0.00", message = "El descuento general no puede ser negativo")
+    @DecimalMin(value = "0.00", message = "El descuento general no puede ser negativo.")
     BigDecimal globalDiscountAmount,
 
-    @NotNull(message = "El método de pago es obligatorio")
+    @NotNull(message = "El método de pago es obligatorio.")
     PaymentMethod paymentMethod,
 
-    @DecimalMin(value = "0.00", message = "El monto en efectivo no puede ser negativo")
+    @DecimalMin(value = "0.00", message = "El monto en efectivo no puede ser negativo.")
     BigDecimal amountCash,
 
-    @DecimalMin(value = "0.00", message = "El monto en QR no puede ser negativo")
+    @DecimalMin(value = "0.00", message = "El monto en QR no puede ser negativo.")
     BigDecimal amountQr,
 
-    @DecimalMin(value = "0.00", message = "El monto recibido no puede ser negativo")
+    @DecimalMin(value = "0.00", message = "El monto recibido no puede ser negativo.")
     BigDecimal amountReceived,
 
     // P-39: the at-cost sale's optional comment («Mami precio costo») travels here

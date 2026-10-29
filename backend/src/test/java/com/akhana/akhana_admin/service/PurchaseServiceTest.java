@@ -215,6 +215,17 @@ class PurchaseServiceTest {
             .hasMessage("El costo unitario de 'Té verde' no puede ser negativo.");
     }
 
+    @Test
+    @DisplayName("COM-02: un costo unitario con más de 2 decimales se rechaza en vez de redondearse")
+    void registerPurchase_rejectsCostWithMoreThanTwoDecimals() {
+        assertThatThrownBy(() -> purchaseService.registerPurchase(request(List.of(line(tea, "1", "30.555")), null, null, false), "operator"))
+            .hasMessage("El costo unitario de 'Té verde' admite hasta 2 decimales.");
+        verify(purchaseRepository, never()).save(any());
+
+        PurchaseResponse res = purchaseService.registerPurchase(request(List.of(line(tea, "1", "30.500")), null, null, false), "operator");
+        assertThat(res.itemsTotal()).isEqualByComparingTo("30.50");
+    }
+
     // ---------------------------------------------------------------- Envío (P-24)
 
     @Test
@@ -453,10 +464,10 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("200.01"), null), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200,00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("0.004"), null), "operator"))
-            .hasMessage("El monto debe ser estrictamente mayor a 0.00 Bs.");
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
         verify(financialTransactionRepository, never()).save(any());
 
         PurchaseResponse res = purchaseService.registerPayment(purchase.getId(),
@@ -466,7 +477,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("1"), null), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 0.00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 0,00).");
     }
 
     @Test
@@ -848,7 +859,7 @@ class PurchaseServiceTest {
         Purchase purchase = existingPurchase("300.00", "100.00");
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("200.01"), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200,00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), mami.getId(), new BigDecimal("10"), null), "operator"))
             .hasMessage("Elija una cuenta o una persona como origen del pago.");
@@ -901,7 +912,7 @@ class PurchaseServiceTest {
         PurchaseRequest tooMuch = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "1", "10")), null, null,
             false, null, null, null, null, byMami("11"));
         assertThatThrownBy(() -> purchaseService.registerPurchase(tooMuch, "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 10.00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 10,00).");
     }
 
     @Test

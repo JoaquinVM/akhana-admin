@@ -1,5 +1,5 @@
-// .xlsx mínimo de una hoja (CAT-06: descarga de filas rechazadas), sin dependencias:
-// un ZIP sin compresión con los XML de SpreadsheetML. Las celdas son texto o número.
+// Minimal one-sheet .xlsx (CAT-06: download of rejected rows), without dependencies:
+// an uncompressed ZIP with the SpreadsheetML XML files. Cells are text or numbers.
 export type XlsxCell = string | number;
 
 const XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
@@ -58,11 +58,11 @@ function escapeXml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    // Caracteres de control que XML no admite
+    // Control characters XML does not allow
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 }
 
-// --- ZIP sin compresión (método 0) ---
+// --- Uncompressed ZIP (method 0) ---
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);

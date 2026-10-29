@@ -157,6 +157,10 @@ El sistema SHALL procesar el cobro de la venta mediante el modal ergonómico de 
 - **WHEN** una venta de 100.00 Bs se paga con método `MIXTO` y el usuario ingresa 40.00 Bs en efectivo
 - **THEN** el sistema calcula automáticamente que el monto por QR es 60.00 Bs, procesa la transacción desglosando ambos importes y genera dos movimientos financieros de ingreso: 40.00 Bs en la cuenta «Caja» y 60.00 Bs en la cuenta configurada como pagos QR, ambos bajo la categoría de ventas
 
+#### Scenario: Pago mixto con una sola parte (segunda revisión, 29-10-2026)
+- **WHEN** una venta `MIXTO` lleva todo en efectivo o todo en QR
+- **THEN** el servidor la rechaza con «En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.» y el modal de cobro deshabilita Confirmar y muestra el mismo aviso. Pruebas en `SaleServiceTest` y `checkout-modal.component.spec.ts`.
+
 #### Scenario: Venta sin cuenta o categoría de ventas (T-17)
 - **WHEN** falta la categoría Venta, o el cobro tiene parte en efectivo y no existe la cuenta «Caja», o tiene parte QR y no hay cuenta marcada para pagos QR
 - **THEN** el sistema rechaza la venta indicando qué falta y no guarda la venta, ni toca la caja, ni genera movimientos (RG-05)
@@ -165,6 +169,10 @@ El sistema SHALL procesar el cobro de la venta mediante el modal ergonómico de 
 
 ### Requirement: Anulación auditada de ventas en caja abierta
 El sistema SHALL permitir la anulación justificada de una venta únicamente si la sesión de caja compartida a la que pertenece se encuentra actualmente en estado `ABIERTA`, requiriendo obligatoriamente el motivo de anulación y anulando automáticamente las transacciones financieras generadas por dicha venta.
+
+#### Scenario: Motivo de anulación (segunda revisión, 29-10-2026)
+- **WHEN** se anula una venta sin motivo o con uno en blanco
+- **THEN** se rechaza con un solo mensaje, «El motivo de anulación es obligatorio.»; el motivo no tiene largo mínimo, igual que en compras, deudas, consumos y finanzas (antes la venta pedía 5 caracteres y mostraba dos mensajes juntos). Pruebas en `SaleControllerTest`.
 
 #### Scenario: Anulación exitosa de venta en caja abierta
 - **WHEN** un usuario solicita anular una venta de la sesión activa ingresando el motivo obligatorio "Error en digitación de productos"

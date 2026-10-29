@@ -6,8 +6,9 @@ import { CashLimitWarningComponent } from '../../../../shared/components/cash-li
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
+import { formatBs } from '../../../../shared/utils/money';
 
-// DEU-03 y DEU-04: historial de la persona con el saldo tras cada registro, devolución y su anulación
+// DEU-03 and DEU-04: the person's history with the balance after each entry, repayment and its void
 @Component({
   selector: 'app-creditor-detail-modal',
   standalone: true,
@@ -20,13 +21,13 @@ export class CreditorDetailModalComponent {
 
   creditorId = input<string | null>(null);
   accounts = input<DebtAccount[]>([]);
-  // Cambia cuando algo fuera del modal movió la deuda (p. ej. un pago anulado en el pedido)
+  // Changes when something outside the modal moved the debt (e.g. a payment voided in the purchase)
   refreshKey = input<number>(0);
 
-  // Emite tras una devolución o su anulación, para refrescar el listado
+  // Emits after a repayment or its void, to refresh the list
   changed = output<void>();
   openPurchase = output<string>();
-  // POS-13: ventas con productos de la persona
+  // POS-13: sales with the person's products
   openSale = output<string>();
   close = output<void>();
 
@@ -52,7 +53,7 @@ export class CreditorDetailModalComponent {
   voidMessage = computed(() => {
     const target = this.voidTarget();
     return target
-      ? `Se anula la devolución de Bs ${target.amount.toFixed(2)} desde ${target.accountName}: la cuenta recupera el monto y la deuda vuelve a subir.`
+      ? `Se anula la devolución de ${formatBs(target.amount)} desde ${target.accountName}: la cuenta recupera el monto y la deuda vuelve a subir.`
       : '';
   });
 
@@ -84,7 +85,7 @@ export class CreditorDetailModalComponent {
     this.history.set(history);
     this.repaymentAccountId.set('');
     this.repaymentComment.set('');
-    // P-48: primero se propone pagarle lo pendiente de sus ventas (Pago a tercero), después lo de pedidos
+    // P-48: first propose paying what is pending of her sales (Pago a tercero), then purchases
     const debt = history.creditor.debt;
     const thirdPartyPending = Math.min(this.pendingThirdParty(history), debt);
     if (thirdPartyPending > 0) {
@@ -96,7 +97,7 @@ export class CreditorDetailModalComponent {
     }
   }
 
-  // Ventas de sus productos menos lo ya devuelto como Pago a tercero; los anulados no cuentan
+  // Sales of her products minus what was already repaid as Pago a tercero; voided ones do not count
   private pendingThirdParty(history: CreditorHistory): number {
     const cents = history.entries
       .filter(e => !e.voided)

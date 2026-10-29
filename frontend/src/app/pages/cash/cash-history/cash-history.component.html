@@ -1,5 +1,5 @@
 <div class="cash-history-page">
-  <!-- Encabezado de Página -->
+  <!-- Page header -->
   <div class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -12,7 +12,7 @@
     </div>
   </div>
 
-  <!-- Barra de Filtros de Estado -->
+  <!-- Status filter bar -->
   <div class="filters-card">
     <div class="status-filters">
       <button
@@ -41,7 +41,7 @@
     <span class="total-counter">{{ filteredSessions().length }} sesiones encontradas</span>
   </div>
 
-  <!-- Tabla Histórica de Sesiones de Caja -->
+  <!-- Cash session history table -->
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -168,7 +168,7 @@
     </div>
   </div>
 
-  <!-- Modal de Detalle de Sesión -->
+  <!-- Session detail modal -->
   <app-cash-detail-modal
     [isOpen]="isDetailModalVisible()"
     [session]="selectedDetail()"

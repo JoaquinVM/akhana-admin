@@ -47,7 +47,7 @@ describe('AuthService', () => {
       fullName: 'Administrador General',
       role: 'ADMINISTRATOR',
       permissions: ['POS', 'USERS'],
-      message: 'Authentication successful'
+      message: 'Sesión iniciada.'
     };
 
     service.login(credentials).subscribe((response) => {
@@ -115,7 +115,7 @@ describe('AuthService', () => {
       role: 'ADMINISTRATOR',
       permissions: [],
       mustChangePassword: true,
-      message: 'Password change required'
+      message: 'Debe cambiar su contraseña.'
     } satisfies LoginResponse);
 
     expect(service.mustChangePassword()).toBe(true);

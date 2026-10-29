@@ -5,8 +5,9 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CustomerService } from '../../../../core/debt/customer.service';
 import { CustomerHistory, CustomerHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
+import { formatBs } from '../../../../shared/utils/money';
 
-// DEU-06 y DEU-07: historial del cliente con el saldo por cobrar tras cada registro, cobro y su anulación
+// DEU-06 and DEU-07: the customer's history with the receivable after each entry, collection and its void
 @Component({
   selector: 'app-customer-detail-modal',
   standalone: true,
@@ -19,10 +20,10 @@ export class CustomerDetailModalComponent {
 
   customerId = input<string | null>(null);
   accounts = input<DebtAccount[]>([]);
-  // Cambia cuando algo fuera del modal movió el saldo (p. ej. una venta anulada en el POS)
+  // Changes when something outside the modal moved the balance (e.g. a sale voided in the POS)
   refreshKey = input<number>(0);
 
-  // Emite tras un cobro o su anulación, para refrescar el listado
+  // Emits after a collection or its void, to refresh the list
   changed = output<void>();
   openSale = output<string>();
   close = output<void>();
@@ -43,13 +44,13 @@ export class CustomerDetailModalComponent {
 
   balance = computed(() => this.history()?.customer.balance ?? 0);
   canCollect = computed(() => this.balance() > 0);
-  // DEU-06: los cobros entran solo a Caja (con caja abierta) o a la cuenta QR
+  // DEU-06: collections go only into Caja (with an open session) or the QR account
   collectionAccounts = computed(() => this.accounts().filter(a => a.cashAccount || a.qrAccount));
 
   voidMessage = computed(() => {
     const target = this.voidTarget();
     return target
-      ? `Se anula el cobro de Bs ${target.amount.toFixed(2)} a ${target.accountName}: la cuenta baja el monto y el saldo por cobrar vuelve a subir.`
+      ? `Se anula el cobro de ${formatBs(target.amount)} a ${target.accountName}: la cuenta baja el monto y el saldo por cobrar vuelve a subir.`
       : '';
   });
 

@@ -177,7 +177,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.openSession(
                 new OpenCashRequest(new BigDecimal("200.00"), " "), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("245.50")
+            .hasMessageContaining("Bs 245,50")
             .hasMessageContaining("comentario de apertura");
         verify(cashSessionRepository, never()).saveAndFlush(any());
     }
@@ -240,7 +240,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.openSession(
                 new OpenCashRequest(new BigDecimal("250.00"), null), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("saldo de la cuenta Caja (Bs 300.00)");
+            .hasMessageContaining("saldo de la cuenta Caja (Bs 300,00)");
         verify(cashSessionRepository, never()).saveAndFlush(any());
     }
 
@@ -319,6 +319,39 @@ class CashSessionServiceTest {
         assertThat(response.difference()).isEqualByComparingTo("20.00");
         assertThat(response.closedBy()).isEqualTo("cajero1");
         assertThat(activeSession.getCuts()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("CAJ-04: los cortes que no suman el monto contado se rechazan y la caja sigue abierta")
+    void closeSession_cutsThatDoNotAddUp_rejected() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        List<CashCutDto> cuts = List.of(new CashCutDto(new BigDecimal("100.00"), 1, 0, null));
+
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
+                new CloseCashRequest(new BigDecimal("3500.00"), null, cuts), "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrija el conteo o deje los cortes vacíos.");
+        assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
+        verify(cashSessionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-04: un corte que no es billete ni moneda boliviana, o repetido, se rechaza; las filas en 0 no se guardan")
+    void closeSession_cutsDenominations() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("3.00"), null,
+                List.of(new CashCutDto(new BigDecimal("3"), 1, 0, null))), "cajero1"))
+            .hasMessage("El corte de Bs 3,00 no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.");
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("20.00"), null,
+                List.of(new CashCutDto(new BigDecimal("10"), 1, 0, null), new CashCutDto(new BigDecimal("10.00"), 0, 1, null))), "cajero1"))
+            .hasMessage("El corte de Bs 10,00 está repetido.");
+
+        List<CashDenominationCut> cuts = CashSessionServiceImpl.buildCuts(activeSession, List.of(
+            new CashCutDto(new BigDecimal("0.5"), 3, 1, null),
+            new CashCutDto(new BigDecimal("200"), 0, 0, null)), new BigDecimal("2.00"));
+        assertThat(cuts).hasSize(1);
+        assertThat(cuts.get(0).getSubtotal()).isEqualByComparingTo("2.00");
     }
 
     @Test

@@ -36,15 +36,15 @@ public class FinancialTransactionResponse {
     private AccountSummary destinationAccount;
     private CategorySummary category;
 
-    // Auditoría de registro
+    // Creation audit
     private String createdBy;
     private Instant createdAt;
 
-    // Auditoría de modificación
+    // Update audit
     private String updatedBy;
     private Instant updatedAt;
 
-    // Auditoría de anulación
+    // Void audit
     private String voidedBy;
     private Instant voidedAt;
     private String voidReason;

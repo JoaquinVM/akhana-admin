@@ -7,7 +7,7 @@
   (close)="onCancel()">
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
-    <!-- Barra Superior de Balance Financiero -->
+    <!-- Expected, counted and difference -->
     <div class="balance-summary-strip">
       <div class="balance-chip">
         <span class="chip-label">Efectivo Esperado</span>
@@ -42,7 +42,7 @@
           } @else if (difference() > 0) {
             <span>Sobrante: +Bs {{ difference() | number:'1.2-2' }}</span>
           } @else {
-            <span>Faltante: Bs {{ difference() | number:'1.2-2' }}</span>
+            <span>Faltante: Bs {{ -difference() | number:'1.2-2' }}</span>
           }
         </div>
       </div>
@@ -53,7 +53,7 @@
       </p>
     }
 
-    <!-- Selector de Modo de Cierre (Arqueo por Cortes vs Conteo Directo) -->
+    <!-- Closing mode: count by cuts or direct amount -->
     <div class="mode-toggle-bar">
       <div class="mode-pills">
         <button
@@ -90,10 +90,10 @@
       }
     </div>
 
-    <!-- Vista 1: Arqueo en 2 Columnas Sin Scroll (Billetes | Monedas) -->
+    <!-- Mode 1: count by cuts in two columns (bills | coins) -->
     @if (activeMode() === 'ARQUEO') {
       <div class="arqueo-two-columns">
-        <!-- Columna Izquierda: Billetes (5 denominaciones) -->
+        <!-- Bills -->
         <div class="cuts-column-card">
           <div class="column-card-header">
             <div class="col-title-group">
@@ -157,7 +157,7 @@
           </table>
         </div>
 
-        <!-- Columna Derecha: Monedas (6 denominaciones) -->
+        <!-- Coins -->
         <div class="cuts-column-card">
           <div class="column-card-header">
             <div class="col-title-group">
@@ -222,7 +222,7 @@
       </div>
     }
 
-    <!-- Vista 2: Conteo Global Directo -->
+    <!-- Mode 2: direct amount -->
     @if (activeMode() === 'DIRECTO') {
       <div class="direct-input-container">
         <div class="form-group">
@@ -249,7 +249,7 @@
       </div>
     }
 
-    <!-- Fila Inferior: Comentario Compacto y Acciones -->
+    <!-- Comment and actions -->
     <div class="modal-footer-composite">
       <div class="comment-input-wrapper">
         <input

@@ -39,7 +39,7 @@ public class FinancialCategory {
     @Column(name = "system_key", length = 30, updatable = false)
     private FinancialCategorySystemKey systemKey;
 
-    // Auditoría
+    // Audit
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     @Builder.Default
     private String createdBy = "SYSTEM";

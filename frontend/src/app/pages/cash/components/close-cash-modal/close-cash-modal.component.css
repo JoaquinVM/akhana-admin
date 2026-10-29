@@ -6,7 +6,7 @@
   font-family: var(--font-body);
 }
 
-/* Barra Superior de Balance Financiero */
+/* Expected, counted and difference bar */
 .balance-summary-strip {
   display: flex;
   align-items: center;
@@ -95,7 +95,7 @@
   border: 1px solid #fecaca;
 }
 
-/* Barra de Modos de Cierre */
+/* Closing mode bar */
 .mode-toggle-bar {
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
-/* Arqueo en 2 Columnas Sin Scroll */
+/* Count in two columns without scroll */
 .arqueo-two-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -308,7 +308,7 @@
   color: #0f172a;
 }
 
-/* Vista Directa */
+/* Direct view */
 .direct-input-container {
   padding: 1.5rem;
   background-color: #f8fafc;
@@ -392,7 +392,7 @@
   color: #64748b;
 }
 
-/* Fila Inferior de Comentario y Botones */
+/* Comment and buttons row */
 .modal-footer-composite {
   display: flex;
   align-items: center;

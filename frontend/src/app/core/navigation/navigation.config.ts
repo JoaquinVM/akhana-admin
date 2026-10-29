@@ -2,9 +2,9 @@ import { NavGroup } from './models/navigation.models';
 import { Role } from '../auth/models/auth.models';
 
 /**
- * Permisos por pantalla (tabla 2.2 de specs/requirements.md): quien entra a una pantalla puede hacer todo en ella.
- * Mismas claves que el enum Permission del backend, que las exige en cada endpoint con @PreAuthorize.
- * Los roles agrupan permisos; el usuario no los elige uno a uno.
+ * Permissions per screen (table 2.2 of specs/requirements.md): whoever enters a screen can do everything in it.
+ * Same keys as the backend Permission enum, which requires them on every endpoint with @PreAuthorize.
+ * Roles group permissions; the user does not pick them one by one.
  */
 export const PERMISSIONS = {
   POS: 'POS',

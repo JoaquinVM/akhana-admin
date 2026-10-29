@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FinancialTransaction } from '../../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
 
-// Modal de anulación con motivo; el servidor valida y revierte los saldos
+// Void modal with reason; the server validates and reverts the balances
 @Component({
   selector: 'app-transaction-void-modal',
   standalone: true,

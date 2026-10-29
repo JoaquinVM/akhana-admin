@@ -8,7 +8,7 @@ import {
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { buildXlsx } from '../../../shared/utils/xlsx-writer';
 
-// Rechazadas y avisos se ven por defecto; las ya existentes, solo con su filtro (CAT-06)
+// Rejected rows and warnings show by default; existing ones only with their filter (CAT-06)
 export type ImportRowFilter = 'PENDING' | 'REJECTED' | 'WARNING' | 'EXISTING';
 
 const STATUS_LABELS: Record<ProductImportRowStatus, string> = {
@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<ProductImportRowStatus, string> = {
   WARNING: 'Con aviso'
 };
 
-// CAT-06: importar productos desde el .xlsx de la planilla en dos pasos, Revisar e Importar
+// CAT-06: import products from the spreadsheet .xlsx in two steps, Revisar and Importar
 @Component({
   selector: 'app-product-import-modal',
   standalone: true,
@@ -35,7 +35,7 @@ export class ProductImportModalComponent {
 
   file = signal<File | null>(null);
   result = signal<ProductImportResult | null>(null);
-  // false: resultado de Revisar (nada guardado); true: resultado de Importar
+  // false: result of Revisar (nothing saved); true: result of Importar
   isImported = signal<boolean>(false);
   isBusy = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
@@ -61,7 +61,7 @@ export class ProductImportModalComponent {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.file.set(input.files?.[0] ?? null);
-    // Otro archivo: hay que volver a revisar
+    // Another file: it must be reviewed again
     this.result.set(null);
     this.isImported.set(false);
     this.errorMessage.set(null);

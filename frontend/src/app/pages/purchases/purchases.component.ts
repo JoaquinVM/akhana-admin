@@ -20,7 +20,7 @@ import { PayablesViewComponent } from './components/payables-view/payables-view.
 import { CreditorService } from '../../core/debt/creditor.service';
 import { Creditor } from '../../core/debt/models/debt.models';
 
-// 'ANULADO' filtra por estado del pedido (COM-09); el resto, por estado de pago de los registrados
+// 'ANULADO' filters by purchase status (COM-09); the rest by payment status of the registered ones
 export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus | 'ANULADO';
 
 export type PurchasesTab = 'ORDERS' | 'PAYABLES';
@@ -49,13 +49,13 @@ export class PurchasesComponent implements OnInit {
 
   activeTab = signal<PurchasesTab>('ORDERS');
   deliveryFilter = signal<DeliveryStatus | ''>('');
-  // Cambia para que la vista por pagar vuelva a cargar (COM-08)
+  // Changes so the payables view reloads (COM-08)
   payablesRefresh = signal<number>(0);
 
   purchases = signal<Purchase[]>([]);
   suppliers = signal<Supplier[]>([]);
   accounts = signal<PaymentAccount[]>([]);
-  // DEU-02: solo las personas activas pagan pedidos
+  // DEU-02: only active people pay purchases
   creditors = signal<Creditor[]>([]);
   supplierFilter = signal<string>('');
   statusFilter = signal<PaymentStatusFilter>('ALL');

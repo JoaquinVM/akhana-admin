@@ -2,7 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { ReportService } from '../../../../core/report/report.service';
 import { ReportName } from '../../../../core/report/models/report.models';
 
-// FIN-10: «Exportar a Excel» descarga el reporte de la pestaña con el mismo rango que se ve
+// FIN-10: «Exportar a Excel» downloads the tab's report with the range on screen
 @Component({
   selector: 'app-report-export-button',
   standalone: true,

@@ -3,7 +3,7 @@ export type ProductStatus = 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 // CAT-08: KILOGRAM means the sell price is Bs per kg and quantities take up to 3 decimals
 export type SaleUnit = 'UNIT' | 'KILOGRAM';
 
-// POS-11: productos especiales que se venden en el POS con nombre y precio escritos
+// POS-11: special products sold in the POS with a typed name and price
 export type ProductSpecialType = 'UNIDENTIFIED' | 'THIRD_PARTY';
 
 export const SPECIAL_TYPE_LABELS: Record<ProductSpecialType, string> = {
@@ -11,8 +11,8 @@ export const SPECIAL_TYPE_LABELS: Record<ProductSpecialType, string> = {
   THIRD_PARTY: 'De tercero'
 };
 
-// CAT-11: peso fijo de un producto por kilo; sin precio fijo, el precio es peso x precio por kilo.
-// price y cost vienen calculados del servidor
+// CAT-11: fixed weight of a product by kilo; without a fixed price, the price is weight x price per kilo.
+// price and cost come computed from the server
 export interface ProductPresentation {
   id: string;
   name: string;
@@ -60,11 +60,11 @@ export interface Product {
   updatedAt?: string | null;
   deletedBy?: string | null;
   deletedAt?: string | null;
-  // CAT-11: activas e inactivas, de menor a mayor peso
+  // CAT-11: active and inactive, lightest first
   presentations?: ProductPresentation[];
-  // Avisos al guardar (venta a pérdida, precios fijos que no cambian)
+  // Warnings on save (sold at a loss, fixed prices that do not change)
   warnings?: string[];
-  // POS-11, POS-13: nulos en los productos normales
+  // POS-11, POS-13: null for normal products
   specialType?: ProductSpecialType | null;
   ownerCreditorId?: string | null;
   ownerCreditorName?: string | null;
@@ -81,14 +81,14 @@ export interface ProductRequest {
   sellPrice: number;
   status?: ProductStatus;
   saleUnit?: SaleUnit;
-  // CAT-11: la lista completa; sin ella el servidor mantiene las presentaciones
+  // CAT-11: the full list; without it the server keeps the presentations
   presentations?: ProductPresentationRequest[];
-  // POS-11: se elige al crear y no cambia; el de tercero exige dueña (POS-13)
+  // POS-11: chosen on create and never changed; a third-party one requires an owner (POS-13)
   specialType?: ProductSpecialType | null;
   ownerCreditorId?: string | null;
 }
 
-// CAT-11: al marcar un producto por kilo se proponen estas, sin precio fijo
+// CAT-11: marking a product by kilo proposes these, without fixed price
 export const SUGGESTED_PRESENTATIONS: ReadonlyArray<{ name: string; weightKg: number }> = [
   { name: '100 g', weightKg: 0.1 },
   { name: '1/2 libra', weightKg: 0.227 }
@@ -102,7 +102,7 @@ export function activePresentations(product: Product): ProductPresentation[] {
   return (product.presentations ?? []).filter((p) => p.active);
 }
 
-// CAT-11: al costo se cobra peso x costo por kilo, sin el precio fijo
+// CAT-11: at cost it charges weight x cost per kilo, without the fixed price
 export function presentationPrice(presentation: ProductPresentation, product: Product, atCost: boolean): number {
   if (atCost) return Math.round(presentation.weightKg * product.buyPrice * 100) / 100;
   return presentation.price;

@@ -1,6 +1,6 @@
 import { SaleUnit } from '../../product/models/product.models';
 
-// COM-04: derivado de los pagos frente al total de las líneas (el envío no cuenta)
+// COM-04: derived from the payments against the lines total (shipping does not count)
 export type PurchasePaymentStatus = 'POR_PAGAR' | 'CONSIGNACION' | 'A_CUENTA' | 'PAGADO';
 
 export type PurchaseStatus = 'REGISTRADO' | 'ANULADO';
@@ -12,7 +12,7 @@ export const PAYMENT_STATUS_LABELS: Record<PurchasePaymentStatus, string> = {
   PAGADO: 'Pagado'
 };
 
-// COM-07: mientras está pendiente la fecha es la estimada; entregado, la de la entrega
+// COM-07: while pending the date is the estimate; once delivered, the delivery date
 export type DeliveryType = 'EN_PUERTA' | 'TERMINAL' | 'EN_TIENDA';
 
 export type DeliveryStatus = 'PENDIENTE' | 'ENTREGADO';
@@ -43,7 +43,7 @@ export interface PurchaseItem {
 
 export interface PurchasePayment {
   id: string;
-  // Un solo origen: una cuenta o una persona que pagó por el negocio (DEU-02)
+  // One source: an account or a person who paid for the business (DEU-02)
   accountId: string | null;
   accountName: string | null;
   cashAccount: boolean;
@@ -58,7 +58,7 @@ export interface PurchasePayment {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
-  // FIN-11: pago migrado de la planilla, sin movimiento de dinero (P-43)
+  // FIN-11: payment migrated from the spreadsheet, without a money movement (P-43)
   historical?: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface Purchase {
   voidReason: string | null;
   items: PurchaseItem[];
   payments: PurchasePayment[];
-  // FIN-11: migrado de la planilla; solo admite pagos mientras tenga saldo
+  // FIN-11: migrated from the spreadsheet; only takes payments while it has a balance
   historical?: boolean;
 }
 
@@ -96,7 +96,7 @@ export interface PurchaseItemRequest {
   productId: string;
   quantity: number;
   unitCost: number;
-  // COM-03: solo si el usuario confirmó la alerta de costo
+  // COM-03: only if the user confirmed the cost alert
   updateProductCost: boolean;
   newSellPrice: number | null;
 }
@@ -112,7 +112,7 @@ export interface PurchaseRequest {
   deliveryType: DeliveryType;
   deliveryStatus: DeliveryStatus;
   deliveryDate: string | null;
-  // Pago inicial opcional, desde una cuenta o hecho por una persona (COM-05, DEU-02)
+  // Optional first payment, from an account or made by a person (COM-05, DEU-02)
   initialPayment: PurchasePaymentRequest | null;
 }
 
@@ -127,7 +127,7 @@ export interface VoidPurchaseRequest {
   voidReason: string;
 }
 
-// COM-08: pedidos con saldo agrupados por proveedor
+// COM-08: purchases with a balance grouped by supplier
 export interface SupplierPayables {
   supplierId: string;
   supplierName: string;
@@ -147,7 +147,7 @@ export interface PurchasePaymentRequest {
   notes: string | null;
 }
 
-// El origen del pago se elige en un solo select: 'account:<id>' o 'creditor:<id>'
+// The payment source is picked in one select: 'account:<id>' or 'creditor:<id>'
 export function paymentSourceFields(source: string): Pick<PurchasePaymentRequest, 'accountId' | 'creditorId'> {
   const [kind, id] = source.split(':');
   return {
@@ -165,7 +165,7 @@ export interface PaymentAccount {
   name: string;
   color: string;
   cashAccount: boolean;
-  // Cuenta de cobros QR (FIN-03): junto con Caja, la única que recibe cobros a clientes (DEU-06)
+  // QR collection account (FIN-03): with Caja, the only one that receives customer collections (DEU-06)
   qrAccount: boolean;
 }
 
@@ -175,7 +175,7 @@ export interface PriceSuggestion {
   currentSellPrice: number;
   currentPercentageProfit: number;
   newCost: number;
-  // null si el costo actual es 0: no hay utilidad porcentual que mantener
+  // null when the current cost is 0: there is no percentage profit to keep
   suggestedSellPrice: number | null;
 }
 

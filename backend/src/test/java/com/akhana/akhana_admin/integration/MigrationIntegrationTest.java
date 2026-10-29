@@ -28,6 +28,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * FIN-11 against the real database: spreadsheets built in the test with every case of specs/migration.md, the
@@ -62,6 +63,10 @@ class MigrationIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // FIN-11 imports once: on a database that already holds the import (the local one after the rehearsal)
+        // these cases cannot run, so they are skipped instead of failing
+        assumeTrue(jdbc.queryForObject("SELECT COUNT(*) FROM historical_imports", Long.class) == 0,
+            "La base ya tiene la importación histórica (FIN-11).");
         tag = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         unit = "IT" + tag + "-AAA";
         nut = "IT" + tag + "-NUE";

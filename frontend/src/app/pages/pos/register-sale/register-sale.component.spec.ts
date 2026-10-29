@@ -458,7 +458,7 @@ describe('RegisterSaleComponent', () => {
 
       component.updateGlobalDiscount(25);
       expect(component.globalDiscount()).toBe(20);
-      expect(component.errorMessage()).toBe('El descuento general no puede superar el subtotal de los productos normales (Bs 20.00).');
+      expect(component.errorMessage()).toBe('El descuento general no puede superar el subtotal de los productos normales (Bs 20,00).');
       expect(component.totalAmount()).toBe(30);
 
       component.removeFromCart(component.cartItems()[0].key);

@@ -131,7 +131,7 @@ describe('LoginComponent', () => {
       username: 'admin',
       role: 'ADMINISTRATOR',
       mustChangePassword: true,
-      message: 'Password change required'
+      message: 'Debe cambiar su contraseña.'
     } satisfies LoginResponse));
 
     component.loginForm.setValue({ username: 'admin', password: 'initial-pass' });

@@ -40,7 +40,7 @@ export interface FinancialCategory {
   type: FinancialCategoryType;
   color: string;
   isSalesDefault: boolean;
-  /** Falso en las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste) y en la de ventas. */
+  /** False for the categories the system records (Pedido, Pago a tercero, Ajuste) and for the sales one. */
   manualEntryAllowed?: boolean;
   createdBy?: string;
   createdAt?: string;
@@ -80,12 +80,12 @@ export interface FinancialTransaction {
   notes?: string;
   status: FinancialTransactionStatus;
   saleId?: string;
-  // COM-06: pago o envío de un pedido; se gestiona desde Compras
+  // COM-06: payment or shipping of a purchase; managed from Compras
   purchaseId?: string | null;
-  // Gasto de una devolución a una persona (DEU-03): se gestiona desde Deudas
+  // Expense of a repayment to a person (DEU-03): managed from Deudas
   creditorRepaymentId?: string | null;
   cashSessionId?: string;
-  // FIN-11: migrado de Transacc.; no cuenta en los saldos ni se edita o anula
+  // FIN-11: migrated from Transacc.; not part of balances, never edited or voided
   historical?: boolean;
   sourceAccount: AccountSummary;
   destinationAccount?: AccountSummary;
@@ -118,7 +118,7 @@ export interface CashExpenseRequest {
   notes?: string;
 }
 
-// CAJ-08: ingreso o retiro de caja, visto desde la cuenta Caja
+// CAJ-08: cash in or out, seen from the Caja account
 export type CashTransferDirection = 'INGRESO' | 'RETIRO';
 
 export interface CashTransferRequest {

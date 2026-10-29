@@ -7,7 +7,7 @@
   padding: 1.5rem 1rem;
 }
 
-/* Encabezado */
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -58,7 +58,7 @@
   height: 18px;
 }
 
-/* Filtros y Buscador */
+/* Filters and search */
 .filters-card {
   display: flex;
   align-items: center;
@@ -130,7 +130,7 @@
   color: #64748b;
 }
 
-/* Tabla */
+/* Table */
 .supplier-code {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
@@ -164,7 +164,7 @@
   color: #334155;
 }
 
-/* Botones de acción en tabla */
+/* Table action buttons */
 .btn-audit:hover {
   color: #2563eb;
   background-color: #eff6ff;

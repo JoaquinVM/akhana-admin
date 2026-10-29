@@ -236,4 +236,37 @@ describe('NavbarComponent', () => {
     expect(groupLabels).not.toContain('Finanzas');
     expect(groupLabels).not.toContain('Seguridad');
   });
+
+  it('en celular el menú se pliega tras un botón y un toque abre o cierra cada grupo', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav.nav-groups');
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.menu-toggle');
+    expect(nav.classList).not.toContain('mobile-open');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(component.mobileMenuOpen()).toBe(true);
+    expect(nav.classList).toContain('mobile-open');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    const groupId = component.visibleNavGroups()[0].id;
+    // A tap fires mouseenter before click: the hover must not open it first
+    component.openGroup(groupId);
+    expect(component.openGroupId()).toBeNull();
+    component.toggleGroup(groupId);
+    expect(component.openGroupId()).toBe(groupId);
+    component.onNavLeave();
+    expect(component.openGroupId()).toBe(groupId);
+    component.toggleGroup(groupId);
+    expect(component.openGroupId()).toBeNull();
+
+    component.closeAllMenus();
+    expect(component.mobileMenuOpen()).toBe(false);
+  });
+
+  it('en pantalla ancha el clic no cierra el grupo que abrió el mouse', () => {
+    const groupId = component.visibleNavGroups()[0].id;
+    component.openGroup(groupId);
+    component.toggleGroup(groupId);
+    expect(component.openGroupId()).toBe(groupId);
+  });
 });

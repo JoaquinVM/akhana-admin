@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, Sale } from '../../../core/sale/models/sale.models';
 
-// Listado de ventas reutilizable (POS-09): historial y, en modo con anulación, la sesión del POS
+// Reusable sales list (POS-09): history and, in void mode, the POS session
 @Component({
   selector: 'app-sales-table',
   standalone: true,
@@ -12,9 +12,9 @@ import { PAYMENT_METHOD_LABELS, PaymentMethod, Sale } from '../../../core/sale/m
 })
 export class SalesTableComponent {
   sales = input<Sale[]>([]);
-  // Muestra la columna Caja (historial: ventas de varias sesiones)
+  // Shows the Caja column (history: sales of several sessions)
   showSession = input<boolean>(false);
-  // Muestra el botón Anular; si hay motivo de bloqueo, queda deshabilitado con ese título
+  // Shows the Anular button; with a blocking reason it is disabled with that title
   showVoid = input<boolean>(false);
   voidBlockedReason = input<string | null>(null);
 
@@ -25,7 +25,7 @@ export class SalesTableComponent {
     return PAYMENT_METHOD_LABELS[method] ?? method;
   }
 
-  // Venta pagada en parte en el momento y en parte a crédito (DEU-05)
+  // Sale paid partly now and partly on credit (DEU-05)
   hasPartialCredit(sale: Sale): boolean {
     return sale.paymentMethod !== 'CREDITO' && (sale.creditAmount ?? 0) > 0;
   }

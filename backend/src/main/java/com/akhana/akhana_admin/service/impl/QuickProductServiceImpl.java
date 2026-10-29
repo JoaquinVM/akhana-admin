@@ -91,16 +91,16 @@ public class QuickProductServiceImpl implements QuickProductService {
         if (request.productIds() != null) {
             Set<UUID> targetProductIds = new LinkedHashSet<>(request.productIds());
 
-            // 1. Remover items que ya no están en la lista solicitada
+            // 1. Remove the items left out of the requested list
             group.getItems().removeIf(item -> !targetProductIds.contains(item.getProduct().getId()));
 
-            // 2. Mapear items existentes por ID de producto para preservar sus IDs y timestamps
+            // 2. Map the current items by product id to keep their ids and timestamps
             Map<UUID, QuickProductGroupItem> existingByProdId = new HashMap<>();
             for (QuickProductGroupItem item : group.getItems()) {
                 existingByProdId.put(item.getProduct().getId(), item);
             }
 
-            // 3. Actualizar el orden de los existentes y agregar únicamente los nuevos productos
+            // 3. Reorder the current items and add only the new products
             int itemOrder = 0;
             for (UUID prodId : targetProductIds) {
                 QuickProductGroupItem existing = existingByProdId.get(prodId);

@@ -73,12 +73,12 @@ public class SupplierServiceImpl implements SupplierService {
         String name = request.name().trim();
         String code = request.code().trim();
 
-        // Validación exclusiva en Backend de unicidad de nombre (excluye ELIMINADO)
+        // Name unique among the non-deleted (RG-04)
         if (supplierRepository.existsByNameIgnoreCaseAndStatusNot(name, SupplierStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe un proveedor activo o inactivo con el nombre especificado.");
         }
 
-        // Validación exclusiva en Backend de unicidad de código (excluye ELIMINADO)
+        // Code unique among the non-deleted (RG-04)
         if (supplierRepository.existsByCodeIgnoreCaseAndStatusNot(code, SupplierStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe un proveedor activo o inactivo con el código especificado.");
         }
@@ -109,12 +109,12 @@ public class SupplierServiceImpl implements SupplierService {
         String name = request.name().trim();
         String code = request.code().trim();
 
-        // Validación de unicidad de nombre excluyendo el registro actual y eliminados
+        // Name unique among the other non-deleted records
         if (supplierRepository.existsByNameIgnoreCaseAndStatusNotAndIdNot(name, SupplierStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otro proveedor activo o inactivo con el nombre especificado.");
         }
 
-        // Validación de unicidad de código excluyendo el registro actual y eliminados
+        // Code unique among the other non-deleted records
         if (supplierRepository.existsByCodeIgnoreCaseAndStatusNotAndIdNot(code, SupplierStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otro proveedor activo o inactivo con el código especificado.");
         }
@@ -144,7 +144,7 @@ public class SupplierServiceImpl implements SupplierService {
             throw new IllegalStateException("El proveedor ya se encuentra en estado ELIMINADO.");
         }
 
-        // Eliminación lógica obligatoria: nunca física
+        // Logical delete only, never physical (RG-01)
         supplier.setStatus(SupplierStatus.ELIMINADO);
         supplier.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         supplier.setDeletedAt(Instant.now());

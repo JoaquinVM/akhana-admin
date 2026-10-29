@@ -30,14 +30,14 @@ export class TagsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Estados Reactivos con Signals
+  // State as signals
   tags = signal<Tag[]>([]);
   searchTerm = signal<string>('');
   selectedStatusFilter = signal<TagStatusFilter>('ACTIVO');
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Modal Formulario (Creación / Edición)
+  // Form modal (create / edit)
   isFormModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedTagId = signal<string | null>(null);
@@ -46,15 +46,15 @@ export class TagsComponent implements OnInit {
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
 
-  // Modal Confirmación al Descartar Cambios
+  // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
 
-  // Modal Confirmación de Eliminación Lógica
+  // Logical delete confirmation modal
   isConfirmModalOpen = signal<boolean>(false);
   tagToDelete = signal<Tag | null>(null);
   isDeleting = signal<boolean>(false);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
@@ -64,16 +64,16 @@ export class TagsComponent implements OnInit {
     color: ['', [Validators.required, Validators.maxLength(50)]]
   });
 
-  // Lista de etiquetas filtrada y ordenada por Nombre A-Z según estado seleccionado
+  // Tags filtered by the selected status and sorted by name A-Z
   filteredTags = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const statusFilter = this.selectedStatusFilter();
     let list = this.tags();
 
-    // Filtro por estado
+    // Status filter
     list = list.filter(t => t.status === statusFilter);
 
-    // Filtro de búsqueda en tiempo real por nombre
+    // Live search by name
     const filtered = term.length === 0
       ? list
       : list.filter(t => t.name.toLowerCase().includes(term));
@@ -82,19 +82,19 @@ export class TagsComponent implements OnInit {
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   });
 
-  // Señal computada para detectar cambios sin guardar (dirty check)
+  // Computed signal for unsaved changes (dirty check)
   hasFormChanges = computed<boolean>(() => {
     this.formVersion(); // Dependencia reactiva
     const formVal = this.tagForm.value;
 
     if (!this.isEditing()) {
-      // En Creación: Se considera que hay cambios si el usuario ingresó algún valor
+      // Creating: there are changes if the user typed any value
       const name = (formVal.name ?? '').toString().trim();
       const color = (formVal.color ?? '').toString().trim();
       return name.length > 0 || color.length > 0;
     }
 
-    // En Edición: Comparar contra los valores originales cargados
+    // Editing: compare against the original values
     const orig = this.originalFormValues();
     if (!orig) return false;
 
@@ -102,7 +102,7 @@ export class TagsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Escuchar cambios reactivos en el formulario para actualizar formVersion
+    // Listen to form changes to update formVersion
     this.tagForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -142,7 +142,7 @@ export class TagsComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
-  // --- Identificación de Campos Modificados ---
+  // --- Modified fields ---
 
   isFieldModified(fieldName: string): boolean {
     this.formVersion();
@@ -160,7 +160,7 @@ export class TagsComponent implements OnInit {
     return currentVal !== origVal;
   }
 
-  // --- Apertura y Cierre de Modales ---
+  // --- Opening and closing modals ---
 
   openCreateModal(): void {
     this.isEditing.set(false);
@@ -198,7 +198,7 @@ export class TagsComponent implements OnInit {
     if (this.isSubmitting()) {
       return;
     }
-    // Si existen cambios sin guardar, solicitar confirmación
+    // With unsaved changes, ask for confirmation
     if (this.hasFormChanges()) {
       this.isDiscardConfirmOpen.set(true);
     } else {
@@ -227,7 +227,7 @@ export class TagsComponent implements OnInit {
   }
 
   saveTag(): void {
-    // En edición, si no hay cambios, no realizar submit
+    // When editing without changes, do not submit
     if (this.isEditing() && !this.hasFormChanges()) {
       return;
     }
@@ -256,7 +256,7 @@ export class TagsComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al actualizar la etiqueta. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -271,7 +271,7 @@ export class TagsComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al crear la etiqueta. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -279,7 +279,7 @@ export class TagsComponent implements OnInit {
     }
   }
 
-  // --- Eliminación Lógica ---
+  // --- Logical delete ---
 
   openDeleteModal(tag: Tag): void {
     if (tag.status === 'ELIMINADO') {
@@ -320,7 +320,7 @@ export class TagsComponent implements OnInit {
     });
   }
 
-  // --- Auditoría ---
+  // --- Audit ---
 
   openAuditModal(tag: Tag): void {
     this.auditModalSubtitle.set(`${tag.name}`);

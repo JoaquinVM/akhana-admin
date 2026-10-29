@@ -24,7 +24,7 @@
           [class.is-invalid]="isInvalid('sourceAccountId')">
           <option value="" disabled>Selecciona cuenta de origen</option>
           @for (acc of accounts(); track acc.id) {
-            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs {{ acc.currentBalance | number:'1.2-2' }})</option>
           }
         </select>
         @if (isInvalid('sourceAccountId')) {
@@ -43,7 +43,7 @@
           [class.is-invalid]="isInvalid('destinationAccountId')">
           <option value="" disabled>Selecciona cuenta de destino</option>
           @for (acc of accounts(); track acc.id) {
-            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+            <option [value]="acc.id">{{ acc.name }} (Saldo: Bs {{ acc.currentBalance | number:'1.2-2' }})</option>
           }
         </select>
         @if (isInvalid('destinationAccountId')) {
@@ -62,7 +62,7 @@
           [class.is-invalid]="isInvalid('accountId')">
           <option value="" disabled>Selecciona una cuenta</option>
           @for (acc of accounts(); track acc.id) {
-            <option [value]="acc.id">{{ acc.name }} ({{ texts().balanceLabel }}: Bs. {{ acc.currentBalance | number:'1.2-2' }})</option>
+            <option [value]="acc.id">{{ acc.name }} ({{ texts().balanceLabel }}: Bs {{ acc.currentBalance | number:'1.2-2' }})</option>
           }
         </select>
         @if (isInvalid('accountId')) {

@@ -11,14 +11,14 @@ import { monthLabel } from '../../../../core/report/report-labels';
 interface ReportLine {
   key: string;
   label: string;
-  /** Monto por columna: un mes o el total del rango; null si no hubo movimientos */
+  /** Amount per column: a month or the range total; null without movements */
   amounts: (number | null)[];
 }
 
 const categoryKey = (c: CategoryAmount) => c.categoryId ?? 'none';
 const transferKey = (t: TransferAmount) => `${t.sourceAccountId}>${t.destinationAccountId}`;
 
-// FIN-10 / CON-03: movimientos por categoría y mes, transferencias y consumo aparte; reemplaza Resumen Transacc.
+// FIN-10 / CON-03: movements by category and month, with transfers and consumption apart; replaces Resumen Transacc.
 @Component({
   selector: 'app-transactions-by-category-report',
   standalone: true,
@@ -35,13 +35,13 @@ export class TransactionsByCategoryReportComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Una columna por mes y la última con el total del rango, como la tabla dinámica
+  // One column per month and the last one with the range total, like the pivot table
   columns = computed<TransactionsByCategoryMonth[]>(() => {
     const r = this.report();
     return r ? [...r.months, r.totals] : [];
   });
 
-  // Las filas salen del total del rango, que ya trae todas las categorías y transferencias ordenadas
+  // The rows come from the range total, which already has every category and transfer sorted
   incomeLines = computed(() =>
     this.lines(this.report()?.totals.incomes ?? [], m => m.incomes, categoryKey, c => c.categoryName));
   expenseLines = computed(() =>
@@ -57,7 +57,7 @@ export class TransactionsByCategoryReportComponent implements OnInit {
   readonly monthLabel = monthLabel;
 
   ngOnInit(): void {
-    // Sin fechas el servidor propone el mes en curso hasta hoy y las devuelve para los filtros
+    // Without dates the server proposes the current month up to today and returns them for the filters
     this.load();
   }
 

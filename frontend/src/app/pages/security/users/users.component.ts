@@ -40,13 +40,13 @@ export class UsersComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   searchTerm = signal<string>('');
 
-  // Paginación
+  // Pagination
   currentPage = signal<number>(0);
   pageSize = signal<number>(10);
   totalElements = signal<number>(0);
   totalPages = signal<number>(0);
 
-  // Modal de Creación
+  // Create modal
   isCreateModalOpen = signal<boolean>(false);
   isCreating = signal<boolean>(false);
   createFormError = signal<string | null>(null);
@@ -54,12 +54,12 @@ export class UsersComponent implements OnInit {
   createForm: FormGroup = this.fb.group({
     fullName: ['', [Validators.required, Validators.maxLength(150)]],
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
     confirmPassword: ['', [Validators.required]],
     role: ['OPERATOR' as Role, [Validators.required]]
   });
 
-  // Modal de Edición
+  // Edit modal
   isEditModalOpen = signal<boolean>(false);
   isUpdating = signal<boolean>(false);
   editFormError = signal<string | null>(null);
@@ -72,21 +72,21 @@ export class UsersComponent implements OnInit {
     role: ['OPERATOR' as Role, [Validators.required]]
   });
 
-  // Modal Confirmación de Descarte de Cambios
+  // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
 
-  // Modal de Confirmación de Eliminación Lógica
+  // Logical delete confirmation modal
   isDeleteModalOpen = signal<boolean>(false);
   isDeleting = signal<boolean>(false);
   userToDelete = signal<User | null>(null);
   deleteError = signal<string | null>(null);
 
-  // Modal de Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
 
-  // Detección ergonómica de cambios en edición (idéntico a ProductsComponent)
+  // Change detection while editing (same as ProductsComponent)
   hasFormChanges = computed<boolean>(() => {
     this.formVersion();
     const orig = this.originalFormValues();
@@ -141,7 +141,7 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  // --- Modal de Creación ---
+  // --- Create modal ---
 
   openCreateModal(): void {
     this.createForm.reset({
@@ -197,7 +197,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // --- Modal de Edición con Detección Ergonómica de Cambios ---
+  // --- Edit modal with change detection ---
 
   openEditModal(user: User): void {
     this.userToEdit.set(user);
@@ -281,7 +281,7 @@ export class UsersComponent implements OnInit {
       next: (updatedUser) => {
         this.isUpdating.set(false);
         this.closeEditModal();
-        // Si el usuario editado es el usuario en sesión, refrescar perfil (rol y permisos) para sincronizar Navbar
+        // If the edited user is the signed-in one, refresh the profile (role and permissions) for the navbar
         if (this.authService.currentUser()?.id === user.id) {
           this.authService.fetchCurrentUserProfile().subscribe();
         }
@@ -294,7 +294,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // --- Modal de Confirmación de Baja Lógica ---
+  // --- Logical delete confirmation modal ---
 
   openDeleteModal(user: User): void {
     const currentUsername = this.authService.currentUser()?.username;
@@ -336,7 +336,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // --- Modal de Auditoría de 6 Campos ---
+  // --- Audit modal (6 fields) ---
 
   openAuditModal(user: User): void {
     this.auditModalSubtitle.set(`${user.fullName} (${user.username})`);

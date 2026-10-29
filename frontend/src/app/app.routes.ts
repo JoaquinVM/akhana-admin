@@ -43,7 +43,7 @@ export const routes: Routes = [
       },
       {
         path: 'pos/sale',
-        // Diferida: con el cobro al costo y a crédito el bundle inicial pasaba el límite de 1 MB
+        // Lazy loaded: with at-cost and credit checkout the initial bundle went over 1 MB
         loadComponent: () =>
           import('./pages/pos/register-sale/register-sale.component').then(m => m.RegisterSaleComponent),
         canActivate: [permissionGuard],
@@ -57,7 +57,7 @@ export const routes: Routes = [
       },
       {
         path: 'sales',
-        // Carga diferida: el bundle inicial está en el límite de presupuesto (1 MB)
+        // Lazy loaded: the initial bundle is at its budget limit (1 MB)
         loadComponent: () => import('./pages/sales/sales-history.component').then(m => m.SalesHistoryComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.SALES_HISTORY }
@@ -93,14 +93,14 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
-        // Carga diferida: el bundle inicial está en el límite de presupuesto (1 MB)
+        // Lazy loaded: the initial bundle is at its budget limit (1 MB)
         loadComponent: () => import('./pages/reports/reports.component').then(m => m.ReportsComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.REPORTS }
       },
       {
         path: 'migration',
-        // FIN-11: se usa una sola vez, en carga diferida
+        // FIN-11: used only once, lazy loaded
         loadComponent: () => import('./pages/migration/migration.component').then(m => m.MigrationComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.MIGRATION }
@@ -131,7 +131,7 @@ export const routes: Routes = [
       },
       {
         path: 'consumptions',
-        // Carga diferida: el bundle inicial está en el límite de presupuesto (1 MB)
+        // Lazy loaded: the initial bundle is at its budget limit (1 MB)
         loadComponent: () => import('./pages/consumptions/consumptions.component').then(m => m.ConsumptionsComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.CONSUMPTIONS }
@@ -144,7 +144,7 @@ export const routes: Routes = [
       },
       {
         path: 'debts',
-        // Carga diferida: mantiene el bundle inicial dentro del presupuesto
+        // Lazy loaded: keeps the initial bundle within budget
         loadComponent: () => import('./pages/debts/debts.component').then(m => m.DebtsComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.DEBTS }

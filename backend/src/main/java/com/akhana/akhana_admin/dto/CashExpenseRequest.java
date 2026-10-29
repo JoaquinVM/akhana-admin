@@ -18,18 +18,18 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CashExpenseRequest {
 
-    @NotNull(message = "El monto es obligatorio")
-    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0")
+    @NotNull(message = "El monto es obligatorio.")
+    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0.")
     private BigDecimal amount;
 
-    @NotNull(message = "La categoría de gasto es obligatoria")
+    @NotNull(message = "La categoría de gasto es obligatoria.")
     private UUID categoryId;
 
-    @NotBlank(message = "La descripción es obligatoria")
-    @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")
+    @NotBlank(message = "La descripción es obligatoria.")
+    @Size(max = 255, message = "La descripción no puede exceder 255 caracteres.")
     private String description;
 
-    @Size(max = 500, message = "Los comentarios no pueden exceder 500 caracteres")
+    @Size(max = 500, message = "Los comentarios no pueden exceder 500 caracteres.")
     private String notes;
 
     private UUID cashSessionId;

@@ -55,7 +55,7 @@ public class CategoryServiceImpl implements CategoryService {
             }
         }
 
-        // Por defecto: Categorías activas (no eliminadas)
+        // By default the non-deleted categories
         if (hasSearch) {
             categories = categoryRepository.searchCategories(term, CategoryStatus.ELIMINADO);
         } else {
@@ -78,7 +78,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse createCategory(CategoryRequest request, String currentUsername) {
         String name = request.name().trim();
 
-        // Validación exclusiva en Backend de unicidad de nombre (excluye ELIMINADO)
+        // Name unique among the non-deleted (RG-04)
         if (categoryRepository.existsByNameIgnoreCaseAndStatusNot(name, CategoryStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe una categoría activa con el nombre especificado.");
         }
@@ -107,7 +107,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         String name = request.name().trim();
 
-        // Validación de unicidad de nombre excluyendo el registro actual y eliminados
+        // Name unique among the other non-deleted records
         if (categoryRepository.existsByNameIgnoreCaseAndStatusNotAndIdNot(name, CategoryStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otra categoría activa con el nombre especificado.");
         }
@@ -131,7 +131,7 @@ public class CategoryServiceImpl implements CategoryService {
             throw new IllegalStateException("La categoría ya se encuentra en estado ELIMINADO.");
         }
 
-        // Eliminación lógica obligatoria: nunca física
+        // Logical delete only, never physical (RG-01)
         category.setStatus(CategoryStatus.ELIMINADO);
         category.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         category.setDeletedAt(Instant.now());

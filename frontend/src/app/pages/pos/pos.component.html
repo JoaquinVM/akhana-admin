@@ -1,5 +1,5 @@
 <div class="pos-page">
-  <!-- Encabezado de Sección -->
+  <!-- Section header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -18,7 +18,7 @@
       <p class="page-subtitle">Terminal unificado para registro de ventas, arqueo de gaveta y control de turno en tiempo real</p>
     </div>
 
-    <!-- Acciones Principales en Cabecera (Solo activas con caja abierta) -->
+    <!-- Header actions (only with an open session) -->
     <div class="header-actions">
       @if (cashService.currentSession()) {
         <button
@@ -47,7 +47,7 @@
     </div>
   </header>
 
-  <!-- Banner de Feedback Operativo -->
+  <!-- Feedback banner -->
   @if (feedbackMessage(); as msg) {
     <div
       class="feedback-banner"
@@ -76,7 +76,7 @@
     </div>
   }
 
-  <!-- Estado 1: Cargando Información de Caja -->
+  <!-- State 1: loading the cash session -->
   @if (cashService.isLoadingCurrent()) {
     <div class="loading-state-card">
       <div class="spinner-large"></div>
@@ -84,7 +84,7 @@
     </div>
   }
 
-  <!-- Estado 2: Caja Cerrada / Ventas Inhabilitadas -->
+  <!-- State 2: cash closed / sales disabled -->
   @else if (!cashService.currentSession()) {
     <div class="pos-closed-card">
       <div class="closed-hero-icon">
@@ -123,10 +123,10 @@
     </div>
   }
 
-  <!-- Estado 3: Caja Abierta / Operación en Vivo -->
+  <!-- State 3: cash open / live operation -->
   @else if (cashService.currentSession(); as cs) {
     <div class="pos-active-workspace">
-      <!-- Grid de Resumen Financiero en Tiempo Real (KPIs) -->
+      <!-- Live money KPI grid -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-header">
@@ -202,7 +202,7 @@
         </div>
       </div>
 
-      <!-- Sección de Transacciones de la Sesión -->
+      <!-- Session transactions section -->
       <div class="transactions-card">
         <div class="transactions-header">
           <div class="transactions-title-group">
@@ -292,7 +292,7 @@
         </div>
 
         @if (activeTab() === 'VENTAS') {
-          <!-- VISTA DE VENTAS -->
+          <!-- SALES VIEW -->
           @if (recentSales().length === 0) {
             <div class="transactions-empty">
               <div class="empty-icon">
@@ -328,13 +328,13 @@
               (voidSale)="openVoidModal($event)" />
           }
         } @else if (activeTab() === 'MOVIMIENTOS') {
-          <!-- VISTA DE INGRESOS Y RETIROS DE CAJA (CAJ-08) -->
+          <!-- CASH INS AND OUTS VIEW (CAJ-08) -->
           <app-cash-transfers
             [transfers]="recentTransfers()"
             [canOperate]="cs.status === 'ABIERTA'"
             (changed)="onCashTransfersChanged($event)" />
         } @else {
-          <!-- VISTA DE COMPRAS (Gastos asociados a la sesión actual de Caja) -->
+          <!-- PURCHASES VIEW (expenses of the current cash session) -->
           @if (recentExpenses().length === 0) {
             <div class="transactions-empty">
               <div class="empty-icon">
@@ -413,7 +413,7 @@
                       </td>
                       <td style="text-align: right">
                         <div class="table-actions" style="justify-content: flex-end">
-                          <!-- Anular gasto -->
+                          <!-- Void expense -->
                           <button
                             type="button"
                             class="btn-icon btn-delete"
@@ -440,7 +440,7 @@
     </div>
   }
 
-  <!-- Modales Operativos -->
+  <!-- Operation modals -->
   <app-open-cash-modal
     [isOpen]="isOpenModalVisible()"
     [isLoading]="isActionLoading()"
@@ -472,17 +472,17 @@
     [initialSale]="selectedSaleForDetail()"
     (close)="closeDetailModal()" />
 
-  <!-- Modal Registrar Gasto de Caja -->
+  <!-- Register cash expense modal -->
   <app-cash-expense-modal
     [isOpen]="isCashExpenseModalVisible()"
     (close)="closeCashExpenseModal()"
     (saved)="onCashExpenseSaved($event)" />
 
-  <!-- Modal Anulación de Gasto de Caja -->
+  <!-- Cash expense void modal -->
   <app-modal
     [isOpen]="isVoidExpenseModalVisible()"
     title="Anular Gasto de Caja"
-    [subtitle]="selectedExpenseToVoid() ? (selectedExpenseToVoid()?.description + ' - Bs. ' + (selectedExpenseToVoid()?.amount | number:'1.2-2')) : ''"
+    [subtitle]="selectedExpenseToVoid() ? (selectedExpenseToVoid()?.description + ' - Bs ' + (selectedExpenseToVoid()?.amount | number:'1.2-2')) : ''"
     [size]="'md'"
     (close)="closeVoidExpenseModal()">
     <div class="void-expense-content">

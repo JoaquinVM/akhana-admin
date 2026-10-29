@@ -1,5 +1,5 @@
 <div class="summary-page">
-  <!-- Encabezado de página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -29,7 +29,7 @@
     </div>
   </header>
 
-  <!-- Mensajes de Error y Loading -->
+  <!-- Error and loading messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <span>{{ errorMessage() }}</span>
@@ -42,9 +42,9 @@
       <p>Cargando métricas y saldos financieros...</p>
     </div>
   } @else if (summary(); as data) {
-    <!-- Grid de KPIs Principales -->
+    <!-- Main KPI grid -->
     <section class="kpis-grid">
-      <!-- Total Consolidado (Highlight Hero) -->
+      <!-- Consolidated total (hero) -->
       <article class="kpi-card hero-card">
         <div class="kpi-header">
           <span class="kpi-label">Saldo Total Consolidado</span>
@@ -52,13 +52,13 @@
         </div>
         <div class="kpi-body">
           <span class="kpi-value hero-value" [class.negative]="data.totalBalance < 0">
-            Bs. {{ data.totalBalance | number:'1.2-2' }}
+            Bs {{ data.totalBalance | number:'1.2-2' }}
           </span>
           <span class="kpi-desc">Suma acumulada de todas las cuentas activas</span>
         </div>
       </article>
 
-      <!-- Caja Principal -->
+      <!-- Main box -->
       <article class="kpi-card">
         <div class="kpi-header">
           <span class="kpi-label">Caja Principal</span>
@@ -66,13 +66,13 @@
         </div>
         <div class="kpi-body">
           <span class="kpi-value" [class.negative]="data.cashBalance < 0">
-            Bs. {{ data.cashBalance | number:'1.2-2' }}
+            Bs {{ data.cashBalance | number:'1.2-2' }}
           </span>
           <span class="kpi-desc">Efectivo físico disponible en caja</span>
         </div>
       </article>
 
-      <!-- Cuenta BISA -->
+      <!-- Bisa account -->
       <article class="kpi-card">
         <div class="kpi-header">
           <span class="kpi-label">Cuenta Banco BISA</span>
@@ -80,13 +80,13 @@
         </div>
         <div class="kpi-body">
           <span class="kpi-value" [class.negative]="data.bisaBalance < 0">
-            Bs. {{ data.bisaBalance | number:'1.2-2' }}
+            Bs {{ data.bisaBalance | number:'1.2-2' }}
           </span>
           <span class="kpi-desc">Cuenta bancaria empresarial</span>
         </div>
       </article>
 
-      <!-- Cuenta Joaco -->
+      <!-- Joaco account -->
       <article class="kpi-card">
         <div class="kpi-header">
           <span class="kpi-label">Cuenta Joaco</span>
@@ -94,13 +94,13 @@
         </div>
         <div class="kpi-body">
           <span class="kpi-value" [class.negative]="data.joacoBalance < 0">
-            Bs. {{ data.joacoBalance | number:'1.2-2' }}
+            Bs {{ data.joacoBalance | number:'1.2-2' }}
           </span>
           <span class="kpi-desc">Cuenta corriente asociada</span>
         </div>
       </article>
 
-      <!-- Cuenta QR Activa -->
+      <!-- Active QR account -->
       <article class="kpi-card qr-card">
         <div class="kpi-header">
           <span class="kpi-label">Cuenta QR Predeterminada</span>
@@ -115,7 +115,7 @@
       </article>
     </section>
 
-    <!-- Sección de Cuentas Financieras -->
+    <!-- Accounts section -->
     <section class="section-card">
       <div class="section-header">
         <div class="section-title-wrapper">
@@ -139,14 +139,14 @@
               }
             </div>
             <div class="acc-mini-balance" [class.negative]="acc.currentBalance < 0">
-              Bs. {{ acc.currentBalance | number:'1.2-2' }}
+              Bs {{ acc.currentBalance | number:'1.2-2' }}
             </div>
           </div>
         }
       </div>
     </section>
 
-    <!-- Sección de Últimos Movimientos -->
+    <!-- Latest movements section -->
     <section class="section-card">
       <div class="section-header">
         <div class="section-title-wrapper">
@@ -189,7 +189,7 @@
                     [class.negative]="tx.type === 'GASTO_MANUAL'">
                   @if (tx.type === 'GASTO_MANUAL') { - }
                   @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
-                  Bs. {{ tx.amount | number:'1.2-2' }}
+                  Bs {{ tx.amount | number:'1.2-2' }}
                 </td>
                 <td>
                   <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">

@@ -29,7 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final LoginAttemptService loginAttemptService;
 
-    private static final String GENERIC_AUTH_ERROR = "Invalid username or password";
+    private static final String GENERIC_AUTH_ERROR = "Usuario o contraseña incorrectos.";
 
     @Override
     @Transactional(readOnly = true)
@@ -66,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
             user.getRole(),
             user.getPermissions(),
             user.isMustChangePassword(),
-            user.isMustChangePassword() ? "Password change required" : "Authentication successful"
+            user.isMustChangePassword() ? "Debe cambiar su contraseña." : "Sesión iniciada."
         );
     }
 
@@ -83,13 +83,13 @@ public class AuthServiceImpl implements AuthService {
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("La contraseña actual no es correcta");
+            throw new IllegalArgumentException("La contraseña actual no es correcta.");
         }
         if (request.newPassword().equals(request.currentPassword())) {
-            throw new IllegalArgumentException("La nueva contraseña debe ser distinta de la actual");
+            throw new IllegalArgumentException("La nueva contraseña debe ser distinta de la actual.");
         }
         if (request.newPassword().equalsIgnoreCase(user.getUsername())) {
-            throw new IllegalArgumentException("La nueva contraseña no puede ser igual al nombre de usuario");
+            throw new IllegalArgumentException(UserServiceImpl.PASSWORD_EQUALS_USERNAME);
         }
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));

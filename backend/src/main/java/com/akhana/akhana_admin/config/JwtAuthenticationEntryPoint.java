@@ -24,7 +24,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setCharacterEncoding("UTF-8");
 
         String json = String.format(
-            "{\"error\":\"Unauthorized\",\"message\":\"Authentication required or token is invalid/expired\",\"timestamp\":\"%s\"}",
+            "{\"error\":\"Unauthorized\",\"message\":\"La sesión no es válida o venció; vuelva a iniciar sesión.\",\"timestamp\":\"%s\"}",
             Instant.now().toString()
         );
 

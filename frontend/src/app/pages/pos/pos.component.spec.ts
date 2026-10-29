@@ -264,10 +264,10 @@ describe('PosComponent', () => {
     expect(mockCategoryService.getCategories).toHaveBeenCalledWith('GASTO');
 
     mockCashService.getCurrentSession.mockClear();
-    component.onCashExpenseSaved('Gasto de caja de Bs. 35.50 registrado exitosamente.');
+    component.onCashExpenseSaved('Gasto de caja de Bs 35,50 registrado exitosamente.');
 
     expect(component.isCashExpenseModalVisible()).toBe(false);
-    expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs. 35.50 registrado exitosamente');
+    expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs 35,50 registrado exitosamente');
     expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledWith('session-1');
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
   });

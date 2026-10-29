@@ -52,7 +52,7 @@
           <option [value]="seller">{{ seller }}</option>
         }
       </select>
-      <!-- POS-12: ventas con líneas sin identificar que esperan su producto -->
+      <!-- POS-12: sales with unidentified lines waiting for their product -->
       <label class="pending-filter">
         <input type="checkbox" [checked]="pendingAssignment()" (change)="onPendingAssignment($any($event.target).checked)" />
         Por asignar

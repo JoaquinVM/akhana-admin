@@ -38,7 +38,7 @@
                     @if (entry.amount > 0) {
                       <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · a crédito Bs {{ entry.amount | number:'1.2-2' }}</span>
                     } @else {
-                      <!-- P-49: pagada en el momento, no cambia el saldo -->
+                      <!-- P-49: paid at once, does not change the balance -->
                       <span class="entry-note">Total Bs {{ entry.saleTotal | number:'1.2-2' }} · pagada</span>
                     }
                   } @else {

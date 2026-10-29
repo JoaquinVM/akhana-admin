@@ -7,7 +7,7 @@
   (close)="handleClose()">
 
   <div class="checkout-modal-body">
-    <!-- Total Destacado -->
+    <!-- Highlighted total -->
     <div class="checkout-total-banner">
       <div class="total-banner-details">
         <span class="total-banner-label">Total a Cobrar</span>
@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <!-- Venta al costo: cliente y parte a crédito (CON-02, DEU-05) -->
+    <!-- At-cost sale: customer and credit part (CON-02, DEU-05) -->
     @if (atCost()) {
       <div class="checkout-credit-panel">
         <div class="checkout-field-row">
@@ -99,7 +99,7 @@
         </p>
       </div>
     } @else {
-      <!-- Pestañas de Método de Pago -->
+      <!-- Payment method tabs -->
       <div class="checkout-method-tabs" role="tablist">
         <button
           type="button"
@@ -141,9 +141,9 @@
         </button>
       </div>
 
-      <!-- Paneles según Método de Pago -->
+      <!-- Panels per payment method -->
 
-      <!-- Panel EFECTIVO -->
+      <!-- Cash panel -->
       @if (paymentMethod() === 'EFECTIVO') {
         <div class="checkout-panel">
           <div class="checkout-field-row">
@@ -213,7 +213,7 @@
         </div>
       }
 
-      <!-- Panel MIXTO -->
+      <!-- Mixed panel -->
       @else if (paymentMethod() === 'MIXTO') {
         <div class="checkout-panel">
           <div class="mixed-portions-split">
@@ -241,6 +241,10 @@
               </div>
             </div>
           </div>
+
+          @if (mixedNeedsBothParts()) {
+            <p class="mixed-hint" role="alert">El efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.</p>
+          }
 
           <div class="checkout-field-row">
             <label class="checkout-field-label" for="cashReceived">Monto recibido:</label>
@@ -300,7 +304,7 @@
       </div>
     }
 
-    <!-- Acciones del Modal -->
+    <!-- Modal actions -->
     <div class="checkout-modal-actions">
       <button
         type="button"

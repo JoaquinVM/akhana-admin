@@ -14,7 +14,7 @@ import { ConsumptionDetailModalComponent } from './components/consumption-detail
 
 export type ConsumptionStatusFilter = 'ALL' | ConsumptionStatus;
 
-// CON-01: consumos internos valorados al costo; no mueven dinero
+// CON-01: internal consumptions valued at cost; they move no money
 @Component({
   selector: 'app-consumptions',
   standalone: true,
@@ -45,19 +45,19 @@ export class ConsumptionsComponent implements OnInit {
   isFormOpen = signal<boolean>(false);
   detailId = signal<string | null>(null);
 
-  // Un producto inactivo puede seguir en la tienda y consumirse; uno eliminado, no
+  // An inactive product may still be in the store and consumed; a deleted one may not
   availableProducts = computed(() => this.products()
     .filter(p => p.status !== 'ELIMINADO')
     .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })));
 
-  // Total al costo de los consumos registrados que se ven en el listado
+  // Total at cost of the registered consumptions in the list
   visibleTotal = computed(() => this.consumptions()
     .filter(c => c.status === 'REGISTRADO')
     .reduce((sum, c) => sum + c.totalAmount, 0));
 
   ngOnInit(): void {
     this.productService.getProducts().subscribe({
-      // POS-11: los productos especiales no se consumen
+      // POS-11: special products are not consumed
       next: products => this.products.set(products.filter(p => !isSpecialProduct(p))),
       error: () => this.errorMessage.set('No se pudo cargar el catálogo de productos.')
     });

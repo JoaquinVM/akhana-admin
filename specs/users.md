@@ -39,6 +39,10 @@ El sistema SHALL permitir el registro de nuevos usuarios requiriendo obligatoria
 - **WHEN** se intenta crear un usuario con un nombre de usuario que ya existe en la base de datos
 - **THEN** el sistema rechaza la solicitud e informa que el nombre de usuario ya se encuentra registrado
 
+#### Scenario: Nombre de usuario que solo cambia en mayúsculas y contraseña al crear (segunda revisión, 29-10-2026)
+- **WHEN** existe `operador_qa` (activo o dado de baja) y se crea `Operador_QA`, o la contraseña nueva tiene menos de 8 caracteres o es igual al nombre de usuario
+- **THEN** el servidor rechaza el alta: el nombre de usuario es único sin distinguir mayúsculas («El nombre de usuario 'Operador_QA' ya está registrado.», 409) y la contraseña sigue la misma regla que el cambio de contraseña (8 a 100 caracteres, distinta del nombre de usuario). El formulario pide 8 caracteres. Pruebas en `UserServiceTest`.
+
 #### Scenario: Rechazo por rol ausente
 - **WHEN** se intenta crear o editar un usuario sin indicar el rol
 - **THEN** el backend responde 400 y no guarda cambios

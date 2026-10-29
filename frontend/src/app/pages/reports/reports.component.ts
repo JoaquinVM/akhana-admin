@@ -10,7 +10,7 @@ import {
 export type ReportTab = 'SALES_BY_DAY' | 'SALES_BY_SUPPLIER' | 'TRANSACTIONS_BY_CATEGORY' | 'TOTALS'
   | 'CONSUMPTIONS';
 
-// FIN-10: cada reporte es una pestaña con su propio filtro de fechas (specs/reports.md)
+// FIN-10: each report is a tab with its own date filter (specs/reports.md)
 @Component({
   selector: 'app-reports',
   standalone: true,

@@ -130,7 +130,7 @@ class JwtAuthenticationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"wrong-pass\",\"newPassword\":\"brand-new-pass\"}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La contraseña actual no es correcta"));
+            .andExpect(jsonPath("$.message").value("La contraseña actual no es correcta."));
 
         String body = mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -157,7 +157,7 @@ class JwtAuthenticationIntegrationTest {
         mockMvc.perform(get("/api/auth/me"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
-            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+            .andExpect(jsonPath("$.message").value("La sesión no es válida o venció; vuelva a iniciar sesión."));
     }
 
     @Test
@@ -167,6 +167,6 @@ class JwtAuthenticationIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer invalid.jwt.token"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
-            .andExpect(jsonPath("$.message").value("Authentication required or token is invalid/expired"));
+            .andExpect(jsonPath("$.message").value("La sesión no es válida o venció; vuelva a iniciar sesión."));
     }
 }

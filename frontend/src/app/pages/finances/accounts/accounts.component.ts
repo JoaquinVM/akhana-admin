@@ -30,7 +30,7 @@ export class AccountsComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Modal Formulario (Creación / Edición)
+  // Form modal (create / edit)
   isFormModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedAccountId = signal<string | null>(null);
@@ -48,7 +48,7 @@ export class AccountsComponent implements OnInit {
   accountTransactions = signal<FinancialTransaction[]>([]);
   isLoadingMovements = signal<boolean>(false);
 
-  // Modal Saldo al corte (FIN-01)
+  // Cutover balance modal (FIN-01)
   isOpeningBalanceModalOpen = signal<boolean>(false);
   accountForOpeningBalance = signal<FinancialAccount | null>(null);
   openingBalanceError = signal<string | null>(null);
@@ -68,7 +68,7 @@ export class AccountsComponent implements OnInit {
     isQrAccount: [false]
   });
 
-  // Saldo total acumulado de todas las cuentas activas
+  // Total balance of every active account
   totalBalance = computed(() => {
     return this.accounts().reduce((sum, acc) => sum + (acc.currentBalance || 0), 0);
   });

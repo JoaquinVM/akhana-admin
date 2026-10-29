@@ -16,16 +16,17 @@ export class CashService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/cash-sessions';
 
-  // Estados Reactivos con Signals
+  // Shared state of the open cash session; null while the cash is closed
   currentSession = signal<CashSessionSummary | null>(null);
   isLoadingCurrent = signal<boolean>(false);
 
-  getCurrentSession(): Observable<CashSessionSummary> {
+  // The server answers 204 (null body) when there is no open session
+  getCurrentSession(): Observable<CashSessionSummary | null> {
     this.isLoadingCurrent.set(true);
-    return this.http.get<CashSessionSummary>(`${this.apiUrl}/current`).pipe(
+    return this.http.get<CashSessionSummary | null>(`${this.apiUrl}/current`).pipe(
       tap({
         next: (session) => {
-          this.currentSession.set(session);
+          this.currentSession.set(session ?? null);
           this.isLoadingCurrent.set(false);
         },
         error: () => {

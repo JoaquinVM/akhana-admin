@@ -77,7 +77,7 @@ public class TagServiceImpl implements TagService {
     public TagResponse createTag(TagRequest request, String currentUsername) {
         String name = request.name().trim();
 
-        // Validación exclusiva en Backend de unicidad de nombre (excluye ELIMINADO)
+        // Name unique among the non-deleted (RG-04)
         if (tagRepository.existsByNameIgnoreCaseAndStatusNot(name, TagStatus.ELIMINADO)) {
             throw new DuplicateResourceException("Ya existe una etiqueta activa con el nombre especificado.");
         }
@@ -105,7 +105,7 @@ public class TagServiceImpl implements TagService {
 
         String name = request.name().trim();
 
-        // Validación de unicidad de nombre excluyendo el registro actual y eliminados
+        // Name unique among the other non-deleted records
         if (tagRepository.existsByNameIgnoreCaseAndStatusNotAndIdNot(name, TagStatus.ELIMINADO, id)) {
             throw new DuplicateResourceException("Ya existe otra etiqueta activa con el nombre especificado.");
         }
@@ -128,7 +128,7 @@ public class TagServiceImpl implements TagService {
             throw new IllegalStateException("La etiqueta ya se encuentra en estado ELIMINADO.");
         }
 
-        // Eliminación lógica obligatoria: nunca física
+        // Logical delete only, never physical (RG-01)
         tag.setStatus(TagStatus.ELIMINADO);
         tag.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         tag.setDeletedAt(Instant.now());

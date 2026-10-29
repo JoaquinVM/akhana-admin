@@ -5,16 +5,16 @@ import { PaymentMethod } from '../../../../core/sale/models/sale.models';
 import { Customer } from '../../../../core/debt/models/debt.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
-// Pago elegido en el cobro; la venta (ítems y descuentos) la arma register-sale
+// Payment chosen at checkout; register-sale builds the sale (items and discounts)
 export interface CheckoutPayment {
   paymentMethod: PaymentMethod;
   amountCash: number;
   amountQr: number;
   amountReceived: number;
-  // Venta al costo (CON-02, DEU-05): cliente opcional, obligatorio con crédito
+  // At-cost sale (CON-02, DEU-05): customer optional, required with credit
   customerId: string | null;
   creditAmount: number;
-  // P-39: comentario opcional de la venta al costo («Mami precio costo»); vacío si no hay
+  // P-39: optional comment of the at-cost sale («Mami precio costo»); empty when none
   comment: string;
 }
 
@@ -33,7 +33,7 @@ export class CheckoutModalComponent implements OnChanges {
   @Input('totalAmount') set totalInput(value: number) {
     this.total.set(value || 0);
   }
-  // Solo la venta al costo admite cliente y crédito (DEU-05)
+  // Only the at-cost sale takes a customer and credit (DEU-05)
   @Input('atCost') set atCostInput(value: boolean) {
     this.atCost.set(!!value);
   }
@@ -53,7 +53,7 @@ export class CheckoutModalComponent implements OnChanges {
 
   totalAmount = computed<number>(() => this.total());
 
-  // Lo que se paga en el momento: el total menos la parte a crédito
+  // What is paid now: the total minus the credit part
   amountDue = computed<number>(() => {
     const credit = this.atCost() ? this.creditAmount() : 0;
     return Math.max(0, Math.round((this.totalAmount() - credit) * 100) / 100);
@@ -61,7 +61,7 @@ export class CheckoutModalComponent implements OnChanges {
 
   hasCredit = computed<boolean>(() => this.atCost() && this.creditAmount() > 0);
 
-  // Toda la venta a crédito: se envía con método CREDITO y sin pago
+  // The whole sale on credit: sent as CREDITO with no payment
   isFullCredit = computed<boolean>(() => this.hasCredit() && this.amountDue() === 0);
 
   amountQr = computed<number>(() => {
@@ -88,6 +88,11 @@ export class CheckoutModalComponent implements OnChanges {
     return 0;
   });
 
+  // POS-04: the server rejects a mixed payment with one part at 0, so the form explains it first
+  mixedNeedsBothParts = computed<boolean>(() =>
+    this.paymentMethod() === 'MIXTO' && !this.isFullCredit()
+    && (this.amountCash() <= 0 || this.amountCash() >= this.amountDue()));
+
   isPaymentValid = computed<boolean>(() => {
     if (this.totalAmount() <= 0) {
       return false;
@@ -108,10 +113,11 @@ export class CheckoutModalComponent implements OnChanges {
       return true;
     }
     if (this.paymentMethod() === 'MIXTO') {
+      // POS-04: both parts above 0; all in one is Efectivo or QR
       const cashPortion = this.amountCash();
       return (
-        cashPortion >= 0 &&
-        cashPortion <= this.amountDue() &&
+        cashPortion > 0 &&
+        cashPortion < this.amountDue() &&
         received >= cashPortion
       );
     }
@@ -119,8 +125,8 @@ export class CheckoutModalComponent implements OnChanges {
   });
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Al abrir se reinician los montos con el método elegido la última vez; sin crédito.
-    // P-49: la venta al costo es para cualquiera, así que se propone «Sin cliente»
+    // On open the amounts restart with the last method chosen, without credit.
+    // P-49: the at-cost sale is for anyone, so «Sin cliente» is proposed
     if (changes['isOpen'] && this.isOpen) {
       this.creditAmount.set(0);
       this.comment.set('');
@@ -177,16 +183,16 @@ export class CheckoutModalComponent implements OnChanges {
     this.customerId.set(customerId || null);
   }
 
-  // El crédito va de 0 al total; los montos del pago se recalculan sobre lo que queda
+  // Credit goes from 0 to the total; the payment amounts are recomputed on what is left
   onCreditChange(val: number | null): void {
     const parsed = val !== null && !isNaN(val) ? Number(val) : 0;
     const credit = Math.max(0, Math.min(this.totalAmount(), Math.round(parsed * 100) / 100));
     this.creditAmount.set(credit);
-    // P-49: al dar crédito sin cliente elegido se propone el único cliente activo
+    // P-49: giving credit without a customer proposes the only active one
     if (credit > 0 && !this.customerId() && this.customers.length === 1) {
       this.customerId.set(this.customers[0].id);
     }
-    // Un método que no sea de pago (CREDITO) nunca queda elegido en las pestañas
+    // A non-payment method (CREDITO) is never left selected in the tabs
     this.setPaymentMethod(this.paymentMethod() === 'CREDITO' ? 'EFECTIVO' : this.paymentMethod());
   }
 

@@ -14,7 +14,7 @@
   box-shadow: 0 4px 20px -4px rgba(27, 59, 24, 0.04);
 }
 
-/* Marca / Logo */
+/* Brand / logo */
 .navbar-left {
   display: flex;
   align-items: center;
@@ -57,7 +57,7 @@
   text-transform: uppercase;
 }
 
-/* Grupos de Navegación */
+/* Navigation groups */
 .navbar-center {
   display: flex;
   align-items: center;
@@ -104,7 +104,7 @@
   color: #1B3B18;
 }
 
-/* Grupo Activo */
+/* Active group */
 .group-active-indicator {
   display: none;
   width: 6px;
@@ -124,7 +124,7 @@
   display: inline-block;
 }
 
-/* Menú Desplegable Flotante */
+/* Floating dropdown menu */
 .dropdown-menu {
   display: block;
   position: absolute;
@@ -191,7 +191,7 @@
   background-color: #7BB142;
 }
 
-/* Opción Activa dentro del Menú */
+/* Active menu option */
 .dropdown-item.active {
   background: rgba(245, 184, 0, 0.14);
   color: #1B3B18;
@@ -236,7 +236,7 @@
   color: #718096;
 }
 
-/* Área Derecha: Usuario y Logout */
+/* Right area: user and logout */
 .navbar-right {
   display: flex;
   align-items: center;
@@ -348,5 +348,79 @@
 
   .logout-btn {
     padding: 0 10px;
+  }
+}
+
+/* Menu button, only on narrow screens */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(46, 91, 39, 0.16);
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.menu-toggle-bar {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: #1B3B18;
+}
+
+/* Phones: the groups fold into a panel under the bar, so the page never scrolls sideways */
+@media (max-width: 767px) {
+  .top-navbar {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .brand-text,
+  .user-info {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .navbar-center {
+    display: none;
+  }
+
+  .navbar-center.mobile-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    padding: 8px 12px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(46, 91, 39, 0.12);
+    box-shadow: 0 12px 24px -8px rgba(27, 59, 24, 0.18);
+  }
+
+  .navbar-center.mobile-open .nav-group-btn {
+    width: 100%;
+    justify-content: space-between;
+    height: 44px;
+  }
+
+  .navbar-center.mobile-open .dropdown-menu {
+    position: static;
+    min-width: 0;
+    box-shadow: none;
+    margin: 0 0 6px;
   }
 }

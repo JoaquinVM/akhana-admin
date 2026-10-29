@@ -36,7 +36,7 @@ public class Supplier {
     @Builder.Default
     private SupplierStatus status = SupplierStatus.ACTIVO;
 
-    // Campos de Auditoría
+    // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 

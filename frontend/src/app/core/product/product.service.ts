@@ -44,7 +44,7 @@ export class ProductService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  // CAT-06: Revisar valida sin guardar; Importar vuelve a validar el mismo archivo y guarda
+  // CAT-06: Revisar validates without saving; Importar validates the same file again and saves
   previewImport(file: File): Observable<ProductImportResult> {
     return this.http.post<ProductImportResult>(`${this.apiUrl}/import/preview`, this.importForm(file));
   }

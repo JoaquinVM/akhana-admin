@@ -10,7 +10,7 @@ import { SaleDetailModalComponent } from '../../../../shared/components/sale-det
 import { CreditorDetailModalComponent } from '../creditor-detail-modal/creditor-detail-modal.component';
 import { PurchaseDetailModalComponent } from '../../../purchases/components/purchase-detail-modal/purchase-detail-modal.component';
 
-// '' = activas e inactivas (sin eliminadas)
+// '' = active and inactive (deleted left out)
 export type CreditorStatusFilter = '' | CreditorStatus;
 
 interface CreditorDraft {
@@ -20,7 +20,7 @@ interface CreditorDraft {
   status: CreditorStatus;
 }
 
-// DEU-01 y DEU-04: personas con su deuda; alta, edición, baja y detalle con historial
+// DEU-01 and DEU-04: people with their debt; create, edit, delete and detail with history
 @Component({
   selector: 'app-creditors-view',
   standalone: true,
@@ -54,7 +54,7 @@ export class CreditorsViewComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Formulario de alta o edición
+  // Create or edit form
   isFormOpen = signal<boolean>(false);
   editing = signal<Creditor | null>(null);
   draft = signal<CreditorDraft>(emptyDraft());
@@ -66,12 +66,12 @@ export class CreditorsViewComponent implements OnInit {
 
   auditCreditor = signal<Creditor | null>(null);
 
-  // Detalle con historial; al abrir un pedido se oculta y vuelve al cerrarlo
+  // Detail with history; opening a purchase hides it and closing brings it back
   detailCreditorId = signal<string | null>(null);
   purchaseId = signal<string | null>(null);
-  // POS-13: venta abierta desde el historial de la persona
+  // POS-13: sale opened from the person's history
   saleId = signal<string | null>(null);
-  // Cambia para que el detalle vuelva a cargar el historial
+  // Changes so the detail reloads the history
   detailRefresh = signal<number>(0);
 
   totalDebt = computed(() => round2(this.creditors().reduce((sum, c) => sum + c.debt, 0)));
@@ -123,7 +123,7 @@ export class CreditorsViewComponent implements OnInit {
     return status === 'ACTIVO' ? 'Activa' : status === 'INACTIVO' ? 'Inactiva' : 'Eliminada';
   }
 
-  // --- Alta y edición ---
+  // --- Create and edit ---
 
   openCreate(): void {
     this.editing.set(null);
@@ -194,7 +194,7 @@ export class CreditorsViewComponent implements OnInit {
     });
   }
 
-  // --- Baja lógica ---
+  // --- Logical delete ---
 
   openDelete(creditor: Creditor): void {
     this.errorMessage.set(null);
@@ -235,7 +235,7 @@ export class CreditorsViewComponent implements OnInit {
     this.purchaseId.set(purchaseId);
   }
 
-  // Un pago anulado desde el pedido cambia la deuda: se recarga el historial y el listado
+  // A payment voided from the purchase changes the debt: reload the history and the list
   closePurchase(): void {
     this.purchaseId.set(null);
     this.detailRefresh.update(n => n + 1);

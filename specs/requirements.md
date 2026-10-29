@@ -12,7 +12,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
-| Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
+| Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | Segunda revisión hecha; falta dividir `pos.component.html` y `register-sale` y pasar sus `@Input` a `input()` | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
 | Proveedores y compras | COM-01 a COM-09 | ✅ Completo | — | `purchases.md` |
@@ -91,14 +91,14 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 
 ## 3. Requerimientos por versión
 
-Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP.
+Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz).
 
 ### 3.1 Principios transversales · V1
 
 - **RG-01** Nada se borra físicamente: productos, ventas, pedidos, movimientos y usuarios usan baja lógica o anulación.
 - **RG-02** Todo registro guarda auditoría: quién y cuándo creó, modificó, eliminó o anuló. La genera el servidor, nunca el cliente.
-- **RG-03** Toda anulación exige motivo y revierte su efecto en caja y cuentas (y en stock desde la V2).
-- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error.
+- **RG-03** Toda anulación exige motivo (sin largo mínimo) y revierte su efecto en caja y cuentas (y en stock desde la V2).
+- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error. Todo error llega al usuario en español, sin detalles técnicos.
 - **RG-05** Toda operación que mueve dinero es atómica: todo o nada, en una sola transacción de base de datos.
 
 ### 3.2 Catálogo
@@ -158,7 +158,7 @@ Detalle en `cash.md`.
 - **CAJ-01** No se puede vender sin una caja abierta.
 - **CAJ-02** Apertura con monto inicial ≥ 0 y comentario opcional.
 - **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros. Los ajustes de apertura y cierre no cuentan. Una salida de Caja que supera el esperado se avisa sin bloquear.
-- **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10) en "caja" y "reserva".
+- **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", que si se carga debe sumar el monto contado.
 - **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
 - **CAJ-06** Una caja cerrada es inmutable: no se reabre ni recibe movimientos.
 - **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
@@ -173,7 +173,7 @@ Detalle en `sales.md`.
 - **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
-- **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto.
+- **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.
 - **POS-06** Numeración de venta única y correlativa. En desarrollo los números saltan porque las pruebas consumen las secuencias; en producción no.
 - **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33).
@@ -204,7 +204,7 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 
 Detalle en `users.md`.
 
-- **USR-01** Usuario con nombre completo y nombre de usuario inmutable; contraseña con hash BCrypt.
+- **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña de 8 a 100 caracteres, distinta del nombre de usuario, con hash BCrypt.
 - **USR-02** Permisos controlados en el frontend (menú, rutas) y en el backend (cada endpoint).
 - **USR-03** Un usuario dado de baja pierde el acceso de inmediato, aunque tenga una sesión abierta.
 - **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador.
@@ -337,6 +337,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
+- [ ] Dividir `pos.component.html` y `register-sale` en componentes y pasar los 6 componentes del POS con `@Input`/`@Output` a `input()`/`output()` (hallazgo de la segunda revisión).
 - [ ] Instalar el VPS con `specs/deploy.md` (Tareas «En el VPS»): HTTPS por Tailscale, respaldo diario a B2 y restauración probada (NF-01, NF-02, NF-05).
 - [ ] El día de la salida, en producción (`migration.md`): vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).

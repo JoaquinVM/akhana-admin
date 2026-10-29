@@ -8,15 +8,15 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record SaleItemRequest(
-    @NotNull(message = "El ID del producto es obligatorio")
+    @NotNull(message = "El ID del producto es obligatorio.")
     UUID productId,
 
-    @NotNull(message = "La cantidad es obligatoria")
-    @DecimalMin(value = "0", inclusive = false, message = "La cantidad debe ser mayor a 0")
-    @Digits(integer = 9, fraction = 3, message = "La cantidad admite hasta 3 decimales")
+    @NotNull(message = "La cantidad es obligatoria.")
+    @DecimalMin(value = "0", inclusive = false, message = "La cantidad debe ser mayor a 0.")
+    @Digits(integer = 9, fraction = 3, message = "La cantidad admite hasta 3 decimales.")
     BigDecimal quantity,
 
-    @DecimalMin(value = "0.00", message = "El descuento unitario no puede ser negativo")
+    @DecimalMin(value = "0.00", message = "El descuento unitario no puede ser negativo.")
     BigDecimal discountPerUnit,
 
     // CAT-11: sold by presentation; quantity is then the whole number of packs

@@ -9,14 +9,23 @@
     </a>
   </div>
 
-  <nav class="navbar-center nav-groups" (mouseleave)="closeAllMenus()" aria-label="Navegación Principal">
+  <button type="button" class="menu-toggle" (click)="toggleMobileMenu()"
+          [attr.aria-expanded]="mobileMenuOpen()" aria-controls="main-nav" aria-label="Abrir o cerrar el menú">
+    <span class="menu-toggle-bar" aria-hidden="true"></span>
+    <span class="menu-toggle-bar" aria-hidden="true"></span>
+    <span class="menu-toggle-bar" aria-hidden="true"></span>
+  </button>
+
+  <nav id="main-nav" class="navbar-center nav-groups" [class.mobile-open]="mobileMenuOpen()"
+       (mouseleave)="onNavLeave()" aria-label="Navegación Principal">
     @for (group of visibleNavGroups(); track group.id) {
       <div class="nav-group-container"
            [class.group-active]="isGroupActive(group)"
            [class.menu-open]="openGroupId() === group.id"
            (mouseenter)="openGroup(group.id)"
            (mouseleave)="closeGroup(group.id)">
-        <button type="button" class="nav-group-btn" [attr.aria-label]="'Menú de ' + group.label">
+        <button type="button" class="nav-group-btn" [attr.aria-label]="'Menú de ' + group.label"
+                [attr.aria-expanded]="openGroupId() === group.id" (click)="toggleGroup(group.id)">
           <span class="group-active-indicator" aria-hidden="true"></span>
           <span class="group-label">{{ group.label }}</span>
           <span class="chevron-icon" aria-hidden="true">▾</span>

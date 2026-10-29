@@ -6,7 +6,7 @@ import { ReportService } from '../../../../core/report/report.service';
 import { ConsumptionsReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
 
-// CON-03: consumos activos al costo por día y mes, y por proveedor actual del producto y mes
+// CON-03: active consumptions at cost by day and month, and by the product's current supplier and month
 @Component({
   selector: 'app-consumptions-report',
   standalone: true,
@@ -28,7 +28,7 @@ export class ConsumptionsReportComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // La búsqueda solo filtra los proveedores a la vista; el total del rango sigue siendo el de todos
+  // The search only filters the suppliers on screen; the range total is still that of all
   suppliers = computed(() => {
     const term = this.search().trim().toLowerCase();
     const suppliers = this.report()?.suppliers ?? [];
@@ -38,7 +38,7 @@ export class ConsumptionsReportComponent implements OnInit {
   readonly monthLabel = monthLabel;
 
   ngOnInit(): void {
-    // Sin fechas el servidor propone el mes en curso hasta hoy y las devuelve para los filtros
+    // Without dates the server proposes the current month up to today and returns them for the filters
     this.load();
   }
 

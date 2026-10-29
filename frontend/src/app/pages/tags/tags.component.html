@@ -1,5 +1,5 @@
 <div class="tags-page">
-  <!-- Encabezado de Página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-content">
       <nav class="breadcrumb">
@@ -21,7 +21,7 @@
     </div>
   </header>
 
-  <!-- Mensajes de Error Global -->
+  <!-- Global error messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger">
       <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -33,9 +33,9 @@
     </div>
   }
 
-  <!-- Barra de Filtros y Búsqueda -->
+  <!-- Filters and search bar -->
   <div class="filters-card">
-    <!-- Filtros de Estado Reutilizables: Activos y Eliminados -->
+    <!-- Shared status filters: active and deleted -->
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
       <button
         type="button"
@@ -81,7 +81,7 @@
     </div>
   </div>
 
-  <!-- Contenedor Principal: Tabla / Estado de Carga / Estado Vacío -->
+  <!-- Main container: table / loading / empty -->
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -124,7 +124,7 @@
           } @else {
             @for (tag of filteredTags(); track tag.id) {
               <tr [attr.data-id]="tag.id">
-                <!-- Columna Color: Muestra visual con círculo de color y código -->
+                <!-- Color column: color dot and code -->
                 <td>
                   <div class="category-color-pill" [title]="tag.color">
                     <span class="color-dot" [style.backgroundColor]="tag.color"></span>
@@ -132,22 +132,22 @@
                   </div>
                 </td>
 
-                <!-- Columna Nombre -->
+                <!-- Name column -->
                 <td>
                   <span class="category-name">{{ tag.name }}</span>
                 </td>
 
-                <!-- Columna Estado -->
+                <!-- Status column -->
                 <td>
                   <span class="status-badge" [ngClass]="tag.status === 'ACTIVO' ? 'badge-active' : 'badge-deleted'">
                     {{ tag.status === 'ACTIVO' ? 'Activo' : 'Eliminado' }}
                   </span>
                 </td>
 
-                <!-- Columna Acciones -->
+                <!-- Actions column -->
                 <td>
                   <div class="table-actions" style="justify-content: flex-end">
-                    <!-- Auditoría: Disponible para todos los estados -->
+                    <!-- Audit: for every status -->
                     <button
                       type="button"
                       class="btn-icon btn-audit"
@@ -160,7 +160,7 @@
                       </svg>
                     </button>
 
-                    <!-- Editar y Eliminar: Solo para etiquetas ACTIVAS -->
+                    <!-- Edit and delete: only active tags -->
                     @if (tag.status === 'ACTIVO') {
                       <button
                         type="button"
@@ -198,8 +198,8 @@
     </div>
   </div>
 
-  <!-- Modal Reutilizable de Formulario (Creación y Edición) -->
-  <!-- closeOnBackdrop=false mandatorio según requerimiento -->
+  <!-- Shared form modal (create and edit) -->
+  <!-- closeOnBackdrop=false, as required -->
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Etiqueta' : 'Nueva Etiqueta'"
@@ -209,7 +209,7 @@
     (close)="attemptCloseForm()">
 
     <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
-      <!-- Alerta de Error de Negocio (Backend) -->
+      <!-- Business error from the backend -->
       @if (formError()) {
         <div class="alert alert-danger" style="margin-bottom: 1.25rem;">
           <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -249,7 +249,7 @@
         }
       </div>
 
-      <!-- Selector de Color Reutilizable -->
+      <!-- Shared color picker -->
       <div class="form-group">
         <app-color-picker
           formControlName="color"
@@ -260,7 +260,7 @@
         </app-color-picker>
       </div>
 
-      <!-- Pie del Formulario / Acciones -->
+      <!-- Form footer / actions -->
       <div class="form-actions">
         <button
           type="button"
@@ -285,7 +285,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal de Confirmación al Descartar Cambios sin Guardar -->
+  <!-- Discard unsaved changes confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     title="¿Descartar cambios?"
@@ -297,7 +297,7 @@
     (cancel)="cancelDiscard()">
   </app-confirm-modal>
 
-  <!-- Modal Reutilizable de Confirmación de Eliminación Lógica -->
+  <!-- Shared logical delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isConfirmModalOpen()"
     title="¿Eliminar Etiqueta?"
@@ -310,7 +310,7 @@
     (cancel)="cancelDelete()">
   </app-confirm-modal>
 
-  <!-- Modal Reutilizable de Auditoría (closeOnBackdrop=true) -->
+  <!-- Shared audit modal (closeOnBackdrop=true) -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     title="Auditoría de Etiqueta"

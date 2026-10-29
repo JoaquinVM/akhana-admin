@@ -1,6 +1,6 @@
 /* =============================================================================
    SaleDetailModalComponent Styles
-   Componente desacoplado de visualización de venta (POS e Historial)
+   Standalone sale detail view (POS and sales history)
    ============================================================================= */
 
 .sale-detail-container {
@@ -43,7 +43,7 @@
   margin: 0;
 }
 
-/* 1. Información General */
+/* 1. General information */
 .general-info-card {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -86,7 +86,7 @@
   width: fit-content;
 }
 
-/* Badges de estado */
+/* Status badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -109,7 +109,7 @@
   border: 1px solid #fecaca;
 }
 
-/* 2. Información de Anulación */
+/* 2. Void information */
 .void-info-box {
   padding: 1rem 1.25rem;
   background-color: #fff1f2;
@@ -174,7 +174,7 @@
   font-weight: 600;
 }
 
-/* 3. Tabla de Productos */
+/* 3. Products table */
 .products-section {
   display: flex;
   flex-direction: column;
@@ -289,7 +289,7 @@
   font-weight: 700;
 }
 
-/* 4. Resumen y Pagos */
+/* 4. Summary and payments */
 .financials-grid {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
@@ -320,7 +320,7 @@
   gap: 0.625rem;
 }
 
-/* Métodos de Pago */
+/* Payment methods */
 .payment-list {
   display: flex;
   flex-direction: column;
@@ -380,7 +380,7 @@
   font-weight: 500;
 }
 
-/* Totales y Descuentos */
+/* Totals and discounts */
 .totals-row {
   display: flex;
   align-items: center;
@@ -451,13 +451,13 @@
   padding-top: 0.75rem;
 }
 
-/* CON-02: venta al costo */
+/* CON-02: at-cost sale */
 .badge-at-cost {
   background-color: #ffedd5;
   color: #9a3412;
 }
 
-/* POS-11 a POS-13: líneas libres y su asignación (solo desde el historial) */
+/* POS-11 to POS-13: free lines and their assignment (only from the history) */
 .free-line-badge {
   align-self: flex-start;
   font-size: 0.6875rem;

@@ -179,9 +179,9 @@ class CreditorServiceTest {
 
         assertThatThrownBy(() -> creditorService.updateCreditor(mami.getId(),
             new CreditorRequest("Mami", null, null, CreditorStatus.INACTIVO), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150.00; devuélvala antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvala antes de darla de baja.");
         assertThatThrownBy(() -> creditorService.deleteCreditor(mami.getId(), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150.00; devuélvala antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvala antes de darla de baja.");
         assertThat(mami.getStatus()).isEqualTo(CreditorStatus.ACTIVO);
     }
 
@@ -249,7 +249,7 @@ class CreditorServiceTest {
 
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(),
             new BigDecimal("30.01"), null, CreditorRepaymentConcept.THIRD_PARTY), "operator"))
-            .hasMessage("El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30.00); registre el resto con el concepto Pedido.");
+            .hasMessage("El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30,00); registre el resto con el concepto Pedido.");
         assertThat(repayments).isEmpty();
     }
 
@@ -353,14 +353,14 @@ class CreditorServiceTest {
 
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("50.01"), null), "operator"))
-            .hasMessage("La devolución supera la deuda con Mami (Bs 50.00).");
+            .hasMessage("La devolución supera la deuda con Mami (Bs 50,00).");
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("0.004"), null), "operator"))
-            .hasMessage("El monto debe ser estrictamente mayor a 0.00 Bs.");
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
         debt("0");
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("1"), null), "operator"))
-            .hasMessage("La devolución supera la deuda con Mami (Bs 0.00).");
+            .hasMessage("La devolución supera la deuda con Mami (Bs 0,00).");
         verify(financialTransactionRepository, never()).save(any());
 
         debt("50.00");

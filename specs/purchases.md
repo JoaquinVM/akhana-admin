@@ -40,6 +40,8 @@ fecha del pedido, líneas, costo de envío, total y comentario. Auditoría de al
   que en ventas.
 - **Cuando** el costo unitario de una línea es negativo **entonces** se rechaza; un costo 0 se acepta
   (bonificación).
+- **Cuando** el costo unitario tiene más de 2 decimales (30,555) **entonces** se rechaza con «El costo unitario de
+  '<producto>' admite hasta 2 decimales.», en vez de redondearse sin aviso (segunda revisión, 29-10-2026).
 - **Cuando** una línea usa un producto eliminado **entonces** se rechaza; los inactivos se aceptan (se compran
   aunque no se vendan aún).
 - **Cuando** se registra el pedido **entonces** cada línea guarda copia del nombre y código del producto, y el

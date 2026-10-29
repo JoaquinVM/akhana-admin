@@ -25,6 +25,8 @@ import java.util.UUID;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
+    static final String PASSWORD_EQUALS_USERNAME = "La contraseña no puede ser igual al nombre de usuario.";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -48,8 +50,12 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse createUser(CreateUserRequest request, String currentUsername) {
         String cleanUsername = request.username().trim();
-        if (userRepository.existsByUsername(cleanUsername)) {
-            throw new DuplicateResourceException("El nombre de usuario '" + cleanUsername + "' ya está registrado");
+        if (userRepository.existsByUsernameIgnoreCase(cleanUsername)) {
+            throw new DuplicateResourceException("El nombre de usuario '" + cleanUsername + "' ya está registrado.");
+        }
+        // Same rule as the password change (USR-06)
+        if (request.password().equalsIgnoreCase(cleanUsername)) {
+            throw new IllegalArgumentException(PASSWORD_EQUALS_USERNAME);
         }
 
         User user = User.builder()
@@ -79,14 +85,14 @@ public class UserServiceImpl implements UserService {
         boolean isFullNameChanged = !newFullName.equals(user.getFullName());
         boolean isRoleChanged = newRole != user.getRole();
 
-        // Si no existen cambios efectivos, no modificar campos de auditoría ni actualizar
+        // Without effective changes the audit fields are left untouched
         if (!isFullNameChanged && !isRoleChanged) {
             log.debug("No effective changes detected for user '{}'. Skipping update.", user.getUsername());
             return mapToResponse(user);
         }
 
         if (isRoleChanged && user.getRole() == Role.ADMINISTRATOR) {
-            ensureNotLastAdministrator("No se puede quitar el rol de administrador al último administrador activo");
+            ensureNotLastAdministrator("No se puede quitar el rol de administrador al último administrador activo.");
         }
 
         user.setFullName(newFullName);
@@ -107,17 +113,17 @@ public class UserServiceImpl implements UserService {
                 .filter(u -> u.getDeletedAt() == null)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
 
-        // 1. Prohibir auto-eliminación
+        // Nobody deletes their own user (USR-04)
         if (user.getUsername().equalsIgnoreCase(currentUsername)) {
-            throw new IllegalArgumentException("No está permitido eliminar su propia cuenta de usuario");
+            throw new IllegalArgumentException("No está permitido eliminar su propia cuenta de usuario.");
         }
 
-        // 2. Prohibir eliminación si es el último administrador
+        // Nor the last active administrator
         if (user.getRole() == Role.ADMINISTRATOR) {
-            ensureNotLastAdministrator("No se puede eliminar al último administrador activo");
+            ensureNotLastAdministrator("No se puede eliminar al último administrador activo.");
         }
 
-        // 3. Baja lógica
+        // Logical delete (RG-01)
         user.setActive(false);
         user.setDeletedAt(Instant.now());
         user.setDeletedBy(currentUsername);

@@ -4,7 +4,7 @@
 }
 
 /* ========================================================
-   Estilos del Modal de Cobro (Distribución Equilibrada)
+   Checkout modal styles
    ======================================================== */
 .checkout-modal-body {
   display: flex;
@@ -12,7 +12,7 @@
   gap: 1.15rem;
 }
 
-/* 1. Total Banner Destacado */
+/* 1. Highlighted total banner */
 .checkout-total-banner {
   display: flex;
   align-items: center;
@@ -64,7 +64,7 @@
   letter-spacing: -0.02em;
 }
 
-/* 2. Pestañas de Método de Pago */
+/* 2. Payment method tabs */
 .checkout-method-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -105,7 +105,7 @@
   height: 16px;
 }
 
-/* 3. Panel de Cobro */
+/* 3. Payment panel */
 .checkout-panel {
   display: flex;
   flex-direction: column;
@@ -178,7 +178,7 @@
   appearance: textfield;
 }
 
-/* Eliminar flechas/spinners por defecto del navegador en inputs del modal de cobro */
+/* Hide the browser's number spinners in the checkout inputs */
 .money-input-field::-webkit-outer-spin-button,
 .money-input-field::-webkit-inner-spin-button,
 .checkout-modal input[type="number"]::-webkit-outer-spin-button,
@@ -232,7 +232,7 @@
   transform: translateY(1px);
 }
 
-/* Mixto Grid */
+/* Mixed payment grid */
 .mixed-portions-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -290,7 +290,7 @@
   color: #1d4ed8;
 }
 
-/* Panel de Cambio */
+/* Change panel */
 .checkout-change-panel {
   display: flex;
   align-items: center;
@@ -392,7 +392,7 @@
   border-radius: var(--radius-full);
 }
 
-/* Alertas de Checkout */
+/* Checkout alerts */
 .checkout-alert-error {
   display: flex;
   align-items: center;
@@ -411,7 +411,7 @@
   flex-shrink: 0;
 }
 
-/* Acciones en Modal */
+/* Modal actions */
 .checkout-modal-actions {
   display: flex;
   align-items: center;
@@ -451,7 +451,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* Venta al costo: cliente y crédito (CON-02, DEU-05) */
+/* At-cost sale: customer and credit (CON-02, DEU-05) */
 .checkout-credit-panel {
   display: flex;
   flex-direction: column;
@@ -473,4 +473,10 @@
 
 .credit-full-panel {
   text-align: center;
+}
+
+.mixed-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #b45309;
 }

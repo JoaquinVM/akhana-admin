@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class OpeningBalanceRequest {
 
-    @NotNull(message = "El saldo al corte es obligatorio")
-    @DecimalMin(value = "0.00", message = "El saldo al corte no puede ser negativo")
+    @NotNull(message = "El saldo al corte es obligatorio.")
+    @DecimalMin(value = "0.00", message = "El saldo al corte no puede ser negativo.")
     private BigDecimal amount;
 }

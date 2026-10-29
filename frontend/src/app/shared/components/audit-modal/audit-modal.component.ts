@@ -42,7 +42,7 @@ export class AuditModalComponent {
 
   close = output<void>();
 
-  // Señal computada que filtra estrictamente campos nulos, indefinidos o vacíos
+  // Computed signal that leaves out null, undefined or empty fields
   activeAuditFields = computed<AuditField[]>(() => {
     const rawData = this.data();
     if (!rawData) return [];
@@ -51,7 +51,7 @@ export class AuditModalComponent {
     const result: AuditField[] = [];
 
     for (const [key, rawValue] of Object.entries(rawData)) {
-      // Regla Mandatoria: No mostrar campos null, vacíos o undefined
+      // Never show null, empty or undefined fields
       if (rawValue === null || rawValue === undefined) {
         continue;
       }

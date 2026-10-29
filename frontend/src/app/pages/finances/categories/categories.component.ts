@@ -35,7 +35,7 @@ export class FinancialCategoriesComponent implements OnInit {
   searchTerm = signal<string>('');
   selectedTypeFilter = signal<CategoryTypeFilter>('TODOS');
 
-  // Modal Formulario (Creación / Edición)
+  // Form modal (create / edit)
   isFormModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedCategoryId = signal<string | null>(null);
@@ -47,7 +47,7 @@ export class FinancialCategoriesComponent implements OnInit {
   categoryToDelete = signal<FinancialCategory | null>(null);
   isDeleting = signal<boolean>(false);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');

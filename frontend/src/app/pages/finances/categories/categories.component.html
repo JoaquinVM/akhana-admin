@@ -1,5 +1,5 @@
 <div class="categories-page">
-  <!-- Encabezado de página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -22,7 +22,7 @@
     </div>
   </header>
 
-  <!-- Filtros y Buscador -->
+  <!-- Filters and search -->
   <section class="filters-card">
     <div class="filter-pill-group">
       <button
@@ -65,7 +65,7 @@
     </div>
   </section>
 
-  <!-- Mensajes de Error y Loading -->
+  <!-- Error and loading messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <span>{{ errorMessage() }}</span>
@@ -78,7 +78,7 @@
       <p>Cargando categorías financieras...</p>
     </div>
   } @else {
-    <!-- Tabla de Categorías -->
+    <!-- Categories table -->
     <div class="table-card">
       <div class="table-responsive">
         <table class="zen-table">
@@ -167,7 +167,7 @@
     </div>
   }
 
-  <!-- Modal Crear/Editar Categoría -->
+  <!-- Create/edit category modal -->
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Categoría Financiera' : 'Nueva Categoría Financiera'"
@@ -196,7 +196,7 @@
         }
       </div>
 
-      <!-- Selector de Color Reutilizable -->
+      <!-- Shared color picker -->
       <div class="form-group">
         <app-color-picker
           formControlName="color"
@@ -254,7 +254,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal Auditoría -->
+  <!-- Audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     title="Auditoría de Categoría"
@@ -263,7 +263,7 @@
     (close)="closeAuditModal()">
   </app-audit-modal>
 
-  <!-- Modal Confirmación de Eliminación -->
+  <!-- Delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDeleteModalOpen()"
     title="¿Eliminar categoría financiera?"

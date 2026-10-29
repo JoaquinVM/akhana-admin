@@ -14,7 +14,7 @@ import { SaleDetailModalComponent } from '../../shared/components/sale-detail-mo
 
 export type SaleStatusFilter = 'ALL' | SaleStatus;
 
-// POS-09: historial de ventas de todas las cajas, paginado en el servidor
+// POS-09: sales history of every session, paginated on the server
 @Component({
   selector: 'app-sales-history',
   standalone: true,
@@ -131,7 +131,7 @@ export class SalesHistoryComponent implements OnInit {
     this.loadSales();
   }
 
-  // POS-12: al asignar la última línea la venta deja de estar por asignar
+  // POS-12: assigning the last line takes the sale out of pending assignment
   onSaleUpdated(sale: Sale): void {
     if (this.pendingAssignment() && !(sale.items ?? []).some(i => i.assignmentStatus === 'POR_ASIGNAR')) {
       this.loadSales(this.currentPage());

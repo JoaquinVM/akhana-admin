@@ -467,7 +467,7 @@ class FinancialTransactionServiceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
                 tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
-        assertTrue(ex.getMessage().contains("Cuenta Joaco quedaría con saldo negativo (saldo disponible: 30.00 Bs)"));
+        assertTrue(ex.getMessage().contains("Cuenta Joaco quedaría con saldo negativo (saldo disponible: Bs 30,00)"));
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
     }
@@ -834,7 +834,7 @@ class FinancialTransactionServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
-        assertTrue(ex.getMessage().contains("mayor a 0.00"));
+        assertTrue(ex.getMessage().contains("mayor a Bs 0,00"));
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any(FinancialTransaction.class));
     }

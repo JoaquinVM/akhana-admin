@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { PAYMENT_STATUS_LABELS, Payables, Purchase, PurchasePaymentStatus } from '../../../../core/purchase/models/purchase.models';
 
-// COM-08: pedidos con saldo por proveedor; el saldo lo calcula el servidor
+// COM-08: purchases with a balance per supplier; the server computes the balance
 @Component({
   selector: 'app-payables-view',
   standalone: true,
@@ -15,7 +15,7 @@ export class PayablesViewComponent {
   private readonly purchaseService = inject(PurchaseService);
 
   supplierId = input<string>('');
-  // Cambia para volver a cargar tras un pago o una anulación
+  // Changes to reload after a payment or a void
   refreshKey = input<number>(0);
 
   open = output<Purchase>();

@@ -4,14 +4,14 @@
   size="xl"
   (close)="handleClose()">
   <div class="config-modal-body">
-    <!-- Columna Izquierda: Grupos con Drag & Drop -->
+    <!-- Left column: groups with drag and drop -->
     <div class="groups-pane">
       <div class="pane-header">
         <h4 class="pane-title">Grupos de Productos</h4>
         <span class="pane-subtitle">Arrastra para cambiar el orden</span>
       </div>
 
-      <!-- Formulario para crear nuevo grupo -->
+      <!-- Form to create a group -->
       <div class="new-group-box">
         <input
           type="text"
@@ -29,7 +29,7 @@
         </button>
       </div>
 
-      <!-- Lista de grupos reordenable con Drag & Drop -->
+      <!-- Group list sortable with drag and drop -->
       <div
         cdkDropList
         class="groups-drag-list"
@@ -75,7 +75,7 @@
       </div>
     </div>
 
-    <!-- Columna Derecha: Detalle y Asignación de Productos del Grupo Seleccionado -->
+    <!-- Right column: products of the selected group -->
     <div class="products-pane">
       @if (selectedGroup; as group) {
         <div class="pane-header">
@@ -85,7 +85,7 @@
           </div>
         </div>
 
-        <!-- Lista reordenable de productos asignados al grupo -->
+        <!-- Sortable list of the group's products -->
         <div class="group-products-section">
           <label class="section-label">Orden en el POS (Drag & Drop):</label>
           <div
@@ -133,7 +133,7 @@
           </div>
         </div>
 
-        <!-- Buscador para añadir productos desde el catálogo general -->
+        <!-- Search to add products from the catalog -->
         <div class="catalog-add-section">
           <label class="section-label">Añadir Productos del Catálogo General:</label>
           <div class="search-input-wrapper">

@@ -56,7 +56,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String CASH_TRANSFER_ONLY = "Solo se pueden anular desde el POS los ingresos y retiros de caja.";
     static final String SYSTEM_CATEGORY = "La categoría «%s» la registra el sistema (pagos de pedidos en Compras, devoluciones en Deudas, ajustes al abrir o cerrar la caja, ventas en el POS); elija otra categoría.";
     static final String CASH_ADJUSTMENT_MOVEMENT = "Los ajustes de caja se generan al abrir o cerrar la caja y no se pueden editar ni anular.";
-    static final String VOID_LEAVES_NEGATIVE = "No se puede anular: la cuenta %s quedaría con saldo negativo (saldo disponible: %s Bs). Anule primero los gastos o transferencias que usaron ese dinero.";
+    static final String VOID_LEAVES_NEGATIVE = "No se puede anular: la cuenta %s quedaría con saldo negativo (saldo disponible: %s). Anule primero los gastos o transferencias que usaron ese dinero.";
 
     @Override
     @Transactional(readOnly = true)
@@ -158,7 +158,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             requireManualCategory(category);
             builder.category(category);
 
-            // Afectar saldo
+            // Apply to the balance
             sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().add(amount));
             financialAccountRepository.save(sourceAccount);
 
@@ -174,7 +174,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             requireManualCategory(category);
             builder.category(category);
 
-            // Afectar saldo
+            // Apply to the balance
             sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().subtract(amount));
             financialAccountRepository.save(sourceAccount);
 
@@ -188,17 +188,17 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             FinancialAccount destinationAccount = activeAccount(accounts, request.getDestinationAccountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cuenta destino no encontrada con ID: " + request.getDestinationAccountId()));
 
-            // Validar saldo suficiente
+            // Enough balance in the source account
             if (sourceAccount.getCurrentBalance().compareTo(amount) < 0) {
                 throw new IllegalStateException(String.format(
-                        "Saldo insuficiente en la cuenta origen (%s). Saldo disponible: %.2f Bs, monto a transferir: %.2f Bs.",
-                        sourceAccount.getName(), sourceAccount.getCurrentBalance(), amount
+                        "Saldo insuficiente en la cuenta origen (%s). Saldo disponible: %s; monto a transferir: %s.",
+                        sourceAccount.getName(), StoreFormat.money(sourceAccount.getCurrentBalance()), StoreFormat.money(amount)
                 ));
             }
 
             builder.destinationAccount(destinationAccount);
 
-            // Afectar ambos saldos
+            // Apply to both balances
             sourceAccount.setCurrentBalance(sourceAccount.getCurrentBalance().subtract(amount));
             destinationAccount.setCurrentBalance(destinationAccount.getCurrentBalance().add(amount));
             financialAccountRepository.save(sourceAccount);
@@ -418,7 +418,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 tx.getSourceAccount() != null ? tx.getSourceAccount().getId() : null,
                 tx.getDestinationAccount() != null ? tx.getDestinationAccount().getId() : null);
 
-        // Revertir impacto en los saldos
+        // Revert the effect on the balances
         BigDecimal amount = tx.getAmount();
         FinancialAccount source = tx.getSourceAccount();
 
@@ -459,7 +459,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static BigDecimal normalizeAmount(BigDecimal amount) {
         BigDecimal normalized = amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : null;
         if (normalized == null || normalized.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto debe ser estrictamente mayor a 0.00 Bs.");
+            throw new IllegalArgumentException("El monto debe ser mayor a Bs 0,00.");
         }
         return normalized;
     }
@@ -485,7 +485,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private static void requireBalanceFor(FinancialAccount account, BigDecimal amount) {
         if (account.getCurrentBalance().compareTo(amount) < 0) {
             throw new IllegalStateException(String.format(VOID_LEAVES_NEGATIVE, account.getName(),
-                    account.getCurrentBalance().setScale(2, RoundingMode.HALF_UP).toPlainString()));
+                    StoreFormat.money(account.getCurrentBalance())));
         }
     }
 
@@ -527,11 +527,11 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     }
 
     private Instant getDefaultStartDate() {
-        return YearMonth.now(PurchaseServiceImpl.STORE_ZONE).atDay(1).atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant();
+        return YearMonth.now(StoreFormat.STORE_ZONE).atDay(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
     }
 
     private Instant getDefaultEndDate() {
-        return LocalDate.now(PurchaseServiceImpl.STORE_ZONE).atTime(23, 59, 59, 999_999_999).atZone(PurchaseServiceImpl.STORE_ZONE).toInstant();
+        return LocalDate.now(StoreFormat.STORE_ZONE).atTime(23, 59, 59, 999_999_999).atZone(StoreFormat.STORE_ZONE).toInstant();
     }
 
     private FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {

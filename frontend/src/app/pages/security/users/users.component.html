@@ -1,5 +1,5 @@
 <div class="users-page">
-  <!-- Encabezado de Página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-left">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -26,7 +26,7 @@
     </div>
   </header>
 
-  <!-- Barra de Filtros y Buscador -->
+  <!-- Filters and search bar -->
   <div class="filters-card">
     <div class="search-box">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,7 +56,7 @@
     </div>
   </div>
 
-  <!-- Mensajes de Error de Red -->
+  <!-- Network error messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
@@ -68,7 +68,7 @@
     </div>
   }
 
-  <!-- Tabla de Usuarios -->
+  <!-- Users table -->
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -139,7 +139,7 @@
                 </td>
                 <td style="text-align: right">
                   <div class="table-actions" style="justify-content: flex-end">
-                    <!-- 1. Ver Auditoría de 6 Campos -->
+                    <!-- 1. View audit (6 fields) -->
                     <button
                       type="button"
                       class="btn-icon btn-audit"
@@ -152,7 +152,7 @@
                       </svg>
                     </button>
 
-                    <!-- 2. Editar Usuario -->
+                    <!-- 2. Edit user -->
                     <button
                       type="button"
                       class="btn-icon btn-edit"
@@ -165,7 +165,7 @@
                       </svg>
                     </button>
 
-                    <!-- 3. Dar de Baja (Eliminación Lógica) -->
+                    <!-- 3. Delete (logical) -->
                     <button
                       type="button"
                       class="btn-icon btn-delete"
@@ -188,7 +188,7 @@
       </table>
     </div>
 
-    <!-- Paginación -->
+    <!-- Pagination -->
     @if (totalPages() > 1) {
       <div class="pagination-container">
         <div class="pagination-info">
@@ -214,7 +214,7 @@
     }
   </div>
 
-  <!-- Modal de Creación de Usuario -->
+  <!-- Create user modal -->
   <app-modal
     [isOpen]="isCreateModalOpen()"
     title="Registrar Nuevo Usuario"
@@ -272,10 +272,10 @@
             type="password"
             class="form-control"
             formControlName="password"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
           />
           @if (createForm.get('password')?.touched && createForm.get('password')?.errors) {
-            <span class="form-error">La contraseña debe tener al menos 6 caracteres.</span>
+            <span class="form-error">La contraseña debe tener entre 8 y 100 caracteres.</span>
           }
         </div>
 
@@ -296,7 +296,7 @@
         </div>
       </div>
 
-      <!-- Rol: agrupa los permisos por acción -->
+      <!-- Role: groups the permissions -->
       <div class="permissions-section">
         <div class="permissions-header">
           <div>
@@ -339,7 +339,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal de Edición de Usuario con Detección Ergonómica de Cambios -->
+  <!-- Edit user modal with change detection -->
   <app-modal
     [isOpen]="isEditModalOpen()"
     title="Editar Usuario"
@@ -354,7 +354,7 @@
 
     <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
       <div class="form-row">
-        <!-- Campo Username Inmutable de Solo Lectura -->
+        <!-- Username field, immutable and read-only -->
         <div class="form-group flex-1">
           <label class="form-label" for="edit-username">
             <span>Nombre de Usuario</span>
@@ -373,7 +373,7 @@
           <span class="form-hint">El nombre de usuario no puede ser modificado por seguridad.</span>
         </div>
 
-        <!-- Campo Nombre Completo con Detección de Cambios -->
+        <!-- Full name field with change detection -->
         <div class="form-group flex-1">
           <label class="form-label" for="edit-fullName">
             <span>Nombre Completo <span class="required-mark">*</span></span>
@@ -395,7 +395,7 @@
         </div>
       </div>
 
-      <!-- Rol: agrupa los permisos por acción -->
+      <!-- Role: groups the permissions -->
       <div class="permissions-section" [class.is-modified]="isFieldModified('role')">
         <div class="permissions-header">
           <div>
@@ -441,7 +441,7 @@
     </form>
   </app-modal>
 
-  <!-- Modal de Confirmación de Descarte de Cambios -->
+  <!-- Discard changes confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     title="Descartar Modificaciones"
@@ -453,7 +453,7 @@
     (cancel)="cancelDiscard()">
   </app-confirm-modal>
 
-  <!-- Modal de Confirmación de Eliminación Lógica -->
+  <!-- Logical delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDeleteModalOpen()"
     title="Dar de Baja a Usuario"
@@ -466,7 +466,7 @@
     (cancel)="cancelDelete()">
   </app-confirm-modal>
 
-  <!-- Modal de Auditoría de 6 Campos (Reutilizado) -->
+  <!-- Shared audit modal (6 fields) -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     title="Auditoría de Usuario"

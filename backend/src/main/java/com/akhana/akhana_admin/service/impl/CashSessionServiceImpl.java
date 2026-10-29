@@ -19,10 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -39,9 +44,16 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
-    static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (Bs %s). Indique el motivo en el comentario de apertura.";
-    static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (Bs %s). Indique el motivo en el comentario de apertura.";
+    static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (%s). Indique el motivo en el comentario de apertura.";
+    static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (%s). Indique el motivo en el comentario de apertura.";
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
+    static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrija el conteo o deje los cortes vacíos.";
+    static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.";
+    static final String CUT_DENOMINATION_REPEATED = "El corte de %s está repetido.";
+    // CAJ-04: the bills and coins of the count
+    static final List<BigDecimal> DENOMINATIONS = Stream.of("200", "100", "50", "20", "10", "5", "2", "1", "0.50", "0.20", "0.10")
+        .map(value -> new BigDecimal(value).setScale(2, RoundingMode.HALF_UP))
+        .toList();
 
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
@@ -59,7 +71,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         if (openingAmount.compareTo(proposal.proposedAmount()) != 0 && openingComment == null) {
             throw new IllegalArgumentException(String.format(
                 proposal.previousSessionNumber() != null ? OPENING_COMMENT_REQUIRED : FIRST_OPENING_COMMENT_REQUIRED,
-                proposal.proposedAmount().toPlainString()));
+                StoreFormat.money(proposal.proposedAmount())));
         }
 
         CashSession session = CashSession.builder()
@@ -104,12 +116,17 @@ public class CashSessionServiceImpl implements CashSessionService {
     @Override
     @Transactional(readOnly = true)
     public CashSessionSummaryResponse getCurrentSession() {
-        CashSession session = cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)
+        return findCurrentSession()
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta actualmente."));
+    }
 
-        expectedCashCalculator.refresh(session);
-        long salesCount = saleRepository.countByCashSessionId(session.getId());
-        return mapToSummary(session, salesCount);
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CashSessionSummaryResponse> findCurrentSession() {
+        return cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA).map(session -> {
+            expectedCashCalculator.refresh(session);
+            return mapToSummary(session, saleRepository.countByCashSessionId(session.getId()));
+        });
     }
 
     @Override
@@ -118,36 +135,23 @@ public class CashSessionServiceImpl implements CashSessionService {
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));
 
         BigDecimal closingAmount = request.closingAmount().setScale(2, RoundingMode.HALF_UP);
+        List<CashDenominationCut> cuts = buildCuts(session, request.cuts(), closingAmount);
         BigDecimal expectedCash = expectedCashCalculator.calculate(session);
         BigDecimal difference = closingAmount.subtract(expectedCash).setScale(2, RoundingMode.HALF_UP);
 
         session.setClosingAmount(closingAmount);
-        session.setClosingComment(request.closingComment() != null ? request.closingComment().trim() : null);
+        session.setClosingComment(request.closingComment() != null && !request.closingComment().isBlank()
+            ? request.closingComment().trim() : null);
         session.setClosedBy(username);
         session.setClosedAt(Instant.now());
         session.setStatus(CashSessionStatus.CERRADA);
         session.setExpectedCash(expectedCash);
         session.setDifference(difference);
 
-        // Persistir cortes opcionales si fueron provistos
-        if (request.cuts() != null && !request.cuts().isEmpty()) {
+        // The optional count by bills and coins (CAJ-04)
+        if (!cuts.isEmpty()) {
             session.getCuts().clear();
-            for (CashCutDto cutDto : request.cuts()) {
-                int cashQty = cutDto.cashQuantity() != null ? cutDto.cashQuantity() : 0;
-                int reserveQty = cutDto.reserveQuantity() != null ? cutDto.reserveQuantity() : 0;
-                BigDecimal denom = cutDto.denomination().setScale(2, RoundingMode.HALF_UP);
-                BigDecimal subtotal = denom.multiply(BigDecimal.valueOf(cashQty + reserveQty)).setScale(2, RoundingMode.HALF_UP);
-
-                CashDenominationCut cut = CashDenominationCut.builder()
-                    .cashSession(session)
-                    .denomination(denom)
-                    .cashQuantity(cashQty)
-                    .reserveQuantity(reserveQty)
-                    .subtotal(subtotal)
-                    .build();
-
-                session.getCuts().add(cut);
-            }
+            session.getCuts().addAll(cuts);
         }
 
         CashSession closed = cashSessionRepository.save(session);
@@ -220,6 +224,45 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getHistoricalOtherOutflow(),
             session.getHistoricalInternalOutflow()
         );
+    }
+
+    // CAJ-04: the count by bills and coins is optional, but when given it must add up to the counted amount, so
+    // the history never shows a count that disagrees with the closing. Empty rows are left out
+    public static List<CashDenominationCut> buildCuts(CashSession session, List<CashCutDto> requested, BigDecimal closingAmount) {
+        if (requested == null || requested.isEmpty()) {
+            return List.of();
+        }
+        List<CashDenominationCut> cuts = new ArrayList<>();
+        Set<BigDecimal> seen = new HashSet<>();
+        BigDecimal total = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        for (CashCutDto cutDto : requested) {
+            BigDecimal denomination = cutDto.denomination().setScale(2, RoundingMode.HALF_UP);
+            if (!DENOMINATIONS.contains(denomination)) {
+                throw new IllegalArgumentException(String.format(CUT_DENOMINATION_INVALID, StoreFormat.money(denomination)));
+            }
+            if (!seen.add(denomination)) {
+                throw new IllegalArgumentException(String.format(CUT_DENOMINATION_REPEATED, StoreFormat.money(denomination)));
+            }
+            int cashQty = cutDto.cashQuantity() != null ? cutDto.cashQuantity() : 0;
+            int reserveQty = cutDto.reserveQuantity() != null ? cutDto.reserveQuantity() : 0;
+            if (cashQty + reserveQty == 0) {
+                continue;
+            }
+            BigDecimal subtotal = denomination.multiply(BigDecimal.valueOf(cashQty + reserveQty)).setScale(2, RoundingMode.HALF_UP);
+            total = total.add(subtotal);
+            cuts.add(CashDenominationCut.builder()
+                .cashSession(session)
+                .denomination(denomination)
+                .cashQuantity(cashQty)
+                .reserveQuantity(reserveQty)
+                .subtotal(subtotal)
+                .build());
+        }
+        if (!cuts.isEmpty() && total.compareTo(closingAmount) != 0) {
+            throw new IllegalArgumentException(String.format(CUTS_MISMATCH, StoreFormat.money(total),
+                StoreFormat.money(closingAmount)));
+        }
+        return cuts;
     }
 
     // CAJ-09: the difference goes to Caja as an Ajuste income (surplus) or expense (shortage) so its balance

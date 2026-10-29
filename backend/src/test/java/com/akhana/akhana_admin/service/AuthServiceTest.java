@@ -80,7 +80,7 @@ class AuthServiceTest {
         assertThat(response.id()).isEqualTo(activeUser.getId());
         assertThat(response.username()).isEqualTo("admin");
         assertThat(response.role()).isEqualTo(Role.ADMINISTRATOR);
-        assertThat(response.message()).isEqualTo("Authentication successful");
+        assertThat(response.message()).isEqualTo("Sesión iniciada.");
 
         verify(userRepository, times(1)).findByUsername("admin");
         verify(passwordEncoder, times(1)).matches("12345admin", activeUser.getPassword());
@@ -96,7 +96,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(request, IP))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("Invalid username or password");
+            .hasMessage("Usuario o contraseña incorrectos.");
 
         verify(userRepository, times(1)).findByUsername("nonexistent");
         verifyNoInteractions(passwordEncoder);
@@ -113,7 +113,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(request, IP))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("Invalid username or password");
+            .hasMessage("Usuario o contraseña incorrectos.");
 
         verify(userRepository, times(1)).findByUsername("admin");
         verify(passwordEncoder, times(1)).matches("wrongPassword", activeUser.getPassword());
@@ -137,7 +137,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(request, IP))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("Invalid username or password");
+            .hasMessage("Usuario o contraseña incorrectos.");
 
         verify(userRepository, times(1)).findByUsername("seller");
         verifyNoInteractions(passwordEncoder);
@@ -155,7 +155,7 @@ class AuthServiceTest {
         LoginResponse response = authService.login(new LoginRequest("admin", "initial-pass"), IP);
 
         assertThat(response.mustChangePassword()).isTrue();
-        assertThat(response.message()).isEqualTo("Password change required");
+        assertThat(response.message()).isEqualTo("Debe cambiar su contraseña.");
     }
 
     @Test
@@ -182,7 +182,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("wrong", "new-strong-pass")))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("La contraseña actual no es correcta");
+            .hasMessage("La contraseña actual no es correcta.");
         verify(userRepository, never()).save(any());
     }
 
@@ -194,7 +194,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("same-password", "same-password")))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("La nueva contraseña debe ser distinta de la actual");
+            .hasMessage("La nueva contraseña debe ser distinta de la actual.");
         verify(userRepository, never()).save(any());
     }
 
@@ -207,7 +207,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "Administrador")))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("La nueva contraseña no puede ser igual al nombre de usuario");
+            .hasMessage("La contraseña no puede ser igual al nombre de usuario.");
         verify(userRepository, never()).save(any());
     }
     private static final String BLOCKED_MESSAGE = "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente.";
@@ -298,7 +298,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("ghost", "wrong"), IP))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("Invalid username or password");
+            .hasMessage("Usuario o contraseña incorrectos.");
         failLogins("ghost", IP, 3);
         assertThatThrownBy(() -> authService.login(new LoginRequest("ghost", "wrong"), IP))
             .isInstanceOf(LoginBlockedException.class)

@@ -19,7 +19,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByUsernameAndDeletedAtIsNull(String username);
 
-    boolean existsByUsername(String username);
+    // Usernames are unique without case, deleted users included (USR-01)
+    boolean existsByUsernameIgnoreCase(String username);
 
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL AND " +
            "(:term IS NULL OR :term = '' OR " +

@@ -23,7 +23,7 @@ export class OpenCashModalComponent {
   close = output<void>();
   confirmed = output<OpenCashRequest>();
 
-  // CAJ-10: cierre de la caja anterior, o el saldo de Caja en la primera caja; null mientras carga
+  // CAJ-10: previous session's closing, or the Caja balance for the first session; null while loading
   proposal = signal<CashOpeningProposal | null>(null);
   amountChanged = signal<boolean>(false);
 
@@ -48,7 +48,7 @@ export class OpenCashModalComponent {
       }
     });
 
-    // El comentario pasa a ser obligatorio si el monto difiere del propuesto (el backend lo valida igual)
+    // The comment becomes required if the amount differs from the proposal (the backend validates it too)
     effect(() => {
       const amount = this.openingAmount();
       const proposal = this.proposal();

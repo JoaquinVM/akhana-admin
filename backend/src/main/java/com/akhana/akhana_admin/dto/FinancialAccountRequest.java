@@ -15,11 +15,11 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class FinancialAccountRequest {
 
-    @NotBlank(message = "El nombre de la cuenta es obligatorio")
-    @Size(max = 100, message = "El nombre no puede exceder 100 caracteres")
+    @NotBlank(message = "El nombre de la cuenta es obligatorio.")
+    @Size(max = 100, message = "El nombre no puede exceder 100 caracteres.")
     private String name;
 
-    @Size(max = 50, message = "El color no puede exceder 50 caracteres")
+    @Size(max = 50, message = "El color no puede exceder 50 caracteres.")
     private String color;
 
     private BigDecimal initialBalance;

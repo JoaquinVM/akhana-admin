@@ -1,5 +1,5 @@
 <div class="register-sale-page">
-  <!-- Cabecera de Página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -32,7 +32,7 @@
     </div>
   </header>
 
-  <!-- Banner de Error Operativo -->
+  <!-- Error banner -->
   @if (errorMessage(); as err) {
     <div class="feedback-banner error">
       <span class="feedback-icon">
@@ -52,11 +52,11 @@
     </div>
   }
 
-  <!-- Layout de Venta y Cobro en 2 Columnas -->
+  <!-- Sale and checkout two-column layout -->
   <div class="sale-workspace-grid">
-    <!-- Columna Izquierda: Catálogo y Productos Rápidos -->
+    <!-- Left column: catalog and quick products -->
     <div class="catalog-column">
-      <!-- Buscador Predictivo -->
+      <!-- Search with suggestions -->
       <div class="search-box-card">
         <div class="search-input-field">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-svg">
@@ -82,7 +82,7 @@
           }
         </div>
 
-        <!-- Dropdown con resultados en tiempo real -->
+        <!-- Live results dropdown -->
         @if (filteredSearchResults().length > 0) {
           <div class="search-dropdown-results">
             @for (prod of filteredSearchResults(); track prod.id) {
@@ -105,7 +105,7 @@
         }
       </div>
 
-      <!-- Productos Rápidos -->
+      <!-- Quick products -->
       <div class="quick-products-card">
         <div class="quick-header">
           <div class="quick-title-group">
@@ -177,9 +177,9 @@
       </div>
     </div>
 
-    <!-- Columna Derecha: Detalle de Venta y Cobro Directo en Pantalla -->
+    <!-- Right column: sale detail and checkout -->
     <div class="checkout-column">
-      <!-- Tarjeta de Carrito / Detalle de Productos -->
+      <!-- Cart card / product detail -->
       <div class="cart-card">
         <div class="cart-header">
           <div class="cart-title-wrap">
@@ -207,7 +207,7 @@
           }
         </div>
 
-        <!-- CON-02: toda la venta al costo (precio = costo, sin descuentos) -->
+        <!-- CON-02: the whole sale at cost (price = cost, no discounts) -->
         <label class="at-cost-toggle" [class.active]="atCost()">
           <input
             type="checkbox"
@@ -219,15 +219,15 @@
           </span>
         </label>
 
-        <!-- Líneas de ítems -->
+        <!-- Item lines -->
         <div class="cart-items-container">
           @for (item of cartItems(); track item.key) {
             <div class="cart-item-row">
-              <!-- Código y Nombre del producto -->
+              <!-- Product code and name -->
               <div class="item-identity">
                 <span class="item-code">{{ item.product.code }}</span>
                 <strong class="item-name" [title]="lineName(item)">{{ lineName(item) }}</strong>
-                <!-- CAT-11: la presentación se eligió al agregar; «Otro peso» va en kilos -->
+                <!-- CAT-11: the presentation was chosen when adding; «Otro peso» goes in kilos -->
                 @if (item.freeName) {
                   <span class="free-line-badge">{{ freeLineLabel(item) }}</span>
                 } @else if (item.presentation) {
@@ -237,7 +237,7 @@
                 }
               </div>
 
-              <!-- Control de Cantidad -->
+              <!-- Quantity control -->
               <div class="qty-stepper">
                 <button
                   type="button"
@@ -270,7 +270,7 @@
               </div>
 
               @if (!atCost() && !item.freeName) {
-                <!-- Descuento por unidad -->
+                <!-- Unit discount -->
                 <div class="item-discount-group">
                   <label class="discount-lbl">Desc/u:</label>
                   <div class="discount-input-wrap">
@@ -287,7 +287,7 @@
                 </div>
               }
 
-              <!-- Precios y Subtotal -->
+              <!-- Prices and subtotal -->
               <div class="item-price-summary">
                 <div class="unit-price-line">
                   @if (item.unitDiscount > 0) {
@@ -298,7 +298,7 @@
                 <strong class="item-subtotal">Bs {{ item.subtotal | number:'1.2-2' }}</strong>
               </div>
 
-              <!-- Quitar ítem -->
+              <!-- Remove item -->
               <button
                 type="button"
                 class="btn-remove-item"
@@ -325,7 +325,7 @@
           }
         </div>
 
-        <!-- Resumen Financiero -->
+        <!-- Money summary -->
         <div class="cart-summary-section">
           <div class="summary-line">
             <span class="sum-label">Subtotal Bruto:</span>
@@ -375,7 +375,7 @@
           </div>
         </div>
 
-        <!-- Botón para avanzar al Cobro (Paso Posterior vía Modal) -->
+        <!-- Button to go to checkout (next step, in a modal) -->
         <div class="cart-checkout-actions">
           <button
             type="button"
@@ -393,7 +393,7 @@
     </div>
   </div>
 
-  <!-- POS-11: nombre y precio de la línea libre -->
+  <!-- POS-11: name and price of the free line -->
   @if (freeLineProduct(); as product) {
     <app-modal
       [isOpen]="true"
@@ -407,7 +407,7 @@
     </app-modal>
   }
 
-  <!-- CAT-11: elegir la presentación de un producto por kilo -->
+  <!-- CAT-11: choose the presentation of a product by kilo -->
   @if (pickerProduct(); as product) {
     <app-modal
       [isOpen]="true"
@@ -422,7 +422,7 @@
     </app-modal>
   }
 
-  <!-- Modal de Cobro (Paso posterior al carrito) -->
+  <!-- Checkout modal (after the cart) -->
   <app-checkout-modal
     [isOpen]="isCheckoutModalOpen()"
     [totalAmount]="totalAmount()"
@@ -434,7 +434,7 @@
     (close)="closeCheckoutModal()"
     (confirmed)="submitSale($event)" />
 
-  <!-- Modal de Configuración Drag & Drop de Productos Rápidos -->
+  <!-- Quick products settings modal (drag and drop) -->
   <app-quick-products-config-modal
     [isOpen]="isConfigModalVisible()"
     (close)="closeConfigModal()" />

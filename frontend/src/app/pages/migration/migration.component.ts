@@ -7,7 +7,7 @@ import { buildXlsx } from '../../shared/utils/xlsx-writer';
 
 type FileKey = 'recaudaciones' | 'pedidos';
 
-// FIN-11: migración histórica de las dos planillas, una sola vez, en dos pasos: Revisar e Importar
+// FIN-11: one-time historical migration of both spreadsheets, in two steps: Revisar and Importar
 @Component({
   selector: 'app-migration',
   standalone: true,
@@ -28,13 +28,13 @@ export class MigrationComponent {
 
   canReview = computed(() => !!this.recaudaciones() && !!this.pedidos() && !!this.cutoffDate() && !this.isBusy());
 
-  // Todo entra completo o no entra: con una sola rechazada no se importa
+  // All or nothing: with a single rejected row nothing is imported
   canImport = computed(() => {
     const result = this.result();
     return !!result && !result.imported && result.rejected.length === 0 && !this.isBusy();
   });
 
-  // Movimientos por mes, para comparar con la tabla dinámica de Transacc.
+  // Movements per month, to compare with the Transacc. pivot table
   movementsByMonth = computed(() => {
     const groups = new Map<string, MigrationMovementTotal[]>();
     for (const movement of this.result()?.movements ?? []) {
@@ -94,7 +94,7 @@ export class MigrationComponent {
     return recaudaciones && pedidos && cutoffDate ? { recaudaciones, pedidos, cutoffDate } : null;
   }
 
-  // Otro archivo u otra fecha de corte: hay que volver a revisar
+  // Another file or cutoff date: it must be reviewed again
   private resetResult(): void {
     if (this.result()?.imported) return;
     this.result.set(null);

@@ -28,14 +28,14 @@ export class SuppliersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Estados Reactivos con Signals
+  // State as signals
   suppliers = signal<Supplier[]>([]);
   searchTerm = signal<string>('');
   selectedStatusFilter = signal<SupplierStatusFilter>('ACTIVE_INACTIVE');
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Modal Formulario (Creación / Edición)
+  // Form modal (create / edit)
   isFormModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedSupplierId = signal<string | null>(null);
@@ -44,15 +44,15 @@ export class SuppliersComponent implements OnInit {
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
 
-  // Modal Confirmación al Descartar Cambios
+  // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
 
-  // Modal Confirmación de Eliminación
+  // Delete confirmation modal
   isConfirmModalOpen = signal<boolean>(false);
   supplierToDelete = signal<Supplier | null>(null);
   isDeleting = signal<boolean>(false);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
@@ -65,7 +65,7 @@ export class SuppliersComponent implements OnInit {
     status: ['ACTIVO']
   });
 
-  // Lista de proveedores filtrada y ordenada por Nombre A-Z según estado seleccionado
+  // Suppliers filtered by the selected status and sorted by name A-Z
   filteredSuppliers = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const statusFilter = this.selectedStatusFilter();
@@ -92,13 +92,13 @@ export class SuppliersComponent implements OnInit {
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   });
 
-  // Señal computada para detectar cambios sin guardar
+  // Computed signal for unsaved changes
   hasFormChanges = computed<boolean>(() => {
     this.formVersion(); // Dependencia reactiva de cambios en el formulario
     const formVal = this.supplierForm.value;
 
     if (!this.isEditing()) {
-      // En Creación: Se considera que hay cambios si el usuario ingresó algún valor en cualquier campo
+      // Creating: there are changes if the user typed a value in any field
       const name = (formVal.name ?? '').toString().trim();
       const code = (formVal.code ?? '').toString().trim();
       const phone = (formVal.phone ?? '').toString().trim();
@@ -106,7 +106,7 @@ export class SuppliersComponent implements OnInit {
       return name.length > 0 || code.length > 0 || phone.length > 0 || description.length > 0;
     }
 
-    // En Edición: Comparar contra los valores originales cargados
+    // Editing: compare against the original values
     const orig = this.originalFormValues();
     if (!orig) return false;
 
@@ -118,7 +118,7 @@ export class SuppliersComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Escuchar cambios reactivos en el formulario para actualizar formVersion
+    // Listen to form changes to update formVersion
     this.supplierForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -158,7 +158,7 @@ export class SuppliersComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
-  // --- Identificación de Campos Modificados ---
+  // --- Modified fields ---
 
   isFieldModified(fieldName: string): boolean {
     this.formVersion();
@@ -176,7 +176,7 @@ export class SuppliersComponent implements OnInit {
     return currentVal !== origVal;
   }
 
-  // --- Apertura y Cierre de Modales ---
+  // --- Opening and closing modals ---
 
   openCreateModal(): void {
     this.isEditing.set(false);
@@ -220,7 +220,7 @@ export class SuppliersComponent implements OnInit {
     if (this.isSubmitting()) {
       return;
     }
-    // Si existen cambios sin guardar, solicitar confirmación
+    // With unsaved changes, ask for confirmation
     if (this.hasFormChanges()) {
       this.isDiscardConfirmOpen.set(true);
     } else {
@@ -252,7 +252,7 @@ export class SuppliersComponent implements OnInit {
   }
 
   saveSupplier(): void {
-    // En edición, si no hay cambios, no realizar submit
+    // When editing without changes, do not submit
     if (this.isEditing() && !this.hasFormChanges()) {
       return;
     }
@@ -284,7 +284,7 @@ export class SuppliersComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al actualizar el proveedor. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -299,7 +299,7 @@ export class SuppliersComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al crear el proveedor. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -307,7 +307,7 @@ export class SuppliersComponent implements OnInit {
     }
   }
 
-  // --- Eliminación Lógica ---
+  // --- Logical delete ---
 
   openDeleteModal(supplier: Supplier): void {
     if (supplier.status === 'ELIMINADO') {
@@ -333,7 +333,7 @@ export class SuppliersComponent implements OnInit {
         if (this.selectedStatusFilter() === 'ACTIVE_INACTIVE' || this.selectedStatusFilter() === 'ACTIVO' || this.selectedStatusFilter() === 'INACTIVO') {
           this.suppliers.update(prev => prev.filter(s => s.id !== supplier.id));
         } else {
-          // Si estamos en filtro ELIMINADO, actualizamos el registro
+          // With the ELIMINADO filter, update the record
           this.suppliers.update(prev => prev.map(s => s.id === supplier.id ? { ...s, status: 'ELIMINADO' as const } : s));
         }
         this.isDeleting.set(false);
@@ -348,7 +348,7 @@ export class SuppliersComponent implements OnInit {
     });
   }
 
-  // --- Auditoría ---
+  // --- Audit ---
 
   openAuditModal(supplier: Supplier): void {
     this.auditModalSubtitle.set(`${supplier.code} - ${supplier.name}`);

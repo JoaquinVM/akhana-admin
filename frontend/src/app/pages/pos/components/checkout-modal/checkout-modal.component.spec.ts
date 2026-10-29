@@ -35,6 +35,21 @@ describe('CheckoutModalComponent', () => {
     expect(component.isPaymentValid()).toBe(false); // insuficiente
   });
 
+  it('POS-04: el pago mixto exige efectivo y QR mayores a 0 y lo explica', () => {
+    component.setPaymentMethod('MIXTO');
+    expect(component.isPaymentValid()).toBe(true);
+    expect(component.mixedNeedsBothParts()).toBe(false);
+
+    component.onCashPortionChange(20); // all in cash
+    fixture.detectChanges();
+    expect(component.isPaymentValid()).toBe(false);
+    expect(component.mixedNeedsBothParts()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('elija Efectivo o QR');
+
+    component.onCashPortionChange(0); // all by QR
+    expect(component.isPaymentValid()).toBe(false);
+  });
+
   it('debe procesar el método de pago QR fijando el monto y sin cambio', () => {
     component.setPaymentMethod('QR');
 

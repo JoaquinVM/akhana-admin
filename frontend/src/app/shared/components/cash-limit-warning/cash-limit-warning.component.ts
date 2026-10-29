@@ -3,8 +3,8 @@ import { DecimalPipe } from '@angular/common';
 import { CashService } from '../../../core/cash/cash.service';
 
 /**
- * Aviso (sin bloquear) cuando una salida de Caja supera el efectivo esperado de la caja abierta (CAJ-03).
- * Se muestra solo si la salida es de Caja; el esperado lo calcula el servidor.
+ * Warning (not blocking) when money leaving Caja exceeds the expected cash of the open session (CAJ-03).
+ * Shown only when the money leaves Caja; the server computes the expected cash.
  */
 @Component({
   selector: 'app-cash-limit-warning',
@@ -23,7 +23,7 @@ export class CashLimitWarningComponent implements OnInit {
     const n = value === null || value === undefined || value === '' ? null : Number(value);
     this.amountSignal.set(n !== null && !isNaN(n) ? n : null);
   }
-  /** Falso cuando la salida no es de Caja (otra cuenta o una persona). */
+  /** False when the money does not leave Caja (another account or a person). */
   @Input() set fromCash(value: boolean) {
     this.fromCashSignal.set(value);
   }
@@ -37,7 +37,7 @@ export class CashLimitWarningComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // El esperado cambia con cada venta o gasto: se pide al abrir el formulario. Sin caja abierta no hay aviso.
+    // The expected cash changes with each sale or expense: it is fetched when the form opens. Without an open session there is no warning.
     this.cashService.getCurrentSession().subscribe({ error: () => undefined });
   }
 }

@@ -131,13 +131,23 @@ class CashSessionControllerTest {
     @Test
     @DisplayName("GET /api/cash-sessions/current - Debe retornar la caja activa")
     void getCurrentSession_success() throws Exception {
-        when(cashSessionService.getCurrentSession()).thenReturn(summaryResponse);
+        when(cashSessionService.findCurrentSession()).thenReturn(Optional.of(summaryResponse));
 
         mockMvc.perform(get("/api/cash-sessions/current")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("ABIERTA"))
             .andExpect(jsonPath("$.openedBy").value("admin"));
+    }
+
+    @Test
+    @DisplayName("GET /api/cash-sessions/current - Sin caja abierta responde 204, no un error")
+    void getCurrentSession_closed_returnsNoContent() throws Exception {
+        when(cashSessionService.findCurrentSession()).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/cash-sessions/current")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
+            .andExpect(status().isNoContent());
     }
 
     @Test

@@ -90,7 +90,7 @@ public class Product {
     @Builder.Default
     private List<ProductPresentation> presentations = new ArrayList<>();
 
-    // Campos de Auditoría
+    // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 

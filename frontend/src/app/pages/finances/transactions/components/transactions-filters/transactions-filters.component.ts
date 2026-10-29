@@ -6,7 +6,7 @@ import {
   FinancialTransactionType
 } from '../../../../../core/finance/models/finance.models';
 
-// Filtros del listado de transacciones; el padre guarda los valores y vuelve a consultar
+// Transaction list filters; the parent keeps the values and queries again
 @Component({
   selector: 'app-transactions-filters',
   standalone: true,

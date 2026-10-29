@@ -7,10 +7,10 @@ import jakarta.validation.constraints.Size;
 
 
 public record UpdateUserRequest(
-    @NotBlank(message = "El nombre completo es obligatorio")
-    @Size(min = 2, max = 150, message = "El nombre completo debe tener entre 2 y 150 caracteres")
+    @NotBlank(message = "El nombre completo es obligatorio.")
+    @Size(min = 2, max = 150, message = "El nombre completo debe tener entre 2 y 150 caracteres.")
     String fullName,
 
-    @NotNull(message = "El rol es obligatorio")
+    @NotNull(message = "El rol es obligatorio.")
     Role role
 ) {}

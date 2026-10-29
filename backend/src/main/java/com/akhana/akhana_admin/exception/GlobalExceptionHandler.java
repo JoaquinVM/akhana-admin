@@ -4,17 +4,25 @@ import com.akhana.akhana_admin.dto.ErrorResponse;
 import com.akhana.akhana_admin.service.ProductImportService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    static final String UNREADABLE_REQUEST = "Los datos enviados no son válidos; revise el formulario e intente de nuevo.";
+    static final String INVALID_PARAMETER = "El valor de «%s» no es válido.";
+    static final String MISSING_PARAMETER = "Falta el dato «%s».";
 
     @ExceptionHandler(AuthenticationFailedException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationFailed(AuthenticationFailedException ex) {
@@ -34,7 +42,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity
             .status(HttpStatus.FORBIDDEN)
-            .body(ErrorResponse.forbidden("No tiene permiso para realizar esta acción"));
+            .body(ErrorResponse.forbidden("No tiene permiso para realizar esta acción."));
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
@@ -66,14 +74,38 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.badRequest(ProductImportService.INVALID_FILE));
     }
 
+    // One message per field (the first broken rule), so a blank field does not also report its length
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
-            .map(FieldError::getDefaultMessage)
-            .collect(Collectors.joining(", "));
-
+        Map<String, String> byField = new LinkedHashMap<>();
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            byField.putIfAbsent(error.getField(), error.getDefaultMessage());
+        }
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponse.badRequest(errorMessage));
+            .body(ErrorResponse.badRequest(String.join(" ", byField.values())));
+    }
+
+    // A body that is not valid JSON or has a value of the wrong type, such as an unknown option
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.badRequest(UNREADABLE_REQUEST));
+    }
+
+    // A query or path parameter that cannot be read, such as a date that is not yyyy-mm-dd
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.badRequest(String.format(INVALID_PARAMETER, ex.getName())));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.badRequest(String.format(MISSING_PARAMETER, ex.getParameterName())));
     }
 }

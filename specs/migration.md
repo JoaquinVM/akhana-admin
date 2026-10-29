@@ -471,7 +471,8 @@ Construcción (rama `feat/migration`, 27-10-2026):
   venta de Mami, libra, producto en Gramo, «precio costo», regalo, transferencia, cierre con sobrante, pedidos
   pagado, a cuenta, por pagar con línea y en consignación, código inexistente, categoría inexistente, pedido sin
   proveedor, producto por kilo sin «Se vende por», fila posterior al corte, hoja faltante, segunda importación,
-  saldo y apertura sin históricos).
+  saldo y apertura sin históricos). Desde la segunda revisión (29-10-2026) la prueba se omite, en vez de fallar,
+  cuando la base ya tiene una importación (la local tras el ensayo): la importación es una sola vez.
 - [x] Frontend: pantalla Migración con Revisar / Importar, resultado y descarga de rechazadas; marca «Histórico»
   en ventas, cajas, pedidos y consumos.
 - [x] Validar con los `.xlsx` reales (arriba).

@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FinancialTransaction } from '../../../../../core/finance/models/finance.models';
 
-// Listado de transacciones financieras con sus acciones por fila
+// Money movements list with its row actions
 @Component({
   selector: 'app-transactions-table',
   standalone: true,
@@ -18,7 +18,7 @@ export class TransactionsTableComponent {
   voidRequested = output<FinancialTransaction>();
   auditRequested = output<FinancialTransaction>();
 
-  // Los movimientos históricos (FIN-11) no se editan ni se anulan; el servidor también los rechaza
+  // Historical movements (FIN-11) are never edited or voided; the server rejects it too
   canModify(tx: FinancialTransaction): boolean {
     return tx.status === 'ACTIVO' && !tx.historical;
   }

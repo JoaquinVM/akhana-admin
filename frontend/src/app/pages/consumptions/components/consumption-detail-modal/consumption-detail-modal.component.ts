@@ -5,7 +5,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
 import { Consumption } from '../../../../core/consumption/models/consumption.models';
 
-// CON-01: detalle de solo lectura con líneas y auditoría; la anulación no depende de la caja
+// CON-01: read-only detail with lines and audit; the void does not depend on the cash session
 @Component({
   selector: 'app-consumption-detail-modal',
   standalone: true,
@@ -18,7 +18,7 @@ export class ConsumptionDetailModalComponent {
 
   consumptionId = input<string | null>(null);
 
-  // Emite el consumo anulado para refrescar el listado
+  // Emits the voided consumption to refresh the list
   updated = output<Consumption>();
   close = output<void>();
 

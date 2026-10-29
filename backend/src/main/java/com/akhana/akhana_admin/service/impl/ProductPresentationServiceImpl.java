@@ -66,7 +66,7 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
         List<ProductPresentation> fixed = active.stream().filter(p -> p.getFixedPrice() != null).toList();
         if (priceChanged && !fixed.isEmpty()) {
             warnings.add("Estas presentaciones tienen precio fijo y no cambian: " + fixed.stream()
-                .map(p -> p.getName() + " (Bs " + amount(p.getFixedPrice()) + ")")
+                .map(p -> p.getName() + " (" + StoreFormat.money(p.getFixedPrice()) + ")")
                 .collect(Collectors.joining(", ")) + ".");
         }
         return warnings;
@@ -193,7 +193,7 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
             }
             if (!weights.add(presentation.getWeightKg().setScale(3, RoundingMode.UNNECESSARY))) {
                 throw new IllegalArgumentException("Ya existe una presentación de "
-                    + presentation.getWeightKg().setScale(3, RoundingMode.UNNECESSARY).toPlainString().replace('.', ',')
+                    + StoreFormat.number(presentation.getWeightKg(), 3)
                     + " kg en este producto.");
             }
         }
@@ -241,9 +241,5 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
         presentation.setUpdatedBy(username);
         presentation.setUpdatedAt(now);
         return presentation;
-    }
-
-    private static String amount(BigDecimal value) {
-        return value.setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',');
     }
 }

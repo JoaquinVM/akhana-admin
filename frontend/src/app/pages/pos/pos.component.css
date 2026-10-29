@@ -81,7 +81,7 @@
   gap: 0.75rem;
 }
 
-/* Banner de Feedback */
+/* Feedback banner */
 .feedback-banner {
   display: flex;
   align-items: center;
@@ -139,7 +139,7 @@
   height: 14px;
 }
 
-/* Estado de Carga */
+/* Loading state */
 .loading-state-card {
   display: flex;
   flex-direction: column;
@@ -166,7 +166,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* Estado: Caja Cerrada / Hero */
+/* State: cash closed / hero */
 .pos-closed-card {
   display: flex;
   flex-direction: column;
@@ -225,14 +225,14 @@
   flex-shrink: 0;
 }
 
-/* Estado: Caja Abierta / Workspace */
+/* State: cash open / workspace */
 .pos-active-workspace {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-/* Grid de Métricas Financieras (KPIs) */
+/* Money KPI grid */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -313,7 +313,7 @@
   font-weight: 500;
 }
 
-/* Card de Transacciones de la Sesión */
+/* Session transactions card */
 .transactions-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -440,7 +440,7 @@
   justify-content: center;
 }
 
-/* Distintivos de Estado de Venta */
+/* Sale status badges */
 .status-badge-sale {
   display: inline-flex;
   align-items: center;
@@ -475,7 +475,7 @@
   font-size: 0.8125rem;
 }
 
-/* Botones de acción en tabla */
+/* Table action buttons */
 .table-actions {
   display: flex;
   align-items: center;
@@ -507,7 +507,7 @@
   color: #94a3b8;
 }
 
-/* Botones Auxiliares */
+/* Helper buttons */
 .btn-lg {
   padding: 0.75rem 1.75rem;
   font-size: 1rem;
@@ -546,7 +546,7 @@
   border-top: 1px solid #f1f5f9;
 }
 
-/* Categoría con Color Pill */
+/* Category color pill */
 .category-color-pill {
   display: inline-flex;
   align-items: center;
@@ -576,7 +576,7 @@
   text-overflow: ellipsis;
 }
 
-/* Monto y Descripción de Gasto */
+/* Expense amount and description */
 .expense-amount-val {
   color: #dc2626;
   font-family: var(--font-mono, monospace);
@@ -597,7 +597,7 @@
   margin-top: 0.15rem;
 }
 
-/* Validaciones y Marcas de Formulario */
+/* Form validation marks */
 .required-mark {
   color: var(--color-danger, #dc2626);
   font-weight: bold;
@@ -621,7 +621,7 @@
   font-weight: 500;
 }
 
-/* Modal Anulación de Gasto */
+/* Expense void modal */
 .void-warning-text {
   font-size: 0.875rem;
   color: #475569;

@@ -63,7 +63,7 @@ class UserServiceTest {
                 Role.OPERATOR
         );
 
-        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByUsernameIgnoreCase("newuser")).thenReturn(false);
         when(passwordEncoder.encode("raw_password")).thenReturn("encoded_pass");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User u = invocation.getArgument(0);
@@ -92,9 +92,30 @@ class UserServiceTest {
                 Role.OPERATOR
         );
 
-        when(userRepository.existsByUsername("testuser")).thenReturn(true);
+        when(userRepository.existsByUsernameIgnoreCase("testuser")).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> userService.createUser(request, "admin"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_usernameDiffersOnlyInCase_throwsException() {
+        // USR-01: «Operador_QA» is taken when «operador_qa» exists
+        CreateUserRequest request = new CreateUserRequest("Otro", "Operador_QA", "raw_password", Role.OPERATOR);
+        when(userRepository.existsByUsernameIgnoreCase("Operador_QA")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> userService.createUser(request, "admin"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_passwordEqualsUsername_throwsException() {
+        CreateUserRequest request = new CreateUserRequest("Nuevo", "cajero01", "CAJERO01", Role.OPERATOR);
+        when(userRepository.existsByUsernameIgnoreCase("cajero01")).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> userService.createUser(request, "admin"));
+        assertEquals("La contraseña no puede ser igual al nombre de usuario.", ex.getMessage());
         verify(userRepository, never()).save(any());
     }
 

@@ -24,6 +24,7 @@ import {
   FinancialTransaction,
   VoidFinancialTransactionRequest
 } from '../../core/finance/models/finance.models';
+import { formatBs } from '../../shared/utils/money';
 
 @Component({
   selector: 'app-pos',
@@ -50,10 +51,10 @@ export class PosComponent implements OnInit {
   private readonly saleService = inject(SaleService);
   private readonly transactionService = inject(FinancialTransactionService);
 
-  // Selector de vista: Ventas, Compras o Ingresos/Retiros de caja
+  // View selector: Ventas, Compras or Ingresos/Retiros de caja
   activeTab = signal<'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'>('VENTAS');
 
-  // Estados de visibilidad de modales
+  // Modal visibility
   isOpenModalVisible = signal<boolean>(false);
   isCloseModalVisible = signal<boolean>(false);
   isInfoModalVisible = signal<boolean>(false);
@@ -69,14 +70,14 @@ export class PosComponent implements OnInit {
   feedbackMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
   recentSales = signal<Sale[]>([]);
 
-  // Compras y Gastos de la sesión
+  // Purchases and expenses of the session
   recentExpenses = signal<FinancialTransaction[]>([]);
   isLoadingExpenses = signal<boolean>(false);
 
-  // Ingresos y retiros de caja de la sesión (CAJ-08)
+  // Cash ins and outs of the session (CAJ-08)
   recentTransfers = signal<FinancialTransaction[]>([]);
 
-  // Computados de gastos (los gastos anulados no se cuentan como activos)
+  // Expense totals (voided expenses do not count)
   activeExpenses = computed(() =>
     this.recentExpenses().filter((e) => e.status === 'ACTIVO')
   );
@@ -85,10 +86,10 @@ export class PosComponent implements OnInit {
     this.activeExpenses().reduce((sum, e) => sum + e.amount, 0)
   );
 
-  // Efectivo esperado en gaveta: lo calcula el servidor (CAJ-03: incluye gastos y transferencias de Caja)
+  // Expected cash in the drawer: computed by the server (CAJ-03: includes Caja expenses and transfers)
   expectedCashInDrawer = computed(() => Number(this.cashService.currentSession()?.expectedCash) || 0);
 
-  // Modal de anulación de gastos
+  // Expense void modal
   selectedExpenseToVoid = signal<FinancialTransaction | null>(null);
   isVoidExpenseModalVisible = signal<boolean>(false);
   voidExpenseReason = signal<string>('');
@@ -135,7 +136,7 @@ export class PosComponent implements OnInit {
     this.isLoadingExpenses.set(true);
     this.transactionService.getExpensesByCashSession(sessionId).subscribe({
       next: (movements) => {
-        // La sesión vincula gastos y transferencias de Caja; cada pestaña muestra los suyos
+        // The session links Caja expenses and transfers; each tab shows its own
         this.recentExpenses.set((movements || []).filter((m) => m.type === 'GASTO_MANUAL'));
         this.recentTransfers.set((movements || []).filter((m) => m.type === 'TRANSFERENCIA'));
         this.isLoadingExpenses.set(false);
@@ -148,7 +149,7 @@ export class PosComponent implements OnInit {
     });
   }
 
-  // Tras registrar o anular un ingreso/retiro: refresca movimientos y el efectivo esperado
+  // After registering or voiding a cash in/out: refresh movements and the expected cash
   onCashTransfersChanged(message: string): void {
     this.showFeedback('success', message);
     this.loadCurrentSession();
@@ -168,7 +169,7 @@ export class PosComponent implements OnInit {
     });
   }
 
-  // Navegación hacia pantalla de Registro de Venta
+  // Navigation to the register-sale screen
   navigateToRegisterSale(): void {
     if (!this.cashService.currentSession()) {
       this.showFeedback('error', 'No se pueden registrar ventas con la caja cerrada. Abre una caja primero.');
@@ -177,12 +178,12 @@ export class PosComponent implements OnInit {
     this.router.navigate(['/pos/sale']);
   }
 
-  // Compatibilidad con pruebas previas
+  // Kept for older tests
   openSaleModal(): void {
     this.navigateToRegisterSale();
   }
 
-  // Consulta de Detalle de Venta
+  // Sale detail lookup
   openDetailModal(sale: Sale): void {
     this.selectedSaleForDetailId.set(sale.id);
     this.selectedSaleForDetail.set(sale);
@@ -195,7 +196,7 @@ export class PosComponent implements OnInit {
     this.isDetailModalVisible.set(false);
   }
 
-  // Anulación de Ventas
+  // Sale void
   openVoidModal(sale: Sale): void {
     if (sale.status === 'ANULADA') return;
     if (!this.cashService.currentSession()) {
@@ -235,7 +236,7 @@ export class PosComponent implements OnInit {
     });
   }
 
-  // Modales y Acciones Operativas de Caja
+  // Cash session modals and actions
   openInfoModal(): void {
     this.isInfoModalVisible.set(true);
   }
@@ -300,7 +301,7 @@ export class PosComponent implements OnInit {
     });
   }
 
-  // Gasto de Caja Directo
+  // Direct cash expense
   openCashExpenseModal(): void {
     if (!this.cashService.currentSession()) {
       this.showFeedback('error', 'No se puede registrar un gasto con la caja cerrada.');
@@ -323,7 +324,7 @@ export class PosComponent implements OnInit {
     this.loadCurrentSession();
   }
 
-  // Anulación de Gasto
+  // Expense void
   openVoidExpenseModal(tx: FinancialTransaction): void {
     if (tx.status === 'ANULADO') return;
     if (!this.cashService.currentSession()) {
@@ -358,7 +359,7 @@ export class PosComponent implements OnInit {
       next: (updatedTx) => {
         this.isActionLoading.set(false);
         this.closeVoidExpenseModal();
-        this.showFeedback('success', `Gasto de Bs. ${updatedTx.amount.toFixed(2)} anulado exitosamente.`);
+        this.showFeedback('success', `Gasto de ${formatBs(updatedTx.amount)} anulado exitosamente.`);
         const session = this.cashService.currentSession();
         if (session) {
           this.loadExpensesForSession(session.id);

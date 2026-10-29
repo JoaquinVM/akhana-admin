@@ -9,10 +9,11 @@ import {
 } from '../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
+import { formatBs } from '../../../../shared/utils/money';
 
 /**
- * Ingresos y retiros de caja del turno (CAJ-08): cada uno es una transferencia entre Caja y otra cuenta.
- * Lista los de la caja abierta, los registra y los anula; avisa al POS para refrescar la caja.
+ * Cash ins and outs of the shift (CAJ-08): each one is a transfer between Caja and another account.
+ * Lists those of the open session, registers and voids them; tells the POS to refresh the session.
  */
 @Component({
   selector: 'app-cash-transfers',
@@ -32,7 +33,7 @@ export class CashTransfersComponent {
   }
   @Input() canOperate = false;
 
-  /** Emite el mensaje de éxito después de registrar o anular. */
+  /** Emits the success message after registering or voiding. */
   @Output() changed = new EventEmitter<string>();
 
   readonly items = this.transfersSignal.asReadonly();
@@ -61,12 +62,12 @@ export class CashTransfersComponent {
   voidReason = signal<string>('');
   voidError = signal<string | null>(null);
 
-  /** Un ingreso entra a Caja; un retiro sale de Caja. */
+  /** A cash in enters Caja; a cash out leaves Caja. */
   directionOf(tx: FinancialTransaction): CashTransferDirection {
     return tx.destinationAccount?.cashAccount ? 'INGRESO' : 'RETIRO';
   }
 
-  /** La cuenta que no es Caja. */
+  /** The account that is not Caja. */
   otherAccountOf(tx: FinancialTransaction): string {
     const other = this.directionOf(tx) === 'INGRESO' ? tx.sourceAccount : tx.destinationAccount;
     return other?.name || '-';
@@ -112,7 +113,7 @@ export class CashTransfersComponent {
         this.isLoading.set(false);
         this.closeForm();
         const label = this.formDirection() === 'INGRESO' ? 'Ingreso' : 'Retiro';
-        this.changed.emit(`${label} de caja de Bs. ${tx.amount.toFixed(2)} registrado exitosamente.`);
+        this.changed.emit(`${label} de caja de ${formatBs(tx.amount)} registrado exitosamente.`);
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -142,7 +143,7 @@ export class CashTransfersComponent {
       next: (updated) => {
         this.isLoading.set(false);
         this.closeVoid();
-        this.changed.emit(`Movimiento de caja de Bs. ${updated.amount.toFixed(2)} anulado exitosamente.`);
+        this.changed.emit(`Movimiento de caja de ${formatBs(updated.amount)} anulado exitosamente.`);
       },
       error: (err) => {
         this.isLoading.set(false);

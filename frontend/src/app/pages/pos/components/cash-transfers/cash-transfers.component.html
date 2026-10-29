@@ -96,7 +96,7 @@
   }
 </div>
 
-<!-- Modal Registrar Ingreso / Retiro -->
+<!-- Register cash in / out modal -->
 <app-modal
   [isOpen]="isFormVisible()"
   [title]="formDirection() === 'INGRESO' ? 'Ingreso a Caja' : 'Retiro de Caja'"
@@ -179,11 +179,11 @@
   </form>
 </app-modal>
 
-<!-- Modal Anular Ingreso / Retiro -->
+<!-- Cash in / out void modal -->
 <app-modal
   [isOpen]="!!transferToVoid()"
   title="Anular movimiento de caja"
-  [subtitle]="transferToVoid() ? (transferToVoid()!.description + ' - Bs. ' + (transferToVoid()!.amount | number:'1.2-2')) : ''"
+  [subtitle]="transferToVoid() ? (transferToVoid()!.description + ' - Bs ' + (transferToVoid()!.amount | number:'1.2-2')) : ''"
   [size]="'md'"
   (close)="closeVoid()">
   @if (voidError()) {

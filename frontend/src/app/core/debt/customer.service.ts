@@ -17,7 +17,7 @@ export class CustomerService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/customers';
 
-  // Sin estado: activos e inactivos (sin eliminados). El POS lee los activos para la venta a crédito
+  // Without status: active and inactive (deleted left out). The POS reads the active ones for credit sales
   getCustomers(status: CustomerStatus | null = null, search?: string): Observable<Customer[]> {
     let params = new HttpParams();
     if (status) {

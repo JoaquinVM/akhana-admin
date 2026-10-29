@@ -10,7 +10,7 @@ import { AuditModalComponent } from '../../../../shared/components/audit-modal/a
 import { CustomerDetailModalComponent } from '../customer-detail-modal/customer-detail-modal.component';
 import { SaleDetailModalComponent } from '../../../../shared/components/sale-detail-modal/sale-detail-modal.component';
 
-// '' = activos e inactivos (sin eliminados)
+// '' = active and inactive (deleted left out)
 export type CustomerStatusFilter = '' | CustomerStatus;
 
 interface CustomerDraft {
@@ -20,7 +20,7 @@ interface CustomerDraft {
   status: CustomerStatus;
 }
 
-// DEU-05 y DEU-07: clientes con su saldo por cobrar; alta, edición, baja y detalle con historial
+// DEU-05 and DEU-07: customers with their receivable; create, edit, delete and detail with history
 @Component({
   selector: 'app-customers-view',
   standalone: true,
@@ -37,7 +37,7 @@ interface CustomerDraft {
   styleUrls: ['./customers-view.component.css']
 })
 export class CustomersViewComponent implements OnInit {
-  // Las cuentas para cobrar se leen del endpoint de Deudas (/api/debts/accounts)
+  // The collection accounts come from the Deudas endpoint (/api/debts/accounts)
   private readonly creditorService = inject(CreditorService);
   private readonly customerService = inject(CustomerService);
 
@@ -55,7 +55,7 @@ export class CustomersViewComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Formulario de alta o edición
+  // Create or edit form
   isFormOpen = signal<boolean>(false);
   editing = signal<Customer | null>(null);
   draft = signal<CustomerDraft>(emptyDraft());
@@ -67,10 +67,10 @@ export class CustomersViewComponent implements OnInit {
 
   auditCustomer = signal<Customer | null>(null);
 
-  // Detalle con historial; al abrir una venta se oculta y vuelve al cerrarla
+  // Detail with history; opening a sale hides it and closing brings it back
   detailCustomerId = signal<string | null>(null);
   saleId = signal<string | null>(null);
-  // Cambia para que el detalle vuelva a cargar el historial
+  // Changes so the detail reloads the history
   detailRefresh = signal<number>(0);
 
   totalBalance = computed(() => round2(this.customers().reduce((sum, c) => sum + c.balance, 0)));
@@ -122,7 +122,7 @@ export class CustomersViewComponent implements OnInit {
     return status === 'ACTIVO' ? 'Activo' : status === 'INACTIVO' ? 'Inactivo' : 'Eliminado';
   }
 
-  // --- Alta y edición ---
+  // --- Create and edit ---
 
   openCreate(): void {
     this.editing.set(null);
@@ -193,7 +193,7 @@ export class CustomersViewComponent implements OnInit {
     });
   }
 
-  // --- Baja lógica ---
+  // --- Logical delete ---
 
   openDelete(customer: Customer): void {
     this.errorMessage.set(null);
@@ -234,7 +234,7 @@ export class CustomersViewComponent implements OnInit {
     this.saleId.set(saleId);
   }
 
-  // Una venta anulada desde el POS cambia el saldo: al volver se recarga el historial y el listado
+  // A sale voided from the POS changes the balance: on return reload the history and the list
   closeSale(): void {
     this.saleId.set(null);
     this.detailRefresh.update(n => n + 1);

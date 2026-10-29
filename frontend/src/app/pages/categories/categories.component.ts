@@ -30,14 +30,14 @@ export class CategoriesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Estados Reactivos con Signals
+  // State as signals
   categories = signal<Category[]>([]);
   searchTerm = signal<string>('');
   selectedStatusFilter = signal<CategoryStatusFilter>('ACTIVO');
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Modal Formulario (Creación / Edición)
+  // Form modal (create / edit)
   isFormModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedCategoryId = signal<string | null>(null);
@@ -46,15 +46,15 @@ export class CategoriesComponent implements OnInit {
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
 
-  // Modal Confirmación al Descartar Cambios
+  // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
 
-  // Modal Confirmación de Eliminación Lógica
+  // Logical delete confirmation modal
   isConfirmModalOpen = signal<boolean>(false);
   categoryToDelete = signal<Category | null>(null);
   isDeleting = signal<boolean>(false);
 
-  // Modal Auditoría
+  // Audit modal
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
@@ -65,16 +65,16 @@ export class CategoriesComponent implements OnInit {
     color: ['', [Validators.required, Validators.maxLength(50)]]
   });
 
-  // Lista de categorías filtrada y ordenada por Nombre A-Z según estado seleccionado
+  // Categories filtered by the selected status and sorted by name A-Z
   filteredCategories = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const statusFilter = this.selectedStatusFilter();
     let list = this.categories();
 
-    // Filtro por estado
+    // Status filter
     list = list.filter(c => c.status === statusFilter);
 
-    // Filtro de búsqueda en tiempo real por nombre
+    // Live search by name
     const filtered = term.length === 0
       ? list
       : list.filter(c => c.name.toLowerCase().includes(term));
@@ -83,20 +83,20 @@ export class CategoriesComponent implements OnInit {
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   });
 
-  // Señal computada para detectar cambios sin guardar (dirty check)
+  // Computed signal for unsaved changes (dirty check)
   hasFormChanges = computed<boolean>(() => {
     this.formVersion(); // Dependencia reactiva
     const formVal = this.categoryForm.value;
 
     if (!this.isEditing()) {
-      // En Creación: Se considera que hay cambios si el usuario ingresó algún valor
+      // Creating: there are changes if the user typed any value
       const name = (formVal.name ?? '').toString().trim();
       const description = (formVal.description ?? '').toString().trim();
       const color = (formVal.color ?? '').toString().trim();
       return name.length > 0 || description.length > 0 || color.length > 0;
     }
 
-    // En Edición: Comparar contra los valores originales cargados
+    // Editing: compare against the original values
     const orig = this.originalFormValues();
     if (!orig) return false;
 
@@ -106,7 +106,7 @@ export class CategoriesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Escuchar cambios reactivos en el formulario para actualizar formVersion
+    // Listen to form changes to update formVersion
     this.categoryForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -146,7 +146,7 @@ export class CategoriesComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
-  // --- Identificación de Campos Modificados ---
+  // --- Modified fields ---
 
   isFieldModified(fieldName: string): boolean {
     this.formVersion();
@@ -164,7 +164,7 @@ export class CategoriesComponent implements OnInit {
     return currentVal !== origVal;
   }
 
-  // --- Apertura y Cierre de Modales ---
+  // --- Opening and closing modals ---
 
   openCreateModal(): void {
     this.isEditing.set(false);
@@ -204,7 +204,7 @@ export class CategoriesComponent implements OnInit {
     if (this.isSubmitting()) {
       return;
     }
-    // Si existen cambios sin guardar, solicitar confirmación
+    // With unsaved changes, ask for confirmation
     if (this.hasFormChanges()) {
       this.isDiscardConfirmOpen.set(true);
     } else {
@@ -234,7 +234,7 @@ export class CategoriesComponent implements OnInit {
   }
 
   saveCategory(): void {
-    // En edición, si no hay cambios, no realizar submit
+    // When editing without changes, do not submit
     if (this.isEditing() && !this.hasFormChanges()) {
       return;
     }
@@ -264,7 +264,7 @@ export class CategoriesComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al actualizar la categoría. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -279,7 +279,7 @@ export class CategoriesComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          // Mostrar mensaje de negocio devuelto por el backend
+          // Show the business message returned by the backend
           const msg = err.error?.message || 'Error al crear la categoría. Verifique los datos ingresados.';
           this.formError.set(msg);
         }
@@ -287,7 +287,7 @@ export class CategoriesComponent implements OnInit {
     }
   }
 
-  // --- Eliminación Lógica ---
+  // --- Logical delete ---
 
   openDeleteModal(category: Category): void {
     if (category.status === 'ELIMINADO') {
@@ -328,7 +328,7 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
-  // --- Auditoría ---
+  // --- Audit ---
 
   openAuditModal(category: Category): void {
     this.auditModalSubtitle.set(`${category.name}`);

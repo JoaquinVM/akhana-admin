@@ -1,4 +1,4 @@
-/* Modales */
+/* Modals */
 .action-form, .void-content {
   display: flex;
   flex-direction: column;
@@ -24,7 +24,7 @@
 }
 
 .form-label.required {
-  /* Usar span.required-mark en HTML */
+  /* Use span.required-mark in the HTML */
 }
 
 .form-control.is-invalid {

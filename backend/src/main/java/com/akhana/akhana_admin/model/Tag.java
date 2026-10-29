@@ -30,7 +30,7 @@ public class Tag {
     @Builder.Default
     private TagStatus status = TagStatus.ACTIVO;
 
-    // Campos de Auditoría
+    // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 

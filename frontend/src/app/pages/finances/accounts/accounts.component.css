@@ -7,7 +7,7 @@
   padding: 1.5rem 1rem;
 }
 
-/* Encabezado */
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -64,7 +64,7 @@
   height: 18px;
 }
 
-/* Banner de Resumen */
+/* Summary banner */
 .summary-banner {
   display: flex;
   align-items: center;
@@ -109,7 +109,7 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Grid de Cuentas */
+/* Accounts grid */
 .accounts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -310,7 +310,7 @@
   cursor: not-allowed;
 }
 
-/* Estilos de formulario */
+/* Form styles */
 .account-form {
   display: flex;
   flex-direction: column;
@@ -443,7 +443,7 @@
   border-top: 1px solid #f1f5f9;
 }
 
-/* Modal Movimientos */
+/* Movements modal */
 .movements-container {
   min-height: 200px;
 }

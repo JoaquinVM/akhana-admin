@@ -61,7 +61,7 @@ export class SaleService {
     );
   }
 
-  // POS-09: historial paginado, del más reciente al más antiguo
+  // POS-09: paginated history, newest first
   searchSales(filters: SaleFilters = {}, page = 0, size = 20): Observable<PageResponse<Sale>> {
     let params = new HttpParams().set('page', page).set('size', size);
     for (const key of ['from', 'to', 'status', 'saleType', 'paymentMethod', 'createdBy'] as const) {
@@ -76,7 +76,7 @@ export class SaleService {
     return this.http.get<PageResponse<Sale>>(this.apiUrl, { params });
   }
 
-  // Usuarios que registraron al menos una venta, para el filtro del historial
+  // Users who registered at least one sale, for the history filter
   getSellers(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/sellers`);
   }
@@ -85,7 +85,7 @@ export class SaleService {
     return this.http.get<Sale>(`${this.apiUrl}/${saleId}`);
   }
 
-  // POS-12: la línea sin identificar toma el producto real y su costo, una sola vez
+  // POS-12: the unidentified line takes the real product and its cost, once
   assignItem(saleId: string, itemId: string, productId: string): Observable<Sale> {
     return this.http.post<Sale>(`${this.apiUrl}/${saleId}/items/${itemId}/assign`, { productId });
   }

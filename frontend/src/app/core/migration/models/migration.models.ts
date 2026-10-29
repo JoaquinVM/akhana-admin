@@ -1,4 +1,4 @@
-// FIN-11: resultado de revisar o importar la migración histórica de las dos planillas
+// FIN-11: result of reviewing or importing the historical migration of both spreadsheets
 export interface MigrationSheetCount {
   sheet: string;
   read: number;
@@ -7,7 +7,7 @@ export interface MigrationSheetCount {
   afterCutoff: number;
 }
 
-// rowNumber es la fila de la planilla (el título es la fila 1)
+// rowNumber is the spreadsheet row (the header is row 1)
 export interface MigrationRowMessage {
   sheet: string;
   rowNumber: number;

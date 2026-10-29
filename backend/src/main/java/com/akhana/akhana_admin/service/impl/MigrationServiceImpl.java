@@ -20,7 +20,6 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -36,7 +35,6 @@ import static com.akhana.akhana_admin.service.impl.MigrationWorkbook.*;
 @Transactional
 public class MigrationServiceImpl implements MigrationService {
 
-    static final ZoneId STORE_ZONE = ZoneId.of("America/La_Paz");
     static final String VENTAS = "Ventas";
     static final String TRANSACC = "Transacc.";
     static final String CIERRE = "Cierre de Caja";
@@ -262,7 +260,7 @@ public class MigrationServiceImpl implements MigrationService {
         if (cutoffDate == null) {
             throw new IllegalArgumentException("Falta la fecha de corte.");
         }
-        if (cutoffDate.isAfter(LocalDate.now(STORE_ZONE))) {
+        if (cutoffDate.isAfter(LocalDate.now(StoreFormat.STORE_ZONE))) {
             throw new IllegalArgumentException("La fecha de corte no puede ser posterior a hoy.");
         }
         MigrationWorkbook workbook = new MigrationWorkbook(
@@ -685,10 +683,10 @@ public class MigrationServiceImpl implements MigrationService {
             analysis.sessions.add(CashSession.builder()
                 .status(CashSessionStatus.CERRADA)
                 .openingAmount(opening)
-                .openedAt(date.atTime(LocalTime.of(9, 0)).atZone(STORE_ZONE).toInstant())
+                .openedAt(date.atTime(LocalTime.of(9, 0)).atZone(StoreFormat.STORE_ZONE).toInstant())
                 .closingAmount(closing)
                 .closingComment(truncate(emptyToNull(row.text("comment")), 500))
-                .closedAt(date.atTime(LocalTime.of(21, 0)).atZone(STORE_ZONE).toInstant())
+                .closedAt(date.atTime(LocalTime.of(21, 0)).atZone(StoreFormat.STORE_ZONE).toInstant())
                 .totalSalesCash(amounts.get("cash"))
                 .totalSalesQr(amounts.get("qr"))
                 .totalSales(amounts.get("total"))
@@ -860,7 +858,7 @@ public class MigrationServiceImpl implements MigrationService {
             BigDecimal linesTotal = lines.stream().map(PurchaseItem::getSubtotal).reduce(ZERO, BigDecimal::add);
             if (!lines.isEmpty() && linesTotal.compareTo(itemsTotal) != 0) {
                 analysis.notices.add(new RowMessage(PEDIDOS, row.rowNumber(), List.of("La suma de las líneas ("
-                    + linesTotal.toPlainString() + ") no coincide con el Monto (" + itemsTotal.toPlainString()
+                    + StoreFormat.money(linesTotal) + ") no coincide con el Monto (" + StoreFormat.money(itemsTotal)
                     + "): el pedido queda con el Monto.")));
             }
             String comment = String.join(" · ", List.of(row.text("name"), row.text("comment")).stream()
@@ -1020,7 +1018,7 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     private static Instant instant(LocalDate date) {
-        return date.atTime(LocalTime.NOON).atZone(STORE_ZONE).toInstant();
+        return date.atTime(LocalTime.NOON).atZone(StoreFormat.STORE_ZONE).toInstant();
     }
 
     private static String key(String code) {

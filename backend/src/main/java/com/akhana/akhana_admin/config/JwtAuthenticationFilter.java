@@ -95,7 +95,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(String.format(
-            "{\"error\":\"PasswordChangeRequired\",\"message\":\"Debe cambiar su contraseña antes de continuar\",\"timestamp\":\"%s\"}",
+            "{\"error\":\"PasswordChangeRequired\",\"message\":\"Debe cambiar su contraseña antes de continuar.\",\"timestamp\":\"%s\"}",
             Instant.now()));
     }
 }

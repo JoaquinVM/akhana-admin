@@ -15,7 +15,7 @@
     <p class="void-warning">
       ¿Estás seguro de que deseas anular esta transacción?
       <strong>
-        {{ transaction()?.type }}: Bs. {{ transaction()?.amount | number:'1.2-2' }}
+        {{ transaction()?.type }}: Bs {{ transaction()?.amount | number:'1.2-2' }}
       </strong>
     </p>
 

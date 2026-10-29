@@ -6,7 +6,7 @@ import { ReportService } from '../../../../core/report/report.service';
 import { SalesByDayReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
 
-// FIN-10 / CON-03: ventas por día de la tienda, con subtotal por mes; reemplaza Resumen Ventas Diario
+// FIN-10 / CON-03: sales by store day, with month subtotals; replaces Resumen Ventas Diario
 @Component({
   selector: 'app-sales-by-day-report',
   standalone: true,
@@ -24,7 +24,7 @@ export class SalesByDayReportComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
-    // Sin fechas el servidor propone el mes en curso hasta hoy y las devuelve para los filtros
+    // Without dates the server proposes the current month up to today and returns them for the filters
     this.load();
   }
 
@@ -58,7 +58,7 @@ export class SalesByDayReportComponent implements OnInit {
 
   readonly monthLabel = monthLabel;
 
-  // Días de la tienda como texto, sin pasar por la zona horaria del navegador
+  // Store days as text, without going through the browser's time zone
   dayLabel(date: string | null): string {
     if (!date) {
       return '';

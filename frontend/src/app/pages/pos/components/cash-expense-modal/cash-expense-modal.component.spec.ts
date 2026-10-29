@@ -65,7 +65,7 @@ describe('CashExpenseModalComponent', () => {
       description: 'Compra de hielo',
       notes: 'Factura #123'
     });
-    expect(saved).toHaveBeenCalledWith('Gasto de caja de Bs. 35.50 registrado exitosamente.');
+    expect(saved).toHaveBeenCalledWith('Gasto de caja de Bs 35,50 registrado exitosamente.');
   });
 
   it('marca los campos y no envía si el formulario es inválido', () => {

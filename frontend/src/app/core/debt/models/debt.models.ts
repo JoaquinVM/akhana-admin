@@ -2,7 +2,7 @@ import { PaymentAccount } from '../../purchase/models/purchase.models';
 
 export type CreditorStatus = 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
-// DEU-01 / DEU-04: persona a la que el negocio le debe; la deuda la calcula el servidor
+// DEU-01 / DEU-04: person the business owes money to; the server computes the debt
 export interface Creditor {
   id: string;
   name: string;
@@ -25,11 +25,11 @@ export interface CreditorRequest {
   status?: CreditorStatus;
 }
 
-// DEU-04: pagos de pedidos hechos por la persona (PAYMENT) y devoluciones (REPAYMENT)
-// POS-13: SALE es una venta con productos de la persona (suma a la deuda)
+// DEU-04: purchase payments made by the person (PAYMENT) and repayments (REPAYMENT)
+// POS-13: SALE is a sale with the person's products (adds to the debt)
 export type CreditorHistoryEntryType = 'PAYMENT' | 'SALE' | 'REPAYMENT';
 
-// Qué devuelve: pedidos que pagó (categoría Pedido) o ventas de sus productos (Pago a tercero)
+// What is repaid: purchases she paid (category Pedido) or sales of her products (Pago a tercero)
 export type CreditorRepaymentConcept = 'PURCHASE' | 'THIRD_PARTY';
 
 export interface CreditorHistoryEntry {
@@ -50,7 +50,7 @@ export interface CreditorHistoryEntry {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
-  // Deuda después del registro; un anulado no la cambia
+  // Debt after the entry; a voided one does not change it
   balanceAfter: number;
 }
 
@@ -59,7 +59,7 @@ export interface CreditorHistory {
   entries: CreditorHistoryEntry[];
 }
 
-// DEU-03: devolución desde Caja (con caja abierta) u otra cuenta
+// DEU-03: repayment from Caja (with an open session) or another account
 export interface CreditorRepaymentRequest {
   accountId: string;
   amount: number;
@@ -75,7 +75,7 @@ export type DebtAccount = PaymentAccount;
 
 export type CustomerStatus = 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
-// DEU-05 / DEU-07: cliente que compra al costo a crédito; el saldo por cobrar lo calcula el servidor
+// DEU-05 / DEU-07: customer buying at cost on credit; the server computes the receivable
 export interface Customer {
   id: string;
   name: string;
@@ -98,14 +98,14 @@ export interface CustomerRequest {
   status?: CustomerStatus;
 }
 
-// DEU-07: ventas con parte a crédito (SALE) y cobros (COLLECTION)
+// DEU-07: sales partly on credit (SALE) and collections (COLLECTION)
 export type CustomerHistoryEntryType = 'SALE' | 'COLLECTION';
 
 export interface CustomerHistoryEntry {
   type: CustomerHistoryEntryType;
   id: string;
   date: string;
-  // SALE: la parte a crédito; COLLECTION: lo cobrado
+  // SALE: the credit part; COLLECTION: what was collected
   amount: number;
   saleId: string | null;
   saleNumber: string | null;
@@ -117,7 +117,7 @@ export interface CustomerHistoryEntry {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
-  // Saldo por cobrar después del registro; un anulado no lo cambia
+  // Receivable after the entry; a voided one does not change it
   balanceAfter: number;
 }
 
@@ -126,7 +126,7 @@ export interface CustomerHistory {
   entries: CustomerHistoryEntry[];
 }
 
-// DEU-06: cobro a Caja (con caja abierta) o a la cuenta QR
+// DEU-06: collection into Caja (with an open session) or the QR account
 export interface CustomerCollectionRequest {
   accountId: string;
   amount: number;

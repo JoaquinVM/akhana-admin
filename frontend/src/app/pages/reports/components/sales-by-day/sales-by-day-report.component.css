@@ -63,7 +63,7 @@
   border-top: 2px solid #cbd5e1;
 }
 
-/* POS-13: ventas de terceros, fuera del total de la tienda */
+/* POS-13: third-party sales, outside the store's total */
 .report-table .muted {
   font-style: italic;
   color: #64748b;

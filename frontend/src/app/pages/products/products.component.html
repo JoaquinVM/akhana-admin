@@ -1,5 +1,5 @@
 <div class="products-page">
-  <!-- Encabezado de Página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-content">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -22,9 +22,9 @@
     </div>
   </header>
 
-  <!-- Barra de Filtros y Búsqueda -->
+  <!-- Filters and search bar -->
   <div class="filters-card">
-    <!-- Filtros de Estado Reutilizables (A la Izquierda) -->
+    <!-- Shared status filters (left) -->
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
       <button
         type="button"
@@ -64,7 +64,7 @@
       </button>
     </div>
 
-    <!-- Buscador y Contador de Productos (A la Derecha) -->
+    <!-- Product search and counter (right) -->
     <div class="filters-search-wrapper">
       <div class="search-box">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -95,7 +95,7 @@
     </div>
   </div>
 
-  <!-- CAT-11: avisos del último guardado (venta a pérdida, precios fijos que no cambian) -->
+  <!-- CAT-11: warnings of the last save (sold at a loss, fixed prices that do not change) -->
   @if (saveWarnings().length > 0) {
     <div class="alert alert-warning" role="status">
       <ul class="save-warnings">
@@ -107,7 +107,7 @@
     </div>
   }
 
-  <!-- Mensajes de Error de Red -->
+  <!-- Network error messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
@@ -119,7 +119,7 @@
     </div>
   }
 
-  <!-- Tabla de Productos -->
+  <!-- Products table -->
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -244,7 +244,7 @@
                 </td>
                 <td style="text-align: right">
                   <div class="table-actions" style="justify-content: flex-end">
-                    <!-- Opción Auditoría disponible para todos los estados -->
+                    <!-- Audit option for every status -->
                     <button
                       type="button"
                       class="btn-icon btn-audit"
@@ -257,9 +257,9 @@
                       </svg>
                     </button>
 
-                    <!-- Acciones disponibles únicamente para ACTIVO e INACTIVO -->
+                    <!-- Actions only for ACTIVO and INACTIVO -->
                     @if (product.status !== 'ELIMINADO') {
-                      <!-- Botón Editar -->
+                      <!-- Edit button -->
                       <button
                         type="button"
                         class="btn-icon btn-edit"
@@ -272,7 +272,7 @@
                         </svg>
                       </button>
 
-                      <!-- Botón Eliminar -->
+                      <!-- Delete button -->
                       <button
                         type="button"
                         class="btn-icon btn-delete"
@@ -297,7 +297,7 @@
     </div>
   </div>
 
-  <!-- Modal de Formulario (Creación y Edición) -->
+  <!-- Form modal (create and edit) -->
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Producto' : 'Nuevo Producto'"
@@ -319,7 +319,7 @@
 
     <form [formGroup]="productForm" (ngSubmit)="saveProduct()">
       <div class="form-row">
-        <!-- Código -->
+        <!-- Code -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-code">
             <span>Código <span class="required-mark">*</span></span>
@@ -341,7 +341,7 @@
           }
         </div>
 
-        <!-- Nombre -->
+        <!-- Name -->
         <div class="form-group flex-2">
           <label class="form-label" for="product-name">
             <span>Nombre del Producto <span class="required-mark">*</span></span>
@@ -365,7 +365,7 @@
       </div>
 
       <div class="form-row">
-        <!-- Selector Cromático de Categoría -->
+        <!-- Category color picker -->
         <div class="form-group flex-1 position-relative">
           <label class="form-label" for="product-category-trigger">
             <span>Categoría <span class="required-mark">*</span></span>
@@ -415,7 +415,7 @@
           }
         </div>
 
-        <!-- Selector de Proveedor -->
+        <!-- Supplier select -->
         <div class="form-group flex-1 position-relative">
           <label class="form-label" for="product-supplier-trigger">
             <span>Proveedor <span class="required-mark">*</span></span>
@@ -461,7 +461,7 @@
           }
         </div>
 
-        <!-- Selector de Estado (Solo en Edición) -->
+        <!-- Status select (edit only) -->
         @if (isEditing()) {
           <div class="form-group flex-1 position-relative">
             <label class="form-label" for="product-status-trigger">
@@ -503,7 +503,7 @@
         }
       </div>
 
-      <!-- Selector Múltiple de Etiquetas -->
+      <!-- Tag multiselect -->
       <div class="form-group">
         <label class="form-label">
           <span>Etiquetas (Opcional)</span>
@@ -545,7 +545,7 @@
         </div>
       </div>
 
-      <!-- Tipo de producto (POS-11): solo al crear; el especial se vende con nombre y precio escritos -->
+      <!-- Product type (POS-11): only on create; a special one is sold with a typed name and price -->
       <div class="form-row">
         <div class="form-group flex-1">
           <label class="form-label" for="product-special-type">
@@ -584,7 +584,7 @@
       </div>
 
       @if (!isSpecialForm()) {
-      <!-- Unidad de venta (CAT-08) -->
+      <!-- Sale unit (CAT-08) -->
       <div class="form-group">
         <label class="form-label" for="product-sale-unit">
           <span>Se vende por <span class="required-mark">*</span></span>
@@ -604,7 +604,7 @@
 
       }
 
-      <!-- Presentaciones del producto por kilo (CAT-11) -->
+      <!-- Presentations of the product by kilo (CAT-11) -->
       @if (isKilogramForm() && !isSpecialForm()) {
         <div class="form-group presentations-section">
           <label class="form-label">
@@ -676,10 +676,10 @@
         </div>
       }
 
-      <!-- Fila de Precios y Utilidad Automática -->
+      <!-- Prices and computed profit row -->
       @if (!isSpecialForm()) {
       <div class="form-row prices-row">
-        <!-- Precio Compra -->
+        <!-- Buy price -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-buy-price">
             <span>Precio de Compra <span class="required-mark">*</span></span>
@@ -705,7 +705,7 @@
           }
         </div>
 
-        <!-- Precio Venta -->
+        <!-- Sell price -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-sell-price">
             <span>Precio de Venta <span class="required-mark">*</span></span>
@@ -731,7 +731,7 @@
           }
         </div>
 
-        <!-- Utilidad Fija (Automático, solo lectura) -->
+        <!-- Fixed profit (computed, read-only) -->
         <div class="form-group flex-1">
           <label class="form-label">
             <span>Utilidad fija (Automático)</span>
@@ -741,7 +741,7 @@
           </div>
         </div>
 
-        <!-- Utilidad Porcentual (Automático, solo lectura) -->
+        <!-- Percentage profit (computed, read-only) -->
         <div class="form-group flex-1">
           <label class="form-label">
             <span>Utilidad % (Automático)</span>
@@ -756,7 +756,7 @@
       </div>
       }
 
-      <!-- Descripción -->
+      <!-- Description -->
       <div class="form-group">
         <label class="form-label" for="product-description">
           <span>Descripción (Opcional)</span>
@@ -793,13 +793,13 @@
     </form>
   </app-modal>
 
-  <!-- CAT-06: importación desde la planilla -->
+  <!-- CAT-06: import from the spreadsheet -->
   <app-product-import-modal
     [isOpen]="isImportModalOpen()"
     (close)="isImportModalOpen.set(false)"
     (imported)="loadProducts()" />
 
-  <!-- Modal Confirmación al Descartar Cambios -->
+  <!-- Discard changes confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     title="Descartar cambios"
@@ -811,7 +811,7 @@
     (cancel)="cancelDiscard()">
   </app-confirm-modal>
 
-  <!-- Modal Confirmación Eliminación Lógica -->
+  <!-- Logical delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isConfirmDeleteOpen()"
     title="Eliminar Producto"
@@ -824,7 +824,7 @@
     (cancel)="cancelDelete()">
   </app-confirm-modal>
 
-  <!-- Modal Auditoría -->
+  <!-- Audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     title="Auditoría del Producto"

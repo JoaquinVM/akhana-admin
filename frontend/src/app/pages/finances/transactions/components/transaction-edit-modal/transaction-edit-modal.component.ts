@@ -3,7 +3,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FinancialCategory, FinancialTransaction } from '../../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
 
-// Modal para editar descripción, categoría o notas; el padre es dueño del formulario y lo envía
+// Modal to edit description, category or notes; the parent owns the form and submits it
 @Component({
   selector: 'app-transaction-edit-modal',
   standalone: true,
@@ -22,8 +22,8 @@ export class TransactionEditModalComponent {
   submitted = output<void>();
   close = output<void>();
 
-  // Solo se ofrece cambiar a una categoría del mismo tipo (ingreso o gasto) que admita movimientos manuales;
-  // la actual se mantiene aunque sea de sistema
+  // Only categories of the same type (income or expense) that take manual movements are offered;
+  // the current one is kept even if it is a system one
   sameTypeCategories = computed(() => {
     const current = this.transaction()?.category;
     return this.categories().filter(cat => cat.type === current?.type

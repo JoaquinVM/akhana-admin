@@ -7,7 +7,7 @@
 
   @if (session(); as cs) {
     <div class="session-detail-content">
-      <!-- Tarjetas de Resumen Financiero -->
+      <!-- Money summary cards -->
       <div class="metrics-grid">
         <div class="metric-card">
           <span class="metric-label">Monto Inicial</span>
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <!-- Trazabilidad de Apertura y Cierre -->
+      <!-- Opening and closing audit -->
       <div class="audit-columns">
         <div class="audit-box">
           <div class="audit-box-header">
@@ -117,7 +117,7 @@
         </div>
       </div>
 
-      <!-- Pestañas de detalle: Ventas y Cortes -->
+      <!-- Detail tabs: sales and cuts -->
       <div class="tabs-nav">
         <button
           type="button"
@@ -135,7 +135,7 @@
         </button>
       </div>
 
-      <!-- Tab Contenido: Ventas -->
+      <!-- Tab content: sales -->
       @if (activeTab === 'ventas') {
         <div class="tab-pane">
           @if (cs.sales.length === 0) {
@@ -183,7 +183,7 @@
         </div>
       }
 
-      <!-- Tab Contenido: Cortes -->
+      <!-- Tab content: cuts -->
       @if (activeTab === 'cortes') {
         <div class="tab-pane">
           @if (cs.cuts.length === 0) {

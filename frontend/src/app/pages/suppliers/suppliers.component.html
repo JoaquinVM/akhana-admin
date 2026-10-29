@@ -1,5 +1,5 @@
 <div class="suppliers-page">
-  <!-- Encabezado de Página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-content">
       <nav class="breadcrumb">
@@ -21,7 +21,7 @@
     </div>
   </header>
 
-  <!-- Mensajes de Error Global -->
+  <!-- Global error messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger">
       <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -33,9 +33,9 @@
     </div>
   }
 
-  <!-- Barra de Filtros y Búsqueda -->
+  <!-- Filters and search bar -->
   <div class="filters-card">
-    <!-- Filtros de Estado Reutilizables -->
+    <!-- Shared status filters -->
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
       <button
         type="button"
@@ -99,7 +99,7 @@
     </div>
   </div>
 
-  <!-- Contenedor de Tabla de Datos -->
+  <!-- Data table container -->
   <div class="table-container">
     <div class="table-responsive">
       <table class="table">
@@ -168,7 +168,7 @@
                 </td>
                 <td style="text-align: right">
                   <div class="table-actions" style="justify-content: flex-end">
-                    <!-- Opción Auditoría disponible para todos los estados -->
+                    <!-- Audit option for every status -->
                     <button
                       type="button"
                       class="btn-icon btn-audit"
@@ -181,7 +181,7 @@
                       </svg>
                     </button>
 
-                    <!-- Opción Editar disponible únicamente para ACTIVO e INACTIVO -->
+                    <!-- Edit option only for ACTIVO and INACTIVO -->
                     @if (supplier.status !== 'ELIMINADO') {
                       <button
                         type="button"
@@ -195,7 +195,7 @@
                         </svg>
                       </button>
 
-                      <!-- Opción Eliminar disponible únicamente para ACTIVO e INACTIVO -->
+                      <!-- Delete option only for ACTIVO and INACTIVO -->
                       <button
                         type="button"
                         class="btn-icon btn-delete"
@@ -220,7 +220,7 @@
     </div>
   </div>
 
-  <!-- Modal Reutilizable: Formulario de Creación / Edición (NO cierra al hacer clic fuera) -->
+  <!-- Shared create / edit form modal (does NOT close on outside click) -->
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Proveedor' : 'Nuevo Proveedor'"
@@ -238,7 +238,7 @@
     </div>
 
     <form [formGroup]="supplierForm" (ngSubmit)="saveSupplier()">
-      <!-- Banner de error devuelto por Backend (incluyendo unicidad 409) -->
+      <!-- Backend error banner (including 409 uniqueness) -->
       @if (formError()) {
         <div class="alert alert-danger" role="alert">
           <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -366,7 +366,7 @@
     </form>
   </app-modal>
 
-  <!-- Componente Reutilizable: Modal de Confirmación para Descartar Cambios -->
+  <!-- Shared discard changes confirmation modal -->
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     [title]="'¿Descartar cambios?'"
@@ -378,7 +378,7 @@
     (cancel)="cancelDiscard()">
   </app-confirm-modal>
 
-  <!-- Componente Reutilizable: Modal de Confirmación de Eliminación Lógica -->
+  <!-- Shared logical delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isConfirmModalOpen()"
     [title]="'¿Eliminar Proveedor?'"
@@ -391,7 +391,7 @@
     (cancel)="cancelDelete()">
   </app-confirm-modal>
 
-  <!-- Componente Reutilizable: Modal de Auditoría (Cierra al hacer clic fuera) -->
+  <!-- Shared audit modal (closes on outside click) -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     [title]="'Auditoría del Proveedor'"

@@ -9,8 +9,8 @@ export interface FreeLine {
 }
 
 /**
- * POS-11: al elegir un producto especial se escriben el nombre y el precio de la línea, ambos obligatorios.
- * Las reglas finales las valida el servidor.
+ * POS-11: choosing a special product asks for the line's name and price, both required.
+ * The server validates the final rules.
  */
 @Component({
   selector: 'app-free-line-form',

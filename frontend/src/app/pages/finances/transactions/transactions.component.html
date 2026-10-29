@@ -1,5 +1,5 @@
 <div class="transactions-page">
-  <!-- Encabezado de página -->
+  <!-- Page header -->
   <header class="page-header">
     <div class="header-titles">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
@@ -39,7 +39,7 @@
     </div>
   </header>
 
-  <!-- Barra de Saldos de Cuentas -->
+  <!-- Account balances bar -->
   <section class="accounts-summary-bar">
     <span class="bar-title">Saldos Actuales:</span>
     <div class="accounts-chips">
@@ -48,7 +48,7 @@
           <span class="chip-color" [style.background-color]="acc.color"></span>
           <span class="chip-name">{{ acc.name }}</span>
           <span class="chip-balance" [class.negative]="acc.currentBalance < 0">
-            Bs. {{ acc.currentBalance | number:'1.2-2' }}
+            Bs {{ acc.currentBalance | number:'1.2-2' }}
           </span>
         </div>
       }
@@ -69,7 +69,7 @@
     (filtersReset)="resetFilters()">
   </app-transactions-filters>
 
-  <!-- Mensajes de Error y Loading -->
+  <!-- Error and loading messages -->
   @if (errorMessage()) {
     <div class="alert alert-danger" role="alert">
       <span>{{ errorMessage() }}</span>
@@ -147,14 +147,14 @@
     (close)="closeVoidModal()">
   </app-transaction-void-modal>
 
-  <!-- Modal Detalle de Venta POS Reutilizable -->
+  <!-- Shared POS sale detail modal -->
   <app-sale-detail-modal
     [isOpen]="isSaleDetailOpen()"
     [saleId]="selectedSaleId()"
     (close)="closeSaleDetail()">
   </app-sale-detail-modal>
 
-  <!-- Modal Auditoría Reutilizable -->
+  <!-- Shared audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
     title="Auditoría de Transacción"

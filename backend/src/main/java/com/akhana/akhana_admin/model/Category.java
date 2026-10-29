@@ -33,7 +33,7 @@ public class Category {
     @Builder.Default
     private CategoryStatus status = CategoryStatus.ACTIVO;
 
-    // Campos de Auditoría
+    // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;
 

@@ -2,7 +2,7 @@ import { Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
-// COM-09: pide el motivo de anulación de un pedido o un pago (RG-03); el servidor valida y revierte el dinero
+// COM-09: asks the void reason of a purchase or a payment (RG-03); the server validates and reverts the money
 @Component({
   selector: 'app-void-reason-modal',
   standalone: true,

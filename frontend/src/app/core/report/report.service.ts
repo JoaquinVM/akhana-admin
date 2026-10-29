@@ -12,7 +12,7 @@ export class ReportService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/reports';
 
-  // Sin fechas el servidor devuelve el mes en curso hasta hoy
+  // Without dates the server returns the current month up to today
   getSalesByDay(range: ReportRange = {}): Observable<SalesByDayReport> {
     return this.http.get<SalesByDayReport>(`${this.apiUrl}/sales-by-day`, { params: this.rangeParams(range) });
   }
@@ -34,7 +34,7 @@ export class ReportService {
     return this.http.get<ConsumptionsReport>(`${this.apiUrl}/consumptions`, { params: this.rangeParams(range) });
   }
 
-  // FIN-10: el servidor arma el .xlsx con los mismos números de la pantalla
+  // FIN-10: the server builds the .xlsx with the same numbers as the screen
   exportReport(report: ReportName, range: ReportRange = {}): Observable<ReportFile> {
     return this.http.get(`${this.apiUrl}/${report}/export`,
       { params: this.rangeParams(range), responseType: 'blob', observe: 'response' }).pipe(
@@ -43,7 +43,7 @@ export class ReportService {
           ?? `akhana-${report}-${range.from ?? ''}-${range.to ?? ''}.xlsx`,
         content: response.body ?? new Blob()
       })),
-      // Con responseType blob el error JSON del servidor también llega como Blob: se lee para mostrar su mensaje
+      // With responseType blob the server's JSON error also arrives as a Blob: it is read to show its message
       catchError((err: HttpErrorResponse) => from(this.readError(err)).pipe(switchMap(error => throwError(() => error))))
     );
   }

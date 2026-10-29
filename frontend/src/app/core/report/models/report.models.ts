@@ -1,24 +1,24 @@
-// FIN-10 / CON-03: ventas normales y al costo en columnas aparte
+// FIN-10 / CON-03: normal and at-cost sales in separate columns
 export interface SalesByDayRow {
-  /** Día de la tienda (YYYY-MM-DD); null en los subtotales del mes y el total del rango */
+  /** Store day (YYYY-MM-DD); null in the month subtotals and the range total */
   date: string | null;
   normalSales: number;
   normalQuantity: number;
   normalTotal: number;
   normalCost: number;
   normalProfit: number;
-  /** Utilidad ÷ total de las normales × 100; null si no hay ventas normales */
+  /** Profit ÷ normal total × 100; null without normal sales */
   normalMargin: number | null;
   atCostSales: number;
   atCostQuantity: number;
   atCostTotal: number;
-  /** POS-12: líneas por asignar; venta de la tienda fuera de la utilidad hasta asignarse */
+  /** POS-12: lines pending assignment; store sales left out of profit until assigned */
   pendingTotal: number;
-  /** POS-12: líneas sin identificar definitivo; venta de la tienda siempre fuera de la utilidad */
+  /** POS-12: lines closed as unidentified; store sales always left out of profit */
   unidentifiedTotal: number;
-  /** POS-13: ventas de terceros; no suman al total ni a la utilidad de la tienda */
+  /** POS-13: third-party sales; they add neither to the store's total nor to its profit */
   thirdPartyTotal: number;
-  /** Normales + al costo + por asignar + sin identificar */
+  /** Normal + at cost + pending assignment + unidentified */
   total: number;
   profit: number;
 }
@@ -37,15 +37,15 @@ export interface SalesByDayReport {
   totals: SalesByDayRow;
 }
 
-// FIN-10 / CON-03: por proveedor actual del producto y mes, con el descuento general repartido por línea
+// FIN-10 / CON-03: by the product's current supplier and month, with the general discount spread per line
 export interface SalesBySupplierRow {
-  /** Mes de la tienda (YYYY-MM); null en el total del proveedor y del rango */
+  /** Store month (YYYY-MM); null in the supplier and range totals */
   month: string | null;
   normalQuantity: number;
   normalTotal: number;
   normalCost: number;
   normalProfit: number;
-  /** Utilidad ÷ total de las normales × 100; null si no hay ventas normales */
+  /** Profit ÷ normal total × 100; null without normal sales */
   normalMargin: number | null;
   atCostQuantity: number;
   atCostTotal: number;
@@ -53,7 +53,7 @@ export interface SalesBySupplierRow {
 }
 
 export interface SalesBySupplier {
-  /** null en «Sin proveedor» (líneas históricas sin proveedor) */
+  /** null in «Sin proveedor» (historical lines without a supplier) */
   supplierId: string | null;
   supplierName: string;
   months: SalesBySupplierRow[];
@@ -68,7 +68,7 @@ export interface SalesBySupplierReport {
 }
 
 export interface CategoryAmount {
-  /** null en «Sin categoría» */
+  /** null in «Sin categoría» */
   categoryId: string | null;
   categoryName: string;
   /** Ingresos en positivo, gastos en negativo */
@@ -84,7 +84,7 @@ export interface TransferAmount {
 }
 
 export interface TransactionsByCategoryMonth {
-  /** Mes de la tienda (YYYY-MM); null en el total del rango */
+  /** Store month (YYYY-MM); null in the range total */
   month: string | null;
   incomes: CategoryAmount[];
   incomeTotal: number;
@@ -94,7 +94,7 @@ export interface TransactionsByCategoryMonth {
   net: number;
   transfers: TransferAmount[];
   consumptions: number;
-  /** Consumos al costo, en positivo; sin movimiento de dinero (CON-03) */
+  /** Consumptions at cost, positive; no money movement (CON-03) */
   consumptionTotal: number;
 }
 
@@ -105,27 +105,27 @@ export interface TransactionsByCategoryReport {
   totals: TransactionsByCategoryMonth;
 }
 
-// FIN-10 / CON-03: totales por mes; las ventas son los subtotales de ventas por día y los consumos van aparte
+// FIN-10 / CON-03: totals per month; sales are the month subtotals of sales by day and consumptions go apart
 export interface TotalsRow {
-  /** Mes de la tienda (YYYY-MM); null en el total del rango */
+  /** Store month (YYYY-MM); null in the range total */
   month: string | null;
   normalSales: number;
   normalTotal: number;
   normalCost: number;
   normalProfit: number;
-  /** Utilidad ÷ total de las normales × 100; null si no hay ventas normales */
+  /** Profit ÷ normal total × 100; null without normal sales */
   normalMargin: number | null;
   atCostSales: number;
   atCostTotal: number;
-  /** POS-12, POS-13: igual que en ventas por día */
+  /** POS-12, POS-13: same as in sales by day */
   pendingTotal: number;
   unidentifiedTotal: number;
   thirdPartyTotal: number;
   total: number;
   consumptions: number;
-  /** Consumos al costo, sin movimiento de dinero */
+  /** Consumptions at cost, no money movement */
   consumptionTotal: number;
-  /** Utilidad de las ventas normales − consumos al costo */
+  /** Profit of the normal sales − consumptions at cost */
   profitAfterConsumptions: number;
 }
 
@@ -137,12 +137,12 @@ export interface TotalsReport {
 }
 
 export interface ConsumptionsDayRow {
-  /** Día de la tienda (YYYY-MM-DD); null en el subtotal del mes y en el total del rango */
+  /** Store day (YYYY-MM-DD); null in the month subtotal and the range total */
   date: string | null;
   consumptions: number;
-  /** Suma de las cantidades de sus líneas (kilos en los productos por peso) */
+  /** Sum of its lines' quantities (kilos for products by weight) */
   quantity: number;
-  /** Total al costo, sin movimiento de dinero */
+  /** Total at cost, no money movement */
   total: number;
 }
 
@@ -153,7 +153,7 @@ export interface ConsumptionsMonth {
 }
 
 export interface ConsumptionsSupplierRow {
-  /** Mes de la tienda (YYYY-MM); null en el total del proveedor y del rango */
+  /** Store month (YYYY-MM); null in the supplier and range totals */
   month: string | null;
   quantity: number;
   total: number;
@@ -181,7 +181,7 @@ export interface ReportRange {
   to?: string | null;
 }
 
-/** Reporte exportable a Excel: el tramo de su ruta en /api/reports (FIN-10) */
+/** Report exportable to Excel: its path segment in /api/reports (FIN-10) */
 export type ReportName = 'sales-by-day' | 'sales-by-supplier' | 'transactions-by-category' | 'totals' | 'consumptions';
 
 /** Archivo .xlsx descargado: akhana-<reporte>-<desde>-<hasta>.xlsx */

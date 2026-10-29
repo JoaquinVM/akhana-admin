@@ -62,7 +62,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException(NO_ITEMS);
         }
-        LocalDate today = LocalDate.now(PurchaseServiceImpl.STORE_ZONE);
+        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
         LocalDate consumptionDate = request.consumptionDate() != null ? request.consumptionDate() : today;
         if (consumptionDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);

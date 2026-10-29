@@ -204,7 +204,7 @@ class FinancialAccountServiceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialAccountService.deleteAccount(joaco.getId(), "admin"));
-        assertTrue(ex.getMessage().contains("saldo actual sea exactamente 0.00 Bs"));
+        assertTrue(ex.getMessage().contains("saldo actual sea exactamente Bs 0,00"));
     }
 
     @Test

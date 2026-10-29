@@ -1,8 +1,8 @@
 export type CashSessionStatus = 'ABIERTA' | 'CERRADA';
-// CREDITO: venta al costo toda a crédito, sin pago en el momento (DEU-05)
-// HISTORICO: venta migrada de la planilla, sin pagos; su dinero está en los movimientos (FIN-11)
+// CREDITO: at-cost sale fully on credit, with no payment now (DEU-05)
+// HISTORICO: sale migrated from the spreadsheet, without payments; its money is in the movements (FIN-11)
 export type PaymentMethod = 'EFECTIVO' | 'QR' | 'MIXTO' | 'CREDITO' | 'HISTORICO';
-// CON-02: toda la venta es normal o al costo (precio = costo, sin utilidad)
+// CON-02: the whole sale is normal or at cost (price = cost, no profit)
 export type SaleType = 'NORMAL' | 'AL_COSTO';
 export type SaleStatus = 'COMPLETADA' | 'ANULADA';
 
@@ -13,7 +13,7 @@ export interface CashCutItem {
   subtotal: number;
 }
 
-// CAJ-10: monto inicial propuesto a partir del cierre de la caja anterior
+// CAJ-10: opening amount proposed from the previous session's closing
 export interface CashOpeningProposal {
   proposedAmount: number;
   previousSessionNumber: number | null;
@@ -40,14 +40,14 @@ export interface SaleItem {
   finalUnitPrice: number;
   quantity: number;
   subtotal: number;
-  // Cómo se vende el producto: una línea por kilo sin presentación muestra kilos y precio por kilo
+  // How the product is sold: a line by kilo without presentation shows kilos and price per kilo
   saleUnit?: 'UNIT' | 'KILOGRAM' | null;
-  // CAT-11: copia de la presentación vendida y los kilos de la línea
+  // CAT-11: copy of the sold presentation and the line's kilos
   presentationId?: string | null;
   presentationName?: string | null;
   presentationWeightKg?: number | null;
   weightKg?: number | null;
-  // POS-11 a POS-13: línea libre con el nombre escrito, su asignación y la dueña
+  // POS-11 to POS-13: free line with its typed name, its assignment and the owner
   freeLineType?: 'UNIDENTIFIED' | 'THIRD_PARTY' | null;
   freeName?: string | null;
   assignmentStatus?: SaleItemAssignmentStatus | null;
@@ -62,7 +62,7 @@ export type SaleItemAssignmentStatus = 'POR_ASIGNAR' | 'ASIGNADO' | 'SIN_IDENTIF
 export interface Sale {
   id: string;
   saleNumber: string;
-  // Null en las ventas históricas (FIN-11)
+  // Null for historical sales (FIN-11)
   cashSessionId: string | null;
   sessionNumber?: number | null;
   status?: SaleStatus;
@@ -86,9 +86,9 @@ export interface Sale {
   saleType?: SaleType;
   customerId?: string | null;
   customerName?: string | null;
-  // Parte de la venta que queda por cobrar al cliente (DEU-05)
+  // Part of the sale left to collect from the customer (DEU-05)
   creditAmount?: number;
-  // FIN-11: migrado de la planilla; no se anula ni se edita
+  // FIN-11: migrated from the spreadsheet; never voided or edited
   historical?: boolean;
 }
 
@@ -110,14 +110,14 @@ export interface CashSessionSummary {
   expectedCash: number;
   difference?: number | null;
   salesCount: number;
-  // FIN-11: caja de la hoja Cierre de Caja
+  // FIN-11: session from the Cierre de Caja sheet
   historical?: boolean;
 }
 
 export interface CashSessionDetail extends CashSessionSummary {
   cuts: CashCutItem[];
   sales: Sale[];
-  // FIN-11: montos de la planilla que el sistema calcula de los movimientos (null en las demás cajas)
+  // FIN-11: spreadsheet amounts the system otherwise computes from movements (null for other sessions)
   historicalOtherIncome?: number | null;
   historicalExpenses?: number | null;
   historicalOtherOutflow?: number | null;

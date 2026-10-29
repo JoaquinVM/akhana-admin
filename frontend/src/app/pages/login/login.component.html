@@ -38,7 +38,7 @@
 
       <!-- Form -->
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
-        <!-- Field: Usuario -->
+        <!-- Field: username -->
         <div class="form-group">
           <label for="username" class="form-label">Usuario</label>
           <div class="input-wrapper" [class.input-error]="isFieldInvalid('username')">
@@ -59,7 +59,7 @@
           }
         </div>
 
-        <!-- Field: Contraseña -->
+        <!-- Field: password -->
         <div class="form-group">
           <label for="password" class="form-label">Contraseña</label>
           <div class="input-wrapper" [class.input-error]="isFieldInvalid('password')">

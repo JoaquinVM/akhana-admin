@@ -25,11 +25,12 @@ import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
+import { formatBs } from '../../../shared/utils/money';
 
-// POS-10 / CAT-08: el precio de los productos por peso es por kilo («Otro peso»)
+// POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
 export const WEIGHT_STEP_KG = 0.1;
 
-// CAT-11: una línea es un producto, o un producto por kilo con una presentación (bolsitas enteras)
+// CAT-11: a line is a product, or a product by kilo with a presentation (whole packs)
 export function cartKey(product: Product, presentation: ProductPresentation | null): string {
   return presentation ? `${product.id}:${presentation.id}` : product.id;
 }
@@ -43,7 +44,7 @@ export interface CartItem {
   unitDiscount: number;
   unitFinalPrice: number;
   subtotal: number;
-  // POS-11: línea libre de un producto especial, con el nombre escrito; cada una es una línea aparte
+  // POS-11: free line of a special product, with its typed name; each one is its own line
   freeName?: string | null;
 }
 
@@ -72,38 +73,38 @@ export class RegisterSaleComponent implements OnInit {
   private readonly saleService = inject(SaleService);
   private readonly customerService = inject(CustomerService);
 
-  // Estados de catálogo y búsqueda
+  // Catalog and search state
   catalogProducts = signal<Product[]>([]);
   productSearchTerm = signal<string>('');
   isLoadingCatalog = signal<boolean>(false);
 
-  // Productos Rápidos
+  // Quick products
   activeGroupId = signal<string | null>(null);
   isConfigModalVisible = signal<boolean>(false);
 
-  // CAT-11: producto por kilo esperando que se elija su presentación
+  // CAT-11: product by kilo waiting for its presentation
   pickerProduct = signal<Product | null>(null);
 
-  // POS-11: producto especial esperando su nombre y precio
+  // POS-11: special product waiting for its name and price
   freeLineProduct = signal<Product | null>(null);
   private freeLineCount = 0;
 
-  // Carrito de ventas
+  // Sale cart
   cartItems = signal<CartItem[]>([]);
   globalDiscount = signal<number>(0);
 
-  // CON-02: toda la venta al costo; clientes activos para el crédito (DEU-05)
+  // CON-02: the whole sale at cost; active customers for credit (DEU-05)
   atCost = signal<boolean>(false);
   customers = signal<Customer[]>([]);
 
-  // Modal de Cobro (el pago vive en CheckoutModalComponent)
+  // Checkout modal (the payment lives in CheckoutModalComponent)
   isCheckoutModalOpen = signal<boolean>(false);
 
   // Estados operativos
   isSubmitting = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Computed: Grupo activo de productos rápidos
+  // Computed: active quick product group
   activeGroup = computed<QuickProductGroup | null>(() => {
     const groups = this.quickProductService.groups();
     if (groups.length === 0) return null;
@@ -112,7 +113,7 @@ export class RegisterSaleComponent implements OnInit {
     return groups.find((g) => g.id === currentId) ?? groups[0];
   });
 
-  // Computed: Resultados filtrados del catálogo
+  // Computed: filtered catalog results
   filteredSearchResults = computed<Product[]>(() => {
     const term = this.productSearchTerm().toLowerCase().trim();
     if (!term) return [];
@@ -121,8 +122,8 @@ export class RegisterSaleComponent implements OnInit {
       .slice(0, 8);
   });
 
-  // Computed: Métricas del Carrito
-  // Un producto por peso cuenta como un ítem, sin importar los kilos
+  // Computed: cart totals
+  // A product by weight counts as one item, whatever the kilos
   cartCount = computed<number>(() => {
     return this.cartItems().reduce((sum, item) => sum + (this.isWeightLine(item) ? 1 : item.quantity), 0);
   });
@@ -151,7 +152,7 @@ export class RegisterSaleComponent implements OnInit {
 
   hasFreeLines = computed<boolean>(() => this.cartItems().some((it) => !!it.freeName));
 
-  // P-44: el descuento general se reparte solo entre las líneas normales; con solo líneas libres no hay
+  // P-44: the general discount is spread only over the normal lines; with only free lines there is none
   onlyFreeLines = computed<boolean>(() => this.cartItems().length > 0 && this.cartItems().every((it) => !!it.freeName));
 
   normalSubtotal = computed<number>(() => {
@@ -173,7 +174,7 @@ export class RegisterSaleComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Validar existencia de caja activa
+    // There must be an open session
     this.cashService.getCurrentSession().subscribe({
       next: (session) => {
         if (!session || session.status !== 'ABIERTA') {
@@ -203,12 +204,12 @@ export class RegisterSaleComponent implements OnInit {
     });
   }
 
-  // Operaciones de Carrito
+  // Cart operations
   isWeighted(product: Product): boolean {
     return product.saleUnit === 'KILOGRAM';
   }
 
-  // «Otro peso»: cantidad en kilos con hasta 3 decimales
+  // «Otro peso»: quantity in kilos with up to 3 decimals
   isWeightLine(item: CartItem): boolean {
     return this.isWeighted(item.product) && !item.presentation;
   }
@@ -218,7 +219,7 @@ export class RegisterSaleComponent implements OnInit {
     return item.presentation ? `${item.product.name} · ${item.presentation.name}` : item.product.name;
   }
 
-  // CAT-11: un producto por kilo con presentaciones abre el selector; sin ellas entra como «Otro peso»
+  // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
   addToCart(product: Product): void {
     if (isSpecialProduct(product)) {
       this.productSearchTerm.set('');
@@ -249,7 +250,7 @@ export class RegisterSaleComponent implements OnInit {
     this.pickerProduct.set(null);
   }
 
-  // POS-11: la línea libre no lleva descuento por unidad ni entra en el descuento general (P-44)
+  // POS-11: a free line has no unit discount and stays out of the general discount (P-44)
   onFreeLineConfirmed(line: FreeLine): void {
     const product = this.freeLineProduct();
     this.freeLineProduct.set(null);
@@ -343,7 +344,7 @@ export class RegisterSaleComponent implements OnInit {
     );
   }
 
-  // «Otro peso»: kilos con hasta 3 decimales (paso de 100 g); por unidad o presentación: enteros
+  // «Otro peso»: kilos with up to 3 decimals (100 g step); by unit or presentation: whole numbers
   private quantityStep(item: CartItem): number {
     return this.isWeightLine(item) ? WEIGHT_STEP_KG : 1;
   }
@@ -383,8 +384,8 @@ export class RegisterSaleComponent implements OnInit {
     const maxAllowed = this.normalSubtotal();
     if (safeDiscount > maxAllowed) {
       this.errorMessage.set(this.hasFreeLines()
-        ? `El descuento general no puede superar el subtotal de los productos normales (Bs ${maxAllowed.toFixed(2)}).`
-        : `El descuento general no puede superar el subtotal de Bs ${maxAllowed.toFixed(2)}.`);
+        ? `El descuento general no puede superar el subtotal de los productos normales (${formatBs(maxAllowed)}).`
+        : `El descuento general no puede superar el subtotal de ${formatBs(maxAllowed)}.`);
       this.globalDiscount.set(maxAllowed);
       return;
     }
@@ -405,7 +406,7 @@ export class RegisterSaleComponent implements OnInit {
     this.errorMessage.set(null);
   }
 
-  // CON-02: venta al costo. El servidor pone precio = costo; aquí solo se muestra igual
+  // CON-02: at-cost sale. The server sets price = cost; here it is only shown the same way
   onAtCostToggle(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.setAtCost(input.checked);
@@ -432,7 +433,7 @@ export class RegisterSaleComponent implements OnInit {
     }
     this.atCost.set(enabled);
     this.errorMessage.set(null);
-    // Sin descuentos en la venta al costo; al volver a normal se parte de cero también
+    // No discounts on an at-cost sale; going back to normal also starts from zero
     this.globalDiscount.set(0);
     this.cartItems.update((items) =>
       items.map((it) => {
@@ -461,7 +462,7 @@ export class RegisterSaleComponent implements OnInit {
     return `'${product.name}' no tiene costo registrado; no se puede vender al costo.`;
   }
 
-  // Grupos y Configuración de Productos Rápidos
+  // Quick product groups and settings
   selectGroup(groupId: string): void {
     this.activeGroupId.set(groupId);
   }
@@ -474,7 +475,7 @@ export class RegisterSaleComponent implements OnInit {
     this.isConfigModalVisible.set(false);
   }
 
-  // Control del Modal de Cobro
+  // Checkout modal control
   openCheckoutModal(): void {
     if (this.cartItems().length === 0 || this.totalAmount() <= 0) {
       return;
@@ -487,7 +488,7 @@ export class RegisterSaleComponent implements OnInit {
     this.isCheckoutModalOpen.set(false);
   }
 
-  // Navegación y Envío de Venta
+  // Navigation and sale submit
   cancelAndReturn(): void {
     this.router.navigate(['/pos']);
   }
@@ -507,7 +508,7 @@ export class RegisterSaleComponent implements OnInit {
       amountCash: payment.amountCash,
       amountQr: payment.amountQr,
       amountReceived: payment.amountReceived,
-      // P-39: el comentario de la venta al costo reemplaza la descripción automática
+      // P-39: the at-cost sale comment replaces the automatic description
       description: this.atCost()
         ? payment.comment || `Venta al costo POS (${payment.paymentMethod})`
         : `Venta POS (${payment.paymentMethod})`,

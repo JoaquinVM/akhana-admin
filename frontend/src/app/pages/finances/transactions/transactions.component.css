@@ -7,7 +7,7 @@
   padding: 1.5rem 1rem;
 }
 
-/* Encabezado */
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -128,7 +128,7 @@
   box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
 }
 
-/* Barra de Resumen de Saldos */
+/* Balances summary bar */
 .accounts-summary-bar {
   display: flex;
   align-items: center;
