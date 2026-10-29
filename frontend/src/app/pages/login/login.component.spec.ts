@@ -2,14 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LoginComponent } from './login.component';
+import { LoginComponent, SESSION_ENDED } from './login.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { LoginResponse } from '../../core/auth/models/auth.models';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
-  let authServiceSpy: { login: ReturnType<typeof vi.fn> };
+  let authServiceSpy: { login: ReturnType<typeof vi.fn>; consumeSessionEnded?: ReturnType<typeof vi.fn> };
   let routerSpy: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -138,5 +138,15 @@ describe('LoginComponent', () => {
     component.onSubmit();
 
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/change-password']);
+  });
+
+  it('si la sesión anterior terminó, lo explica una sola vez al volver al login', async () => {
+    authServiceSpy.consumeSessionEnded = vi.fn().mockReturnValueOnce(true).mockReturnValue(false);
+    const again = TestBed.createComponent(LoginComponent);
+    again.detectChanges();
+
+    expect(again.componentInstance.errorMessage()).toBe(SESSION_ENDED);
+    expect(again.nativeElement.textContent).toContain('Su sesión terminó');
+    expect(TestBed.createComponent(LoginComponent).componentInstance.errorMessage()).toBeNull();
   });
 });

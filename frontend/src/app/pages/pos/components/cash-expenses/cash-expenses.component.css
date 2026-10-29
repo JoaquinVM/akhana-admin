@@ -1,0 +1,197 @@
+/* Copied from the POS: empty state, badges and buttons the expenses table shares with the sales view */
+.transactions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  color: #94a3b8;
+}
+
+.empty-svg {
+  width: 44px;
+  height: 44px;
+}
+
+.transactions-empty h4 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.transactions-empty p {
+  margin: 0 0 1.25rem;
+  font-size: 0.8125rem;
+}
+
+.empty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sale status badges */
+.status-badge-sale {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-badge-sale.badge-completed {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status-badge-sale.badge-voided {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.row-voided {
+  background-color: #fffaf0;
+  opacity: 0.85;
+}
+
+.sale-detail-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8125rem;
+}
+
+/* Table action buttons */
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-audit:hover:not(:disabled) {
+  color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.btn-delete:hover:not(:disabled) {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.btn-icon-svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Expenses table and its void modal */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Category color pill */
+.category-color-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Expense amount and description */
+.expense-amount-val {
+  color: #dc2626;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.expense-desc-main {
+  display: block;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.expense-desc-notes {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+/* Expense void modal */
+.void-warning-text {
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.void-expense-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

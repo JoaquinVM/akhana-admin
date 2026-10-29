@@ -363,32 +363,30 @@ describe('PosComponent', () => {
     expect(component.recentExpenses().length).toBe(2);
   });
 
-  it('debe abrir modal de anulación de gasto de caja y confirmar anulación', () => {
-    const expense: any = {
-      id: 'tx-exp-1',
-      type: 'GASTO_MANUAL',
-      amount: 45.0,
-      transactionDate: '2026-10-01T11:00:00Z',
-      description: 'Compra de bolsas kraft',
-      status: 'ACTIVO',
-      cashSessionId: 'session-1',
-      sourceAccount: { id: 'acc-1', name: 'Caja', color: '#1B3B18' },
-      category: { id: 'cat-1', name: 'Insumos', type: 'GASTO', color: '#2E5B27' },
-      createdBy: 'admin'
-    };
+  it('al anular un gasto desde la tabla de gastos, avisa y recarga la caja', () => {
+    mockCashService.getCurrentSession.mockClear();
+    component.onCashExpensesChanged('Gasto de Bs 45,00 anulado exitosamente.');
 
-    // Anulación
-    component.openVoidExpenseModal(expense);
-    expect(component.isVoidExpenseModalVisible()).toBe(true);
-    expect(component.selectedExpenseToVoid()?.id).toBe('tx-exp-1');
+    expect(component.feedbackMessage()?.text).toBe('Gasto de Bs 45,00 anulado exitosamente.');
+    expect(mockCashService.getCurrentSession).toHaveBeenCalled();
+  });
 
-    component.voidExpenseReason.set('Error en comprobante');
-    component.handleConfirmVoidExpense();
+  it('el aviso de cierre muestra el sobrante o faltante con el formato de la tienda', () => {
+    mockCashService.closeSession.mockReturnValue(of({ ...mockSession, status: 'CERRADA', sessionNumber: 208, difference: -4.32 }));
+    component.handleConfirmClose({ closingAmount: 100, closingComment: null });
 
-    expect(mockTransactionService.voidCashExpense).toHaveBeenCalledWith('tx-exp-1', {
-      voidReason: 'Error en comprobante'
-    });
-    expect(component.isVoidExpenseModalVisible()).toBe(false);
+    expect(component.feedbackMessage()?.text).toBe('Caja #208 cerrada exitosamente (con faltante de Bs 4,32).');
+  });
+
+  it('al refrescar la caja abierta mantiene el espacio de trabajo (sin volver a «Cargando»)', () => {
+    mockCashService.isLoadingCurrent.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.pos-active-workspace')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.loading-state-card')).toBeNull();
+
+    mockCashService.currentSession.set(null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.loading-state-card')).toBeTruthy();
   });
 
   it('debe alternar de regreso a Ventas mostrando el listado actual sin cambios', () => {

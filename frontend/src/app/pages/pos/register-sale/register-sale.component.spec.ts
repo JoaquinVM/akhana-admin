@@ -146,7 +146,7 @@ describe('RegisterSaleComponent', () => {
     expect(mockProductService.getProducts).toHaveBeenCalledWith(undefined, 'ACTIVO');
     expect(mockQuickProductService.loadGroups).toHaveBeenCalled();
     expect(component.catalogProducts().length).toBe(2);
-    expect(component.activeGroup()?.name).toBe('Bebidas Calientes');
+    expect(fixture.nativeElement.querySelector('app-sale-catalog .group-tab-btn.active')?.textContent).toContain('Bebidas Calientes');
   });
 
   it('debe redirigir a /pos si no hay una caja abierta', () => {

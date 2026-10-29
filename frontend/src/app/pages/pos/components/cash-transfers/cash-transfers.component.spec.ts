@@ -35,8 +35,8 @@ describe('CashTransfersComponent', () => {
 
     fixture = TestBed.createComponent(CashTransfersComponent);
     component = fixture.componentInstance;
-    component.transfers = [withdrawal, income, { ...income, id: 'tx-3', status: 'ANULADO' }];
-    component.canOperate = true;
+    fixture.componentRef.setInput('transfers', [withdrawal, income, { ...income, id: 'tx-3', status: 'ANULADO' }]);
+    fixture.componentRef.setInput('canOperate', true);
     fixture.detectChanges();
   });
 
@@ -101,7 +101,7 @@ describe('CashTransfersComponent', () => {
   });
 
   it('no abre el formulario si la caja no está abierta', () => {
-    component.canOperate = false;
+    fixture.componentRef.setInput('canOperate', false);
     component.openForm('RETIRO');
 
     expect(mockTransactionService.getCashTransferAccounts).not.toHaveBeenCalled();

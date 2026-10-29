@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -25,21 +25,24 @@ export class CashExpenseModalComponent {
   private readonly categoryService = inject(FinancialCategoryService);
   private readonly transactionService = inject(FinancialTransactionService);
 
-  isOpenValue = false;
+  readonly isOpen = input<boolean>(false);
 
-  @Input() set isOpen(value: boolean) {
-    if (value && !this.isOpenValue) {
-      this.load();
-    }
-    this.isOpenValue = value;
-  }
-  get isOpen(): boolean {
-    return this.isOpenValue;
-  }
-
-  @Output() close = new EventEmitter<void>();
+  readonly close = output<void>();
   /** Emits the success message after registering the expense. */
-  @Output() saved = new EventEmitter<string>();
+  readonly saved = output<string>();
+
+  private wasOpen = false;
+
+  constructor() {
+    // The categories and the form reload each time the modal opens, not while it stays open
+    effect(() => {
+      const open = this.isOpen();
+      if (open && !this.wasOpen) {
+        untracked(() => this.load());
+      }
+      this.wasOpen = open;
+    });
+  }
 
   categories = signal<FinancialCategory[]>([]);
   error = signal<string | null>(null);

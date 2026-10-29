@@ -238,6 +238,7 @@ public class MigrationServiceImpl implements MigrationService {
     @Override
     public MigrationResponse importHistory(String recaudacionesName, byte[] recaudaciones, String pedidosName,
                                            byte[] pedidos, LocalDate cutoffDate, String username) {
+        historicalImportRepository.lockImport();
         ensureNotDone();
         Analysis analysis = analyze(recaudacionesName, recaudaciones, pedidosName, pedidos, cutoffDate);
         if (!analysis.rejected.isEmpty()) {

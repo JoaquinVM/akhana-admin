@@ -1,0 +1,143 @@
+@if (items().length === 0) {
+  <div class="transactions-empty">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg">
+        <circle cx="9" cy="21" r="1" />
+        <circle cx="20" cy="21" r="1" />
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+      </svg>
+    </div>
+    <h4>No hay compras o gastos registrados en este turno</h4>
+    <p>Los gastos y compras de mercadería registrados con fondos de Caja durante esta sesión aparecerán aquí.</p>
+    <div class="empty-actions">
+      <button
+        type="button"
+        class="btn btn-warning btn-sm"
+        (click)="registerExpense.emit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Registrar Gasto</span>
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 150px">Fecha / Hora</th>
+          <th style="width: 170px">Categoría</th>
+          <th style="width: 130px">Responsable</th>
+          <th style="width: 110px">Estado</th>
+          <th>Concepto / Detalle</th>
+          <th style="width: 130px; text-align: right">Monto</th>
+          <th style="width: 80px; text-align: right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (exp of items(); track exp.id) {
+          <tr [class.row-voided]="exp.status === 'ANULADO'">
+            <td>{{ exp.transactionDate | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              @if (exp.category) {
+                <span class="category-color-pill" [title]="exp.category.name">
+                  <span class="color-dot" [style.backgroundColor]="exp.category.color || '#2E5B27'"></span>
+                  <span class="pill-text">{{ exp.category.name }}</span>
+                </span>
+              } @else {
+                <span class="text-muted">-</span>
+              }
+            </td>
+            <td>{{ exp.createdBy || 'Sistema' }}</td>
+            <td>
+              @if (exp.status === 'ANULADO') {
+                <span class="status-badge-sale badge-voided">
+                  Anulado
+                </span>
+              } @else {
+                <span class="status-badge-sale badge-completed">
+                  Activo
+                </span>
+              }
+            </td>
+            <td>
+              <div class="sale-detail-cell">
+                <span class="expense-desc-main">{{ exp.description }}</span>
+                @if (exp.notes) {
+                  <small class="expense-desc-notes">{{ exp.notes }}</small>
+                }
+              </div>
+            </td>
+            <td style="text-align: right">
+              <strong class="expense-amount-val" [class.line-through]="exp.status === 'ANULADO'">
+                - Bs {{ exp.amount | number:'1.2-2' }}
+              </strong>
+            </td>
+            <td style="text-align: right">
+              <div class="table-actions" style="justify-content: flex-end">
+                <!-- Void expense -->
+                <button
+                  type="button"
+                  class="btn-icon btn-delete"
+                  [disabled]="exp.status === 'ANULADO' || !canOperate()"
+                  [title]="exp.status === 'ANULADO' ? 'Este gasto ya se encuentra anulado' : (!canOperate() ? 'No se pueden anular gastos con caja cerrada' : 'Anular gasto')"
+                  aria-label="Anular gasto"
+                  (click)="openVoidModal(exp)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<!-- Cash expense void modal -->
+<app-modal
+  [isOpen]="voidTarget() !== null"
+  title="Anular Gasto de Caja"
+  [subtitle]="voidTarget() ? (voidTarget()?.description + ' - Bs ' + (voidTarget()?.amount | number:'1.2-2')) : ''"
+  [size]="'md'"
+  (close)="closeVoidModal()">
+  <div class="void-expense-content">
+    @if (voidError()) {
+      <div class="alert alert-danger" role="alert">
+        <span>{{ voidError() }}</span>
+      </div>
+    }
+    <p class="void-warning-text">
+      ¿Estás seguro de anular este gasto de caja? El monto será restituido automáticamente a la gaveta de efectivo y el gasto quedará registrado como anulado.
+    </p>
+
+    <div class="form-group">
+      <label for="void-expense-reason" class="form-label">Motivo de anulación <span class="required-mark">*</span></label>
+      <textarea
+        id="void-expense-reason"
+        class="form-control"
+        rows="2"
+        [ngModel]="voidReason()"
+        (ngModelChange)="voidReason.set($event)"
+        placeholder="Explica brevemente por qué se anula este gasto..."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeVoidModal()" [disabled]="isVoiding()">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-danger" (click)="confirmVoid()" [disabled]="isVoiding() || !voidReason().trim()">
+        @if (isVoiding()) {
+          <span>Anulando...</span>
+        } @else {
+          <span>Confirmar Anulación</span>
+        }
+      </button>
+    </div>
+  </div>
+</app-modal>

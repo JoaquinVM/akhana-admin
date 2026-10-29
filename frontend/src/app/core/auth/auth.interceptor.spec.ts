@@ -8,13 +8,18 @@ import { AuthService } from './auth.service';
 describe('authInterceptor', () => {
   let httpClient: HttpClient;
   let httpTesting: HttpTestingController;
-  let authServiceSpy: { getToken: ReturnType<typeof vi.fn>; clearSession: ReturnType<typeof vi.fn> };
+  let authServiceSpy: {
+    getToken: ReturnType<typeof vi.fn>;
+    clearSession: ReturnType<typeof vi.fn>;
+    markSessionEnded: ReturnType<typeof vi.fn>;
+  };
   let routerSpy: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     authServiceSpy = {
       getToken: vi.fn(),
-      clearSession: vi.fn()
+      clearSession: vi.fn(),
+      markSessionEnded: vi.fn()
     };
     routerSpy = {
       navigate: vi.fn()
@@ -71,6 +76,16 @@ describe('authInterceptor', () => {
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
 
     expect(authServiceSpy.clearSession).toHaveBeenCalled();
+    expect(authServiceSpy.markSessionEnded).toHaveBeenCalled();
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('sin token un 401 no marca una sesión terminada', () => {
+    authServiceSpy.getToken.mockReturnValue(null);
+    httpClient.get('/api/protected/data').subscribe({ error: () => undefined });
+    httpTesting.expectOne('/api/protected/data').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(authServiceSpy.markSessionEnded).not.toHaveBeenCalled();
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
   });
 });

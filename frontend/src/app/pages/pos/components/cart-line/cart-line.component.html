@@ -1,0 +1,88 @@
+<div class="cart-item-row">
+  <!-- Product code and name -->
+  <div class="item-identity">
+    <span class="item-code">{{ item().product.code }}</span>
+    <strong class="item-name" [title]="name()">{{ name() }}</strong>
+    <!-- CAT-11: the presentation was chosen when adding; «Otro peso» goes in kilos -->
+    @if (item().freeName) {
+      <span class="free-line-badge">{{ freeLabel() }}</span>
+    } @else if (item().presentation; as presentation) {
+      <span class="weight-unit">{{ presentation.weightKg | number:'1.3-3' }} kg c/u</span>
+    } @else if (weightLine()) {
+      <span class="weight-unit">Peso en kg</span>
+    }
+  </div>
+
+  <!-- Quantity control -->
+  <div class="qty-stepper">
+    <button
+      type="button"
+      class="qty-btn"
+      title="Restar cantidad"
+      (click)="decrement.emit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
+    <input
+      type="number"
+      [min]="weightLine() ? 0.001 : 1"
+      [step]="weightLine() ? 0.001 : 1"
+      class="qty-input"
+      [class.qty-input-weight]="weightLine()"
+      [title]="weightLine() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
+      [ngModel]="item().quantity"
+      (ngModelChange)="quantityChange.emit($event)" />
+    <button
+      type="button"
+      class="qty-btn"
+      title="Sumar cantidad"
+      (click)="increment.emit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
+  </div>
+
+  @if (!atCost() && !item().freeName) {
+    <!-- Unit discount -->
+    <div class="item-discount-group">
+      <label class="discount-lbl">Desc/u:</label>
+      <div class="discount-input-wrap">
+        <span class="currency-prefix">Bs</span>
+        <input
+          type="number"
+          step="0.50"
+          min="0"
+          [max]="item().unitPrice"
+          class="form-control form-control-sm text-right"
+          [ngModel]="item().unitDiscount"
+          (ngModelChange)="discountChange.emit($event)" />
+      </div>
+    </div>
+  }
+
+  <!-- Prices and subtotal -->
+  <div class="item-price-summary">
+    <div class="unit-price-line">
+      @if (item().unitDiscount > 0) {
+        <span class="old-price">Bs {{ item().unitPrice | number:'1.2-2' }}</span>
+      }
+      <span class="final-unit-price">Bs {{ item().unitFinalPrice | number:'1.2-2' }} {{ weightLine() ? '/kg' : 'c/u' }}</span>
+    </div>
+    <strong class="item-subtotal">Bs {{ item().subtotal | number:'1.2-2' }}</strong>
+  </div>
+
+  <!-- Remove item -->
+  <button
+    type="button"
+    class="btn-remove-item"
+    title="Quitar ítem"
+    (click)="remove.emit()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  </button>
+</div>

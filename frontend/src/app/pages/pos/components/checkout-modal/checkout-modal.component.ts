@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, signal } from '@angular/core';
+import { Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentMethod } from '../../../../core/sale/models/sale.models';
@@ -25,25 +25,19 @@ export interface CheckoutPayment {
   templateUrl: './checkout-modal.component.html',
   styleUrls: ['./checkout-modal.component.css']
 })
-export class CheckoutModalComponent implements OnChanges {
-  @Input() isOpen = false;
-  @Input() cartCount = 0;
-  @Input() isSubmitting = false;
-  @Input() errorMessage: string | null = null;
-  @Input('totalAmount') set totalInput(value: number) {
-    this.total.set(value || 0);
-  }
+export class CheckoutModalComponent {
+  readonly isOpen = input<boolean>(false);
+  readonly cartCount = input<number>(0);
+  readonly isSubmitting = input<boolean>(false);
+  readonly errorMessage = input<string | null>(null);
+  readonly total = input<number, number | null | undefined>(0, { alias: 'totalAmount', transform: (value) => value || 0 });
   // Only the at-cost sale takes a customer and credit (DEU-05)
-  @Input('atCost') set atCostInput(value: boolean) {
-    this.atCost.set(!!value);
-  }
-  @Input() customers: Customer[] = [];
+  readonly atCost = input<boolean, boolean | null | undefined>(false, { transform: (value) => !!value });
+  readonly customers = input<Customer[]>([]);
 
-  @Output() close = new EventEmitter<void>();
-  @Output() confirmed = new EventEmitter<CheckoutPayment>();
+  readonly close = output<void>();
+  readonly confirmed = output<CheckoutPayment>();
 
-  readonly total = signal<number>(0);
-  readonly atCost = signal<boolean>(false);
   paymentMethod = signal<PaymentMethod>('EFECTIVO');
   amountCash = signal<number>(0);
   amountReceived = signal<number>(0);
@@ -124,15 +118,21 @@ export class CheckoutModalComponent implements OnChanges {
     return false;
   });
 
-  ngOnChanges(changes: SimpleChanges): void {
+  constructor() {
     // On open the amounts restart with the last method chosen, without credit.
-    // P-49: the at-cost sale is for anyone, so «Sin cliente» is proposed
-    if (changes['isOpen'] && this.isOpen) {
-      this.creditAmount.set(0);
-      this.comment.set('');
-      this.customerId.set(null);
-      this.setPaymentMethod(this.paymentMethod());
-    }
+    // P-49: the at-cost sale is for anyone, so «Sin cliente» is proposed.
+    // Only the opening triggers it: a new total while open does not reset what was typed
+    effect(() => {
+      if (!this.isOpen()) {
+        return;
+      }
+      untracked(() => {
+        this.creditAmount.set(0);
+        this.comment.set('');
+        this.customerId.set(null);
+        this.setPaymentMethod(this.paymentMethod());
+      });
+    });
   }
 
   setPaymentMethod(method: PaymentMethod): void {
@@ -189,8 +189,8 @@ export class CheckoutModalComponent implements OnChanges {
     const credit = Math.max(0, Math.min(this.totalAmount(), Math.round(parsed * 100) / 100));
     this.creditAmount.set(credit);
     // P-49: giving credit without a customer proposes the only active one
-    if (credit > 0 && !this.customerId() && this.customers.length === 1) {
-      this.customerId.set(this.customers[0].id);
+    if (credit > 0 && !this.customerId() && this.customers().length === 1) {
+      this.customerId.set(this.customers()[0].id);
     }
     // A non-payment method (CREDITO) is never left selected in the tabs
     this.setPaymentMethod(this.paymentMethod() === 'CREDITO' ? 'EFECTIVO' : this.paymentMethod());
@@ -201,7 +201,7 @@ export class CheckoutModalComponent implements OnChanges {
   }
 
   handleConfirm(): void {
-    if (!this.isPaymentValid() || this.isSubmitting) {
+    if (!this.isPaymentValid() || this.isSubmitting()) {
       return;
     }
     const customerId = this.atCost() ? this.customerId() : null;

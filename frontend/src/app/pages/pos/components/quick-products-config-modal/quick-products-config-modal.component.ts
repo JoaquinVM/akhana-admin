@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -16,8 +16,8 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
   styleUrls: ['./quick-products-config-modal.component.css']
 })
 export class QuickProductsConfigModalComponent implements OnInit {
-  @Input() isOpen = false;
-  @Output() close = new EventEmitter<void>();
+  readonly isOpen = input<boolean>(false);
+  readonly close = output<void>();
 
   readonly quickProductService = inject(QuickProductService);
   private readonly productService = inject(ProductService);

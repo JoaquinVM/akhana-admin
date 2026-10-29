@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,7 +66,7 @@ class UserServiceTest {
 
         when(userRepository.existsByUsernameIgnoreCase("newuser")).thenReturn(false);
         when(passwordEncoder.encode("raw_password")).thenReturn("encoded_pass");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User u = invocation.getArgument(0);
             u.setId(UUID.randomUUID());
             return u;
@@ -80,7 +81,7 @@ class UserServiceTest {
         assertTrue(response.active());
         assertEquals(Role.OPERATOR, response.role());
         assertEquals(Role.OPERATOR.permissionKeys(), response.permissions());
-        verify(userRepository).save(any(User.class));
+        verify(userRepository).saveAndFlush(any(User.class));
     }
 
     @Test
@@ -95,7 +96,7 @@ class UserServiceTest {
         when(userRepository.existsByUsernameIgnoreCase("testuser")).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> userService.createUser(request, "admin"));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -105,7 +106,7 @@ class UserServiceTest {
         when(userRepository.existsByUsernameIgnoreCase("Operador_QA")).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> userService.createUser(request, "admin"));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -116,7 +117,7 @@ class UserServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> userService.createUser(request, "admin"));
         assertEquals("La contraseña no puede ser igual al nombre de usuario.", ex.getMessage());
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -166,7 +167,7 @@ class UserServiceTest {
     @Test
     void deleteUser_lastAdmin_throwsException() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(1L);
+        when(userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR)).thenReturn(List.of(sampleUser));
 
         assertThrows(IllegalStateException.class, () -> userService.deleteUser(userId, "other_admin"));
         verify(userRepository, never()).save(any());
@@ -175,7 +176,7 @@ class UserServiceTest {
     @Test
     void deleteUser_success_softDeletes() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(2L);
+        when(userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR)).thenReturn(List.of(sampleUser, new User()));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         userService.deleteUser(userId, "other_admin");
@@ -189,7 +190,7 @@ class UserServiceTest {
     @Test
     void updateUser_demoteLastAdministrator_throwsException() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(1L);
+        when(userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR)).thenReturn(List.of(sampleUser));
 
         UpdateUserRequest request = new UpdateUserRequest("Test User", Role.OPERATOR);
 
@@ -200,7 +201,7 @@ class UserServiceTest {
     @Test
     void updateUser_demoteAdministratorWhenOthersRemain_changesRole() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
-        when(userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR)).thenReturn(2L);
+        when(userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR)).thenReturn(List.of(sampleUser, new User()));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserResponse response = userService.updateUser(userId, new UpdateUserRequest("Test User", Role.OPERATOR), "editor_user");
@@ -218,7 +219,7 @@ class UserServiceTest {
 
         userService.deleteUser(userId, "other_admin");
 
-        verify(userRepository, never()).countByRoleAndActiveTrueAndDeletedAtIsNull(any());
+        verify(userRepository, never()).findActiveByRoleForUpdate(any());
         verify(userRepository).save(sampleUser);
     }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { CashService } from '../../../core/cash/cash.service';
 
@@ -16,23 +16,22 @@ import { CashService } from '../../../core/cash/cash.service';
 export class CashLimitWarningComponent implements OnInit {
   private readonly cashService = inject(CashService);
 
-  private readonly amountSignal = signal<number | null>(null);
-  private readonly fromCashSignal = signal<boolean>(true);
-
-  @Input() set amount(value: number | string | null | undefined) {
-    const n = value === null || value === undefined || value === '' ? null : Number(value);
-    this.amountSignal.set(n !== null && !isNaN(n) ? n : null);
-  }
+  // The amount typed in the form; a form control may hand it over as text
+  readonly amount = input<number | string | null | undefined>(null);
   /** False when the money does not leave Caja (another account or a person). */
-  @Input() set fromCash(value: boolean) {
-    this.fromCashSignal.set(value);
-  }
+  readonly fromCash = input<boolean>(true);
+
+  private readonly amountValue = computed<number | null>(() => {
+    const value = this.amount();
+    const n = value === null || value === undefined || value === '' ? null : Number(value);
+    return n !== null && !isNaN(n) ? n : null;
+  });
 
   readonly expectedCash = computed(() => this.cashService.currentSession()?.expectedCash ?? null);
   readonly exceeds = computed(() => {
-    const amount = this.amountSignal();
+    const amount = this.amountValue();
     const expected = this.expectedCash();
-    return this.fromCashSignal() && amount !== null && expected !== null
+    return this.fromCash() && amount !== null && expected !== null
       && Math.round(amount * 100) > Math.round(expected * 100);
   });
 

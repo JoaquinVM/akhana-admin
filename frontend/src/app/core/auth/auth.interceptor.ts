@@ -26,6 +26,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       // If a protected request fails with 401, clear local session and redirect to login
       if (error.status === 401 && !req.url.includes('/api/auth/login')) {
+        // With a token there was a session the server no longer accepts: the login explains it
+        if (token) {
+          authService.markSessionEnded?.();
+        }
         authService.clearSession();
         router.navigate(['/login']);
       }

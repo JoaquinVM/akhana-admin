@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FinancialTransactionService } from '../../../../core/finance/financial-transaction.service';
@@ -26,17 +26,13 @@ export class CashTransfersComponent {
   private readonly transactionService = inject(FinancialTransactionService);
   private readonly fb = inject(FormBuilder);
 
-  private readonly transfersSignal = signal<FinancialTransaction[]>([]);
-
-  @Input() set transfers(value: FinancialTransaction[] | null) {
-    this.transfersSignal.set(value || []);
-  }
-  @Input() canOperate = false;
+  readonly transfers = input<FinancialTransaction[] | null>(null);
+  readonly canOperate = input<boolean>(false);
 
   /** Emits the success message after registering or voiding. */
-  @Output() changed = new EventEmitter<string>();
+  readonly changed = output<string>();
 
-  readonly items = this.transfersSignal.asReadonly();
+  readonly items = computed(() => this.transfers() ?? []);
   readonly activeItems = computed(() => this.items().filter((t) => t.status === 'ACTIVO'));
   readonly totalIncome = computed(() =>
     this.activeItems().filter((t) => this.directionOf(t) === 'INGRESO').reduce((sum, t) => sum + t.amount, 0)
@@ -74,7 +70,7 @@ export class CashTransfersComponent {
   }
 
   openForm(direction: CashTransferDirection): void {
-    if (!this.canOperate) return;
+    if (!this.canOperate()) return;
     this.formDirection.set(direction);
     this.formError.set(null);
     this.transactionService.getCashTransferAccounts().subscribe({
@@ -123,7 +119,7 @@ export class CashTransfersComponent {
   }
 
   openVoid(tx: FinancialTransaction): void {
-    if (tx.status === 'ANULADO' || !this.canOperate) return;
+    if (tx.status === 'ANULADO' || !this.canOperate()) return;
     this.transferToVoid.set(tx);
     this.voidReason.set('');
     this.voidError.set(null);

@@ -472,7 +472,10 @@ Construcción (rama `feat/migration`, 27-10-2026):
   pagado, a cuenta, por pagar con línea y en consignación, código inexistente, categoría inexistente, pedido sin
   proveedor, producto por kilo sin «Se vende por», fila posterior al corte, hoja faltante, segunda importación,
   saldo y apertura sin históricos). Desde la segunda revisión (29-10-2026) la prueba se omite, en vez de fallar,
-  cuando la base ya tiene una importación (la local tras el ensayo): la importación es una sola vez.
+  cuando la base ya tiene una importación (la local tras el ensayo): la importación es una sola vez. Dos importaciones
+  a la vez ya no pasan ambas la verificación: `importHistory` toma un lock de PostgreSQL de la transacción
+  (`pg_advisory_xact_lock`) antes de comprobar que no hay otra, así la segunda espera a la primera y la rechaza
+  («ya se importó»). Prueba concurrente en `SerializationLockIntegrationTest`.
 - [x] Frontend: pantalla Migración con Revisar / Importar, resultado y descarga de rechazadas; marca «Histórico»
   en ventas, cajas, pedidos y consumos.
 - [x] Validar con los `.xlsx` reales (arriba).

@@ -12,7 +12,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
-| Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | Segunda revisión hecha; falta dividir `pos.component.html` y `register-sale` y pasar sus `@Input` a `input()` | §4 |
+| Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
 | Proveedores y compras | COM-01 a COM-09 | ✅ Completo | — | `purchases.md` |
@@ -170,7 +170,7 @@ Detalle en `cash.md`.
 
 Detalle en `sales.md`.
 
-- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea.
+- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
@@ -207,7 +207,7 @@ Detalle en `users.md`.
 - **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña de 8 a 100 caracteres, distinta del nombre de usuario, con hash BCrypt.
 - **USR-02** Permisos controlados en el frontend (menú, rutas) y en el backend (cada endpoint).
 - **USR-03** Un usuario dado de baja pierde el acceso de inmediato, aunque tenga una sesión abierta.
-- **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador.
+- **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador, tampoco con dos bajas a la vez.
 - **USR-05** Dos roles, Operador y Administrador, con permisos por pantalla según la tabla 2.2 (P-33).
 - **USR-06** El primer administrador se crea desde variables de entorno solo si no hay usuarios y debe cambiar la contraseña en su primer ingreso. Cualquier usuario puede cambiar su contraseña indicando la actual.
 - **USR-07** El login se bloquea tras varios intentos fallidos por usuario o por IP, con un mensaje que no revela si el usuario existe (T-19).
@@ -337,7 +337,6 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] Dividir `pos.component.html` y `register-sale` en componentes y pasar los 6 componentes del POS con `@Input`/`@Output` a `input()`/`output()` (hallazgo de la segunda revisión).
 - [ ] Instalar el VPS con `specs/deploy.md` (Tareas «En el VPS»): HTTPS por Tailscale, respaldo diario a B2 y restauración probada (NF-01, NF-02, NF-05).
 - [ ] El día de la salida, en producción (`migration.md`): vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).

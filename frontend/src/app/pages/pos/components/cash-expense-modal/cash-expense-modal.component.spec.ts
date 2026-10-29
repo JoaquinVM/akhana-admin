@@ -42,7 +42,7 @@ describe('CashExpenseModalComponent', () => {
 
     fixture = TestBed.createComponent(CashExpenseModalComponent);
     component = fixture.componentInstance;
-    component.isOpen = true;
+    fixture.componentRef.setInput('isOpen', true);
     fixture.detectChanges();
   });
 

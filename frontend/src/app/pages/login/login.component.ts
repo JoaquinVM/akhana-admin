@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
+export const SESSION_ENDED = 'Su sesión terminó: venció o se cambió la contraseña en otro equipo. Vuelva a ingresar.';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -25,6 +27,12 @@ export class LoginComponent {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly showPassword = signal(false);
+
+  constructor() {
+    if (this.authService.consumeSessionEnded?.()) {
+      this.errorMessage.set(SESSION_ENDED);
+    }
+  }
 
   togglePasswordVisibility(): void {
     this.showPassword.update((val) => !val);

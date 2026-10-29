@@ -373,8 +373,9 @@
   background: #1B3B18;
 }
 
-/* Phones: the groups fold into a panel under the bar, so the page never scrolls sideways */
-@media (max-width: 767px) {
+/* Phones, tablets and small laptops (the administrator menu needs ~1100 px): the groups fold into a panel under
+   the bar, so the page never scrolls sideways */
+@media (max-width: 1100px) {
   .top-navbar {
     height: 60px;
     padding: 0 12px;

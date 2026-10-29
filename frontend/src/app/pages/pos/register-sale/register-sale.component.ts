@@ -15,13 +15,15 @@ import {
   isSpecialProduct,
   presentationPrice
 } from '../../../core/product/models/product.models';
-import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
 import {
   SaleDetailRequest,
   SaleItemRequest
 } from '../../../core/sale/models/sale.models';
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
+import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
+import { CartLineComponent } from '../components/cart-line/cart-line.component';
+import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineName } from './cart-item';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
@@ -35,18 +37,7 @@ export function cartKey(product: Product, presentation: ProductPresentation | nu
   return presentation ? `${product.id}:${presentation.id}` : product.id;
 }
 
-export interface CartItem {
-  key: string;
-  product: Product;
-  presentation: ProductPresentation | null;
-  quantity: number;
-  unitPrice: number;
-  unitDiscount: number;
-  unitFinalPrice: number;
-  subtotal: number;
-  // POS-11: free line of a special product, with its typed name; each one is its own line
-  freeName?: string | null;
-}
+export type { CartItem } from './cart-item';
 
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
 
@@ -57,6 +48,8 @@ export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libre
     CommonModule,
     FormsModule,
     QuickProductsConfigModalComponent,
+    SaleCatalogComponent,
+    CartLineComponent,
     CheckoutModalComponent,
     ModalComponent,
     PresentationPickerComponent,
@@ -75,11 +68,9 @@ export class RegisterSaleComponent implements OnInit {
 
   // Catalog and search state
   catalogProducts = signal<Product[]>([]);
-  productSearchTerm = signal<string>('');
   isLoadingCatalog = signal<boolean>(false);
 
   // Quick products
-  activeGroupId = signal<string | null>(null);
   isConfigModalVisible = signal<boolean>(false);
 
   // CAT-11: product by kilo waiting for its presentation
@@ -100,27 +91,9 @@ export class RegisterSaleComponent implements OnInit {
   // Checkout modal (the payment lives in CheckoutModalComponent)
   isCheckoutModalOpen = signal<boolean>(false);
 
-  // Estados operativos
+  // Submit state
   isSubmitting = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
-
-  // Computed: active quick product group
-  activeGroup = computed<QuickProductGroup | null>(() => {
-    const groups = this.quickProductService.groups();
-    if (groups.length === 0) return null;
-    const currentId = this.activeGroupId();
-    if (!currentId) return groups[0];
-    return groups.find((g) => g.id === currentId) ?? groups[0];
-  });
-
-  // Computed: filtered catalog results
-  filteredSearchResults = computed<Product[]>(() => {
-    const term = this.productSearchTerm().toLowerCase().trim();
-    if (!term) return [];
-    return this.catalogProducts()
-      .filter((p) => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
-      .slice(0, 8);
-  });
 
   // Computed: cart totals
   // A product by weight counts as one item, whatever the kilos
@@ -206,23 +179,20 @@ export class RegisterSaleComponent implements OnInit {
 
   // Cart operations
   isWeighted(product: Product): boolean {
-    return product.saleUnit === 'KILOGRAM';
+    return isWeightedProduct(product);
   }
 
-  // «Otro peso»: quantity in kilos with up to 3 decimals
   isWeightLine(item: CartItem): boolean {
-    return this.isWeighted(item.product) && !item.presentation;
+    return isWeightLine(item);
   }
 
   lineName(item: CartItem): string {
-    if (item.freeName) return item.freeName;
-    return item.presentation ? `${item.product.name} · ${item.presentation.name}` : item.product.name;
+    return lineName(item);
   }
 
   // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
   addToCart(product: Product): void {
     if (isSpecialProduct(product)) {
-      this.productSearchTerm.set('');
       if (this.atCost()) {
         this.errorMessage.set(AT_COST_NO_FREE_LINES);
         return;
@@ -232,7 +202,6 @@ export class RegisterSaleComponent implements OnInit {
     }
     if (this.isWeighted(product) && activePresentations(product).length > 0) {
       this.pickerProduct.set(product);
-      this.productSearchTerm.set('');
       return;
     }
     this.addLine(product, null);
@@ -276,9 +245,7 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   freeLineLabel(item: CartItem): string {
-    return item.product.specialType === 'THIRD_PARTY'
-      ? `De ${item.product.ownerCreditorName ?? 'tercero'}`
-      : 'Sin identificar';
+    return freeLineLabel(item);
   }
 
   private addLine(product: Product, presentation: ProductPresentation | null): void {
@@ -289,8 +256,7 @@ export class RegisterSaleComponent implements OnInit {
     } else {
       if (this.atCost() && !this.hasCost(product)) {
         this.errorMessage.set(this.zeroCostMessage(product));
-        this.productSearchTerm.set('');
-        return;
+          return;
       }
       const quantity = presentation || !this.isWeighted(product) ? 1 : WEIGHT_STEP_KG;
       const price = this.priceFor(product, presentation);
@@ -306,7 +272,6 @@ export class RegisterSaleComponent implements OnInit {
       };
       this.cartItems.update((items) => [...items, newItem]);
     }
-    this.productSearchTerm.set('');
     this.errorMessage.set(null);
   }
 
@@ -463,10 +428,6 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   // Quick product groups and settings
-  selectGroup(groupId: string): void {
-    this.activeGroupId.set(groupId);
-  }
-
   openConfigModal(): void {
     this.isConfigModalVisible.set(true);
   }

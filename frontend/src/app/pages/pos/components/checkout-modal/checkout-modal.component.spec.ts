@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SimpleChange } from '@angular/core';
 import { vi } from 'vitest';
 import { CheckoutModalComponent } from './checkout-modal.component';
 
@@ -7,10 +6,12 @@ describe('CheckoutModalComponent', () => {
   let component: CheckoutModalComponent;
   let fixture: ComponentFixture<CheckoutModalComponent>;
 
+  // Closes and opens again, so the opening effect runs with the new total
   function open(total: number): void {
-    component.totalInput = total;
-    component.isOpen = true;
-    component.ngOnChanges({ isOpen: new SimpleChange(false, true, false) });
+    fixture.componentRef.setInput('isOpen', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('totalAmount', total);
+    fixture.componentRef.setInput('isOpen', true);
     fixture.detectChanges();
   }
 
@@ -132,7 +133,7 @@ describe('CheckoutModalComponent', () => {
     emitted.mockClear();
     component.onAmountReceivedChange(5);
     component.handleConfirm();
-    component.isSubmitting = true;
+    fixture.componentRef.setInput('isSubmitting', true);
     component.onAmountReceivedChange(8);
     component.handleConfirm();
     expect(emitted).not.toHaveBeenCalled();
@@ -142,8 +143,8 @@ describe('CheckoutModalComponent', () => {
     const neida = { id: 'cus-1', name: 'Tía Neida', balance: 0 } as any;
 
     function openAtCost(total: number, customers: any[] = [neida]): void {
-      component.atCostInput = true;
-      component.customers = customers;
+      fixture.componentRef.setInput('atCost', true);
+      fixture.componentRef.setInput('customers', customers);
       open(total);
     }
 
@@ -242,7 +243,7 @@ describe('CheckoutModalComponent', () => {
       openAtCost(50);
       component.onCreditChange(20);
       component.comment.set('No va');
-      component.atCostInput = false;
+      fixture.componentRef.setInput('atCost', false);
 
       expect(component.amountDue()).toBe(50);
       const emitted = vi.fn();
@@ -251,5 +252,17 @@ describe('CheckoutModalComponent', () => {
       component.handleConfirm();
       expect(emitted).toHaveBeenCalledWith(expect.objectContaining({ customerId: null, creditAmount: 0, amountCash: 50, comment: '' }));
     });
+  });
+
+  it('reinicia los montos solo al abrir, no cuando cambia el total con el modal abierto', () => {
+    component.setPaymentMethod('EFECTIVO');
+    component.amountReceived.set(50);
+
+    fixture.componentRef.setInput('totalAmount', 30);
+    fixture.detectChanges();
+    expect(component.amountReceived()).toBe(50);
+
+    open(30);
+    expect(component.amountReceived()).toBe(30);
   });
 });

@@ -5,10 +5,10 @@
       <span>Retiros: <strong class="text-out">Bs {{ totalWithdrawals() | number:'1.2-2' }}</strong></span>
     </div>
     <div class="transfers-actions">
-      <button type="button" class="btn btn-secondary btn-sm" [disabled]="!canOperate" (click)="openForm('INGRESO')">
+      <button type="button" class="btn btn-secondary btn-sm" [disabled]="!canOperate()" (click)="openForm('INGRESO')">
         <span>+ Ingreso a caja</span>
       </button>
-      <button type="button" class="btn btn-warning btn-sm" [disabled]="!canOperate" (click)="openForm('RETIRO')">
+      <button type="button" class="btn btn-warning btn-sm" [disabled]="!canOperate()" (click)="openForm('RETIRO')">
         <span>− Retiro de caja</span>
       </button>
     </div>
@@ -76,7 +76,7 @@
                   <button
                     type="button"
                     class="btn-icon btn-delete"
-                    [disabled]="tx.status === 'ANULADO' || !canOperate"
+                    [disabled]="tx.status === 'ANULADO' || !canOperate()"
                     [title]="tx.status === 'ANULADO' ? 'Este movimiento ya está anulado' : 'Anular movimiento'"
                     aria-label="Anular movimiento"
                     (click)="openVoid(tx)">

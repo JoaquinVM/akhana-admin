@@ -15,15 +15,12 @@ import { CashSessionInfoModalComponent } from '../cash/components/cash-session-i
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
 import { CashTransfersComponent } from './components/cash-transfers/cash-transfers.component';
 import { CashExpenseModalComponent } from './components/cash-expense-modal/cash-expense-modal.component';
+import { CashExpensesComponent } from './components/cash-expenses/cash-expenses.component';
+import { PosKpisComponent } from './components/pos-kpis/pos-kpis.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
-import { ModalComponent } from '../../shared/components/modal/modal.component';
-import { FormsModule } from '@angular/forms';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
-import {
-  FinancialTransaction,
-  VoidFinancialTransactionRequest
-} from '../../core/finance/models/finance.models';
+import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { formatBs } from '../../shared/utils/money';
 
 @Component({
@@ -31,16 +28,16 @@ import { formatBs } from '../../shared/utils/money';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     OpenCashModalComponent,
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
     VoidSaleModalComponent,
     CashTransfersComponent,
     CashExpenseModalComponent,
+    CashExpensesComponent,
+    PosKpisComponent,
     SaleDetailModalComponent,
-    SalesTableComponent,
-    ModalComponent
+    SalesTableComponent
   ],
   templateUrl: './pos.component.html',
   styleUrls: ['./pos.component.css']
@@ -88,12 +85,6 @@ export class PosComponent implements OnInit {
 
   // Expected cash in the drawer: computed by the server (CAJ-03: includes Caja expenses and transfers)
   expectedCashInDrawer = computed(() => Number(this.cashService.currentSession()?.expectedCash) || 0);
-
-  // Expense void modal
-  selectedExpenseToVoid = signal<FinancialTransaction | null>(null);
-  isVoidExpenseModalVisible = signal<boolean>(false);
-  voidExpenseReason = signal<string>('');
-  voidExpenseError = signal<string | null>(null);
 
   ngOnInit(): void {
     this.checkNavigationState();
@@ -287,7 +278,7 @@ export class PosComponent implements OnInit {
         const diff = closedSession.difference ?? 0;
         const diffText = diff === 0
           ? 'con cuadre exacto'
-          : `con diferencia de ${diff >= 0 ? '+' : ''}${diff} Bs`;
+          : `con ${diff > 0 ? 'sobrante' : 'faltante'} de ${formatBs(Math.abs(diff))}`;
         this.showFeedback('success', `Caja #${closedSession.sessionNumber} cerrada exitosamente (${diffText}).`);
         this.recentSales.set([]);
         this.recentExpenses.set([]);
@@ -324,53 +315,10 @@ export class PosComponent implements OnInit {
     this.loadCurrentSession();
   }
 
-  // Expense void
-  openVoidExpenseModal(tx: FinancialTransaction): void {
-    if (tx.status === 'ANULADO') return;
-    if (!this.cashService.currentSession()) {
-      this.showFeedback('error', 'No se pueden anular gastos con la caja cerrada.');
-      return;
-    }
-    this.selectedExpenseToVoid.set(tx);
-    this.voidExpenseReason.set('');
-    this.voidExpenseError.set(null);
-    this.isVoidExpenseModalVisible.set(true);
-  }
-
-  closeVoidExpenseModal(): void {
-    this.selectedExpenseToVoid.set(null);
-    this.voidExpenseReason.set('');
-    this.voidExpenseError.set(null);
-    this.isVoidExpenseModalVisible.set(false);
-  }
-
-  handleConfirmVoidExpense(): void {
-    const tx = this.selectedExpenseToVoid();
-    if (!tx) return;
-
-    this.isActionLoading.set(true);
-    this.voidExpenseError.set(null);
-
-    const req: VoidFinancialTransactionRequest = {
-      voidReason: this.voidExpenseReason().trim()
-    };
-
-    this.transactionService.voidCashExpense(tx.id, req).subscribe({
-      next: (updatedTx) => {
-        this.isActionLoading.set(false);
-        this.closeVoidExpenseModal();
-        this.showFeedback('success', `Gasto de ${formatBs(updatedTx.amount)} anulado exitosamente.`);
-        const session = this.cashService.currentSession();
-        if (session) {
-          this.loadExpensesForSession(session.id);
-          this.cashService.getCurrentSession().subscribe();
-        }
-      },
-      error: (err: any) => {
-        this.isActionLoading.set(false);
-        this.voidExpenseError.set(err.error?.message || 'Error al anular el gasto.');
-      }
-    });
+  // After voiding a cash expense: refresh the expenses and the expected cash
+  onCashExpensesChanged(message: string): void {
+    this.showFeedback('success', message);
+    this.loadCurrentSession();
   }
 
   dismissFeedback(): void {

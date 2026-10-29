@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoidSaleModalComponent } from './void-sale-modal.component';
 import { Sale } from '../../../../core/sale/models/sale.models';
-import { SimpleChange } from '@angular/core';
 
 describe('VoidSaleModalComponent', () => {
   let component: VoidSaleModalComponent;
@@ -26,12 +25,8 @@ describe('VoidSaleModalComponent', () => {
 
     fixture = TestBed.createComponent(VoidSaleModalComponent);
     component = fixture.componentInstance;
-    component.isOpen = true;
-    component.sale = mockSale;
-
-    component.ngOnChanges({
-      isOpen: new SimpleChange(false, true, true)
-    });
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('sale', mockSale);
     fixture.detectChanges();
   });
 
@@ -41,12 +36,12 @@ describe('VoidSaleModalComponent', () => {
     expect(component.isValid).toBe(false);
   });
 
-  it('debe validar que el motivo tenga al menos 5 caracteres', () => {
-    component.voidReason.set('abc');
-    expect(component.isValid).toBe(false);
-
+  it('RG-03: el motivo es obligatorio, sin largo mínimo', () => {
     component.voidReason.set('    ');
     expect(component.isValid).toBe(false);
+
+    component.voidReason.set('mal');
+    expect(component.isValid).toBe(true);
 
     component.voidReason.set('Error en digitación');
     expect(component.isValid).toBe(true);
@@ -62,11 +57,11 @@ describe('VoidSaleModalComponent', () => {
     expect(emittedReason).toBe('Error en digitación');
   });
 
-  it('no debe emitir confirmed si el motivo tiene menos de 5 caracteres', () => {
+  it('no debe emitir confirmed si el motivo está en blanco', () => {
     let emitted = false;
     component.confirmed.subscribe(() => (emitted = true));
 
-    component.voidReason.set('mal');
+    component.voidReason.set('   ');
     component.handleConfirm();
 
     expect(emitted).toBe(false);

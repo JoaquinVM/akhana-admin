@@ -27,23 +27,23 @@ describe('CashLimitWarningComponent', () => {
   const warning = () => fixture.debugElement.query(By.css('.cash-limit-warning'));
 
   it('pide la caja actual al mostrarse y avisa solo si el monto supera el esperado', () => {
-    component.amount = 120.5;
+    fixture.componentRef.setInput('amount', 120.5);
     fixture.detectChanges();
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
     expect(warning()).toBeNull();
 
-    component.amount = '120.51';
+    fixture.componentRef.setInput('amount', '120.51');
     fixture.detectChanges();
     expect(warning().nativeElement.textContent).toContain('120.50');
   });
 
   it('no avisa si la salida no es de Caja o no hay caja abierta', () => {
-    component.amount = 500;
-    component.fromCash = false;
+    fixture.componentRef.setInput('amount', 500);
+    fixture.componentRef.setInput('fromCash', false);
     fixture.detectChanges();
     expect(warning()).toBeNull();
 
-    component.fromCash = true;
+    fixture.componentRef.setInput('fromCash', true);
     mockCashService.currentSession.set(null);
     mockCashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 404 })));
     fixture.detectChanges();

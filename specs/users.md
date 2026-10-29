@@ -104,7 +104,11 @@ El sistema SHALL realizar la baja de usuarios mediante eliminación lógica (`de
 
 #### Scenario: Rechazo de eliminación del último administrador
 - **WHEN** se intenta eliminar al único administrador activo
-- **THEN** el sistema bloquea la operación advirtiendo que el sistema no puede quedar sin capacidad de administración
+- **THEN** el sistema bloquea la operación advirtiendo que el sistema no puede quedar sin capacidad de administración. Desde el 29-10-2026 la cuenta de administradores activos bloquea sus filas (`findActiveByRoleForUpdate`, en orden de id): si dos administradores se dan de baja o se pasan a Operador a la vez, el segundo espera al primero y vuelve a contar, así nunca quedan los dos fuera. Prueba concurrente en `SerializationLockIntegrationTest`.
+
+#### Scenario: Sesión que terminó
+- **WHEN** el servidor rechaza el token de una sesión abierta (venció o se cambió la contraseña en otro equipo)
+- **THEN** el frontend vuelve al login y muestra «Su sesión terminó: venció o se cambió la contraseña en otro equipo. Vuelva a ingresar.», una sola vez. Al crear un usuario, la respuesta ya trae la fecha de creación. Pruebas en `auth.interceptor.spec.ts`, `login.component.spec.ts` y `UserServiceTest`.
 
 ---
 

@@ -1,10 +1,10 @@
 <app-modal
-  [isOpen]="isOpen"
+  [isOpen]="isOpen()"
   title="Anular Venta"
   size="sm"
   (close)="handleClose()">
   <div class="void-modal-body">
-    @if (sale) {
+    @if (sale(); as sale) {
       <div class="sale-summary-card">
         <div class="summary-row">
           <span class="lbl">Venta:</span>
@@ -38,25 +38,22 @@
         id="voidReason"
         rows="3"
         class="form-control"
-        placeholder="Explica detalladamente por qué se anula esta venta (mínimo 5 caracteres)..."
+        placeholder="Explica por qué se anula esta venta..."
         [ngModel]="voidReason()"
         (ngModelChange)="voidReason.set($event)"></textarea>
-      @if (voidReason().trim().length > 0 && voidReason().trim().length < 5) {
-        <span class="field-hint text-danger">El motivo debe tener al menos 5 caracteres.</span>
-      }
     </div>
   </div>
 
   <div modal-footer class="modal-footer-actions">
-    <button type="button" class="btn btn-secondary" [disabled]="isLoading" (click)="handleClose()">
+    <button type="button" class="btn btn-secondary" [disabled]="isLoading()" (click)="handleClose()">
       Cancelar
     </button>
     <button
       type="button"
       class="btn btn-danger"
-      [disabled]="!isValid || isLoading"
+      [disabled]="!isValid || isLoading()"
       (click)="handleConfirm()">
-      @if (isLoading) {
+      @if (isLoading()) {
         <span class="spinner-small"></span>
         <span>Anulando...</span>
       } @else {

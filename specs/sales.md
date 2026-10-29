@@ -18,6 +18,13 @@ El sistema SHALL proveer un buscador interactivo en el POS que permita filtrar y
 
 ---
 
+#### Scenario: Enter agrega por código (pendientes de la segunda revisión, 29-10-2026)
+- **WHEN** el operador escribe un código en el buscador y presiona Enter
+- **THEN** se agrega el producto con ese código exacto (sin distinguir mayúsculas) aunque haya más resultados; sin código exacto, Enter agrega solo si hay un único resultado, y si hay varios no hace nada. Un producto por kilo con presentaciones abre su selector, igual que al hacer clic. Pruebas en `sale-catalog.component.spec.ts`.
+
+#### Scenario: Estructura de la pantalla de venta y del POS
+- **THEN** `register-sale` usa `app-sale-catalog` (buscador y productos rápidos) y `app-cart-line` (cada fila del carrito, con `CartItem` y sus funciones en `register-sale/cart-item.ts`); el POS usa `app-pos-kpis` (las cinco cifras) y `app-cash-expenses` (gastos de la caja y su anulación, como `app-cash-transfers`). Todos los componentes del POS usan `input()`/`output()`; el modal de cobro reinicia sus montos con un `effect` solo al abrirse. El POS ya no reemplaza la pantalla por «Cargando…» cada vez que refresca la caja abierta: eso destruía y recreaba el formulario de retiro, cuyo aviso de efectivo volvía a pedir la caja, en un bucle de pedidos a `/cash-sessions/current` al abrir la pestaña Ingresos / Retiros. En celular, la fila del carrito pasa a dos renglones y la pantalla de venta no tiene scroll horizontal. Pruebas en `pos.component.spec.ts`, `cash-expenses.component.spec.ts`, `pos-kpis.component.spec.ts` y `cart-line.component.spec.ts`.
+
 ### Requirement: Productos rápidos organizados en grupos configurables
 El sistema SHALL disponer de una sección de accesos directos ("Productos Rápidos") en el POS organizada por grupos, permitiendo agregar productos al carrito en un solo clic e incrementando la cantidad si ya existen en la venta.
 
@@ -172,7 +179,7 @@ El sistema SHALL permitir la anulación justificada de una venta únicamente si 
 
 #### Scenario: Motivo de anulación (segunda revisión, 29-10-2026)
 - **WHEN** se anula una venta sin motivo o con uno en blanco
-- **THEN** se rechaza con un solo mensaje, «El motivo de anulación es obligatorio.»; el motivo no tiene largo mínimo, igual que en compras, deudas, consumos y finanzas (antes la venta pedía 5 caracteres y mostraba dos mensajes juntos). Pruebas en `SaleControllerTest`.
+- **THEN** se rechaza con un solo mensaje, «El motivo de anulación es obligatorio.»; el motivo no tiene largo mínimo, igual que en compras, deudas, consumos y finanzas (antes la venta pedía 5 caracteres y mostraba dos mensajes juntos). El modal de anulación del POS tampoco pide 5 caracteres: habilita Confirmar con cualquier motivo no vacío; el de anular un gasto de caja, igual. Pruebas en `SaleControllerTest`, `void-sale-modal.component.spec.ts` y `cash-expenses.component.spec.ts`.
 
 #### Scenario: Anulación exitosa de venta en caja abierta
 - **WHEN** un usuario solicita anular una venta de la sesión activa ingresando el motivo obligatorio "Error en digitación de productos"

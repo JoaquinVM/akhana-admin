@@ -87,7 +87,7 @@ describe('QuickProductsConfigModalComponent', () => {
 
     fixture = TestBed.createComponent(QuickProductsConfigModalComponent);
     component = fixture.componentInstance;
-    component.isOpen = true;
+    fixture.componentRef.setInput('isOpen', true);
     fixture.detectChanges();
   });
 

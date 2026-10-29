@@ -1,5 +1,5 @@
 <app-modal
-  [isOpen]="isOpen"
+  [isOpen]="isOpen()"
   title="Cobro de Venta"
   subtitle="Selecciona el método de pago y confirma la transacción"
   size="md"
@@ -11,7 +11,7 @@
     <div class="checkout-total-banner">
       <div class="total-banner-details">
         <span class="total-banner-label">Total a Cobrar</span>
-        <span class="total-banner-count">{{ cartCount }} {{ cartCount === 1 ? 'producto' : 'productos' }} en la venta</span>
+        <span class="total-banner-count">{{ cartCount() }} {{ cartCount() === 1 ? 'producto' : 'productos' }} en la venta</span>
       </div>
       <div class="total-banner-price">
         <span class="price-curr">Bs</span>
@@ -30,7 +30,7 @@
             [ngModel]="customerId()"
             (ngModelChange)="onCustomerChange($event)">
             <option [ngValue]="null">Sin cliente (paga en el momento)</option>
-            @for (c of customers; track c.id) {
+            @for (c of customers(); track c.id) {
               <option [ngValue]="c.id">{{ c.name }} · por cobrar Bs {{ c.balance | number:'1.2-2' }}</option>
             }
           </select>
@@ -293,14 +293,14 @@
       }
     }
 
-    @if (errorMessage) {
+    @if (errorMessage()) {
       <div class="checkout-alert-error">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <span>{{ errorMessage }}</span>
+        <span>{{ errorMessage() }}</span>
       </div>
     }
 
@@ -310,16 +310,16 @@
         type="button"
         class="btn btn-secondary btn-modal-action"
         (click)="handleClose()"
-        [disabled]="isSubmitting">
+        [disabled]="isSubmitting()">
         Cancelar
       </button>
 
       <button
         type="button"
         class="btn btn-primary btn-modal-action btn-confirm-checkout"
-        [disabled]="!isPaymentValid() || isSubmitting"
+        [disabled]="!isPaymentValid() || isSubmitting()"
         (click)="handleConfirm()">
-        @if (isSubmitting) {
+        @if (isSubmitting()) {
           <span class="spinner-small"></span>
           <span>Procesando Venta...</span>
         } @else {

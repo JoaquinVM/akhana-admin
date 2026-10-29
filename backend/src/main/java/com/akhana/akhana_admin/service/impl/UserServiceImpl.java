@@ -67,7 +67,8 @@ public class UserServiceImpl implements UserService {
                 .createdBy(currentUsername)
                 .build();
 
-        User saved = userRepository.save(user);
+        // Flushed so the response carries the creation time the database stamps
+        User saved = userRepository.saveAndFlush(user);
         log.info("User '{}' created by '{}'", saved.getUsername(), currentUsername);
         return mapToResponse(saved);
     }
@@ -133,7 +134,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void ensureNotLastAdministrator(String message) {
-        if (userRepository.countByRoleAndActiveTrueAndDeletedAtIsNull(Role.ADMINISTRATOR) <= 1) {
+        if (userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR).size() <= 1) {
             throw new IllegalStateException(message);
         }
     }
