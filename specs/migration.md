@@ -10,7 +10,7 @@ la migración sea mecánica, y lo que no tiene producto entra con los productos 
 Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 y CAT-11.
 
 Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Correcciones en la
-planilla hechas el 27-10-2026 (HOJITA cerrada) salvo las filas de Ventas sin código; falta correrla el día de la salida,
+planilla hechas el 27-10-2026 (HOJITA cerrada) y el 28-10-2026 (filas de Ventas sin código); falta correrla el día de la salida,
 vaciando antes la última fila del Cierre (borrador).
 
 ## Qué se migra y qué no
@@ -36,8 +36,8 @@ CAT-06). Hay que hacer antes una copia de respaldo de las dos planillas.
 Hechas el 27-10-2026 con el dueño, con copia de respaldo previa de las dos planillas: consumos (P-40), hoja
 Consumos completa, Cierre igual a Ventas, columnas Proveedor y Monto pagado en Pedidos y los arreglos de la
 validación. Las filas de Transacc. cambiaron de número (se quitaron 59 gastos Consumo y se agregó un Sobrante):
-los números de fila de la validación del 26-10 ya no sirven. Faltan las filas de Ventas sin código (P-42); el
-borrador del Cierre se vacía el día de la salida (abajo); HOJITA (P-41) quedó cerrada.
+los números de fila de la validación del 26-10 ya no sirven. Las filas de Ventas sin código (P-42) se hicieron el
+28-10-2026; el borrador del Cierre se vacía el día de la salida (abajo); HOJITA (P-41) quedó cerrada.
 
 ### Consumos anotados como venta (P-40)
 
@@ -85,13 +85,32 @@ borraron productos de la hoja Productos. Al 26-10 son 327 filas.
   del producto especial de Mami (POS-13).
 - **Cuando** no se puede identificar **entonces** queda sin código y entra como venta sin identificar (POS-12).
 - El Excel de costos del sistema anterior es un archivo de trabajo: no va al repositorio.
-- Propuesta del 27-10-2026 (pendiente de aprobar por el dueño; la planilla no se tocó): 269 grupos en el archivo de
-  trabajo «Revision P-42 filas sin codigo.xlsx». El Excel anterior (`query_11`) solo trae nombre, costo y precio de
-  venta: su costo se usa cuando el producto y el precio coinciden; si no, el del catálogo. Resultado: 95 grupos
-  seguros (138 filas), 50 por revisar (54) y 124 sin identificar (135). Unos 25 de los sin identificar tienen costo
-  en el Excel anterior pero no están en Productos (Magnesio Total 5, Vitabiosa, Café Chulumani…): el dueño decide si
-  se agregan a Productos o entran sin identificar. Los de granel por gramo (Cayú, Arándano) piden además pasar la
-  Cant a gramos. Falta que el dueño indique los productos de terceros (Mami).
+- **Cuando** el producto se vendió pero ya no se compra ni está en Productos, y el Excel anterior tiene su costo
+  **entonces** se agrega a la hoja Productos y, después de importarlo (CAT-06, que crea todo Activo), se da de baja
+  (inactivo): la migración acepta productos inactivos (solo ignora los eliminados) y la venta entra con código y
+  utilidad. Si el proveedor no se conoce, va con el proveedor «Sistema anterior».
+- **Cuando** el producto se vende por gramo (granel) **entonces** la Cant de la fila pasa a gramos y el Precio
+  unitario a precio por gramo, como las demás filas de frutos secos.
+- Hecho el 28-10-2026 con el dueño (las 327 filas del 26-10). El Excel anterior (`query_11`) solo trae nombre, costo
+  y precio de venta: su costo se usa cuando producto y precio coinciden; si no, el del catálogo. Las ventas del 24 al
+  26-10 ya estaban codificadas en la planilla. Resultado:
+  - 236 filas con código y costo unitario; 5 de granel pasadas a gramos (Arándano, Cayú).
+  - 25 productos nuevos al final de Productos (filas 886 a 910: `AMJ-ACE-BAC-90U`, `AMJ-MAG-TOT-100U`,
+    `AMJ-CUR-110U`, `VBE-DIM-MAG-60U`, `VBE-COL-HID-300GR`, `VBE-MEL-LEO-POL-90GR`, `VIB-COL-T2D-60U`,
+    `ALF-OM3-KID-60U`, `SOL-GLI-VEG-40ML`, `SOL-CAR-ACT-30GR`, `ANV-HOJ-QUI-250GR`, `ITE-HID-100ML`,
+    `ITE-ACE-COC-200GR`, `PAT-BOL-SUR-50G`, `ORI-CAF-THO-250GR`, `GRA-MOS`, `UNI-CRE-REG-50GR`, `UNI-TON-MAN-140ML`,
+    `UNI-TON-PMI-140ML`, `UNI-REP-60ML`, `INN-STE-HOJ-100GR` y los de «Sistema anterior» `ANT-VIT-BIO-500ML`,
+    `ANT-CAF-CHU-320GR`, `ANT-CAF-EXO-250GR`, `ANT-ACE-OLI-500ML`), que se dan de baja después de importarlos.
+  - 8 filas de Sagrada Madre (20 al 23-10) son de Mami: código `TER-SAG-MAD`, costo igual al precio.
+  - 91 filas quedan sin código (sin nombre, genéricas o no identificadas) y entran como venta sin identificar.
+- También el 28-10-2026: las 63 ventas del 27-10 codificadas, la fila 6059 (Stevia) con su precio unitario, costo
+  de las filas 3418 y 3741 que no lo tenían, y Kefir Frutado Naturale con costo 22.
+- **Cuando** una fila tiene Cant × Precio unitario distinto del Total **entonces** la migración usa Total ÷ Cant
+  como precio. Al 28-10 quedan 8 así (filas 567, 1052, 1053, 1492, 1783, 1811, 1994 y 5022), probablemente con la
+  Cant mal anotada; no se tocan sin el dueño porque el Total ya cuadra con el Cierre. Las filas 1401 y 1402
+  (11-08) tenían el total conjunto de Bs 160 copiado en las dos: se corrigió a 64 y 96 y, con la regla de «Cierre
+  igual a Ventas», el Total del Cierre del 11-08 bajó a 3.296, el «Ventas» Caja de Transacc. a 2.479 y el Sobrante
+  pasó de −55 a 105 (la caja final contada no cambia).
 
 ### Pedidos (P-45 a P-47)
 
@@ -351,8 +370,12 @@ Correcciones en la planilla (con el dueño, en otra sesión):
 - [ ] Copia de respaldo de las dos planillas.
 - [ ] Lista por día de consumos anotados como venta y corrección en Ventas, Transacc., Cierre de Caja y Consumos.
 - [ ] Código y costo unitario en cada fila de la hoja Consumos (el dueño).
-- [ ] Revisión de las filas de Ventas sin código con el Excel de costos del sistema anterior; ventas de Mami
-  marcadas.
+- [x] Revisión de las filas de Ventas sin código con el Excel de costos del sistema anterior; ventas de Mami
+  marcadas (28-10-2026).
+- [ ] Día de la salida, antes de migrar: crear la persona Mami en Deudas y los productos especiales `SIN-IDENT`
+  (Sin identificar) y `TER-SAG-MAD` (De tercero, dueña Mami); importar los productos y dar de baja los 25 nuevos
+  de P-42.
+- [ ] Con el dueño: revisar la Cant de las 8 filas de Ventas donde Cant × Precio no da el Total.
 - [ ] Columna Proveedor en Pedidos (Claude propone, el dueño confirma) y Monto pagado en los pedidos A Cuenta.
 - [ ] Arreglos de «Otros arreglos encontrados» y categorías faltantes en Finanzas.
 - [x] HOJITA vaciada en las otras hojas (27-10-2026).
