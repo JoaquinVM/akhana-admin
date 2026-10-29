@@ -228,8 +228,8 @@ class MigrationIntegrationTest {
             "Akhana Pedidos.xlsx", validPedidos(), CUTOFF);
         assertThat(preview.rejected()).isEmpty();
         assertThat(preview.imported()).isFalse();
-        assertThat(preview.unassignedLines()).isEqualTo(1);
-        assertThat(preview.unassignedTotal()).isEqualByComparingTo("23.00");
+        assertThat(preview.unidentifiedLines()).isEqualTo(1);
+        assertThat(preview.unidentifiedTotal()).isEqualByComparingTo("23.00");
         assertThat(preview.thirdPartyDebts()).singleElement()
             .satisfies(debt -> {
                 assertThat(debt.creditorName()).isEqualTo(mamiName);
@@ -246,6 +246,7 @@ class MigrationIntegrationTest {
         assertThat(july.profit()).isEqualByComparingTo("66.04");
         // P-39: «Mami precio costo» and the breakage marked «precio costo» are at-cost sales, not consumptions
         assertThat(july.atCost()).isEqualByComparingTo("20.00");
+        assertThat(july.unidentified()).isEqualByComparingTo("23.00");
         assertThat(july.thirdParty()).isEqualByComparingTo("50.00");
         assertThat(july.consumptions()).isEqualByComparingTo("10.00");
         assertThat(preview.notices()).singleElement().satisfies(notice -> {
@@ -288,11 +289,14 @@ class MigrationIntegrationTest {
         assertThat((BigDecimal) kilo.get("unit_price")).isEqualByComparingTo("210.00");
         assertThat((BigDecimal) kilo.get("unit_cost")).isEqualByComparingTo("130.00");
         Map<String, Object> free = jdbc.queryForMap(
-            "SELECT free_name, unit_cost, assignment_status FROM sale_items WHERE sale_id = ? AND free_line_type = 'UNIDENTIFIED'",
-            normal);
+            "SELECT free_name, unit_cost, assignment_status, assigned_by, assigned_at FROM sale_items "
+                + "WHERE sale_id = ? AND free_line_type = 'UNIDENTIFIED'", normal);
         assertThat(free.get("free_name")).isEqualTo("Pan sin gluten");
         assertThat((BigDecimal) free.get("unit_cost")).isEqualByComparingTo("0");
-        assertThat(free.get("assignment_status")).isEqualTo("POR_ASIGNAR");
+        // POS-12 (28-10-2026): rows without a code are closed as unidentified for good by the import
+        assertThat(free.get("assignment_status")).isEqualTo("SIN_IDENTIFICAR");
+        assertThat(free.get("assigned_by")).isEqualTo("it-migration");
+        assertThat(free.get("assigned_at")).isNotNull();
         BigDecimal debt = jdbc.queryForObject(
             "SELECT SUM(i.subtotal) FROM sale_items i JOIN creditors c ON c.id = i.creditor_id WHERE c.name = ?",
             BigDecimal.class, mamiName);

@@ -57,10 +57,12 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal quantity = (BigDecimal) row[3];
             BigDecimal pending = (BigDecimal) row[6];
             BigDecimal thirdParty = (BigDecimal) row[7];
-            // Pending (POS-12) and third-party (POS-13) lines are not normal sales
-            BigDecimal total = ((BigDecimal) row[4]).subtract(pending).subtract(thirdParty);
+            BigDecimal unidentified = (BigDecimal) row[8];
+            // Pending and unidentified (POS-12) and third-party (POS-13) lines are not normal sales
+            BigDecimal total = ((BigDecimal) row[4]).subtract(pending).subtract(thirdParty).subtract(unidentified);
             day.pendingTotal = day.pendingTotal.add(pending);
             day.thirdPartyTotal = day.thirdPartyTotal.add(thirdParty);
+            day.unidentifiedTotal = day.unidentifiedTotal.add(unidentified);
             if (SaleType.AL_COSTO.name().equals(row[1])) {
                 day.atCostSales += sales;
                 day.atCostQuantity = day.atCostQuantity.add(quantity);
@@ -112,7 +114,7 @@ public class ReportServiceImpl implements ReportService {
             int next = 0;
             for (Object[] line : lines) {
                 BigDecimal lineTotal = isFreeLine(line) ? (BigDecimal) line[7] : discounted.get(next++);
-                // Pending and third-party lines are not sales of a supplier (POS-12, POS-13)
+                // Pending, unidentified and third-party lines are not sales of a supplier (POS-12, POS-13)
                 if (!Boolean.TRUE.equals(line[9])) {
                     continue;
                 }
@@ -281,7 +283,8 @@ public class ReportServiceImpl implements ReportService {
                                                       BigDecimal consumptionTotal) {
         Row s = sales != null ? sales : new Sums().toRow(null);
         return new TotalsReportResponse.Row(month, s.normalSales(), s.normalTotal(), s.normalCost(), s.normalProfit(),
-            s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.pendingTotal(), s.thirdPartyTotal(), s.total(),
+            s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.pendingTotal(), s.unidentifiedTotal(), s.thirdPartyTotal(),
+            s.total(),
             consumptions, consumptionTotal, s.normalProfit().subtract(consumptionTotal));
     }
 
@@ -466,10 +469,12 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal atCostTotal = BigDecimal.ZERO;
         BigDecimal pendingTotal = BigDecimal.ZERO;
         BigDecimal thirdPartyTotal = BigDecimal.ZERO;
+        BigDecimal unidentifiedTotal = BigDecimal.ZERO;
 
         void add(Sums other) {
             pendingTotal = pendingTotal.add(other.pendingTotal);
             thirdPartyTotal = thirdPartyTotal.add(other.thirdPartyTotal);
+            unidentifiedTotal = unidentifiedTotal.add(other.unidentifiedTotal);
             normalSales += other.normalSales;
             normalQuantity = normalQuantity.add(other.normalQuantity);
             normalTotal = normalTotal.add(other.normalTotal);
@@ -484,10 +489,12 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal margin = normalTotal.signum() > 0
                 ? profit.multiply(HUNDRED).divide(normalTotal, 2, RoundingMode.HALF_UP)
                 : null;
-            // The store's sales include those waiting for their product, not the third-party ones
+            // The store's sales include those waiting for their product and the unidentified ones, not the
+            // third-party ones
             return new Row(date, normalSales, quantity(normalQuantity), money(normalTotal), money(normalCost), profit,
                 margin, atCostSales, quantity(atCostQuantity), money(atCostTotal), money(pendingTotal),
-                money(thirdPartyTotal), money(normalTotal.add(atCostTotal).add(pendingTotal)), profit);
+                money(unidentifiedTotal), money(thirdPartyTotal),
+                money(normalTotal.add(atCostTotal).add(pendingTotal).add(unidentifiedTotal)), profit);
         }
     }
 }

@@ -103,6 +103,32 @@ class ReportServiceTest {
     }
 
     @Test
+    @DisplayName("POS-12: sin identificar definitivo suma al total de la tienda pero no a las normales ni a la utilidad")
+    void unidentifiedApartFromProfit() {
+        // The same sale with the pending line of 20 closed as unidentified for good
+        stubRows(row("2026-07-17", "NORMAL", 1, "1.000", "100.00", "30.00", "0", "30.00", "20.00"));
+        stubConsumptions(consumption("2026-07", 1, "5.00"));
+
+        Row day = reportService.getSalesByDay(JULY_1, AUGUST_31).months().getFirst().days().getFirst();
+
+        assertEquals(new BigDecimal("50.00"), day.normalTotal());
+        assertEquals(new BigDecimal("30.00"), day.normalCost());
+        assertEquals(new BigDecimal("20.00"), day.normalProfit());
+        assertEquals(new BigDecimal("40.00"), day.normalMargin());
+        assertEquals(new BigDecimal("0.00"), day.pendingTotal());
+        assertEquals(new BigDecimal("20.00"), day.unidentifiedTotal());
+        assertEquals(new BigDecimal("30.00"), day.thirdPartyTotal());
+        assertEquals(new BigDecimal("70.00"), day.total());
+        assertEquals(new BigDecimal("20.00"), day.profit());
+
+        TotalsReportResponse.Row july = reportService.getTotals(JULY_1, AUGUST_31).months().getFirst();
+        assertEquals(new BigDecimal("20.00"), july.unidentifiedTotal());
+        assertEquals(new BigDecimal("70.00"), july.total());
+        assertEquals(new BigDecimal("20.00"), july.normalProfit());
+        assertEquals(new BigDecimal("15.00"), july.profitAfterConsumptions());
+    }
+
+    @Test
     @DisplayName("Un día solo con ventas al costo deja el margen vacío")
     void marginIsEmptyWithoutNormalSales() {
         stubRows(row("2026-07-17", "AL_COSTO", 1, "1.000", "104.00", "104.00"));
@@ -658,7 +684,12 @@ class ReportServiceTest {
 
     private static Object[] row(String day, String type, long sales, String quantity, String total, String cost,
                                 String pending, String thirdParty) {
+        return row(day, type, sales, quantity, total, cost, pending, thirdParty, "0");
+    }
+
+    private static Object[] row(String day, String type, long sales, String quantity, String total, String cost,
+                                String pending, String thirdParty, String unidentified) {
         return new Object[] {day, type, sales, new BigDecimal(quantity), new BigDecimal(total), new BigDecimal(cost),
-                new BigDecimal(pending), new BigDecimal(thirdParty)};
+                new BigDecimal(pending), new BigDecimal(thirdParty), new BigDecimal(unidentified)};
     }
 }

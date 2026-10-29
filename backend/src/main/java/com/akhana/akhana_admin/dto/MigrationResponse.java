@@ -14,8 +14,8 @@ public record MigrationResponse(
     List<SheetCount> sheets,
     List<RowMessage> rejected,
     List<RowMessage> notices,
-    int unassignedLines,
-    BigDecimal unassignedTotal,
+    int unidentifiedLines,
+    BigDecimal unidentifiedTotal,
     List<OwnerDebt> thirdPartyDebts,
     List<MonthTotals> months,
     List<MovementTotal> movements
@@ -30,10 +30,10 @@ public record MigrationResponse(
     public record OwnerDebt(String creditorName, BigDecimal amount) {}
 
     /**
-     * Per month: normal sales (including the unassigned lines, without third-party ones), profit of the normal
-     * lines with a known cost, unassigned, at-cost and third-party sales, and consumptions at cost.
+     * Per month: normal sales (including the unidentified lines, without third-party ones), profit of the normal
+     * lines with a known cost, unidentified (POS-12), at-cost and third-party sales, and consumptions at cost.
      */
-    public record MonthTotals(String month, BigDecimal sales, BigDecimal profit, BigDecimal unassigned,
+    public record MonthTotals(String month, BigDecimal sales, BigDecimal profit, BigDecimal unidentified,
                               BigDecimal atCost, BigDecimal thirdParty, BigDecimal consumptions) {}
 
     /** Net per month and category (income +, expense −) or per pair of accounts for transfers. */

@@ -80,7 +80,7 @@
       </div>
 
       <ul class="summary-facts">
-        <li><strong>Líneas por asignar (POS-12):</strong> {{ r.unassignedLines }} por Bs {{ r.unassignedTotal | number:'1.2-2' }}</li>
+        <li><strong>Líneas sin identificar (POS-12):</strong> {{ r.unidentifiedLines }} por Bs {{ r.unidentifiedTotal | number:'1.2-2' }}</li>
         @for (debt of r.thirdPartyDebts; track debt.creditorName) {
           <li><strong>Deuda inicial con {{ debt.creditorName }} (POS-13):</strong> Bs {{ debt.amount | number:'1.2-2' }}</li>
         } @empty {
@@ -134,11 +134,11 @@
 
     <section class="card">
       <h2 class="section-title">Totales por mes</h2>
-      <p class="form-hint">Para comparar con las tablas dinámicas. Ventas incluye lo por asignar; de terceros y al costo van aparte.</p>
+      <p class="form-hint">Para comparar con las tablas dinámicas. Ventas incluye lo sin identificar (fuera de la utilidad); de terceros y al costo van aparte.</p>
       <div class="table-container">
         <table class="table">
           <thead>
-            <tr><th>Mes</th><th class="num">Ventas</th><th class="num">Utilidad</th><th class="num">Por asignar</th>
+            <tr><th>Mes</th><th class="num">Ventas</th><th class="num">Utilidad</th><th class="num">Sin identificar</th>
               <th class="num">Al costo</th><th class="num">De terceros</th><th class="num">Consumos</th></tr>
           </thead>
           <tbody>
@@ -147,7 +147,7 @@
                 <td>{{ month.month }}</td>
                 <td class="num">{{ month.sales | number:'1.2-2' }}</td>
                 <td class="num">{{ month.profit | number:'1.2-2' }}</td>
-                <td class="num">{{ month.unassigned | number:'1.2-2' }}</td>
+                <td class="num">{{ month.unidentified | number:'1.2-2' }}</td>
                 <td class="num">{{ month.atCost | number:'1.2-2' }}</td>
                 <td class="num">{{ month.thirdParty | number:'1.2-2' }}</td>
                 <td class="num">{{ month.consumptions | number:'1.2-2' }}</td>

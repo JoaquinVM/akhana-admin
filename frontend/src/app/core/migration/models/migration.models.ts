@@ -23,7 +23,7 @@ export interface MigrationMonthTotals {
   month: string;
   sales: number;
   profit: number;
-  unassigned: number;
+  unidentified: number;
   atCost: number;
   thirdParty: number;
   consumptions: number;
@@ -41,8 +41,8 @@ export interface MigrationResult {
   sheets: MigrationSheetCount[];
   rejected: MigrationRowMessage[];
   notices: MigrationRowMessage[];
-  unassignedLines: number;
-  unassignedTotal: number;
+  unidentifiedLines: number;
+  unidentifiedTotal: number;
   thirdPartyDebts: MigrationOwnerDebt[];
   months: MigrationMonthTotals[];
   movements: MigrationMovementTotal[];

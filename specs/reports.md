@@ -68,6 +68,9 @@ Reemplaza Resumen Ventas Diario. Una fila por día con ventas, agrupadas por mes
 - **Cuando** una venta se registra a las 23:30 del 17-07 en Bolivia (03:30 del 18-07 UTC) **entonces** cuenta en
   el 17-07.
 - **Cuando** un día no tiene ventas activas **entonces** no aparece; un mes sin ventas tampoco.
+- **Cuando** hay líneas libres (POS-11 a POS-13) **entonces** van en las columnas Por asignar y Sin identificar
+  (suman al total del día, no a la utilidad) y De terceros (fuera del total); detalle en `specs/sales.md`,
+  «Reportes con ventas por asignar, sin identificar y de terceros».
 - **Cuando** se calcula el costo de un día **entonces** se suman cantidad × costo de sus líneas sin redondear y el
   resultado se redondea a 2 decimales; la utilidad del día es total − costo ya redondeado. Los subtotales del mes
   y el total del rango suman las filas de los días, para que la tabla cuadre a la vista. El margen es utilidad ÷
@@ -147,7 +150,8 @@ transferencias y el consumo.
 - Hecho el 26-10-2026: `GET /api/reports/totals?from=&to=` (mismo rango y validaciones que ventas por día) toma los
   subtotales por mes y el total del rango de ventas por día, así ambos reportes muestran siempre el mismo total,
   costo y utilidad, y les agrega los consumos `REGISTRADO` del mes (cantidad y total al costo, la misma consulta de
-  movimientos por categoría). Utilidad = utilidad de las normales (las ventas al costo no la cambian); utilidad menos
+  movimientos por categoría). Utilidad = utilidad de las normales (las ventas al costo, por asignar y sin
+  identificar no la cambian); utilidad menos
   consumos = utilidad − consumos al costo. Un mes aparece si tiene ventas o consumos. Pestaña «Totales» con una fila
   por mes y el total del rango. Validado con julio de Resumen Ventas Diario en `ReportServiceTest`: normales
   Bs 37.584 con utilidad Bs 8.505,78, más una venta al costo de Bs 104 da el Total 37.688 de la planilla; con

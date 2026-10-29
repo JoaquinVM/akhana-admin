@@ -348,7 +348,9 @@ en el historial (`/sales`, permiso `SALES_HISTORY`, P-33) se asigna una sola vez
 - **Asignar producto**: se elige un producto normal activo que se vende por unidad; la línea toma su id, código,
   nombre y costo actual; el monto vendido, la caja y los movimientos no cambian (única excepción a T-07).
   **Confirmado (P-44, 28-10-2026)**: no se asignan productos por kilo, porque la cantidad de la línea son unidades.
-- **Sin identificar definitivo**: la línea queda `SIN_IDENTIFICAR` con costo 0 (toda la venta es utilidad).
+- **Sin identificar definitivo**: la línea queda `SIN_IDENTIFICAR` con costo 0. **Decidido con el dueño
+  (28-10-2026)**: no cuenta en la utilidad; los reportes la muestran en su propia columna «Sin identificar»
+  (ver «Reportes con ventas por asignar, sin identificar y de terceros»).
 
 Queda auditado quién y cuándo (`assigned_by`, `assigned_at`). Una venta anulada no se asigna. En la V2 la
 asignación descuenta el stock del producto elegido.
@@ -372,7 +374,8 @@ asignación descuenta el stock del producto elegido.
 
 #### Scenario: Sin identificar definitivo
 - **WHEN** se cierra la línea como sin identificar definitivo
-- **THEN** queda `SIN_IDENTIFICAR` con costo 0, el producto sigue siendo el especial y ya no aparece por asignar
+- **THEN** queda `SIN_IDENTIFICAR` con costo 0, el producto sigue siendo el especial, ya no aparece en el filtro
+  «Por asignar» y en los reportes pasa de la columna Por asignar a Sin identificar (fuera de la utilidad)
 
 #### Scenario: Venta anulada
 - **WHEN** se intenta asignar una línea de una venta anulada
@@ -380,9 +383,10 @@ asignación descuenta el stock del producto elegido.
 
 #### Scenario: Ventas por asignar en el historial
 - **WHEN** en `/sales` se marca el filtro «Por asignar»
-- **THEN** se listan solo las ventas completadas con al menos una línea por asignar; en el detalle cada línea por
+- **THEN** se listan solo las ventas completadas con al menos una línea por asignar (una venta cuyas líneas libres
+  están todas asignadas o cerradas como sin identificar definitivo no aparece); en el detalle cada línea por
   asignar muestra «Por asignar» y las acciones «Asignar producto» y «Sin identificar definitivo»; las asignadas
-  muestran el nombre escrito, quién y cuándo
+  y las sin identificar definitivo muestran el nombre escrito, quién y cuándo
 
 ---
 
@@ -416,17 +420,20 @@ sistema de gasto, FIN-05) en vez de Pedido.
 
 ---
 
-### Requirement: Reportes con ventas por asignar y de terceros (POS-12, POS-13)
-El sistema SHALL mostrar aparte, en ventas por día y en totales por mes, dos columnas nuevas:
+### Requirement: Reportes con ventas por asignar, sin identificar y de terceros (POS-12, POS-13)
+El sistema SHALL mostrar aparte, en ventas por día y en totales por mes, tres columnas:
 - **Por asignar**: lo vendido en líneas por asignar. Es venta de la tienda (suma al total), pero no entra en ventas
   normales, costo ni utilidad hasta que se asigne; al asignarse pasa a las normales con su costo.
+- **Sin identificar** (28-10-2026): lo vendido en líneas cerradas como sin identificar definitivo. Suma al total de
+  la tienda, pero queda siempre fuera de ventas normales, cantidad, costo, utilidad y margen (no se sabe su costo,
+  así que no se inventa una utilidad).
 - **Ventas de terceros**: lo vendido en líneas de tercero. No suma a las ventas ni a la utilidad de la tienda.
 
-Las normales son el total de la venta menos esas dos partes; su cantidad y costo no cuentan esas líneas. Una venta
-que solo tiene líneas de tercero no cuenta como venta normal. En ventas por proveedor no entran las líneas por asignar
-ni las de tercero (una asignada cuenta en el proveedor del producto asignado). Las líneas cerradas como sin
-identificar definitivo son normales con costo 0. Movimientos por categoría no cambia: la venta entra como Venta y el
-pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas columnas.
+Las normales son el total de la venta menos esas tres partes; su cantidad y costo no cuentan esas líneas. Una venta
+que solo tiene líneas libres no asignadas (por asignar, sin identificar o de tercero) no cuenta como venta normal.
+En ventas por proveedor no entran las líneas por asignar, sin identificar ni las de tercero (una asignada cuenta en
+el proveedor del producto asignado). Movimientos por categoría no cambia: la venta entra como Venta y el pago a la
+dueña como Pago a tercero. La exportación a Excel lleva las mismas columnas.
 
 #### Scenario: Día con las tres clases
 - **WHEN** un día hay una venta de Bs 100,00 con una línea normal de Bs 50,00 (costo Bs 30,00), una por asignar de
@@ -437,6 +444,12 @@ pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas c
 #### Scenario: Después de asignar
 - **WHEN** la línea por asignar de Bs 20,00 se asigna a un producto de costo Bs 12,00
 - **THEN** el mismo día muestra ventas normales Bs 70,00, costo Bs 42,00, utilidad Bs 28,00 y por asignar Bs 0,00
+
+#### Scenario: Después de cerrar como sin identificar definitivo
+- **WHEN** en cambio la línea por asignar de Bs 20,00 se cierra como sin identificar definitivo
+- **THEN** el mismo día muestra ventas normales Bs 50,00, costo Bs 30,00, utilidad Bs 20,00, por asignar Bs 0,00,
+  sin identificar Bs 20,00, ventas de terceros Bs 30,00 y total del día (tienda) Bs 70,00; en totales por mes la
+  utilidad y la utilidad menos consumos tampoco la cuentan
 
 ---
 
@@ -478,3 +491,14 @@ pago a la dueña como Pago a tercero. La exportación a Excel lleva las mismas c
   app (VTA-000134: Kefir Bs 27,00 + Mami Bs 30,00 − Bs 5,00 = Bs 52,00, deuda +Bs 30,00, proveedor = normales).
   Pruebas en `SaleServiceFreeLineTest`, `ReportServiceTest`, `SaleRepositoryTest`, `register-sale` y
   `sale-detail-modal`.
+- [x] Sin identificar definitivo fuera de la utilidad (decidido el 28-10-2026, hecho el 29-10-2026, rama
+  `feat/unidentified-final`): en `SaleRepository` la línea normal es solo la no libre o la `ASIGNADO`;
+  `sumByDayAndType` devuelve además el total `SIN_IDENTIFICAR` y cuenta como venta normal solo la que tiene alguna
+  línea normal (antes contaba también la que solo tenía líneas por asignar); `findReportLines` deja esas líneas
+  fuera del proveedor. `unidentifiedTotal` en ventas por día y totales (suma al total, no a la utilidad), columna
+  «Sin identificar» en su Excel y en la pantalla Reportes. El filtro «Por asignar» ya buscaba solo `POR_ASIGNAR`.
+  La migración histórica cierra las filas de Ventas sin código como `SIN_IDENTIFICAR` con quien importa y la hora
+  de la importación; Revisar muestra «Líneas sin identificar» y la columna Sin identificar de los totales por mes
+  (`unidentifiedLines`, `unidentifiedTotal`, `MonthTotals.unidentified`). Pruebas en `SaleRepositoryTest`
+  (consultas y filtro), `ReportServiceTest`, `ReportExportServiceTest`, `MigrationIntegrationTest`,
+  `sales-by-day-report`, `totals-report` y `migration.component`. Falta verlo en la app.

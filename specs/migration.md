@@ -83,7 +83,8 @@ borraron productos de la hoja Productos. Al 26-10 son 327 filas.
   del sistema anterior o del costo del catálogo.
 - **Cuando** la fila es una venta de Mami (últimas semanas antes del corte) **entonces** se marca con el código
   del producto especial de Mami (POS-13).
-- **Cuando** no se puede identificar **entonces** queda sin código y entra como venta sin identificar (POS-12).
+- **Cuando** no se puede identificar **entonces** queda sin código y entra como venta sin identificar definitivo
+  (POS-12, decidido el 28-10-2026): ya se revisó una por una, así que no queda por asignar.
 - El Excel de costos del sistema anterior es un archivo de trabajo: no va al repositorio.
 - **Cuando** el producto se vendió pero ya no se compra ni está en Productos, y el Excel anterior tiene su costo
   **entonces** se agrega a la hoja Productos y, después de importarlo (CAT-06, que crea todo Activo), se da de baja
@@ -244,8 +245,11 @@ está en Transacc. como ingresos Venta.
   venta normal y Revisar muestra el aviso «<comentario> parece un regalo o una rotura: entra como venta normal. Si
   se pagó al costo, agregar «precio costo» al comentario (P-39).»
 - **Cuando** la fila no tiene código **entonces** la línea va al «Producto sin identificar» con el nombre y el
-  precio de la fila, costo 0 pendiente y estado por asignar (POS-12); se asigna después desde el historial de
-  ventas. Si falta crear ese producto: «Falta crear el «Producto sin identificar» en Productos (POS-12).»
+  precio de la fila, costo 0 y estado `SIN_IDENTIFICAR` (sin identificar definitivo, POS-12, decidido el
+  28-10-2026), con quien importa y la hora de la importación como quién y cuándo. No aparece en el filtro «Por
+  asignar» ni se asigna después (la venta histórica es de solo lectura); en los reportes va en la columna «Sin
+  identificar», fuera de la utilidad. Si falta crear ese producto: «Falta crear el «Producto sin identificar» en
+  Productos (POS-12).»
 - **Cuando** la fila tiene el código de un producto de tercero (Mami) **entonces** la línea va a ese producto con
   el nombre de la fila y costo igual al precio (POS-13).
 - **Cuando** el código no existe en el catálogo **entonces** la fila se rechaza: «El código <código> no existe en
@@ -325,9 +329,9 @@ coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su 
 ## FIN-11 · Resultado y validación
 
 - **Cuando** se revisa **entonces** se muestra por hoja: filas leídas, a importar, rechazadas y posteriores al
-  corte; la tabla de rechazadas con hoja, fila y motivo (descargable como `.xlsx`); los avisos; las líneas por
-  asignar con su total en Bs; la deuda inicial con cada dueña de productos de terceros; y los totales por mes
-  (ventas, utilidad, por asignar, al costo, de terceros, consumos) y los movimientos por categoría y mes para
+  corte; la tabla de rechazadas con hoja, fila y motivo (descargable como `.xlsx`); los avisos; las líneas sin
+  identificar con su total en Bs; la deuda inicial con cada dueña de productos de terceros; y los totales por mes
+  (ventas, utilidad, sin identificar, al costo, de terceros, consumos) y los movimientos por categoría y mes para
   compararlos con las tablas dinámicas.
 - **Cuando** hay alguna fila rechazada **entonces** no se puede importar: el historial entra completo o no entra.
   «Hay filas rechazadas: se corrigen en la planilla y se revisa de nuevo. No se importó nada.»
@@ -336,7 +340,8 @@ coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su 
 - **Cuando** termina **entonces** los reportes de cualquier mes migrado coinciden con las tablas dinámicas,
   salvo las diferencias conocidas: consumos al costo y fuera de las ventas (P-35, P-40; regalos y roturas siguen
   en las ventas, como venta al costo, P-39), costos completados en
-  las filas sin código (P-42) y ventas de Mami fuera de las ventas de la tienda (POS-13).
+  las filas sin código (P-42), ventas de Mami fuera de las ventas de la tienda (POS-13) y las filas que quedaron
+  sin código fuera de la utilidad (columna Sin identificar, POS-12).
 
 ### Validación con la planilla del 26-10 (sin corregir)
 

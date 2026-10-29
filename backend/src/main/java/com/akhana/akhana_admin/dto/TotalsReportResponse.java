@@ -24,6 +24,7 @@ public record TotalsReportResponse(LocalDate from, LocalDate to, List<Row> month
                       BigDecimal atCostTotal,
                       // POS-12, POS-13: same meaning as in sales per day
                       BigDecimal pendingTotal,
+                      BigDecimal unidentifiedTotal,
                       BigDecimal thirdPartyTotal,
                       BigDecimal total,
                       long consumptions,

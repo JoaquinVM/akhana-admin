@@ -14,9 +14,9 @@ describe('MigrationComponent', () => {
     sheets: [{ sheet: 'Ventas', read: 6053, toImport: 6050, rejected: 0, afterCutoff: 3 }],
     rejected: [],
     notices: [{ sheet: 'Pedidos', rowNumber: 353, messages: ['La suma de las líneas (1371.00) no coincide con el Monto (1496.00): el pedido queda con el Monto.'] }],
-    unassignedLines: 12, unassignedTotal: 340.5,
+    unidentifiedLines: 12, unidentifiedTotal: 340.5,
     thirdPartyDebts: [{ creditorName: 'Mami', amount: 1250 }],
-    months: [{ month: '2026-08', sales: 66951.5, profit: 14716.99, unassigned: 3952, atCost: 0, thirdParty: 0, consumptions: 40 }],
+    months: [{ month: '2026-08', sales: 66951.5, profit: 14716.99, unidentified: 3952, atCost: 0, thirdParty: 0, consumptions: 40 }],
     movements: [
       { month: '2026-08', concept: 'Pedido', amount: -67097.56 },
       { month: '2026-08', concept: 'Venta', amount: 67031.5 },
@@ -61,6 +61,7 @@ describe('MigrationComponent', () => {
     expect(migrationService.preview).toHaveBeenCalledWith(expect.objectContaining({ cutoffDate: '2026-10-26' }));
     expect(text()).toContain('todavía no se guardó nada');
     expect(text()).toContain('Deuda inicial con Mami');
+    expect(text()).toContain('Líneas sin identificar (POS-12): 12 por Bs 340.50');
     expect(text()).toContain('1,250.00');
     expect(text()).toContain('no coincide con el Monto');
     expect(component.movementsByMonth().map(g => g.month)).toEqual(['2026-08', '2026-09']);

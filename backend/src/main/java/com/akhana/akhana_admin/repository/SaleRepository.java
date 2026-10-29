@@ -20,8 +20,8 @@ import java.util.UUID;
 public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     // A line that counts as a normal sale with its cost: not a free line, or an unidentified one already assigned
-    // or closed (POS-12)
-    String NORMAL_LINE = "(free_line_type IS NULL OR COALESCE(assignment_status, '') IN ('ASIGNADO', 'SIN_IDENTIFICAR'))";
+    // (POS-12). One closed as unidentified for good stays out of cost and profit
+    String NORMAL_LINE = "(free_line_type IS NULL OR COALESCE(assignment_status, '') = 'ASIGNADO')";
 
     List<Sale> findByCashSessionIdOrderByCreatedAtDesc(UUID cashSessionId);
 
@@ -61,21 +61,22 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     List<String> findSellers();
 
     // Active sales per store day and sale type (FIN-10, CON-03): rows of {day 'YYYY-MM-DD', sale type, sales,
-    // quantity, total, cost, pending total, third-party total}. The cost is the unrounded sum of quantity x the cost
-    // copied on each line (POS-05). A line by presentation counts its kilos, not its packs (CAT-11).
-    // Lines waiting for their product (POS-12) and third-party lines (POS-13) are left out of quantity and cost and
-    // summed apart; a sale with only third-party lines is not counted. The general discount only applies to the
-    // other lines (P-44), so the normal part is the sale total minus the pending and third-party subtotals
+    // quantity, total, cost, pending total, third-party total, unidentified total}. The cost is the unrounded sum of
+    // quantity x the cost copied on each line (POS-05). A line by presentation counts its kilos, not its packs
+    // (CAT-11). Lines waiting for their product or closed as unidentified (POS-12) and third-party lines (POS-13)
+    // are left out of quantity and cost and summed apart; a sale with only such lines is not counted. The general
+    // discount only applies to the other lines (P-44), so the normal part is the sale total minus those subtotals
     @Query(value = "SELECT to_char(s.created_at AT TIME ZONE 'America/La_Paz', 'YYYY-MM-DD') AS day, s.sale_type, " +
-                   "COUNT(*) FILTER (WHERE COALESCE(i.store_lines, 1) > 0), COALESCE(SUM(i.quantity), 0), " +
+                   "COUNT(*) FILTER (WHERE COALESCE(i.normal_lines, 1) > 0), COALESCE(SUM(i.quantity), 0), " +
                    "SUM(s.total_amount), COALESCE(SUM(i.cost), 0), COALESCE(SUM(i.pending), 0), " +
-                   "COALESCE(SUM(i.third_party), 0) " +
+                   "COALESCE(SUM(i.third_party), 0), COALESCE(SUM(i.unidentified), 0) " +
                    "FROM sales s LEFT JOIN (SELECT sale_id, " +
                    "SUM(COALESCE(weight_kg, quantity)) FILTER (WHERE " + NORMAL_LINE + ") AS quantity, " +
                    "SUM(COALESCE(weight_kg, quantity) * unit_cost) FILTER (WHERE " + NORMAL_LINE + ") AS cost, " +
                    "SUM(subtotal) FILTER (WHERE assignment_status = 'POR_ASIGNAR') AS pending, " +
                    "SUM(subtotal) FILTER (WHERE free_line_type = 'THIRD_PARTY') AS third_party, " +
-                   "COUNT(*) FILTER (WHERE free_line_type IS DISTINCT FROM 'THIRD_PARTY') AS store_lines " +
+                   "SUM(subtotal) FILTER (WHERE assignment_status = 'SIN_IDENTIFICAR') AS unidentified, " +
+                   "COUNT(*) FILTER (WHERE " + NORMAL_LINE + ") AS normal_lines " +
                    "FROM sale_items GROUP BY sale_id) i " +
                    "ON i.sale_id = s.id " +
                    "WHERE s.status = 'COMPLETADA' AND s.created_at >= :from AND s.created_at < :to " +
@@ -85,8 +86,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     // Lines of the active sales (FIN-10, CON-03): rows of {sale id, store month 'YYYY-MM', sale type, sale total,
     // supplier id, supplier name, quantity (kilos for a presentation, CAT-11), line subtotal, unrounded cost,
-    // normal line, free line}. The supplier is the product's current one; pending and third-party lines (POS-12,
-    // POS-13) come with normal line = false. Free lines (POS-11), assigned or not, keep their exact amount: the
+    // normal line, free line}. The supplier is the product's current one; pending, unidentified and third-party
+    // lines (POS-12, POS-13) come with normal line = false. Free lines (POS-11), assigned or not, keep their exact amount: the
     // general discount is spread only over the other lines (P-44)
     @Query(value = "SELECT s.id, to_char(s.created_at AT TIME ZONE 'America/La_Paz', 'YYYY-MM'), s.sale_type, " +
                    "s.total_amount, sup.id, sup.name, COALESCE(i.weight_kg, i.quantity), i.subtotal, " +

@@ -75,7 +75,9 @@ class ReportExportServiceTest {
             assertNumber(dayRow.getCell(5), 640.84, "#,##0.00");
             assertNumber(dayRow.getCell(6), 0.2335, "0.00%");
             assertNumber(dayRow.getCell(9), 104.00, "#,##0.00");
-            assertNumber(dayRow.getCell(12), 2849.00, "#,##0.00");
+            assertEquals("Sin identificar", text(sheet, 3, 11));
+            assertNumber(dayRow.getCell(11), 0.00, "#,##0.00");
+            assertNumber(dayRow.getCell(13), 2849.00, "#,##0.00");
 
             assertEquals("Total julio 2026", text(sheet, FIRST_ROW_WITH_GROUPS + 1, 0));
             assertTrue(isBold(workbook, sheet.getRow(FIRST_ROW_WITH_GROUPS + 1).getCell(3)));
@@ -89,7 +91,7 @@ class ReportExportServiceTest {
     @DisplayName("Ventas por día: un margen vacío (sin ventas normales) queda como celda vacía")
     void salesByDay_emptyMargin() throws IOException {
         SalesByDayReportResponse.Row day = new SalesByDayReportResponse.Row(JULY_17, 0, BigDecimal.ZERO,
-                money("0"), money("0"), money("0"), null, 1, new BigDecimal("1.000"), money("104"), money("0"), money("0"), money("104"),
+                money("0"), money("0"), money("0"), null, 1, new BigDecimal("1.000"), money("104"), money("0"), money("0"), money("0"), money("104"),
                 money("0"));
         when(reportService.getSalesByDay(null, null)).thenReturn(new SalesByDayReportResponse(JULY_1, JULY_17,
                 List.of(new SalesByDayReportResponse.Month("2026-07", List.of(day), day)), day));
@@ -184,9 +186,9 @@ class ReportExportServiceTest {
     @DisplayName("Totales: una fila por mes con la utilidad menos consumos y el total del rango")
     void totals() throws IOException {
         TotalsReportResponse.Row july = new TotalsReportResponse.Row("2026-07", 120, money("37584"), money("29078.22"),
-                money("8505.78"), money("22.63"), 1, money("104"), money("0"), money("0"), money("37688"), 3, money("300"), money("8205.78"));
+                money("8505.78"), money("22.63"), 1, money("104"), money("0"), money("0"), money("0"), money("37688"), 3, money("300"), money("8205.78"));
         TotalsReportResponse.Row total = new TotalsReportResponse.Row(null, 120, money("37584"), money("29078.22"),
-                money("8505.78"), money("22.63"), 1, money("104"), money("0"), money("0"), money("37688"), 3, money("300"), money("8205.78"));
+                money("8505.78"), money("22.63"), 1, money("104"), money("0"), money("0"), money("0"), money("37688"), 3, money("300"), money("8205.78"));
         when(reportService.getTotals(JULY_1, AUGUST_31))
                 .thenReturn(new TotalsReportResponse(JULY_1, AUGUST_31, List.of(july), total));
 
@@ -195,10 +197,11 @@ class ReportExportServiceTest {
         assertEquals("akhana-totals-2026-07-01-2026-08-31.xlsx", file.fileName());
         try (Workbook workbook = open(file)) {
             Sheet sheet = workbook.getSheetAt(0);
-            assertEquals("Utilidad menos consumos", text(sheet, 3, 13));
+            assertEquals("Sin identificar", text(sheet, 3, 9));
+            assertEquals("Utilidad menos consumos", text(sheet, 3, 14));
             assertEquals("julio 2026", text(sheet, FIRST_ROW_WITH_GROUPS, 0));
             assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(4), 8505.78, "#,##0.00");
-            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(13), 8205.78, "#,##0.00");
+            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(14), 8205.78, "#,##0.00");
             assertEquals("Total del rango", text(sheet, FIRST_ROW_WITH_GROUPS + 1, 0));
         }
     }
@@ -251,7 +254,7 @@ class ReportExportServiceTest {
                                                          String margin) {
         return new SalesByDayReportResponse.Row(date, 30, new BigDecimal("74.250"), money(total), money(cost),
                 money(profit), new BigDecimal(margin), 1, new BigDecimal("1.000"), money("104"), money("0"), money("0"),
-                money(total).add(money("104")), money(profit));
+                money("0"), money(total).add(money("104")), money(profit));
     }
 
     private static SalesBySupplierReportResponse.Row supplierRow(String month, String quantity, String total) {

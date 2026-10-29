@@ -160,7 +160,7 @@ public class MigrationServiceImpl implements MigrationService {
     static final class MonthTotalsDraft {
         BigDecimal sales = ZERO;
         BigDecimal profit = ZERO;
-        BigDecimal unassigned = ZERO;
+        BigDecimal unidentified = ZERO;
         BigDecimal atCost = ZERO;
         BigDecimal thirdParty = ZERO;
         BigDecimal consumptions = ZERO;
@@ -179,8 +179,8 @@ public class MigrationServiceImpl implements MigrationService {
         final SortedMap<String, MonthTotalsDraft> months = new TreeMap<>();
         final SortedMap<String, SortedMap<String, BigDecimal>> movements = new TreeMap<>();
         final Map<String, BigDecimal> thirdPartyDebts = new TreeMap<>();
-        int unassignedLines;
-        BigDecimal unassignedTotal = ZERO;
+        int unidentifiedLines;
+        BigDecimal unidentifiedTotal = ZERO;
 
         // Reference data
         final Map<String, Product> products = new HashMap<>();
@@ -425,7 +425,10 @@ public class MigrationServiceImpl implements MigrationService {
         }
     }
 
-    /** POS-11: line of a special product with the name of the row; unassigned (POS-12) or owed to its owner (POS-13). */
+    /**
+     * POS-11: line of a special product with the name of the row; closed as unidentified for good (POS-12, the rows
+     * were already reviewed one by one) or owed to its owner (POS-13).
+     */
     private static SaleItem freeLine(Product product, String name, BigDecimal quantity, BigDecimal total) {
         boolean thirdParty = product.getSpecialType() == ProductSpecialType.THIRD_PARTY;
         String freeName = truncate(name, 150);
@@ -442,7 +445,7 @@ public class MigrationServiceImpl implements MigrationService {
             .subtotal(total)
             .freeLineType(product.getSpecialType())
             .freeName(freeName)
-            .assignmentStatus(thirdParty ? null : SaleItemAssignmentStatus.POR_ASIGNAR)
+            .assignmentStatus(thirdParty ? null : SaleItemAssignmentStatus.SIN_IDENTIFICAR)
             .creditor(thirdParty ? product.getOwnerCreditor() : null)
             .build();
     }
@@ -479,9 +482,9 @@ public class MigrationServiceImpl implements MigrationService {
             analysis.thirdPartyDebts.merge(item.getCreditor().getName(), subtotal, BigDecimal::add);
         } else if (item.getFreeLineType() == ProductSpecialType.UNIDENTIFIED) {
             month.sales = month.sales.add(subtotal);
-            month.unassigned = month.unassigned.add(subtotal);
-            analysis.unassignedLines++;
-            analysis.unassignedTotal = analysis.unassignedTotal.add(subtotal);
+            month.unidentified = month.unidentified.add(subtotal);
+            analysis.unidentifiedLines++;
+            analysis.unidentifiedTotal = analysis.unidentifiedTotal.add(subtotal);
         } else {
             BigDecimal quantity = item.getWeightKg() != null ? item.getWeightKg() : item.getQuantity();
             BigDecimal cost = quantity.multiply(item.getUnitCost()).setScale(2, RoundingMode.HALF_UP);
@@ -1049,7 +1052,14 @@ public class MigrationServiceImpl implements MigrationService {
                 .createdAt(instant(key.date()))
                 .historicalImportId(importId)
                 .build();
-            items.forEach(item -> item.setSale(sale));
+            items.forEach(item -> {
+                item.setSale(sale);
+                // Who and when closed the unidentified lines (POS-12): the import itself
+                if (item.getAssignmentStatus() == SaleItemAssignmentStatus.SIN_IDENTIFICAR) {
+                    item.setAssignedBy(username);
+                    item.setAssignedAt(now);
+                }
+            });
             sale.getItems().addAll(items);
             saleRepository.save(sale);
         });
@@ -1106,7 +1116,7 @@ public class MigrationServiceImpl implements MigrationService {
             .map(e -> new OwnerDebt(e.getKey(), e.getValue()))
             .toList();
         List<MonthTotals> months = analysis.months.entrySet().stream()
-            .map(e -> new MonthTotals(e.getKey(), e.getValue().sales, e.getValue().profit, e.getValue().unassigned,
+            .map(e -> new MonthTotals(e.getKey(), e.getValue().sales, e.getValue().profit, e.getValue().unidentified,
                 e.getValue().atCost, e.getValue().thirdParty, e.getValue().consumptions))
             .toList();
         List<MovementTotal> movements = new ArrayList<>();
@@ -1115,6 +1125,6 @@ public class MigrationServiceImpl implements MigrationService {
         List<RowMessage> rejected = new ArrayList<>(analysis.rejected);
         rejected.sort(Comparator.comparing(RowMessage::sheet).thenComparingInt(RowMessage::rowNumber));
         return new MigrationResponse(analysis.cutoffDate, imported, sheets, rejected, List.copyOf(analysis.notices),
-            analysis.unassignedLines, analysis.unassignedTotal, debts, months, movements);
+            analysis.unidentifiedLines, analysis.unidentifiedTotal, debts, months, movements);
     }
 }
