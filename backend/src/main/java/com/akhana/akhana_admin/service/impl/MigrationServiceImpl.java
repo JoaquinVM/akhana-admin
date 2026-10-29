@@ -810,7 +810,8 @@ public class MigrationServiceImpl implements MigrationService {
             boolean consignment = status.equals("consignacion");
             BigDecimal paid = ZERO;
             switch (status) {
-                case "pagado" -> paid = itemsTotal;
+                // Pagado covers the shipping too, so the order does not stay in Por pagar for it
+                case "pagado" -> paid = itemsTotal == null ? null : itemsTotal.add(shipping);
                 case "a cuenta" -> {
                     BigDecimal partial = money(number(row.cell("paid"), "Monto pagado", errors));
                     if (partial == null) {

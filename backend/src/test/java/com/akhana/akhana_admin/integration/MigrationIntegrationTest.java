@@ -326,13 +326,15 @@ class MigrationIntegrationTest {
 
         // Purchases: payment status from the spreadsheet, payments without a movement (P-43)
         List<Map<String, Object>> purchases = jdbc.queryForList(
-            "SELECT purchase_number, items_total, shipping_cost, paid_amount, consignment, delivery_status, "
+            "SELECT purchase_number, items_total, shipping_cost, total_amount, paid_amount, consignment, delivery_status, "
                 + "(SELECT COUNT(*) FROM purchase_items i WHERE i.purchase_id = p.id) AS lines "
                 + "FROM purchases p WHERE historical_import_id = ? ORDER BY purchase_number", importId);
         assertThat(purchases).extracting(p -> p.get("purchase_number"))
             .containsExactly("PED-H00001", "PED-H00002", "PED-H00003", "PED-H00004");
-        assertThat((BigDecimal) purchases.get(0).get("paid_amount")).isEqualByComparingTo("100.00");
+        // Pagado with shipping: paid in full, not left in Por pagar for the shipping
         assertThat((BigDecimal) purchases.get(0).get("shipping_cost")).isEqualByComparingTo("10.00");
+        assertThat((BigDecimal) purchases.get(0).get("paid_amount")).isEqualByComparingTo("110.00");
+        assertThat((BigDecimal) purchases.get(0).get("total_amount")).isEqualByComparingTo("110.00");
         assertThat((BigDecimal) purchases.get(1).get("paid_amount")).isEqualByComparingTo("20.00");
         assertThat(purchases.get(2).get("lines")).isEqualTo(1L);
         assertThat(purchases.get(2).get("delivery_status")).isEqualTo("PENDIENTE");

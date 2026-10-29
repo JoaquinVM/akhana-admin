@@ -305,7 +305,7 @@ coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su 
   (23 pedidos al 26-10, la mayoría por centavos).
 - **Cuando** el pedido no tiene líneas (1 a 341) **entonces** entra solo con la cabecera (P-45) y su fecha es la
   Fecha Entrega o, si no hay, la Fecha pago.
-- **Cuando** el Estado Pago es Pagado **entonces** se importa un pago por el Monto con la Fecha pago, desde Caja o
+- **Cuando** el Estado Pago es Pagado **entonces** se importa un pago por el Monto más el Monto Envio con la Fecha pago, desde Caja o
   Bisa según Tipo Pago (Otro o vacío: sin cuenta), sin movimiento de dinero (los gastos Pedido y Transporte ya
   están en Transacc., P-43), solo para el estado de pago (COM-04). **Cuando** es A Cuenta **entonces** el pago es
   el Monto pagado (P-47). **Cuando** es Por Pagar **entonces** no tiene pagos. **Cuando** es Consignacion
@@ -393,8 +393,11 @@ Transacc. solo para la prueba local) y sin cambio después de importar. Para lle
   (los kilos van hasta el gramo; el total no cambia) y la 5802 (22-10, Bs 27) con «Sin descripción».
 - Cierre de Caja: no había borrador; las filas sin fecha debajo del 27-10 solo tienen fórmulas en 0 y no se leen.
 
-Hallazgo: un pedido Pagado con Monto Envio se importa con un pago por el Monto, sin el envío, y queda en Por pagar
-por el envío (unos 40 pedidos, de 8 a 80, por ejemplo `PED-H00431`). Falta corregirlo antes de producción.
+Hallazgo: un pedido Pagado con Monto Envio se importaba con un pago por el Monto, sin el envío, y quedaba en Por
+pagar por el envío (36 pedidos, de 8 a 80, por ejemplo `PED-H00431`). Corregido el 29-10-2026: el pago es Monto +
+envío. Ensayo repetido ese día en la base local recreada vacía (respaldo en `~/akhana-backups`, fuera del
+repositorio): productos, Mami, `SIN-IDENT`, `TER-SAG-MAD`, 25 de P-42 inactivos, 6 categorías, saldos y el historial
+con 0 rechazadas. Quedan 20 pedidos en Por pagar, todos A Cuenta, Por Pagar o en consignación en la planilla.
 
 ### Validación con la planilla del 26-10 (sin corregir)
 
@@ -478,8 +481,8 @@ Construcción (rama `feat/migration`, 27-10-2026):
   planilla llevan «precio costo» en el comentario; en `MigrationServiceImpl` la regla «Regalo…»/«…rompió» →
   Consumos se cambió por un aviso en Revisar. `MigrationIntegrationTest` cubre el regalo sin «precio costo» (aviso
   y venta normal) y la rotura con «precio costo» (venta al costo). La pantalla no cambia: los avisos ya se muestran.
-- [ ] Pedido Pagado con Monto Envio: el pago histórico cubre Monto + envío, para que no quede en Por pagar
-  (hallazgo del 29-10-2026), con su caso en `MigrationIntegrationTest`.
+- [x] Pedido Pagado con Monto Envio: el pago histórico cubre Monto + envío, para que no quede en Por pagar
+  (hallazgo del 29-10-2026), con su caso en `MigrationIntegrationTest` (29-10-2026).
 - [ ] El día de la salida: vaciar la última fila del Cierre (borrador) si la hay antes de descargar el `.xlsx`,
   importar productos (CAT-06), crear las categorías de Transacc. en Finanzas, cargar saldos al corte (FIN-01),
   revisar e importar. Ensayado en la base local el 29-10-2026 (arriba).
