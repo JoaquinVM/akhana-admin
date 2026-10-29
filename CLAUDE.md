@@ -5,10 +5,11 @@ Objetivo actual: la V1, que reemplaza las planillas de Google Sheets (sin invent
 
 ## Documentacion valida (solo esta)
 
-- `specs/requirements.md`: fuente de verdad. Alcance por version, roles, requerimientos con ID, preguntas y hoja de ruta.
-  Cuando se decida o descubra algo nuevo (respuesta a una pregunta, hallazgo tecnico, requerimiento nuevo),
-  actualizar este archivo en el mismo commit.
-- `specs/<modulo>.md`: detalle por modulo (escenarios cuando/entonces + tareas), con los mismos IDs.
+- `specs/requirements.md`: fuente de verdad del **que**. Estado, alcance, roles, requerimientos con ID (una o dos
+  lineas cada uno), preguntas y hoja de ruta. Cuando se decida algo nuevo (respuesta a una pregunta, requerimiento
+  nuevo o cambiado), actualizarlo en el mismo commit. Sin fechas, bitacora, endpoints, migraciones ni clases.
+- `specs/<modulo>.md`: el **como** por modulo (escenarios cuando/entonces, notas de implementacion, validaciones con
+  la planilla y tareas), con los mismos IDs. Ahi va el detalle de lo construido y probado.
 - No existe otra documentacion ademas de `specs/requirements.md` y `specs/<modulo>.md`.
 - No crear otros documentos (planes, informes, logs, user stories).
 
@@ -66,6 +67,7 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
   Al cerrar la sesion, con las pruebas pasando, preguntar al usuario si subir a `main` (merge fast-forward si se
   puede, y push); no hacerlo sin su si. Si las pruebas fallan, no se hace merge y se reporta.
 - Avance: la tabla de la seccion 1 de `specs/requirements.md` es el tablero del proyecto. Al cerrar cada sesion,
-  actualizar su estado y pendientes en el mismo commit.
+  en el mismo commit: actualizar la fila del modulo (una linea: estado y que falta) y borrar de «Proximos pasos» lo
+  terminado (queda en git). No agregar historia ni fechas al tablero.
 - Cierre de sesion: ademas del resumen, dar el prompt listo para copiar de la siguiente sesion (proxima tarea
   pendiente segun la hoja de ruta de `specs/requirements.md`).

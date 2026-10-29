@@ -259,3 +259,10 @@ Cuentas por cobrar (junto con o después de CON-02):
   cliente en el pago de la venta al costo del POS (26-10-2026). `PaymentAccountResponse` suma `qrAccount`.
 - [x] Probar P-49 en la app (28-10-2026, rama `feat/app-checks`): VTA-000136 a Tía Neida pagada en efectivo aparece
   en su historial como «pagada» y su saldo sigue en Bs 17,00 (DEU-07).
+
+
+## Notas de implementación
+
+Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.
+
+- **DEU-01** Registro de personas a las que el negocio puede deber dinero (ej. Mami): `creditors`, con nombre único sin distinguir mayúsculas, teléfono, descripción y baja lógica; no se da de baja con deuda mayor a 0. Hecha el 25-10-2026 (migración `V10__creditors.sql`, índice único `LOWER(name)` sin eliminados). Pantalla Deudas (`/debts`, en el menú Compras, carga diferida), pestaña Personas; Compras lee las personas activas con `PURCHASES`.

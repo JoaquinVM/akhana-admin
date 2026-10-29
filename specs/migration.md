@@ -486,3 +486,7 @@ Construcción (rama `feat/migration`, 27-10-2026):
 - [ ] El día de la salida: vaciar la última fila del Cierre (borrador) si la hay antes de descargar el `.xlsx`,
   importar productos (CAT-06), crear las categorías de Transacc. en Finanzas, cargar saldos al corte (FIN-01),
   revisar e importar. Ensayado en la base local el 29-10-2026 (arriba).
+
+## Notas
+
+- Saldos de referencia antes del corte (de `requirements.md` §2.3): 23 de octubre: Caja Bs 7.637,90; Bisa Bs 31.562,58; Efectivo Bs 11.352,04.

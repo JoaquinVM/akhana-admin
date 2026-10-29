@@ -182,3 +182,11 @@ juntos, y el aviso de precios fijos depende del precio por kilo que se guarda en
 - [x] Actualizar `specs/sales.md` (POS-10) y `specs/requirements.md` (CAT-08, CAT-11, POS-10, tablero).
 - [ ] Retomar `specs/product-import.md` (rama `feat/product-import`): las filas de libras de frutos secos pasan a
   ser presentaciones de su producto base.
+
+
+## Notas de implementación
+
+Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.
+
+- **CAT-07** · V1 — El operador puede crear productos y cambiar el costo (precio de compra) de un producto existente. También puede cambiar el precio de venta, desde el catálogo o al aceptar el precio sugerido en una compra (COM-03). Todo cambio de costo o precio queda auditado. Desde el 25-10-2026 los cambios desde una compra se registran en `product_price_changes` (origen `PURCHASE`). Desde el 27-10-2026 también los del catálogo (origen `CATALOG`): `ProductServiceImpl` guarda una fila al crear un producto (costo y precio iniciales, con anterior vacío; migración `V16__catalog_price_changes.sql` quita el `NOT NULL` de `previous_buy_price` y `previous_sell_price`) y otra al editarlo solo si cambia el costo o el precio de venta, en la misma transacción, con quién y cuándo. Los precios fijos de presentaciones siguen con su propia fila (CAT-11). La importación (CAT-06) no registra filas: el producto importado guarda quién y cuándo lo creó. Todavía no hay pantalla que muestre este historial. Pruebas en `ProductServiceTest`.
+- **CAT-08** · V1 — Productos vendidos por peso: precio por kilo, para frutos secos y productos del proveedor Granel (P-31), y presentaciones rápidas (100 g = 0,100 kg; 1/2 libra = 0,227 kg); cantidades con hasta 3 decimales en ventas, compras y consumos. Cada producto indica cómo se vende en `products.sale_unit` (`UNIT` o `KILOGRAM`, por defecto `UNIT`; migración `V7__product_sale_unit.sql`), editable en el formulario de Productos («Se vende por»). Si es `KILOGRAM`, el precio de venta es Bs por kilo y la cantidad son kilos; un producto por unidad solo acepta cantidades enteras (el servidor rechaza los decimales con «La cantidad de '<producto>' debe ser entera: se vende por unidad.»). Las presentaciones rápidas fijas pasan a ser presentaciones configurables por producto (CAT-11).
