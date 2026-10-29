@@ -226,22 +226,24 @@ En el repo (rama `feat/deploy`):
 - [x] Probar en la Mac: compose de producción, respaldo, subida y restauración (ver «Validación»).
 - [x] `shellcheck` sin advertencias en los scripts.
 
-En el VPS (con el dueño, después del merge), en este orden:
+En el VPS (con el dueño), en este orden:
 
-- [ ] Instalar Ubuntu 24.04 (D-1). Por SSH: `apt-get install -y git`, `ssh-keygen -t ed25519`, agregar la clave
+- [x] Instalar Ubuntu 24.04 (D-1). Por SSH: `apt-get install -y git`, `ssh-keygen -t ed25519`, agregar la clave
   pública como *deploy key* de solo lectura en GitHub y `git clone git@github.com:JoaquinVM/akhana-admin.git
   /opt/akhana/app`.
-- [ ] `/opt/akhana/app/deploy/setup-server.sh`, `tailscale up --ssh --hostname akhana`, activar MagicDNS y HTTPS en el
+- [x] `/opt/akhana/app/deploy/setup-server.sh`, `tailscale up --ssh --hostname akhana`, activar MagicDNS y HTTPS en el
   panel de Tailscale.
-- [ ] Crear el bucket privado en B2 y una clave de aplicación solo para él; `rclone config` con un remoto `b2` y un
+- [x] Crear el bucket privado en B2 y una clave de aplicación solo para él; `rclone config` con un remoto `b2` y un
   remoto `crypt` llamado `akhana-crypt`; guardar las dos claves de crypt en el gestor de contraseñas.
-- [ ] Crear los dos chequeos en healthchecks.io (diario con 2 h de gracia; semanal con 1 día).
-- [ ] Completar `/opt/akhana/.env` (guardar copia en el gestor) y correr `deploy.sh`.
-- [ ] `tailscale serve --bg --https=443 http://127.0.0.1:8081`; instalar Tailscale en la PC de caja y el celular;
-  entrar con HTTPS y cambiar la contraseña del admin.
-- [ ] Desde una sesión por Tailscale: `setup-server.sh --lock`; comprobar desde fuera de la red que la IP pública no
+- [x] Crear los dos chequeos en healthchecks.io (diario con 2 h de gracia; semanal con 1 día).
+- [x] Completar `/opt/akhana/.env` (guardar copia en el gestor) y correr `deploy.sh`.
+- [x] `tailscale serve --bg --https=443 http://127.0.0.1:8081`; entrar con HTTPS y cambiar la contraseña del admin.
+- [ ] Instalar Tailscale en la PC de caja y el celular y entrar con HTTPS desde ellos.
+- [x] Desde una sesión por Tailscale: `setup-server.sh --lock`; comprobar desde fuera de la red que la IP pública no
   responde en ningún puerto.
-- [ ] Prueba de restauración en el VPS y en la Mac (arriba); anotar en «Validación».
+- [x] Prueba de restauración en el VPS y en la Mac (arriba); anotar en «Validación».
+- [ ] El día de la salida, antes de migrar: `restore.sh --replace /opt/akhana/base-limpia-v1.dump` (la base recién
+  desplegada, con el admin definitivo) para quitar la copia de prueba.
 
 ## Validación
 
@@ -256,4 +258,23 @@ En la Mac (rama `feat/deploy`), con una copia de la base local que tiene el hist
   coincidió en todo: Flyway 18, 845 productos, 91 ventas, 6.116 líneas, 1.522 movimientos, 517 pedidos y 145 cajas.
 - Un fallo simulado (archivo inexistente) termina con error y pasa por el aviso de fallo.
 
-Falta la prueba en el VPS con B2 real y la restauración en la Mac desde B2.
+En el VPS (Contabo, Ubuntu 24.04.5, 8 GB, US East), con `v1.0.0` (`6fbdbf1`) y una copia de la base local:
+
+- Pruebas de `6fbdbf1` antes de desplegar: suite backend completa y frontend 554/554.
+- `deploy.sh` (primer despliegue) construyó y levantó db, api y web sanos en unos 4 minutos;
+  `https://akhana.<red>.ts.net` responde con certificado válido, `/api` sin token da 401, y el login del admin pidió
+  cambiar la contraseña.
+- `--lock`: desde fuera de la red, la IP pública no responde en 22, 80, 443, 5432, 8080 ni 8081; por Tailscale sí.
+- `rclone` contra B2: el archivo sube cifrado (en B2 el nombre es ilegible), baja con el mismo contenido y se borra.
+- `restore.sh --replace` cargó la copia; la base recién desplegada quedó en `/opt/akhana/base-limpia-v1.dump`, fuera
+  de la rotación.
+- `backup.sh` subió a B2 el respaldo (680 KB) y avisó a healthchecks.io; `restore.sh --check latest` lo bajó de B2 y
+  coincidió en todo: Flyway 19, 11 usuarios, 847 productos, 105 ventas, 6.140 líneas, 1.561 movimientos, 521 pedidos y
+  150 cajas, con la misma última venta.
+
+En la Mac, sin pasar por el VPS, con `rclone` configurado solo con las claves del gestor:
+
+- El respaldo de B2 se listó con su nombre legible, se bajó y se restauró en una base aparte del Postgres local.
+- El backend arrancó sano contra esa base; el reporte de totales de octubre dio 32 ventas normales por Bs 57.253,74,
+  total Bs 58.182,74 y utilidad después de consumos Bs 13.881,98.
+- Las ventas de octubre por estado y tipo (cantidad y monto) y los movimientos coinciden exactamente con producción.

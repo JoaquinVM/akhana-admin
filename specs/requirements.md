@@ -23,7 +23,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | Cargar los saldos al corte el día de la salida | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Migración | CAT-06, FIN-11 | 🟡 Parcial | Construida y ensayada en la base local con 0 rechazadas; falta correrla en producción el día de la salida | `migration.md` |
-| Producción | NF-01, NF-02, NF-05 | 🟡 Parcial | Scripts y configuración listos y probados en la Mac; falta instalar el VPS y probar la restauración desde B2 | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05 | ✅ Completo | `v1.0.0` en el VPS con HTTPS por Tailscale, respaldo diario a B2 y restauración probada; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -337,8 +337,8 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] Instalar el VPS con `specs/deploy.md` (Tareas «En el VPS»): HTTPS por Tailscale, respaldo diario a B2 y restauración probada (NF-01, NF-02, NF-05).
-- [ ] El día de la salida, en producción (`migration.md`): vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
+- [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
+- [ ] El día de la salida, en producción (`migration.md`): volver a la base limpia (`restore.sh --replace /opt/akhana/base-limpia-v1.dump`); vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.
 - [ ] Reportes, fase 2: comparar dos semanas con las tablas dinámicas (`reports.md`).
