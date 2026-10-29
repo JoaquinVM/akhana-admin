@@ -229,6 +229,7 @@ class CreditorServiceTest {
             .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT).build();
         when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT))
             .thenReturn(Optional.of(thirdParty));
+        when(creditorRepository.computeThirdPartyPending(mami.getId())).thenReturn(new BigDecimal("60.00"));
 
         creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("60"),
             null, CreditorRepaymentConcept.THIRD_PARTY), "operator");
@@ -238,6 +239,18 @@ class CreditorServiceTest {
         verify(financialTransactionRepository).save(captor.capture());
         assertThat(captor.getValue().getCategory()).isSameAs(thirdParty);
         assertThat(captor.getValue().getDescription()).isEqualTo("Pago a tercero a Mami");
+    }
+
+    @Test
+    @DisplayName("P-48: el pago a tercero no supera lo pendiente de las ventas de la persona")
+    void registerRepayment_thirdPartyOverPending() {
+        debt("100.00");
+        when(creditorRepository.computeThirdPartyPending(mami.getId())).thenReturn(new BigDecimal("30.00"));
+
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(),
+            new BigDecimal("30.01"), null, CreditorRepaymentConcept.THIRD_PARTY), "operator"))
+            .hasMessage("El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30.00); registre el resto con el concepto Pedido.");
+        assertThat(repayments).isEmpty();
     }
 
     @Test
@@ -326,9 +339,10 @@ class CreditorServiceTest {
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("450.00");
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("50.00");
 
+        // T-14, as in sales: cash session, then person, then account
         var order = inOrder(creditorRepository, cashSessionRepository, financialAccountRepository);
-        order.verify(creditorRepository).findByIdForUpdate(mami.getId());
         order.verify(cashSessionRepository).findByStatusForUpdate(CashSessionStatus.ABIERTA);
+        order.verify(creditorRepository).findByIdForUpdate(mami.getId());
         order.verify(financialAccountRepository).findActiveByIdForUpdate(caja.getId());
     }
 
@@ -397,8 +411,9 @@ class CreditorServiceTest {
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("550.00");
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("100.00");
         var order = inOrder(creditorRepository, cashSessionRepository, financialAccountRepository);
+        // The closed attempt stops at the session, before locking the person
+        order.verify(cashSessionRepository, times(2)).findByIdForUpdate(openSession.getId());
         order.verify(creditorRepository).findByIdForUpdate(mami.getId());
-        order.verify(cashSessionRepository).findByIdForUpdate(openSession.getId());
         order.verify(financialAccountRepository).findAllByIdForUpdate(any());
     }
 

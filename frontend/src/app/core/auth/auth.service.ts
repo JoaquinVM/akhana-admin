@@ -64,12 +64,13 @@ export class AuthService {
     );
   }
 
-  changePassword(request: ChangePasswordRequest): Observable<void> {
-    return this.http.post<void>(this.CHANGE_PASSWORD_URL, request).pipe(
-      tap(() => {
+  // El servidor invalida los tokens anteriores al cambio y devuelve uno nuevo para seguir en esta sesión
+  changePassword(request: ChangePasswordRequest): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(this.CHANGE_PASSWORD_URL, request).pipe(
+      tap((response) => {
         const user = this._currentUser();
         if (user) {
-          this.saveSession(this.getToken() || '', { ...user, mustChangePassword: false });
+          this.saveSession(response?.token || this.getToken() || '', { ...user, mustChangePassword: false });
         }
       })
     );

@@ -23,7 +23,7 @@ export class OpenCashModalComponent {
   close = output<void>();
   confirmed = output<OpenCashRequest>();
 
-  // CAJ-10: cierre de la caja anterior; null mientras carga o si no hay caja anterior
+  // CAJ-10: cierre de la caja anterior, o el saldo de Caja en la primera caja; null mientras carga
   proposal = signal<CashOpeningProposal | null>(null);
   amountChanged = signal<boolean>(false);
 
@@ -41,7 +41,6 @@ export class OpenCashModalComponent {
         this.form.reset({ openingAmount: 0, openingComment: '' });
         this.cashService.getOpeningProposal().subscribe({
           next: (proposal) => {
-            if (proposal.previousSessionNumber === null) return;
             this.proposal.set(proposal);
             this.form.patchValue({ openingAmount: proposal.proposedAmount });
           }
@@ -49,7 +48,7 @@ export class OpenCashModalComponent {
       }
     });
 
-    // El comentario pasa a ser obligatorio si el monto difiere del cierre anterior (el backend lo valida igual)
+    // El comentario pasa a ser obligatorio si el monto difiere del propuesto (el backend lo valida igual)
     effect(() => {
       const amount = this.openingAmount();
       const proposal = this.proposal();

@@ -154,6 +154,12 @@ export class SaleDetailModalComponent {
     this.assignError.set(null);
   }
 
+  /** Utilidad que tendrá la línea con el costo actual del producto elegido (POS-12): lo cobrado − costo × cantidad. */
+  assignmentProfit(item: SaleItem, product: Product): number {
+    const cost = Math.round((product.buyPrice || 0) * (item.quantity || 1) * 100) / 100;
+    return Math.round(((item.subtotal || 0) - cost) * 100) / 100;
+  }
+
   assignTo(sale: Sale, item: SaleItem, product: Product): void {
     if (!item.id || this.isAssigning()) return;
     this.isAssigning.set(true);

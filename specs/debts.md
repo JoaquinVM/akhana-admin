@@ -72,8 +72,8 @@ uno de los dos.
 - **Cuando** el pago trae cuenta y persona, o ninguna **entonces** se rechaza: «Elija una cuenta o una persona
   como origen del pago.» La nota del pago solo se guarda en el movimiento, así que un pago por persona no la
   lleva.
-- Bloqueo: pedido, luego persona (T-14). Al registrar un pedido con pago inicial por persona, la persona se
-  bloquea antes que la caja y la cuenta del envío.
+- Bloqueo: pedido, luego persona (T-14). Al registrar un pedido con pago inicial por persona, se bloquea la caja
+  (si el envío sale de Caja), luego la persona y luego la cuenta del envío.
 
 ### Anulación de un pago por persona (COM-09)
 
@@ -83,7 +83,7 @@ uno de los dos.
   «Ya se devolvió a <nombre> parte de este pago; anule primero la devolución.»
 - **Cuando** se anula el pedido completo (COM-09) **entonces** también se anulan sus pagos por persona con la
   misma regla: si alguno dejaría una deuda negativa, no se anula nada y responde el mismo mensaje.
-- Bloqueo: pedido, persona, caja, cuentas.
+- Bloqueo: pedido, caja, persona, cuentas.
 
 ## DEU-03 · Devolución a la persona
 
@@ -99,6 +99,11 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
   activas − devoluciones activas con Pago a tercero, sin pasar la deuda). Registrada esa, la próxima vez se propone
   «Pedido» por Bs 122,00. Las dos partes suman a la misma deuda; no se descuentan entre sí. Quien registra puede
   cambiar monto y concepto (P-48, 28-10-2026).
+- **Cuando** el concepto es «Pago a tercero» y el monto supera lo pendiente de sus ventas **entonces** se rechaza:
+  «El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30.00); registre el resto con el concepto
+  Pedido.» (validado en el servidor desde el 29-10-2026; antes solo se proponía).
+- **Cuando** la devolución sale de Caja y supera el efectivo esperado **entonces** el formulario lo avisa sin
+  bloquear (CAJ-03).
 - **Cuando** se devuelve desde Caja **entonces** exige caja abierta («Los movimientos de la cuenta Caja
   requieren una caja abierta.»), el gasto se vincula a ella y baja el efectivo esperado (CAJ-03,
   `ExpectedCashCalculator`, como un gasto de Caja).
@@ -107,7 +112,7 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 - **Cuando** la persona está inactiva **entonces** se acepta: hay que poder devolverle lo que se le debe.
 - **Cuando** el gasto de la devolución se mira desde Finanzas o el POS **entonces** no se edita ni anula allí:
   «Los movimientos de una deuda se gestionan desde Deudas.»
-- Bloqueo: persona, caja, cuentas (T-14).
+- Bloqueo: caja, persona, cuentas (T-14, el mismo orden que las ventas desde el 29-10-2026).
 - El vínculo entre devolución y gasto vive solo en `financial_transactions.creditor_repayment_id` (índice único:
   un gasto por devolución), sin columna inversa, para no tener una referencia circular.
 
@@ -181,7 +186,7 @@ abierta, o la cuenta QR), fecha y comentario.
   movimientos de una deuda se gestionan desde Deudas.»
 - El cobro a Caja es un ingreso de caja de CAJ-03: la cuenta Caja lo acepta (amplía FIN-02) y
   `ExpectedCashCalculator` lo suma.
-- Bloqueo: cliente, caja, cuentas (T-14).
+- Bloqueo: caja, cliente, cuentas (T-14, el mismo orden que las ventas desde el 29-10-2026).
 
 ### Anulación de un cobro
 

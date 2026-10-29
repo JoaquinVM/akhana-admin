@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.ChangePasswordRequest;
+import com.akhana.akhana_admin.dto.ChangePasswordResponse;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
 import com.akhana.akhana_admin.dto.UserProfileResponse;
@@ -49,13 +50,12 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Void> changePassword(
+    public ResponseEntity<ChangePasswordResponse> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        authService.changePassword(user.getId(), request);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ChangePasswordResponse(authService.changePassword(user.getId(), request)));
     }
 }

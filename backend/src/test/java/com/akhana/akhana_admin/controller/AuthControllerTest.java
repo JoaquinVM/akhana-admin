@@ -211,9 +211,10 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/change-password - Retorna 204 y delega en el servicio con el usuario autenticado")
+    @DisplayName("POST /api/auth/change-password - Retorna 200 con el token nuevo y delega en el servicio con el usuario autenticado")
     void changePassword_Success() throws Exception {
         User user = authenticate("valid.token", true);
+        when(authService.changePassword(eq(user.getId()), any(ChangePasswordRequest.class))).thenReturn("new.token");
 
         mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
@@ -221,7 +222,8 @@ class AuthControllerTest {
                 .content("""
                     { "currentPassword": "initial-pass", "newPassword": "new-strong-pass" }
                     """))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").value("new.token"));
 
         verify(authService).changePassword(eq(user.getId()), any(ChangePasswordRequest.class));
     }

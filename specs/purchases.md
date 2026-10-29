@@ -5,7 +5,9 @@ Alcance: COM-01 a COM-09. El pago hecho por una persona (origen «persona» de C
 queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
-Toda operación que mueve dinero es atómica (RG-05) y bloquea en orden: pedido, caja, cuentas (T-14).
+Toda operación que mueve dinero es atómica (RG-05) y bloquea en orden: pedido, caja, persona, cuentas (T-14). Al registrar un pedido, la caja se bloquea primero si el envío
+o el primer pago salen de Caja, y las cuentas del envío y del pago se bloquean juntas por id. Un pago desde Caja que
+supera el efectivo esperado se avisa sin bloquear (CAJ-03).
 
 ## Permiso
 
@@ -165,8 +167,8 @@ agrupados por proveedor (`GET /api/purchases/payables`).
 Un pedido o un pago registrado no se edita: se corrige anulándolo con motivo (RG-03). Lo hace quien entra a
 Compras, operador o administrador (tabla 2.2, P-33). La anulación revierte el dinero: los gastos vinculados al
 pedido (`financial_transactions.purchase_id`) quedan `ANULADO` con el mismo motivo, usuario y fecha, la cuenta
-recupera el monto y, si eran de Caja, el efectivo esperado se recalcula. Bloqueo en orden: pedido, caja, cuentas
-(T-14).
+recupera el monto y, si eran de Caja, el efectivo esperado se recalcula. Bloqueo en orden: pedido, caja de sus
+movimientos, personas, cuentas (T-14).
 
 ### Anular un pago (`POST /api/purchases/{id}/payments/{paymentId}/void`)
 

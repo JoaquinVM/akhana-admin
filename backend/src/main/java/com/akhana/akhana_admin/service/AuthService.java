@@ -10,5 +10,6 @@ public interface AuthService {
 
     LoginResponse login(LoginRequest request, String clientIp);
 
-    void changePassword(UUID userId, ChangePasswordRequest request);
+    /** Changes the password and returns a new token: the ones issued before stop working (T-19). */
+    String changePassword(UUID userId, ChangePasswordRequest request);
 }

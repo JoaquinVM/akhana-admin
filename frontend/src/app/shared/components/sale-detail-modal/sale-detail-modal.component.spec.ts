@@ -80,6 +80,12 @@ describe('SaleDetailModalComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('POS-12: calcula la utilidad que tendrá la línea con el costo del producto elegido', () => {
+    const item: any = { id: 'i1', quantity: 2, subtotal: 30 };
+    expect(component.assignmentProfit(item, { buyPrice: 12.5 } as any)).toBe(5);
+    expect(component.assignmentProfit(item, { buyPrice: 16 } as any)).toBe(-2);
+  });
+
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
   });

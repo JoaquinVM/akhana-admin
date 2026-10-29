@@ -452,6 +452,109 @@ class FinancialTransactionServiceTest {
     }
 
     @Test
+    @DisplayName("FIN-06: anular una transferencia no deja la cuenta destino en negativo")
+    void testVoidTransferLeavingDestinationNegativeRejected() {
+        joacoAccount.setCurrentBalance(new BigDecimal("30.00"));
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccount(bisaAccount)
+                .destinationAccount(joacoAccount)
+                .amount(new BigDecimal("80.00"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
+        assertTrue(ex.getMessage().contains("Cuenta Joaco quedaría con saldo negativo (saldo disponible: 30.00 Bs)"));
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+    }
+
+    @Test
+    @DisplayName("FIN-06: anular un ingreso ya gastado no deja la cuenta en negativo")
+    void testVoidIncomeLeavingAccountNegativeRejected() {
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.INGRESO_MANUAL)
+                .sourceAccount(joacoAccount)
+                .category(incomeCat)
+                .amount(new BigDecimal("200.01"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
+        assertEquals(new BigDecimal("200.00"), joacoAccount.getCurrentBalance());
+    }
+
+    @Test
+    @DisplayName("Un gasto o ingreso manual no usa las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste, ventas)")
+    void testCreateWithSystemCategoryRejected() {
+        FinancialCategory pedido = FinancialCategory.builder().id(UUID.randomUUID()).name("Pedido")
+                .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.PURCHASE_PAYMENT).build();
+        FinancialCategory ventas = FinancialCategory.builder().id(UUID.randomUUID()).name("Ventas")
+                .type(FinancialCategoryType.INGRESO).isSalesDefault(true).build();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(pedido.getId())).thenReturn(Optional.of(pedido));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(ventas.getId())).thenReturn(Optional.of(ventas));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> financialTransactionService.createTransaction(
+                FinancialTransactionRequest.builder().type(FinancialTransactionType.GASTO_MANUAL).sourceAccountId(bisaAccount.getId())
+                        .categoryId(pedido.getId()).amount(new BigDecimal("10")).description("Pago").build(), "admin"));
+        assertTrue(ex.getMessage().startsWith("La categoría «Pedido» la registra el sistema"));
+        assertThrows(IllegalArgumentException.class, () -> financialTransactionService.createTransaction(
+                FinancialTransactionRequest.builder().type(FinancialTransactionType.INGRESO_MANUAL).sourceAccountId(bisaAccount.getId())
+                        .categoryId(ventas.getId()).amount(new BigDecimal("10")).description("Venta").build(), "admin"));
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Transporte es categoría de sistema pero también un gasto normal")
+    void testCreateWithShippingCategoryAllowed() {
+        FinancialCategory transporte = FinancialCategory.builder().id(UUID.randomUUID()).name("Transporte")
+                .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.PURCHASE_SHIPPING).build();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(transporte.getId())).thenReturn(Optional.of(transporte));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        financialTransactionService.createTransaction(FinancialTransactionRequest.builder().type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId()).categoryId(transporte.getId()).amount(new BigDecimal("10"))
+                .description("Taxi").build(), "admin");
+
+        assertEquals(new BigDecimal("990.00"), bisaAccount.getCurrentBalance());
+    }
+
+    @Test
+    @DisplayName("CAJ-10: el ajuste de apertura no se anula desde el POS ni desde Finanzas")
+    void testVoidCashAdjustmentRejected() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialCategory ajuste = FinancialCategory.builder().id(UUID.randomUUID()).name("Ajuste")
+                .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.CASH_SHORTAGE).build();
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccount(cajaAccount)
+                .category(ajuste)
+                .amount(new BigDecimal("45.50"))
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(sessionId)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        lenient().when(cashSessionRepository.findByIdForUpdate(sessionId))
+                .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA).build()));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidCashExpense(
+                tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "operador"));
+        assertTrue(ex.getMessage().contains("ajustes de caja"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+    }
+
+    @Test
     @DisplayName("Debe procesar transferencia exitosa entre cuentas con saldo suficiente")
     void testTransferSuccess() {
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()

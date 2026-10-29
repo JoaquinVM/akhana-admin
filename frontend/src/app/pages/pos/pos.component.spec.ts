@@ -257,38 +257,26 @@ describe('PosComponent', () => {
     expect(deleteBtnClosed.nativeElement.disabled).toBe(true);
   });
 
-  it('debe abrir modal de gasto de caja y cargar categorías de gasto', () => {
+  it('debe abrir el modal de gasto de caja y, al registrarlo, cerrarlo y recargar la sesión', () => {
     component.openCashExpenseModal();
-
-    expect(mockCategoryService.getCategories).toHaveBeenCalledWith('GASTO');
+    fixture.detectChanges();
     expect(component.isCashExpenseModalVisible()).toBe(true);
-    expect(component.expenseCategories().length).toBe(1);
-    expect(component.cashExpenseForm.get('categoryId')?.value).toBe('cat-1');
+    expect(mockCategoryService.getCategories).toHaveBeenCalledWith('GASTO');
 
-    component.closeCashExpenseModal();
-    expect(component.isCashExpenseModalVisible()).toBe(false);
-  });
+    mockCashService.getCurrentSession.mockClear();
+    component.onCashExpenseSaved('Gasto de caja de Bs. 35.50 registrado exitosamente.');
 
-  it('debe registrar gasto de caja exitosamente y recargar la sesión', () => {
-    component.openCashExpenseModal();
-
-    component.cashExpenseForm.patchValue({
-      categoryId: 'cat-1',
-      amount: 35.5,
-      description: 'Compra de hielo',
-      notes: 'Factura #123'
-    });
-
-    component.handleConfirmCashExpense();
-
-    expect(mockTransactionService.createCashExpense).toHaveBeenCalledWith({
-      categoryId: 'cat-1',
-      amount: 35.5,
-      description: 'Compra de hielo',
-      notes: 'Factura #123'
-    });
     expect(component.isCashExpenseModalVisible()).toBe(false);
     expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs. 35.50 registrado exitosamente');
+    expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledWith('session-1');
+    expect(mockCashService.getCurrentSession).toHaveBeenCalled();
+  });
+
+  it('no abre el modal de gasto con la caja cerrada', () => {
+    mockCashService.currentSession.set(null);
+    component.openCashExpenseModal();
+    expect(component.isCashExpenseModalVisible()).toBe(false);
+    expect(component.feedbackMessage()?.type).toBe('error');
   });
 
   it('debe tener seleccionada la opción Ventas por defecto y mostrar el selector visual de contenido', () => {
@@ -373,23 +361,6 @@ describe('PosComponent', () => {
     expect(component.activeExpensesCount()).toBe(1);
     expect(component.totalExpensesAmount()).toBe(50.0);
     expect(component.recentExpenses().length).toBe(2);
-  });
-
-  it('debe marcar campos y evitar envío si el formulario de gasto de caja es inválido', () => {
-    component.openCashExpenseModal();
-    component.cashExpenseForm.patchValue({
-      categoryId: '',
-      amount: null,
-      description: ''
-    });
-
-    component.handleConfirmCashExpense();
-
-    expect(component.cashExpenseForm.invalid).toBe(true);
-    expect(component.cashExpenseForm.get('categoryId')?.touched).toBe(true);
-    expect(component.cashExpenseForm.get('amount')?.touched).toBe(true);
-    expect(component.cashExpenseForm.get('description')?.touched).toBe(true);
-    expect(mockTransactionService.createCashExpense).not.toHaveBeenCalled();
   });
 
   it('debe abrir modal de anulación de gasto de caja y confirmar anulación', () => {

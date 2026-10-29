@@ -132,14 +132,20 @@ class JwtAuthenticationIntegrationTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("La contraseña actual no es correcta"));
 
-        mockMvc.perform(post("/api/auth/change-password")
+        String body = mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"%s\",\"newPassword\":\"brand-new-pass\"}".formatted(PASSWORD)))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String newToken = com.jayway.jsonpath.JsonPath.read(body, "$.token");
 
+        // T-19: the token issued before the change stops working; the new one continues the session
         mockMvc.perform(get("/api/users")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/users")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + newToken))
             .andExpect(status().isOk());
 
         login(admin.getUsername(), "brand-new-pass", false);

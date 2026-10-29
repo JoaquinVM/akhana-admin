@@ -148,6 +148,9 @@
       @if (form.get('amount')?.invalid && form.get('amount')?.touched) {
         <span class="invalid-feedback">El monto es obligatorio y debe ser mayor a 0.</span>
       }
+      @if (formDirection() === 'RETIRO') {
+        <app-cash-limit-warning [amount]="form.get('amount')?.value" />
+      }
     </div>
 
     <div class="form-group">

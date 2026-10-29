@@ -21,7 +21,6 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +54,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
     static final String CASH_TRANSFER_SAME_ACCOUNT = "Elige una cuenta distinta de Caja para el ingreso o retiro.";
     static final String CASH_TRANSFER_ONLY = "Solo se pueden anular desde el POS los ingresos y retiros de caja.";
+    static final String SYSTEM_CATEGORY = "La categoría «%s» la registra el sistema (pagos de pedidos en Compras, devoluciones en Deudas, ajustes al abrir o cerrar la caja, ventas en el POS); elija otra categoría.";
+    static final String CASH_ADJUSTMENT_MOVEMENT = "Los ajustes de caja se generan al abrir o cerrar la caja y no se pueden editar ni anular.";
+    static final String VOID_LEAVES_NEGATIVE = "No se puede anular: la cuenta %s quedaría con saldo negativo (saldo disponible: %s Bs). Anule primero los gastos o transferencias que usaron ese dinero.";
 
     @Override
     @Transactional(readOnly = true)
@@ -153,6 +155,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             if (category.getType() != FinancialCategoryType.INGRESO) {
                 throw new IllegalArgumentException("La categoría para un ingreso debe ser de tipo INGRESO.");
             }
+            requireManualCategory(category);
             builder.category(category);
 
             // Afectar saldo
@@ -168,6 +171,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             if (category.getType() != FinancialCategoryType.GASTO) {
                 throw new IllegalArgumentException("La categoría para un gasto debe ser de tipo GASTO.");
             }
+            requireManualCategory(category);
             builder.category(category);
 
             // Afectar saldo
@@ -245,6 +249,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(INITIAL_BALANCE_EDIT);
         }
 
+        if (isCashAdjustment(tx)) {
+            throw new IllegalStateException(CASH_ADJUSTMENT_MOVEMENT);
+        }
+
         if (tx.getType() != request.getType()) {
             throw new IllegalArgumentException("No se puede cambiar el tipo de una transacción ya registrada.");
         }
@@ -270,6 +278,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             }
             if (request.getType() == FinancialTransactionType.GASTO_MANUAL && category.getType() != FinancialCategoryType.GASTO) {
                 throw new IllegalArgumentException("La categoría para un gasto debe ser de tipo GASTO.");
+            }
+            // An old movement may keep its category; it cannot move to one the system records by itself
+            if (tx.getCategory() == null || !tx.getCategory().getId().equals(category.getId())) {
+                requireManualCategory(category);
             }
             tx.setCategory(category);
         }
@@ -395,6 +407,10 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
             throw new IllegalStateException(INITIAL_BALANCE_VOID);
         }
 
+        if (isCashAdjustment(tx)) {
+            throw new IllegalStateException(CASH_ADJUSTMENT_MOVEMENT);
+        }
+
         Optional<CashSession> lockedSession = tx.getCashSessionId() != null
                 ? Optional.of(lockSessionIfOpen(tx.getCashSessionId(), CLOSED_SESSION_VOID))
                 : Optional.empty();
@@ -405,6 +421,13 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         // Revertir impacto en los saldos
         BigDecimal amount = tx.getAmount();
         FinancialAccount source = tx.getSourceAccount();
+
+        // Like a transfer (FIN-06), reverting money that already left the account cannot leave it negative
+        if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL) {
+            requireBalanceFor(source, amount);
+        } else if (tx.getType() == FinancialTransactionType.TRANSFERENCIA) {
+            requireBalanceFor(tx.getDestinationAccount(), amount);
+        }
 
         if (tx.getType() == FinancialTransactionType.INGRESO_MANUAL || tx.getType() == FinancialTransactionType.VENTA_INGRESO) {
             source.setCurrentBalance(source.getCurrentBalance().subtract(amount));
@@ -449,6 +472,23 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         return request.getVoidReason().trim();
     }
 
+    private static void requireManualCategory(FinancialCategory category) {
+        if (!category.isManualEntryAllowed()) {
+            throw new IllegalArgumentException(String.format(SYSTEM_CATEGORY, category.getName()));
+        }
+    }
+
+    private static boolean isCashAdjustment(FinancialTransaction tx) {
+        return tx.getCategory() != null && tx.getCategory().isCashAdjustment();
+    }
+
+    private static void requireBalanceFor(FinancialAccount account, BigDecimal amount) {
+        if (account.getCurrentBalance().compareTo(amount) < 0) {
+            throw new IllegalStateException(String.format(VOID_LEAVES_NEGATIVE, account.getName(),
+                    account.getCurrentBalance().setScale(2, RoundingMode.HALF_UP).toPlainString()));
+        }
+    }
+
     private boolean isCashAccount(UUID accountId) {
         return accountId != null && financialAccountRepository.existsByIdAndIsCashAccountTrue(accountId);
     }
@@ -487,11 +527,11 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     }
 
     private Instant getDefaultStartDate() {
-        return YearMonth.now().atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        return YearMonth.now(PurchaseServiceImpl.STORE_ZONE).atDay(1).atStartOfDay(PurchaseServiceImpl.STORE_ZONE).toInstant();
     }
 
     private Instant getDefaultEndDate() {
-        return LocalDate.now().atTime(23, 59, 59, 999_999_999).atZone(ZoneId.systemDefault()).toInstant();
+        return LocalDate.now(PurchaseServiceImpl.STORE_ZONE).atTime(23, 59, 59, 999_999_999).atZone(PurchaseServiceImpl.STORE_ZONE).toInstant();
     }
 
     private FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {

@@ -338,11 +338,13 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    // Rounded first, so a price that rounds to 0.00 is rejected too (CAT-01)
     private static BigDecimal requireSellPrice(BigDecimal sellPrice) {
-        if (sellPrice.signum() <= 0) {
+        BigDecimal rounded = sellPrice.setScale(2, RoundingMode.HALF_UP);
+        if (rounded.signum() <= 0) {
             throw new IllegalArgumentException(SELL_PRICE_REQUIRED);
         }
-        return sellPrice.setScale(2, RoundingMode.HALF_UP);
+        return rounded;
     }
 
     static final String ZERO_COST_WARNING = "Costo 0: toda la venta cuenta como utilidad.";

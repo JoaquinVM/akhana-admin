@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal, untracked }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
@@ -10,7 +11,7 @@ import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAc
 @Component({
   selector: 'app-creditor-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
   templateUrl: './creditor-detail-modal.component.html',
   styleUrls: ['./creditor-detail-modal.component.css']
 })
@@ -34,6 +35,7 @@ export class CreditorDetailModalComponent {
   errorMessage = signal<string | null>(null);
 
   repaymentAccountId = signal<string>('');
+  repaysFromCash = computed(() => !!this.accounts().find((a) => a.id === this.repaymentAccountId())?.cashAccount);
   repaymentAmount = signal<number | null>(null);
   repaymentComment = signal<string>('');
   repaymentConcept = signal<CreditorRepaymentConcept>('PURCHASE');

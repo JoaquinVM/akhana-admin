@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import jakarta.persistence.EntityManager;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -47,6 +48,9 @@ class CashSessionServiceTest {
     @Mock
     private FinancialCategoryRepository financialCategoryRepository;
 
+    @Mock
+    private EntityManager entityManager;
+
     private CashSessionServiceImpl cashSessionService;
 
     private UUID sessionId;
@@ -56,7 +60,7 @@ class CashSessionServiceTest {
     void setUp() {
         cashSessionService = new CashSessionServiceImpl(cashSessionRepository, saleRepository,
             new ExpectedCashCalculator(financialTransactionRepository),
-            financialAccountRepository, financialCategoryRepository, financialTransactionRepository);
+            financialAccountRepository, financialCategoryRepository, financialTransactionRepository, entityManager);
         sessionId = UUID.randomUUID();
         activeSession = CashSession.builder()
             .id(sessionId)
@@ -79,6 +83,7 @@ class CashSessionServiceTest {
     @DisplayName("Debe abrir exitosamente una caja cuando no existe ninguna sesión abierta")
     void openSession_success() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        stubCashAccount("150.00");
         when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> {
             CashSession cs = invocation.getArgument(0);
             cs.setId(sessionId);
@@ -149,6 +154,7 @@ class CashSessionServiceTest {
     @DisplayName("CAJ-10: abrir con el monto propuesto no exige comentario")
     void openSession_withProposedAmount_noCommentNeeded() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        stubCashAccount("245.50");
         when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.50")));
         when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -158,6 +164,7 @@ class CashSessionServiceTest {
 
         assertThat(response.openingAmount()).isEqualByComparingTo("245.50");
         assertThat(response.openingComment()).isNull();
+        verify(financialTransactionRepository, never()).save(any());
     }
 
     @Test
@@ -181,13 +188,60 @@ class CashSessionServiceTest {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
         when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("245.50")));
-        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> {
+            CashSession cs = invocation.getArgument(0);
+            cs.setId(sessionId);
+            cs.setSessionNumber(8L);
+            return cs;
+        });
+        FinancialAccount cash = stubAdjustment(FinancialCategorySystemKey.CASH_SHORTAGE, FinancialCategoryType.GASTO, "245.50");
 
         CashSessionSummaryResponse response = cashSessionService.openSession(
             new OpenCashRequest(new BigDecimal("200.00"), " Se depositaron 45.50 "), "cajero1");
 
         assertThat(response.openingAmount()).isEqualByComparingTo("200.00");
         assertThat(response.openingComment()).isEqualTo("Se depositaron 45.50");
+        // CAJ-10: la diferencia con el saldo de Caja queda como Ajuste de la caja nueva, así Caja = lo que hay
+        FinancialTransaction tx = captureAdjustment();
+        assertThat(tx.getType()).isEqualTo(FinancialTransactionType.GASTO_MANUAL);
+        assertThat(tx.getAmount()).isEqualByComparingTo("45.50");
+        assertThat(tx.getCategory().getSystemKey()).isEqualTo(FinancialCategorySystemKey.CASH_SHORTAGE);
+        assertThat(tx.getCashSessionId()).isEqualTo(sessionId);
+        assertThat(tx.getDescription()).isEqualTo("Diferencia al abrir la caja #8");
+        assertThat(tx.getNotes()).isEqualTo("Se depositaron 45.50");
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("200.00");
+        // El efectivo esperado de la caja nueva es el monto inicial: el ajuste no es efectivo de la sesión
+        assertThat(response.expectedCash()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-10: abrir con más que el saldo de Caja registra un ingreso de Ajuste")
+    void openSession_moreThanCashBalance_recordsIncomeAdjustment() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("100.00")));
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        FinancialAccount cash = stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
+
+        cashSessionService.openSession(new OpenCashRequest(new BigDecimal("120.00"), "Apareció un billete"), "cajero1");
+
+        FinancialTransaction tx = captureAdjustment();
+        assertThat(tx.getType()).isEqualTo(FinancialTransactionType.INGRESO_MANUAL);
+        assertThat(tx.getAmount()).isEqualByComparingTo("20.00");
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("120.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-10: en la primera caja, abrir con un monto distinto al saldo de Caja exige comentario")
+    void openSession_firstSessionChangedAmountWithoutComment_throws() {
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        stubCashAccount("300.00");
+
+        assertThatThrownBy(() -> cashSessionService.openSession(
+                new OpenCashRequest(new BigDecimal("250.00"), null), "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("saldo de la cuenta Caja (Bs 300.00)");
+        verify(cashSessionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -207,6 +261,7 @@ class CashSessionServiceTest {
     @DisplayName("Debe rechazar la apertura si otra caja se abrió al mismo tiempo (índice único de caja ABIERTA)")
     void openSession_concurrentOpening_throwsDuplicate() {
         when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        stubCashAccount("100.00");
         when(cashSessionRepository.saveAndFlush(any(CashSession.class)))
             .thenThrow(new DataIntegrityViolationException("idx_cash_sessions_only_one_open"));
 
@@ -429,6 +484,18 @@ class CashSessionServiceTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Ajuste");
         verify(financialAccountRepository, never()).save(any());
+    }
+
+    private FinancialAccount stubCashAccount(String balance) {
+        FinancialAccount cash = FinancialAccount.builder()
+            .id(UUID.randomUUID())
+            .name("Caja")
+            .isCashAccount(true)
+            .currentBalance(new BigDecimal(balance))
+            .build();
+        when(financialAccountRepository.findByIsCashAccountTrue()).thenReturn(Optional.of(cash));
+        lenient().when(financialAccountRepository.findAllByIdForUpdate(List.of(cash.getId()))).thenReturn(List.of(cash));
+        return cash;
     }
 
     private FinancialAccount stubAdjustment(FinancialCategorySystemKey key, FinancialCategoryType type, String cashBalance) {

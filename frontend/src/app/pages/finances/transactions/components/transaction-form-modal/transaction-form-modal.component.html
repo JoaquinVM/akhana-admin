@@ -116,6 +116,9 @@
             }
           </span>
         }
+        @if (isCashOutflow()) {
+          <app-cash-limit-warning [amount]="form().get('amount')?.value" />
+        }
       </div>
 
     </div>

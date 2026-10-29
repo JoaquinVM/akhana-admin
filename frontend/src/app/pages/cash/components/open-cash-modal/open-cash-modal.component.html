@@ -28,9 +28,18 @@
       }
       @if (proposal(); as p) {
         <span class="form-hint">
-          Propuesto: Bs {{ p.proposedAmount | number:'1.2-2' }}, el cierre de la caja #{{ p.previousSessionNumber }}.
+          @if (p.previousSessionNumber !== null) {
+            Propuesto: Bs {{ p.proposedAmount | number:'1.2-2' }}, el cierre de la caja #{{ p.previousSessionNumber }}.
+          } @else {
+            Propuesto: Bs {{ p.proposedAmount | number:'1.2-2' }}, el saldo de la cuenta Caja.
+          }
           Si lo cambias, explica el motivo en el comentario.
         </span>
+        @if (amountChanged()) {
+          <span class="form-hint form-hint-warning">
+            La diferencia se registrará como ajuste en la cuenta Caja, para que su saldo sea lo que hay en la gaveta.
+          </span>
+        }
       } @else {
         <span class="form-hint">Efectivo físico disponible en gaveta al momento de la apertura.</span>
       }

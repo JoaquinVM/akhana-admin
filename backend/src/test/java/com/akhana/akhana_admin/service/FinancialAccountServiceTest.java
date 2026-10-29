@@ -274,7 +274,7 @@ class FinancialAccountServiceTest {
     @DisplayName("FIN-01: el saldo al corte de Caja se rechaza si ya se abrió una caja")
     void setOpeningBalance_cashAfterFirstSession_isRejected() {
         when(financialAccountRepository.findActiveByIdForUpdate(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
-        when(cashSessionRepository.count()).thenReturn(1L);
+        when(cashSessionRepository.existsByHistoricalImportIdIsNull()).thenReturn(true);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialAccountService.setOpeningBalance(cajaAccount.getId(), new OpeningBalanceRequest(new BigDecimal("7637.90")), "admin"));
@@ -288,7 +288,7 @@ class FinancialAccountServiceTest {
     void getAllAccounts_reportsOpeningBalanceEditable() {
         when(financialAccountRepository.findByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(bisaAccount, cajaAccount));
         when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(bisaAccount.getId())).thenReturn(true);
-        when(cashSessionRepository.count()).thenReturn(0L);
+        when(cashSessionRepository.existsByHistoricalImportIdIsNull()).thenReturn(false);
         when(financialTransactionRepository.existsMovementsBesidesOpeningBalance(cajaAccount.getId())).thenReturn(false);
 
         List<FinancialAccountResponse> list = financialAccountService.getAllAccounts();

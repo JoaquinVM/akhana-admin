@@ -161,7 +161,13 @@ public class CustomerServiceImpl implements CustomerService {
     public CustomerHistoryResponse registerCollection(UUID customerId, CustomerCollectionRequest request, String username) {
         BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
 
-        // Lock order: customer, then cash session, then account (T-14). An inactive customer can still pay.
+        // Lock order for every money operation, as in sales: cash session, then customer, then account (T-14).
+        // An inactive customer can still pay.
+        CashSession session = null;
+        if (financialAccountRepository.existsByIdAndIsCashAccountTrue(request.accountId())) {
+            session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
+        }
         Customer customer = lockCustomer(customerId);
         BigDecimal balance = balanceOf(customer);
         if (amount.compareTo(balance) > 0) {
@@ -171,11 +177,6 @@ public class CustomerServiceImpl implements CustomerService {
         FinancialCategory category = financialCategoryRepository.findByIsSalesDefaultTrueAndDeletedAtIsNull()
             .orElseThrow(() -> new IllegalStateException(SALES_CATEGORY_MISSING));
 
-        CashSession session = null;
-        if (financialAccountRepository.existsByIdAndIsCashAccountTrue(request.accountId())) {
-            session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
-                .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
-        }
         FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(request.accountId())
             .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.accountId()));
         // Collections are sales income: only Caja or the QR account take them (DEU-06, FIN-03)
@@ -231,23 +232,25 @@ public class CustomerServiceImpl implements CustomerService {
         }
         String voidReason = request.voidReason().trim();
 
-        // Lock order: customer, then cash session, then account (T-14)
-        lockCustomer(customerId);
-        CustomerCollection collection = customerCollectionRepository.findById(collectionId)
-            .filter(k -> k.getCustomer().getId().equals(customerId))
-            .orElseThrow(() -> new ResourceNotFoundException("Cobro no encontrado con ID: " + collectionId));
-        if (collection.getStatus() == CustomerCollectionStatus.ANULADO) {
-            throw new IllegalStateException(ALREADY_VOIDED_COLLECTION);
-        }
+        // The movement is read first only to know its session, which never changes
         FinancialTransaction tx = financialTransactionRepository.findByCustomerCollectionId(collectionId)
-            .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del cobro."));
+            .orElseThrow(() -> new ResourceNotFoundException("Cobro no encontrado con ID: " + collectionId));
 
-        // A Caja movement needs its own session still open (CAJ-06, T-16)
+        // Lock order as in sales: cash session, then customer, then account (T-14). A Caja movement needs its own
+        // session still open (CAJ-06, T-16)
         CashSession session = null;
         if (tx.getCashSessionId() != null) {
             session = cashSessionRepository.findByIdForUpdate(tx.getCashSessionId())
                 .filter(s -> s.getStatus() == CashSessionStatus.ABIERTA)
                 .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_COLLECTION));
+        }
+        lockCustomer(customerId);
+        // Read after the locks, so a second void sees it already voided
+        CustomerCollection collection = customerCollectionRepository.findById(collectionId)
+            .filter(k -> k.getCustomer().getId().equals(customerId))
+            .orElseThrow(() -> new ResourceNotFoundException("Cobro no encontrado con ID: " + collectionId));
+        if (collection.getStatus() == CustomerCollectionStatus.ANULADO) {
+            throw new IllegalStateException(ALREADY_VOIDED_COLLECTION);
         }
         UUID accountId = tx.getSourceAccount().getId();
         FinancialAccount account = financialAccountRepository.findAllByIdForUpdate(Set.of(accountId)).stream()

@@ -22,9 +22,11 @@ export class TransactionEditModalComponent {
   submitted = output<void>();
   close = output<void>();
 
-  // Solo se ofrece cambiar a una categoría del mismo tipo (ingreso o gasto)
+  // Solo se ofrece cambiar a una categoría del mismo tipo (ingreso o gasto) que admita movimientos manuales;
+  // la actual se mantiene aunque sea de sistema
   sameTypeCategories = computed(() => {
-    const type = this.transaction()?.category?.type;
-    return this.categories().filter(cat => cat.type === type);
+    const current = this.transaction()?.category;
+    return this.categories().filter(cat => cat.type === current?.type
+      && (cat.manualEntryAllowed !== false || cat.id === current?.id));
   });
 }

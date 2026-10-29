@@ -14,15 +14,13 @@ import { CloseCashModalComponent } from '../cash/components/close-cash-modal/clo
 import { CashSessionInfoModalComponent } from '../cash/components/cash-session-info-modal/cash-session-info-modal.component';
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
 import { CashTransfersComponent } from './components/cash-transfers/cash-transfers.component';
+import { CashExpenseModalComponent } from './components/cash-expense-modal/cash-expense-modal.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
-import { FinancialCategoryService } from '../../core/finance/financial-category.service';
 import {
-  FinancialCategory,
-  CashExpenseRequest,
   FinancialTransaction,
   VoidFinancialTransactionRequest
 } from '../../core/finance/models/finance.models';
@@ -33,12 +31,12 @@ import {
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule,
     OpenCashModalComponent,
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
     VoidSaleModalComponent,
     CashTransfersComponent,
+    CashExpenseModalComponent,
     SaleDetailModalComponent,
     SalesTableComponent,
     ModalComponent
@@ -51,8 +49,6 @@ export class PosComponent implements OnInit {
   readonly cashService = inject(CashService);
   private readonly saleService = inject(SaleService);
   private readonly transactionService = inject(FinancialTransactionService);
-  private readonly categoryService = inject(FinancialCategoryService);
-  private readonly fb = inject(FormBuilder);
 
   // Selector de vista: Ventas, Compras o Ingresos/Retiros de caja
   activeTab = signal<'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'>('VENTAS');
@@ -66,15 +62,6 @@ export class PosComponent implements OnInit {
   isCashExpenseModalVisible = signal<boolean>(false);
   isActionLoading = signal<boolean>(false);
 
-  expenseCategories = signal<FinancialCategory[]>([]);
-  cashExpenseError = signal<string | null>(null);
-
-  cashExpenseForm: FormGroup = this.fb.group({
-    categoryId: ['', Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
-    description: ['', [Validators.required, Validators.maxLength(255)]],
-    notes: ['']
-  });
 
   selectedSaleToVoid = signal<Sale | null>(null);
   selectedSaleForDetailId = signal<string | null>(null);
@@ -319,62 +306,21 @@ export class PosComponent implements OnInit {
       this.showFeedback('error', 'No se puede registrar un gasto con la caja cerrada.');
       return;
     }
-    this.cashExpenseError.set(null);
-    this.categoryService.getCategories('GASTO').subscribe({
-      next: (cats) => {
-        this.expenseCategories.set(cats);
-        this.cashExpenseForm.reset({
-          categoryId: cats[0]?.id || '',
-          amount: null,
-          description: '',
-          notes: ''
-        });
-        this.isCashExpenseModalVisible.set(true);
-      },
-      error: () => {
-        this.showFeedback('error', 'Error al cargar categorías de gasto.');
-      }
-    });
+    this.isCashExpenseModalVisible.set(true);
   }
 
   closeCashExpenseModal(): void {
     this.isCashExpenseModalVisible.set(false);
-    this.cashExpenseError.set(null);
   }
 
-  handleConfirmCashExpense(): void {
-    if (this.cashExpenseForm.invalid) {
-      this.cashExpenseForm.markAllAsTouched();
-      return;
+  onCashExpenseSaved(message: string): void {
+    this.closeCashExpenseModal();
+    this.showFeedback('success', message);
+    const session = this.cashService.currentSession();
+    if (session) {
+      this.loadExpensesForSession(session.id);
     }
-
-    this.isActionLoading.set(true);
-    this.cashExpenseError.set(null);
-
-    const val = this.cashExpenseForm.value;
-    const req: CashExpenseRequest = {
-      categoryId: val.categoryId,
-      amount: Number(val.amount),
-      description: val.description.trim(),
-      notes: val.notes ? val.notes.trim() : undefined
-    };
-
-    this.transactionService.createCashExpense(req).subscribe({
-      next: (tx) => {
-        this.isActionLoading.set(false);
-        this.closeCashExpenseModal();
-        this.showFeedback('success', `Gasto de caja de Bs. ${tx.amount.toFixed(2)} registrado exitosamente.`);
-        const session = this.cashService.currentSession();
-        if (session) {
-          this.loadExpensesForSession(session.id);
-        }
-        this.loadCurrentSession();
-      },
-      error: (err: any) => {
-        this.isActionLoading.set(false);
-        this.cashExpenseError.set(err.error?.message || 'Error al registrar el gasto de caja.');
-      }
-    });
+    this.loadCurrentSession();
   }
 
   // Anulación de Gasto

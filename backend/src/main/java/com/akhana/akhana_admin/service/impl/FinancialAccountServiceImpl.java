@@ -168,7 +168,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
 
-        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.count() > 0) {
+        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.existsByHistoricalImportIdIsNull()) {
             throw new IllegalStateException("Ya se abrió una caja: el saldo al corte de Caja solo se carga antes de la primera apertura.");
         }
         if (financialTransactionRepository.existsMovementsBesidesOpeningBalance(id)) {
@@ -224,7 +224,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     }
 
     private boolean isOpeningBalanceEditable(FinancialAccount account) {
-        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.count() > 0) {
+        if (Boolean.TRUE.equals(account.getIsCashAccount()) && cashSessionRepository.existsByHistoricalImportIdIsNull()) {
             return false;
         }
         return !financialTransactionRepository.existsMovementsBesidesOpeningBalance(account.getId());

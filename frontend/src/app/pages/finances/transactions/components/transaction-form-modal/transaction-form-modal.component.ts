@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FinancialAccount, FinancialCategory } from '../../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
+import { CashLimitWarningComponent } from '../../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 
 export type TransactionFormMode = 'INGRESO' | 'GASTO' | 'TRANSFERENCIA';
 
@@ -70,7 +71,7 @@ const TEXTS: Record<TransactionFormMode, TransactionFormTexts> = {
 @Component({
   selector: 'app-transaction-form-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
   templateUrl: './transaction-form-modal.component.html',
   styleUrls: ['../transaction-modal.css']
 })
@@ -91,6 +92,14 @@ export class TransactionFormModalComponent {
   isInvalid(field: string): boolean {
     const control = this.form().get(field);
     return !!control?.touched && !!control?.invalid;
+  }
+
+  /** Un gasto o una transferencia que sale de Caja muestra el aviso de efectivo esperado (CAJ-03). */
+  isCashOutflow(): boolean {
+    if (this.mode() === 'INGRESO') return false;
+    const field = this.mode() === 'TRANSFERENCIA' ? 'sourceAccountId' : 'accountId';
+    const accountId = this.form().get(field)?.value;
+    return !!this.accounts().find((a) => a.id === accountId)?.isCashAccount;
   }
 
   hasError(field: string, error: string): boolean {

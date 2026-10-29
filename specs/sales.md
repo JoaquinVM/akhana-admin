@@ -348,6 +348,8 @@ en el historial (`/sales`, permiso `SALES_HISTORY`, P-33) se asigna una sola vez
 - **Asignar producto**: se elige un producto normal activo que se vende por unidad; la línea toma su id, código,
   nombre y costo actual; el monto vendido, la caja y los movimientos no cambian (única excepción a T-07).
   **Confirmado (P-44, 28-10-2026)**: no se asignan productos por kilo, porque la cantidad de la línea son unidades.
+  Desde el 29-10-2026 la confirmación muestra la utilidad que tendrá la línea (lo cobrado − costo × cantidad) y,
+  si es negativa, avisa que la línea queda a pérdida; no se bloquea.
 - **Sin identificar definitivo**: la línea queda `SIN_IDENTIFICAR` con costo 0. **Decidido con el dueño
   (28-10-2026)**: no cuenta en la utilidad; los reportes la muestran en su propia columna «Sin identificar»
   (ver «Reportes con ventas por asignar, sin identificar y de terceros»).

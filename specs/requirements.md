@@ -103,7 +103,7 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 
 ### 3.2 Catálogo
 
-- **CAT-01** · V1 — Producto con código y nombre únicos (sin distinguir mayúsculas, excluyendo eliminados), categoría, proveedor, descripción, etiquetas, costo y precio de venta. El costo puede ser 0, con el aviso «Costo 0: toda la venta cuenta como utilidad.»; el precio de venta debe ser mayor a 0.
+- **CAT-01** · V1 — Producto con código y nombre únicos (sin distinguir mayúsculas, excluyendo eliminados), categoría, proveedor, descripción, etiquetas, costo y precio de venta. El costo puede ser 0, con el aviso «Costo 0: toda la venta cuenta como utilidad.»; el precio de venta, redondeado a 2 decimales, debe ser mayor a 0.
 - **CAT-02** · V1 — Utilidad fija y porcentual calculadas, de solo lectura; se permite venta a pérdida con advertencia.
 - **CAT-03** · V1 — Estados: Activo, Inactivo, Eliminado. Solo los activos se venden.
 - **CAT-04** · V1 — Categorías y etiquetas con color, nombre único y baja lógica.
@@ -136,7 +136,7 @@ Detalle en `debts.md`. Los saldos no se guardan: se calculan desde los registros
 
 - **DEU-01** Personas a las que el negocio puede deber dinero (ej. Mami), con nombre único, teléfono, descripción y baja lógica; no se dan de baja con deuda.
 - **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con ella, sin movimiento de dinero.
-- **DEU-03** La devolución a la persona se registra desde Caja o una cuenta y baja la deuda sin superarla. Es un gasto con categoría Pedido (P-34), o Pago a tercero si se le paga lo de sus ventas (POS-13); solo se anula desde Deudas.
+- **DEU-03** La devolución a la persona se registra desde Caja o una cuenta y baja la deuda sin superarla. Es un gasto con categoría Pedido (P-34), o Pago a tercero si se le paga lo de sus ventas (POS-13), sin superar lo pendiente de ellas; solo se anula desde Deudas.
 - **DEU-04** Saldo por persona e historial de pagos y devoluciones con el saldo después de cada registro. Al devolver se propone el concepto según lo pendiente (P-48).
 - **DEU-05** Una venta al costo puede quedar total o parcialmente a crédito de un cliente registrado; solo la venta al costo admite crédito (P-12).
 - **DEU-06** Los cobros se registran en Caja o en la cuenta QR, bajan el saldo sin superarlo y son un ingreso con categoría Venta (P-34).
@@ -157,14 +157,14 @@ Detalle en `cash.md`.
 
 - **CAJ-01** No se puede vender sin una caja abierta.
 - **CAJ-02** Apertura con monto inicial ≥ 0 y comentario opcional.
-- **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros.
+- **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros. Los ajustes de apertura y cierre no cuentan. Una salida de Caja que supera el esperado se avisa sin bloquear.
 - **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10) en "caja" y "reserva".
 - **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
 - **CAJ-06** Una caja cerrada es inmutable: no se reabre ni recibe movimientos.
 - **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") desde el POS como transferencia entre Caja y otra cuenta, con comentario obligatorio; se anula solo mientras su caja esté abierta.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado.
-- **CAJ-10** La apertura propone como monto inicial el cierre anterior; si se cambia, el comentario es obligatorio.
+- **CAJ-10** La apertura propone como monto inicial el cierre anterior (en la primera caja, el saldo de Caja); si se cambia, el comentario es obligatorio y la diferencia con el saldo de Caja se registra como ajuste, que no se anula.
 
 ### 3.7 Punto de venta · V1
 
@@ -181,7 +181,7 @@ Detalle en `sales.md`.
 - **POS-09** Historial de ventas paginado con filtros por fecha, estado, tipo de venta, método de pago y usuario.
 - **POS-10** Venta por peso: cantidades decimales en kilos y presentaciones del producto (CAT-11).
 - **POS-11** Línea libre: productos especiales del catálogo, sin inventario, que piden nombre y precio al vender. Sin descuento por unidad, productos rápidos, presentaciones ni venta al costo; el descuento general se reparte solo entre las líneas normales (P-44). Llevan categoría y proveedor reales (P-50).
-- **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
+- **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, mostrando antes la utilidad que tendrá la línea, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
 - **POS-13** Venta de productos de terceros (hoy, de Mami): producto especial con su dueña (DEU-01); el costo de la línea es igual al precio y cada venta suma a la deuda con ella, que se le paga con «Pago a tercero» (DEU-03). Los reportes la muestran aparte, fuera de las ventas y la utilidad de la tienda.
 
 ### 3.8 Dinero (finanzas) · V1
@@ -193,7 +193,7 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 - **FIN-03** Exactamente una cuenta marcada para cobros QR en todo momento.
 - **FIN-04** Una cuenta solo se elimina con saldo 0 y si no es Caja ni la cuenta QR.
 - **FIN-05** Categorías de ingreso y gasto, iniciando con las de la planilla: Venta, Otro ingreso, Pedido, Consumo, Comida, Transporte, Otro gasto, Retiro caja, Depósito, Utilidad (retiro del dueño), Ajuste y Pago a tercero (POS-13).
-- **FIN-06** Ingresos y gastos manuales, transferencias con validación de saldo suficiente, anulación auditada.
+- **FIN-06** Ingresos y gastos manuales, transferencias con validación de saldo suficiente (también al anular una transferencia o un ingreso), anulación auditada. Un movimiento manual no usa las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste, Venta); Transporte sí.
 - **FIN-07** Cada venta genera automáticamente sus ingresos (efectivo a Caja, QR a la cuenta QR); esos movimientos no se editan desde Finanzas.
 - **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04).
 - **FIN-09** Resumen con saldo por cuenta y saldo consolidado.
@@ -237,12 +237,12 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 | T-10 | Las cuentas Bisa y Efectivo no se siembran con saldo en el esquema; el saldo al corte se carga desde la app (FIN-01). | V1 | `finance.md` |
 | T-11 | Cantidades decimales (3 decimales) en ventas, compras y consumos. | V1 | `sales.md` |
 | T-13 | Cada endpoint exige el permiso de su pantalla, con prueba que recorre todos los endpoints. | V1 | `users.md` |
-| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (movimiento → caja → cuentas por id), con prueba concurrente. | V1 | `cash.md` |
+| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (movimiento o documento → caja → persona o cliente → cuentas por id), con prueba concurrente. | V1 | `cash.md` |
 | T-15 | Un único cálculo de efectivo esperado (CAJ-03) usado por todos los servicios. | V1 | `cash.md` |
 | T-16 | Los movimientos de la cuenta Caja exigen caja abierta y se vinculan a ella; los de una caja cerrada no se editan ni anulan. | V1 | `cash.md` |
 | T-17 | La venta falla si falta su cuenta o su categoría (RG-05). | V1 | `sales.md` |
 | T-18 | Montos con escala 2 en el servidor, motivo obligatorio en toda anulación, saldo inicial no anulable y fecha puesta por el servidor (salvo FIN-11). | V1 | `finance.md` |
-| T-19 | Límite de intentos de login por usuario e IP y token de 12 h (USR-07). | V1 | `users.md` |
+| T-19 | Límite de intentos de login por usuario e IP y token de 12 h que deja de valer al cambiar la contraseña (USR-07). | V1 | `users.md` |
 | T-04 | Saldos derivados del libro de movimientos, o caché con reporte de conciliación. | V2 | — |
 | T-09 | Auditoría con referencia al id del usuario, no solo su nombre. | V2 | — |
 | T-12 | Caja por punto de venta si hay más de uno (P-01). | V3 | — |

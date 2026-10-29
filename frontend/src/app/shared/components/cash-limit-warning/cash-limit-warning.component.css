@@ -1,0 +1,9 @@
+.cash-limit-warning {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}

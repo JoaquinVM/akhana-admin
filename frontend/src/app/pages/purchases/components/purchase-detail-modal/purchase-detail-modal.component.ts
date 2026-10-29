@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import {
@@ -22,7 +23,7 @@ import { Creditor } from '../../../../core/debt/models/debt.models';
 @Component({
   selector: 'app-purchase-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
   templateUrl: './purchase-detail-modal.component.html',
   styleUrls: ['./purchase-detail-modal.component.css']
 })
@@ -110,6 +111,7 @@ export class PurchaseDetailModalComponent {
 
   // Un pago hecho por una persona no mueve dinero: la nota va en el movimiento de la cuenta
   paysFromAccount = computed(() => this.paymentSource().startsWith('account:'));
+  paysFromCash = computed(() => !!this.accounts().find((a) => 'account:' + a.id === this.paymentSource())?.cashAccount);
 
   sourceName(payment: PurchasePayment): string {
     return paymentSourceName(payment);

@@ -186,6 +186,9 @@
                         <span class="assign-hint">La línea toma el producto elegido y su costo actual; el monto vendido y la caja no cambian. Se hace una sola vez.</span>
                         @if (chosenProduct(); as chosen) {
                           <span class="assign-confirm">Asignar a {{ chosen.code }} · {{ chosen.name }}, costo Bs {{ chosen.buyPrice | number:'1.2-2' }}. No se puede deshacer.</span>
+                          <span class="assign-profit" [class.loss]="assignmentProfit(item, chosen) < 0">
+                            Utilidad de la línea: Bs {{ assignmentProfit(item, chosen) | number:'1.2-2' }}{{ assignmentProfit(item, chosen) < 0 ? '; el costo supera lo cobrado y la línea queda a pérdida.' : '' }}
+                          </span>
                           @if (assignError()) {
                             <span class="assign-error">{{ assignError() }}</span>
                           }

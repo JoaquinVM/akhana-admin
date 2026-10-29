@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -77,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void changePassword(UUID userId, ChangePasswordRequest request) {
+    public String changePassword(UUID userId, ChangePasswordRequest request) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
@@ -93,9 +94,12 @@ public class AuthServiceImpl implements AuthService {
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setMustChangePassword(false);
+        // Other sessions of the user end; this one continues with the returned token
+        user.setPasswordChangedAt(Instant.now());
         user.setUpdatedBy(user.getUsername());
         userRepository.save(user);
 
         log.info("User '{}' changed their password", user.getUsername());
+        return jwtService.generateToken(user);
     }
 }

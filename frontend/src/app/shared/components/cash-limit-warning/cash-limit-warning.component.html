@@ -1,0 +1,6 @@
+@if (exceeds()) {
+  <div class="cash-limit-warning" role="status">
+    El monto supera el efectivo esperado en caja (Bs {{ expectedCash() | number:'1.2-2' }}). Verifique que haya ese
+    dinero en la gaveta antes de registrarlo.
+  </div>
+}

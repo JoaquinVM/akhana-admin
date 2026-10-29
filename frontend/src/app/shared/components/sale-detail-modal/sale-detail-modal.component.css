@@ -540,6 +540,16 @@
   border-color: var(--primary-color, #1b3b18);
 }
 
+.assign-profit {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.assign-profit.loss {
+  color: var(--color-warning, #b45309);
+  font-weight: 600;
+}
+
 .assign-error {
   font-size: 0.75rem;
   color: #dc2626;

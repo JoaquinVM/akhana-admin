@@ -10,6 +10,7 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -34,10 +35,12 @@ public class CashSessionServiceImpl implements CashSessionService {
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
+    private final EntityManager entityManager;
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
     static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (Bs %s). Indique el motivo en el comentario de apertura.";
+    static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (Bs %s). Indique el motivo en el comentario de apertura.";
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
 
     @Override
@@ -50,12 +53,13 @@ public class CashSessionServiceImpl implements CashSessionService {
         String openingComment = request.openingComment() != null && !request.openingComment().isBlank()
             ? request.openingComment().trim() : null;
 
-        // CAJ-10: an opening amount that differs from the previous closing must be explained
+        // CAJ-10: an opening amount that differs from the proposal (the previous closing, or the Caja balance for
+        // the first session) must be explained
         CashOpeningProposalResponse proposal = getOpeningProposal();
-        if (proposal.previousSessionNumber() != null
-                && openingAmount.compareTo(proposal.proposedAmount()) != 0 && openingComment == null) {
-            throw new IllegalArgumentException(
-                String.format(OPENING_COMMENT_REQUIRED, proposal.proposedAmount().toPlainString()));
+        if (openingAmount.compareTo(proposal.proposedAmount()) != 0 && openingComment == null) {
+            throw new IllegalArgumentException(String.format(
+                proposal.previousSessionNumber() != null ? OPENING_COMMENT_REQUIRED : FIRST_OPENING_COMMENT_REQUIRED,
+                proposal.proposedAmount().toPlainString()));
         }
 
         CashSession session = CashSession.builder()
@@ -77,6 +81,9 @@ public class CashSessionServiceImpl implements CashSessionService {
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
         }
+        // The session number comes from the database
+        entityManager.refresh(saved);
+        recordOpeningAdjustment(saved, username);
         return mapToSummary(saved, 0);
     }
 
@@ -223,14 +230,46 @@ public class CashSessionServiceImpl implements CashSessionService {
             return;
         }
         boolean surplus = difference.signum() > 0;
-        FinancialCategory category = financialCategoryRepository
+        FinancialCategory category = adjustmentCategory(surplus);
+        recordAdjustment(session, lockCashAccount(), category, difference,
+            (surplus ? "Sobrante" : "Faltante") + " al cierre de caja #" + session.getSessionNumber(),
+            session.getClosingComment(), username);
+    }
+
+    // CAJ-10: the opening amount is the cash in the drawer, so the difference with the Caja balance (money taken
+    // out or found between sessions, explained in the opening comment) goes to Caja as an Ajuste linked to the new
+    // session. It is not cash of the session, so the expected cash ignores it (CAJ-03), and it is never voided.
+    // Lock order T-14: the new session is already written, then the account.
+    private void recordOpeningAdjustment(CashSession session, String username) {
+        FinancialAccount cashAccount = lockCashAccount();
+        BigDecimal difference = session.getOpeningAmount().subtract(cashAccount.getCurrentBalance())
+            .setScale(2, RoundingMode.HALF_UP);
+        if (difference.signum() == 0) {
+            return;
+        }
+        recordAdjustment(session, cashAccount, adjustmentCategory(difference.signum() > 0), difference,
+            "Diferencia al abrir la caja #" + session.getSessionNumber(), session.getOpeningComment(), username);
+    }
+
+    private FinancialCategory adjustmentCategory(boolean surplus) {
+        return financialCategoryRepository
             .findBySystemKeyAndDeletedAtIsNull(surplus ? FinancialCategorySystemKey.CASH_SURPLUS : FinancialCategorySystemKey.CASH_SHORTAGE)
             .orElseThrow(() -> new IllegalStateException(ADJUSTMENT_CATEGORY_MISSING));
+    }
+
+    private FinancialAccount lockCashAccount() {
         UUID cashAccountId = financialAccountRepository.findByIsCashAccountTrue()
             .orElseThrow(() -> new IllegalStateException(CASH_ACCOUNT_NOT_FOUND))
             .getId();
         FinancialAccount cashAccount = financialAccountRepository.findAllByIdForUpdate(List.of(cashAccountId)).get(0);
+        // Refreshed so a balance read before the lock is not used
+        entityManager.refresh(cashAccount);
+        return cashAccount;
+    }
 
+    private void recordAdjustment(CashSession session, FinancialAccount cashAccount, FinancialCategory category,
+                                  BigDecimal difference, String description, String notes, String username) {
+        boolean surplus = difference.signum() > 0;
         BigDecimal amount = difference.abs();
         cashAccount.setCurrentBalance(surplus
             ? cashAccount.getCurrentBalance().add(amount)
@@ -244,8 +283,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
-            .description((surplus ? "Sobrante" : "Faltante") + " al cierre de caja #" + session.getSessionNumber())
-            .notes(session.getClosingComment())
+            .description(description)
+            .notes(notes)
             .status(FinancialTransactionStatus.ACTIVO)
             .cashSessionId(session.getId())
             .createdBy(username)

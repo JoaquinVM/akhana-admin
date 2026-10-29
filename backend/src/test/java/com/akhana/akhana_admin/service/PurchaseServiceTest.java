@@ -30,6 +30,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -280,6 +281,20 @@ class PurchaseServiceTest {
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("95.00");
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("495.00");
         verify(cashSessionRepository).save(openSession);
+    }
+
+    @Test
+    @DisplayName("T-14: envío desde Bisa y primer pago desde Caja bloquean la caja antes que las cuentas, y las cuentas juntas")
+    void registerPurchase_shippingAndPaymentLockSessionFirst() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(openSession));
+        PurchaseRequest req = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "10", "10")), new BigDecimal("5"),
+            bisa.getId(), false, null, null, null, null, new PurchasePaymentRequest(caja.getId(), null, new BigDecimal("50"), null));
+
+        purchaseService.registerPurchase(req, "operator");
+
+        var order = inOrder(cashSessionRepository, financialAccountRepository);
+        order.verify(cashSessionRepository).findByStatusForUpdate(CashSessionStatus.ABIERTA);
+        order.verify(financialAccountRepository).findAllByIdForUpdate(Set.of(bisa.getId(), caja.getId()));
     }
 
     // ---------------------------------------------------------------- COM-03

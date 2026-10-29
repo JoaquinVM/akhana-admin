@@ -176,10 +176,20 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
 
-        // A person who pays the first payment is locked before the cash session and the accounts (T-14)
+        // Lock order for every money operation: cash session, then the person who pays the first payment, then the
+        // accounts of the shipping and the first payment together by id (T-14)
         PurchasePaymentRequest initialPayment = request.initialPayment();
+        UUID shippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
+        UUID paymentAccountId = initialPayment != null ? initialPayment.accountId() : null;
+        lockPayers(shippingAccountId, paymentAccountId);
         if (initialPayment != null && initialPayment.creditorId() != null && initialPayment.accountId() == null) {
             lockCreditor(initialPayment.creditorId());
+        }
+        Set<UUID> payerAccounts = new HashSet<>();
+        if (shippingAccountId != null) payerAccounts.add(shippingAccountId);
+        if (paymentAccountId != null) payerAccounts.add(paymentAccountId);
+        if (!payerAccounts.isEmpty()) {
+            financialAccountRepository.findAllByIdForUpdate(payerAccounts);
         }
 
         // Category and accounts are resolved before saving anything (RG-05); lock order: session, then account (T-14)
@@ -365,8 +375,17 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
 
-        // Payments made by people: nothing is voided if any debt would go below 0 (DEU-02); people are locked
-        // after the purchase and before the cash session (T-14)
+        // Lock order: purchase, then the open session of its Caja movements, then people, then accounts (T-14)
+        List<FinancialTransaction> movements = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchaseId);
+        movements.stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO && tx.getCashSessionId() != null)
+            .map(FinancialTransaction::getCashSessionId)
+            .distinct()
+            .forEach(sessionId -> cashSessionRepository.findByIdForUpdate(sessionId)
+                .filter(cs -> cs.getStatus() == CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_PURCHASE)));
+
+        // Payments made by people: nothing is voided if any debt would go below 0 (DEU-02)
         Map<UUID, BigDecimal> paidByCreditor = new HashMap<>();
         purchase.getPayments().stream()
             .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO && p.getCreditor() != null)
@@ -379,8 +398,7 @@ public class PurchaseServiceImpl implements PurchaseService {
 
         // Payments and shipping: every movement linked to the purchase (P-24, COM-06)
         Instant now = Instant.now();
-        voidExpenses(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchaseId),
-            CLOSED_SESSION_PURCHASE, voidReason, username, now);
+        voidExpenses(movements, CLOSED_SESSION_PURCHASE, voidReason, username, now);
         purchase.getPayments().stream()
             .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
             .forEach(p -> markVoided(p, voidReason, username, now));
@@ -588,6 +606,17 @@ public class PurchaseServiceImpl implements PurchaseService {
         payment.setVoidedBy(username);
         payment.setVoidedAt(now);
         payment.setVoidReason(voidReason);
+    }
+
+    // The open session is locked first when any of the accounts is Caja (T-14)
+    private void lockPayers(UUID... accountIds) {
+        for (UUID accountId : accountIds) {
+            if (accountId != null && financialAccountRepository.existsByIdAndIsCashAccountTrue(accountId)) {
+                cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
+                    .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
+                return;
+            }
+        }
     }
 
     private Payer lockPayer(UUID accountId) {

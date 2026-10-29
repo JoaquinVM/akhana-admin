@@ -117,13 +117,14 @@ export class TransactionsComponent implements OnInit {
     return this.accounts().filter(acc => !acc.isCashAccount);
   });
 
-  // Categorías de ingreso y gasto
+  // Categorías de ingreso y gasto para registrar a mano: sin las que registra el sistema (Pedido, Pago a tercero,
+  // Ajuste, ventas); el formulario no elige ninguna de antemano
   incomeCategories = computed(() => {
-    return this.categories().filter(c => c.type === 'INGRESO');
+    return this.categories().filter(c => c.type === 'INGRESO' && c.manualEntryAllowed !== false);
   });
 
   expenseCategories = computed(() => {
-    return this.categories().filter(c => c.type === 'GASTO');
+    return this.categories().filter(c => c.type === 'GASTO' && c.manualEntryAllowed !== false);
   });
 
   ngOnInit(): void {
@@ -246,7 +247,7 @@ export class TransactionsComponent implements OnInit {
     this.modalFormError.set(null);
     this.incomeForm.reset({
       accountId: this.incomeEligibleAccounts()[0]?.id || '',
-      categoryId: this.incomeCategories()[0]?.id || '',
+      categoryId: '',
       amount: null,
       description: '',
       notes: ''
@@ -258,7 +259,7 @@ export class TransactionsComponent implements OnInit {
     this.modalFormError.set(null);
     this.expenseForm.reset({
       accountId: this.accounts()[0]?.id || '',
-      categoryId: this.expenseCategories()[0]?.id || '',
+      categoryId: '',
       amount: null,
       description: '',
       notes: ''

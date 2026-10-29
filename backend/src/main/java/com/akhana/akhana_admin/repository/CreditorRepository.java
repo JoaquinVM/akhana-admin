@@ -52,6 +52,17 @@ public interface CreditorRepository extends JpaRepository<Creditor, UUID> {
            nativeQuery = true)
     BigDecimal computeDebt(@Param("id") UUID id);
 
+    /**
+     * Part of the debt from third-party sales still unpaid (POS-13, P-48): their lines of completed sales minus the
+     * active repayments with concept Pago a tercero. May be negative for data registered before the check existed.
+     */
+    @Query(value = "SELECT COALESCE((SELECT SUM(i.subtotal) FROM sale_items i JOIN sales s ON s.id = i.sale_id " +
+                   "WHERE i.creditor_id = :id AND s.status = 'COMPLETADA'), 0) " +
+                   "- COALESCE((SELECT SUM(r.amount) FROM creditor_repayments r " +
+                   "WHERE r.creditor_id = :id AND r.status = 'ACTIVO' AND r.concept = 'THIRD_PARTY'), 0)",
+           nativeQuery = true)
+    BigDecimal computeThirdPartyPending(@Param("id") UUID id);
+
     /** Debt of every person: rows of {creditor id, debt}, computed like {@link #computeDebt}. */
     @Query(value = "SELECT c.id, COALESCE((SELECT SUM(p.amount) FROM purchase_payments p " +
                    "WHERE p.creditor_id = c.id AND p.status = 'ACTIVO'), 0) " +

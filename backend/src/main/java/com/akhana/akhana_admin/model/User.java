@@ -43,6 +43,10 @@ public class User {
     @Builder.Default
     private boolean mustChangePassword = false;
 
+    // Tokens issued before this instant are rejected (T-19); null if the password was never changed
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -59,7 +59,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 User user = userRepository.findByUsername(username).orElse(null);
 
-                if (user != null && user.isActive() && user.getDeletedAt() == null && jwtService.isTokenValid(token, user.getUsername())) {
+                if (user != null && user.isActive() && user.getDeletedAt() == null && jwtService.isTokenValid(token, user.getUsername())
+                        && !jwtService.isIssuedBefore(token, user.getPasswordChangedAt())) {
                     if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED_PATHS.contains(request.getRequestURI().substring(request.getContextPath().length()))) {
                         writePasswordChangeRequired(response);
                         return;

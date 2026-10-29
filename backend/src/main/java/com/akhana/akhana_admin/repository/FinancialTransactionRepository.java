@@ -46,9 +46,15 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
            "OR d.id = :accountId)")
     boolean existsMovementsBesidesOpeningBalance(@Param("accountId") UUID accountId);
 
+    // Ajuste movements (opening and closing differences, CAJ-09, CAJ-10) bring the Caja account to the counted
+    // cash; they are not cash entering or leaving the drawer
+    String NOT_CASH_ADJUSTMENT = "AND (c.systemKey IS NULL OR c.systemKey NOT IN (" +
+           "com.akhana.akhana_admin.model.FinancialCategorySystemKey.CASH_SURPLUS, " +
+           "com.akhana.akhana_admin.model.FinancialCategorySystemKey.CASH_SHORTAGE)) ";
+
     // Cash leaving the drawer during the session: Caja expenses and transfers out of Caja (CAJ-03, T-15)
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
-           "WHERE t.cashSessionId = :cashSessionId " +
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t LEFT JOIN t.category c " +
+           "WHERE t.cashSessionId = :cashSessionId " + NOT_CASH_ADJUSTMENT +
            "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
            "AND t.type IN (com.akhana.akhana_admin.model.FinancialTransactionType.GASTO_MANUAL, " +
            "com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA) " +
@@ -58,8 +64,8 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     // Cash entering the drawer during the session other than sales: transfers into Caja (CAJ-08, T-15) and
     // Caja incomes, which only come from customer collections (DEU-06)
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t " +
-           "LEFT JOIN t.destinationAccount d " +
-           "WHERE t.cashSessionId = :cashSessionId " +
+           "LEFT JOIN t.destinationAccount d LEFT JOIN t.category c " +
+           "WHERE t.cashSessionId = :cashSessionId " + NOT_CASH_ADJUSTMENT +
            "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
            "AND ((t.type = com.akhana.akhana_admin.model.FinancialTransactionType.TRANSFERENCIA AND d.isCashAccount = true) " +
            "OR (t.type = com.akhana.akhana_admin.model.FinancialTransactionType.INGRESO_MANUAL AND t.sourceAccount.isCashAccount = true))")

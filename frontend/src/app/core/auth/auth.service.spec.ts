@@ -124,10 +124,11 @@ describe('AuthService', () => {
     const req = httpTesting.expectOne('/api/auth/change-password');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ currentPassword: 'initial-pass', newPassword: 'new-strong-pass' });
-    req.flush(null);
+    req.flush({ token: 'jwt.after.change' });
 
     expect(service.mustChangePassword()).toBe(false);
-    expect(service.getToken()).toBe('jwt.first.login');
+    // T-19: el token anterior deja de valer; se guarda el nuevo
+    expect(service.getToken()).toBe('jwt.after.change');
     expect(JSON.parse(localStorage.getItem('akhana_user')!).mustChangePassword).toBe(false);
   });
 });

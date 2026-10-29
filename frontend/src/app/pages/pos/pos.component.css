@@ -537,33 +537,6 @@
   transform: translateY(-1px);
 }
 
-/* Modal Gasto de Caja */
-.cash-expense-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.125rem;
-}
-
-.locked-account-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  padding: 0.5rem 0.875rem;
-  border-radius: var(--radius-md, 8px);
-  color: #334155;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.locked-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #164312;
-}
-
 .form-actions {
   display: flex;
   justify-content: flex-end;

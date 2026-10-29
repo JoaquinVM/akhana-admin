@@ -174,6 +174,7 @@ public class FinancialCategoryServiceImpl implements FinancialCategoryService {
                 .color(category.getColor())
                 .isSalesDefault(category.getIsSalesDefault())
                 .systemKey(category.getSystemKey())
+                .manualEntryAllowed(category.isManualEntryAllowed())
                 .createdBy(category.getCreatedBy())
                 .createdAt(category.getCreatedAt())
                 .updatedBy(category.getUpdatedBy())

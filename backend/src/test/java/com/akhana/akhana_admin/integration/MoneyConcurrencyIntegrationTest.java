@@ -91,7 +91,9 @@ class MoneyConcurrencyIntegrationTest {
     @DisplayName("Ventas simultáneas en efectivo: saldo de Caja y totales de la caja correctos, números de venta distintos")
     void concurrentSales_keepBalancesAndGetDistinctNumbers() throws Exception {
         UUID productId = createProduct(new BigDecimal("10.00"));
-        cashSessionService.openSession(new OpenCashRequest(new BigDecimal("100.00"), null), USER);
+        // Opened with the proposed amount (the Caja balance), so no opening adjustment is recorded (CAJ-10)
+        BigDecimal opening = cashSessionService.getOpeningProposal().proposedAmount();
+        cashSessionService.openSession(new OpenCashRequest(opening, null), USER);
 
         List<Outcome<SaleResponse>> outcomes = runConcurrently(THREADS, i -> () -> saleService.registerSale(
             new SaleDetailRequest(List.of(new SaleItemRequest(productId, new BigDecimal("1"), null)), null, PaymentMethod.EFECTIVO,
@@ -106,7 +108,7 @@ class MoneyConcurrencyIntegrationTest {
         var session = cashSessionService.getCurrentSession();
         assertThat(session.totalSalesCash()).isEqualByComparingTo(salesTotal);
         assertThat(session.totalSales()).isEqualByComparingTo(salesTotal);
-        assertThat(session.expectedCash()).isEqualByComparingTo(new BigDecimal("100.00").add(salesTotal));
+        assertThat(session.expectedCash()).isEqualByComparingTo(opening.add(salesTotal));
     }
 
     @Test

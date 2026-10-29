@@ -18,4 +18,7 @@ public interface JwtService {
     boolean isTokenValid(String token, String username);
 
     boolean isTokenExpired(String token);
+
+    /** True if the token was issued before the user's last password change (T-19). */
+    boolean isIssuedBefore(String token, java.time.Instant instant);
 }

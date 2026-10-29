@@ -40,6 +40,8 @@ export interface FinancialCategory {
   type: FinancialCategoryType;
   color: string;
   isSalesDefault: boolean;
+  /** Falso en las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste) y en la de ventas. */
+  manualEntryAllowed?: boolean;
   createdBy?: string;
   createdAt?: string;
   updatedBy?: string;

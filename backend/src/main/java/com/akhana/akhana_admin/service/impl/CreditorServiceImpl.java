@@ -22,6 +22,7 @@ public class CreditorServiceImpl implements CreditorService {
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar la devolución.";
+    static final String THIRD_PARTY_OVER_PENDING = "El Pago a tercero supera lo pendiente de las ventas de %s (Bs %s); registre el resto con el concepto Pedido.";
     static final String THIRD_PARTY_CATEGORY_MISSING = "No existe la categoría Pago a tercero; no se puede registrar la devolución.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String ALREADY_VOIDED_REPAYMENT = "La devolución ya está anulada.";
@@ -178,7 +179,13 @@ public class CreditorServiceImpl implements CreditorService {
     public CreditorHistoryResponse registerRepayment(UUID creditorId, CreditorRepaymentRequest request, String username) {
         BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
 
-        // Lock order: person, then cash session, then account (T-14). An inactive person can still be repaid.
+        // Lock order for every money operation, as in sales: cash session, then person, then account (T-14).
+        // An inactive person can still be repaid.
+        CashSession session = null;
+        if (financialAccountRepository.existsByIdAndIsCashAccountTrue(request.accountId())) {
+            session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
+                .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
+        }
         Creditor creditor = lockCreditor(creditorId);
         BigDecimal debt = debtOf(creditor);
         if (amount.compareTo(debt) > 0) {
@@ -188,16 +195,19 @@ public class CreditorServiceImpl implements CreditorService {
         // Purchases go back as Pedido (P-34) and third-party sales as Pago a tercero (POS-13)
         CreditorRepaymentConcept concept = request.concept() != null ? request.concept() : CreditorRepaymentConcept.PURCHASE;
         boolean thirdParty = concept == CreditorRepaymentConcept.THIRD_PARTY;
+        // Pago a tercero only pays what is pending of the person's sales (P-48); the rest goes back as Pedido
+        if (thirdParty) {
+            BigDecimal pending = scale(creditorRepository.computeThirdPartyPending(creditor.getId())).max(ZERO);
+            if (amount.compareTo(pending) > 0) {
+                throw new IllegalArgumentException(String.format(THIRD_PARTY_OVER_PENDING, creditor.getName(),
+                    pending.toPlainString()));
+            }
+        }
         FinancialCategory category = financialCategoryRepository
             .findBySystemKeyAndDeletedAtIsNull(thirdParty
                 ? FinancialCategorySystemKey.THIRD_PARTY_PAYMENT : FinancialCategorySystemKey.PURCHASE_PAYMENT)
             .orElseThrow(() -> new IllegalStateException(thirdParty ? THIRD_PARTY_CATEGORY_MISSING : PAYMENT_CATEGORY_MISSING));
 
-        CashSession session = null;
-        if (financialAccountRepository.existsByIdAndIsCashAccountTrue(request.accountId())) {
-            session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
-                .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
-        }
         FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(request.accountId())
             .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.accountId()));
 
@@ -248,23 +258,25 @@ public class CreditorServiceImpl implements CreditorService {
         }
         String voidReason = request.voidReason().trim();
 
-        // Lock order: person, then cash session, then account (T-14)
-        lockCreditor(creditorId);
-        CreditorRepayment repayment = creditorRepaymentRepository.findById(repaymentId)
-            .filter(r -> r.getCreditor().getId().equals(creditorId))
-            .orElseThrow(() -> new ResourceNotFoundException("Devolución no encontrada con ID: " + repaymentId));
-        if (repayment.getStatus() == CreditorRepaymentStatus.ANULADO) {
-            throw new IllegalStateException(ALREADY_VOIDED_REPAYMENT);
-        }
+        // The movement is read first only to know its session, which never changes
         FinancialTransaction tx = financialTransactionRepository.findByCreditorRepaymentId(repaymentId)
-            .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento de la devolución."));
+            .orElseThrow(() -> new ResourceNotFoundException("Devolución no encontrada con ID: " + repaymentId));
 
-        // A Caja movement needs its own session still open (CAJ-06, T-16)
+        // Lock order as in sales: cash session, then person, then account (T-14). A Caja movement needs its own
+        // session still open (CAJ-06, T-16)
         CashSession session = null;
         if (tx.getCashSessionId() != null) {
             session = cashSessionRepository.findByIdForUpdate(tx.getCashSessionId())
                 .filter(s -> s.getStatus() == CashSessionStatus.ABIERTA)
                 .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_REPAYMENT));
+        }
+        lockCreditor(creditorId);
+        // Read after the locks, so a second void sees it already voided
+        CreditorRepayment repayment = creditorRepaymentRepository.findById(repaymentId)
+            .filter(r -> r.getCreditor().getId().equals(creditorId))
+            .orElseThrow(() -> new ResourceNotFoundException("Devolución no encontrada con ID: " + repaymentId));
+        if (repayment.getStatus() == CreditorRepaymentStatus.ANULADO) {
+            throw new IllegalStateException(ALREADY_VOIDED_REPAYMENT);
         }
         UUID accountId = tx.getSourceAccount().getId();
         FinancialAccount account = financialAccountRepository.findAllByIdForUpdate(Set.of(accountId)).stream()

@@ -203,6 +203,9 @@
               <input id="payment-amount" type="number" min="0.01" step="0.01" class="form-control" name="amount"
                      [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" />
               <span class="form-hint">Saldo pendiente Bs {{ p.balance | number:'1.2-2' }}</span>
+              @if (paysFromCash()) {
+                <app-cash-limit-warning [amount]="paymentAmount()" />
+              }
             </div>
             @if (paysFromAccount() || !paymentSource()) {
               <div class="form-group">

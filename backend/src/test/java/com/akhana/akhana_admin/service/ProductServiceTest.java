@@ -516,5 +516,10 @@ class ProductServiceTest {
                 null, List.of(), new BigDecimal("40.00"), BigDecimal.ZERO, ProductStatus.ACTIVO, SaleUnit.UNIT);
         assertThatThrownBy(() -> productService.updateProduct(productId, zeroPrice, "admin"))
                 .hasMessage("El precio de venta debe ser mayor a 0.");
+        // CAT-01: a price that rounds to 0.00 is rejected too
+        ProductRequest roundsToZero = new ProductRequest("PROD-001", "Té Matcha Ceremonial 100g", categoryId, supplierId,
+                null, List.of(), new BigDecimal("40.00"), new BigDecimal("0.004"), ProductStatus.ACTIVO, SaleUnit.UNIT);
+        assertThatThrownBy(() -> productService.updateProduct(productId, roundsToZero, "admin"))
+                .hasMessage("El precio de venta debe ser mayor a 0.");
     }
 }

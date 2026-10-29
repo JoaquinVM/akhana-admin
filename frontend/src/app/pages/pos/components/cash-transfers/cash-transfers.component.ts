@@ -8,6 +8,7 @@ import {
   FinancialTransaction
 } from '../../../../core/finance/models/finance.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 
 /**
  * Ingresos y retiros de caja del turno (CAJ-08): cada uno es una transferencia entre Caja y otra cuenta.
@@ -16,7 +17,7 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 @Component({
   selector: 'app-cash-transfers',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
   templateUrl: './cash-transfers.component.html',
   styleUrls: ['./cash-transfers.component.css']
 })

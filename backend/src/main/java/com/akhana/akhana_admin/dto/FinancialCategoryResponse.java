@@ -21,6 +21,8 @@ public class FinancialCategoryResponse {
     private String color;
     private Boolean isSalesDefault;
     private FinancialCategorySystemKey systemKey;
+    // False for the categories a manual movement cannot use (Pedido, Pago a tercero, Ajuste, ventas)
+    private boolean manualEntryAllowed;
 
     // Auditoría
     private String createdBy;

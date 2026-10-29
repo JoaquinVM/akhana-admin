@@ -20,6 +20,9 @@ public interface CashSessionRepository extends JpaRepository<CashSession, UUID> 
 
     boolean existsByStatus(CashSessionStatus status);
 
+    // Any session opened in the system; the historical ones (FIN-11) do not count
+    boolean existsByHistoricalImportIdIsNull();
+
     // Money operations lock the cash session they touch before any account (T-14)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT cs FROM CashSession cs WHERE cs.status = :status")

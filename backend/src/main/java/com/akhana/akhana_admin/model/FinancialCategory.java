@@ -59,6 +59,23 @@ public class FinancialCategory {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    /**
+     * Categories the system records by itself (Pedido, Pago a tercero, Ajuste) and the sales one only come from
+     * their own flows (Compras, Deudas, cierre de caja, ventas); a manual movement cannot use them. Transporte is
+     * also a system category, but it is an ordinary expense too.
+     */
+    public boolean isManualEntryAllowed() {
+        if (Boolean.TRUE.equals(isSalesDefault)) {
+            return false;
+        }
+        return systemKey == null || systemKey == FinancialCategorySystemKey.PURCHASE_SHIPPING;
+    }
+
+    /** CAJ-09, CAJ-10: Ajuste movements are generated when opening or closing the cash session. */
+    public boolean isCashAdjustment() {
+        return systemKey == FinancialCategorySystemKey.CASH_SURPLUS || systemKey == FinancialCategorySystemKey.CASH_SHORTAGE;
+    }
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

@@ -20,6 +20,8 @@ import java.util.Date;
 @Slf4j
 public class JwtServiceImpl implements JwtService {
 
+    private static final String ISSUED_AT_MILLIS = "iatMs";
+
     private final String secret;
     private final Duration expiration;
 
@@ -45,6 +47,8 @@ public class JwtServiceImpl implements JwtService {
                 .claim("username", user.getUsername())
                 .claim("role", user.getRole().name())
                 .issuedAt(Date.from(now))
+                // iat has whole seconds; the milliseconds tell a token apart from a password change in the same second
+                .claim(ISSUED_AT_MILLIS, now.toEpochMilli())
                 .expiration(Date.from(expiry))
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
@@ -87,6 +91,15 @@ public class JwtServiceImpl implements JwtService {
             log.debug("Invalid JWT token: {}", e.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public boolean isIssuedBefore(String token, Instant instant) {
+        if (instant == null) {
+            return false;
+        }
+        Long issuedAtMillis = extractAllClaims(token).get(ISSUED_AT_MILLIS, Long.class);
+        return issuedAtMillis == null || Instant.ofEpochMilli(issuedAtMillis).isBefore(instant);
     }
 
     @Override
