@@ -1,0 +1,9 @@
+[Unit]
+Description=Akhana Admin: daily backup at 03:00 La Paz
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 America/La_Paz
+Persistent=true
+
+[Install]
+WantedBy=timers.target

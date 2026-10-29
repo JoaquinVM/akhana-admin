@@ -23,7 +23,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | Cargar los saldos al corte el día de la salida | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Migración | CAT-06, FIN-11 | 🟡 Parcial | Construida y ensayada en la base local con 0 rechazadas; falta correrla en producción el día de la salida | `migration.md` |
-| Producción | NF-01, NF-02, NF-05 | ❌ Pendiente | VPS con HTTPS y respaldo diario con restauración probada | — |
+| Producción | NF-01, NF-02, NF-05 | 🟡 Parcial | Scripts y configuración listos y probados en la Mac; falta instalar el VPS y probar la restauración desde B2 | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -289,7 +289,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-19 | ¿El operador registra consumos, ventas al costo y otros gastos de caja? | Sí, los tres. |
 | P-20 | ¿A quién se le debe hoy? | A nadie, salvo lo vendido de Mami y no pagado (POS-13). |
 | P-21 | ¿Cómo se paga la consignación? | Queda por pagar hasta que se registre el pago. |
-| P-22 | ¿Dónde se aloja el sistema? | En un VPS en la nube. |
+| P-22 | ¿Dónde se aloja el sistema? | En un VPS Contabo (US East) con Ubuntu, accesible solo por Tailscale (HTTPS `.ts.net`), con respaldo diario cifrado en Backblaze B2 (`deploy.md`). |
 | P-23 | ¿Se migran ventas históricas? | Sí, todas (FIN-11). |
 | P-24 | ¿Cómo se trata el envío de un pedido? | Gasto de Transporte aparte, vinculado a su pedido. |
 | P-25 | ¿El operador puede crear productos? | Sí. |
@@ -337,7 +337,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] Contratar el VPS y preparar HTTPS y el respaldo diario con restauración probada (NF-01, NF-02, NF-05).
+- [ ] Instalar el VPS con `specs/deploy.md` (Tareas «En el VPS»): HTTPS por Tailscale, respaldo diario a B2 y restauración probada (NF-01, NF-02, NF-05).
 - [ ] El día de la salida, en producción (`migration.md`): vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.

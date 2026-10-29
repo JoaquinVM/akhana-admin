@@ -1,0 +1,9 @@
+[Unit]
+Description=Akhana Admin: weekly restore test of the latest backup (NF-01)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/akhana/app/deploy/restore.sh --check latest

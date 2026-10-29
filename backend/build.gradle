@@ -23,6 +23,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
+	// Health check for the production containers (specs/deploy.md)
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.flywaydb:flyway-database-postgresql'
 	// JWT Dependencies (JJWT 0.12.6)
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'

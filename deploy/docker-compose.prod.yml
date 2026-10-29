@@ -1,0 +1,72 @@
+# Production stack of Akhana Admin (specs/deploy.md). Run through deploy/deploy.sh, which passes
+# `-p akhana --env-file /opt/akhana/.env`. Only `web` publishes a port, and only on 127.0.0.1
+# (Docker bypasses ufw): `tailscale serve` puts HTTPS in front of it.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-akhana}
+      POSTGRES_USER: ${DB_USERNAME:-akhana}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set in the env file}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  api:
+    build: ../backend
+    image: akhana-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-akhana}
+      DB_USERNAME: ${DB_USERNAME:-akhana}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is not set in the env file}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-12h}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      FORWARD_HEADERS_STRATEGY: native
+      TZ: ${TZ:-America/La_Paz}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    logging: *logging
+
+  web:
+    build: ../frontend
+    image: akhana-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8081}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+volumes:
+  db_data:
