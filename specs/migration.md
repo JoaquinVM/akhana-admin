@@ -106,8 +106,8 @@ borraron productos de la hoja Productos. Al 26-10 son 327 filas.
 - También el 28-10-2026: las 63 ventas del 27-10 codificadas, la fila 6059 (Stevia) con su precio unitario, costo
   de las filas 3418 y 3741 que no lo tenían, y Kefir Frutado Naturale con costo 22.
 - **Cuando** una fila tiene Cant × Precio unitario distinto del Total **entonces** la migración usa Total ÷ Cant
-  como precio. Al 28-10 quedan 8 así (filas 567, 1052, 1053, 1492, 1783, 1811, 1994 y 5022), probablemente con la
-  Cant mal anotada; no se tocan sin el dueño porque el Total ya cuadra con el Cierre. Las filas 1401 y 1402
+  como precio; se corrige la Cant cuando el Total es el cobrado (cuadra con el Cierre). Hecho el 28-10-2026 con el
+  dueño en las 8 filas que había: 567 → 3, 1052, 1053, 1783, 1811 y 1994 → 2, 1492 → 4 y 5022 → 1. Las filas 1401 y 1402
   (11-08) tenían el total conjunto de Bs 160 copiado en las dos: se corrigió a 64 y 96 y, con la regla de «Cierre
   igual a Ventas», el Total del Cierre del 11-08 bajó a 3.296, el «Ventas» Caja de Transacc. a 2.479 y el Sobrante
   pasó de −55 a 105 (la caja final contada no cambia).
@@ -375,7 +375,7 @@ Correcciones en la planilla (con el dueño, en otra sesión):
 - [ ] Día de la salida, antes de migrar: crear la persona Mami en Deudas y los productos especiales `SIN-IDENT`
   (Sin identificar) y `TER-SAG-MAD` (De tercero, dueña Mami); importar los productos y dar de baja los 25 nuevos
   de P-42.
-- [ ] Con el dueño: revisar la Cant de las 8 filas de Ventas donde Cant × Precio no da el Total.
+- [x] Con el dueño: Cant corregida en las 8 filas de Ventas donde Cant × Precio no daba el Total (28-10-2026).
 - [ ] Columna Proveedor en Pedidos (Claude propone, el dueño confirma) y Monto pagado en los pedidos A Cuenta.
 - [ ] Arreglos de «Otros arreglos encontrados» y categorías faltantes en Finanzas.
 - [x] HOJITA vaciada en las otras hojas (27-10-2026).
