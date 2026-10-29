@@ -43,6 +43,15 @@ más, válida), y da 781 productos (14 renombrados, 3 con costo 0) y las mismas 
 (las 2 filas de código repetido también, porque su código ya está en el catálogo). Los valores de la hoja leída por la API vienen redondeados por el formato de la celda (0,095 se ve
 0,10), por eso se importa el `.xlsx` con los valores reales y no lo que muestra la pantalla.
 
+Planilla marcada el 29-10-2026 con el dueño: columna «Se vende por» en **AA** (de J a Z está la tabla de libras; en J
+chocaría con sus valores), con Gramo en los 14 frutos secos base y las granolas Miranda (`MFR-GRA-ESP`, `MFR-GRA-SFR`)
+y 100 g en los 11 de Granel (`GRA-*`, incluido `GRA-MOS`). Los envasados de 100 g (Stevia, chocolates, Sebo) siguen
+por unidad. Importada en la base local vacía: 909 filas, 827 productos (14 renombrados, 3 con costo 0) y 42
+presentaciones, 40 rechazadas (36 sin precio o sin código y 2 de código repetido, más Leche coco y Gelatina sin
+sabor sin precio) y 17 avisos. Los 14 frutos secos quedan por kilo con 100 g y sus 3 libras a precio fijo; Granel y
+Miranda, por kilo con 100 g y 1/2 libra. Ojo: en la hoja en vivo la celda A1 dice «F» en vez de «Grupo»: así el
+`.xlsx` descargado se rechaza con «Faltan las columnas: Grupo.» (se corrige en la planilla antes de descargar).
+
 ## Permiso y pantalla
 
 - Botón **Importar** en la pantalla Productos, con el permiso de la pantalla (`PRODUCTS`): lo usan el operador y

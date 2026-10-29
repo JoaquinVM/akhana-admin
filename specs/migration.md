@@ -343,6 +343,28 @@ coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su 
   las filas sin código (P-42), ventas de Mami fuera de las ventas de la tienda (POS-13) y las filas que quedaron
   sin código fuera de la utilidad (columna Sin identificar, POS-12).
 
+### P-43 con la planilla del 29-10
+
+Pagos de Pedidos (Pagado por Monto, A Cuenta por Monto pagado) contra gastos con categoría Pedido de Transacc.:
+500 pagos por 274.362,58 y 506 gastos por 276.432,05 (diferencia 2.069,47). Por mes (gastos − pagos): mayo +6.767,
+junio +1.223, julio −4.034, agosto −1.053,03, septiembre −356,50, octubre +209 y 686 de pagos sin fecha. Por monto,
+cuenta y fecha cercana se emparejan 480; quedan 20 pagos (7.012,73) y 26 gastos (9.082,20) sin par. Explicados:
+
+- Un gasto por dos pedidos: Colmena 1.407 del 23-06 = pedidos 80 (1.207) + 94 (200).
+- Pago en dos gastos, uno con otra categoría: Fit Mit 257 (780) = 325 Pedido + 455 «Fit Mit Tia Neida» Otro gasto
+  (05-08); Madre Tierra 437 (649) = 629 + 20 «Pago extra» Otro gasto (28-09).
+- Gasto con categoría Otro gasto en vez de Pedido: Cuñapizzas 237 (315, fila 708), Suerox 334 (245, fila 999),
+  Vitaly 341 (353, fila 1010).
+- Centavos: Minoli 302 (164,43 / 164,40), Itenez 431 (334,05 / 334), Itenez 517 (454,75 / 454,80).
+- Altramuz 161 + 195 (75 + 25 = 100) contra un gasto de 150 (fila 763, Bisa).
+- A Cuenta sin Fecha pago ni Tipo Pago: 349 Glamazon (542 = «Adelanto Glamazon» del 02-09, Caja) y 483 Green Vibe
+  (144 = «Pago parcial green vibe» del 23-10, Caja); su pago entraría sin fecha.
+
+Sin explicación: pagos sin gasto (49 Misqui 238, 150 Solquifar 248, 343 Saltus 314, 345 Melifo 235,50, 406 Misqui
+374) y gastos Pedido sin pedido (mayo: Pan 1.321, Kefir Belen 323, Belen 250, 517 y 285,50, Frombombones 276 y 253;
+Aceite Borges 960 del 01-06, Vitabec 421 del 15-06, Apis 30, Sobres 45, Jorge Junio 100, Faltante sativa griegos
+40,50; y 4 envíos con categoría Pedido: Brownies Vikingos 30, Alulosas 15, Activaloe 50, Pastel de frutas 15).
+
 ### Validación con la planilla del 26-10 (sin corregir)
 
 Con los productos de CAT-06 importados (sin «Se vende por») y las columnas nuevas vacías, la revisión tarda menos
@@ -377,17 +399,26 @@ Correcciones en la planilla (con el dueño, en otra sesión):
 - [ ] Código y costo unitario en cada fila de la hoja Consumos (el dueño).
 - [x] Revisión de las filas de Ventas sin código con el Excel de costos del sistema anterior; ventas de Mami
   marcadas (28-10-2026).
-- [ ] Día de la salida, antes de migrar: crear la persona Mami en Deudas y los productos especiales `SIN-IDENT`
+- [x] Día de la salida, antes de migrar: crear la persona Mami en Deudas y los productos especiales `SIN-IDENT`
   (Sin identificar) y `TER-SAG-MAD` (De tercero, dueña Mami); importar los productos y dar de baja los 25 nuevos
-  de P-42.
+  de P-42. Ensayado el 29-10-2026 en la base local recreada vacía (respaldo de la anterior fuera del repositorio):
+  `SIN-IDENT` «Producto sin identificar» (Nutricion, Sistema anterior) y `TER-SAG-MAD` «Sagrada Madre de Mami»
+  (categoría Inciensos y proveedor Sagrada Madre creados para P-50); los 25 quedan Inactivo. En producción se
+  repite igual.
 - [x] Con el dueño: Cant corregida en las 8 filas de Ventas donde Cant × Precio no daba el Total (28-10-2026).
 - [ ] Columna Proveedor en Pedidos (Claude propone, el dueño confirma) y Monto pagado en los pedidos A Cuenta.
 - [ ] Arreglos de «Otros arreglos encontrados» y categorías faltantes en Finanzas.
 - [x] HOJITA vaciada en las otras hojas (27-10-2026).
-- [ ] Antes de importar (P-43, 28-10-2026): comparar por mes los pagos de Pedidos (Fecha pago, Monto o Monto
+- [x] Antes de importar (P-43, 28-10-2026): comparar por mes los pagos de Pedidos (Fecha pago, Monto o Monto
   pagado, Tipo Pago) con los gastos Pedido de Transacc. (fecha, monto, cuenta) y listar los que no tienen par;
   revisar con el dueño las diferencias (total 3.755,42, mayo +6.767, julio −4.034 y los 5 montos de octubre) y
   corregir en la planilla lo que sea error. Sin cambio de código: los pagos históricos siguen sin vínculo.
+  Comparación hecha el 29-10-2026 (abajo, «P-43 con la planilla del 29-10»); falta revisarla con el dueño.
+- [ ] Con el dueño, antes de migrar: precio de venta de los 16 productos rechazados por la importación que se usan en
+  el historial (12 filas de Ventas y 12 de Detalle Pedidos: `GRA-GEL-SSA`, `BEN-ESP-ACL-100GR`, `APQ-FID-QUI-1KG`,
+  `IVL-REN`, `DES-HAR-COC-500GR`, `ORI-SRO-DOY-800GR`, `ORI-SRO-GRA-800GR` y 9 de Brisol `BRI-*`); Ventas filas 4866
+  (`FSE-GRA-ESP-1LI` con Cant 262,5: se leería como 262,5 libras) y 5759 (`FSE-GRA-ESP` con Cant 1 a Bs 9: 1 g);
+  las diferencias de P-43; «Grupo» en A1 de Productos. Después, importar de nuevo los productos (sale sin duplicar).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` hecho por Mami (DEU-02).
 
 Construcción (rama `feat/migration`, 27-10-2026):
