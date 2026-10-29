@@ -71,7 +71,7 @@
   } @else {
   <div class="table-container">
     <div class="table-responsive">
-      <table class="table">
+      <table class="table" [class.is-reloading]="isLoading()">
         <thead>
           <tr>
             <th scope="col">N.º</th>
@@ -87,13 +87,14 @@
           </tr>
         </thead>
         <tbody>
-          @if (isLoading()) {
+          <!-- While a filter reloads, the current rows stay; only an empty list shows the loading row -->
+          @if (isLoading() && purchases().length === 0) {
             <tr><td colspan="10" class="text-center">Cargando pedidos…</td></tr>
           } @else {
-            @for (purchase of purchases(); track purchase.id) {
+            @for (purchase of visiblePurchases(); track purchase.id) {
               <tr [class.voided-row]="purchase.status === 'ANULADO'">
                 <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
-                <td>{{ purchase.purchaseDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ purchase.purchaseDate | storeDay }}</td>
                 <td>{{ purchase.supplierName }}</td>
                 <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
@@ -137,6 +138,13 @@
         </tbody>
       </table>
     </div>
+    @if (hiddenCount() > 0) {
+      <div class="show-more-row">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="showMore()">
+          Mostrar {{ hiddenCount() < 100 ? hiddenCount() : 100 }} más ({{ hiddenCount() }} sin mostrar)
+        </button>
+      </div>
+    }
   </div>
   }
 

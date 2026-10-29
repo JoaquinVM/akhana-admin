@@ -237,6 +237,9 @@ hasta hoy.
   `ConsumptionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`, `report.service.spec.ts` y
   `consumptions-report.component.spec.ts`.
 - [x] Exportar a Excel los cinco reportes (26-10-2026). Suite completa del backend al cerrar el módulo.
+- [x] Tercera revisión (29-10-2026): los cinco `.xlsx` del 01-07 al 29-10 de la base local (con el historial) se
+  abrieron y compararon con la respuesta de la pantalla: mismos totales, costo, utilidad, margen, días, neto y
+  consumos.
 - [ ] Fase 2: comparar dos semanas con las tablas dinámicas.
 - [x] Regalos y roturas a la venta al costo en la migración (P-39, 28-10-2026): la comparación de la fase 2 ya no
   los suma aparte como consumos.

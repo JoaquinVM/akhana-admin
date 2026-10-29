@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { storeToday } from '../../../../shared/utils/store-date';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
@@ -20,11 +21,12 @@ import {
 } from '../../../../core/purchase/models/purchase.models';
 import { Creditor } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
+import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
 
 @Component({
   selector: 'app-purchase-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
+  imports: [StoreDayPipe, CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
   templateUrl: './purchase-detail-modal.component.html',
   styleUrls: ['./purchase-detail-modal.component.css']
 })
@@ -276,7 +278,5 @@ export class PurchaseDetailModalComponent {
 }
 
 function todayIso(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
+  return storeToday();
 }

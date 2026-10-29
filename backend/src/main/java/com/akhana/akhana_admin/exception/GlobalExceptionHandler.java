@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.exception;
 
 import com.akhana.akhana_admin.dto.ErrorResponse;
 import com.akhana.akhana_admin.service.ProductImportService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +24,7 @@ public class GlobalExceptionHandler {
     static final String UNREADABLE_REQUEST = "Los datos enviados no son válidos; revise el formulario e intente de nuevo.";
     static final String INVALID_PARAMETER = "El valor de «%s» no es válido.";
     static final String MISSING_PARAMETER = "Falta el dato «%s».";
+    static final String CONFLICT_WITH_ANOTHER_SAVE = "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualice la pantalla y revise antes de intentar de nuevo.";
 
     @ExceptionHandler(AuthenticationFailedException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationFailed(AuthenticationFailedException ex) {
@@ -100,6 +102,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.badRequest(String.format(INVALID_PARAMETER, ex.getName())));
+    }
+
+    // A unique index caught what the service check missed (two saves at the same time): a conflict, not a crash
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(ErrorResponse.conflict(CONFLICT_WITH_ANOTHER_SAVE));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)

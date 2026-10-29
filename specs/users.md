@@ -108,7 +108,7 @@ El sistema SHALL realizar la baja de usuarios mediante eliminación lógica (`de
 
 #### Scenario: Sesión que terminó
 - **WHEN** el servidor rechaza el token de una sesión abierta (venció o se cambió la contraseña en otro equipo)
-- **THEN** el frontend vuelve al login y muestra «Su sesión terminó: venció o se cambió la contraseña en otro equipo. Vuelva a ingresar.», una sola vez. Al crear un usuario, la respuesta ya trae la fecha de creación. Pruebas en `auth.interceptor.spec.ts`, `login.component.spec.ts` y `UserServiceTest`.
+- **THEN** el frontend vuelve al login y muestra «Su sesión terminó: venció, se cambió la contraseña o el usuario fue dado de baja. Vuelva a ingresar.», una sola vez. Al crear un usuario, la respuesta ya trae la fecha de creación. Pruebas en `auth.interceptor.spec.ts`, `login.component.spec.ts` y `UserServiceTest`.
 
 ---
 

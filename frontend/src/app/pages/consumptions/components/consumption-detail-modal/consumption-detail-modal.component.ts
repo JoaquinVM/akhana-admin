@@ -4,12 +4,13 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
 import { Consumption } from '../../../../core/consumption/models/consumption.models';
+import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
 
 // CON-01: read-only detail with lines and audit; the void does not depend on the cash session
 @Component({
   selector: 'app-consumption-detail-modal',
   standalone: true,
-  imports: [CommonModule, ModalComponent, VoidReasonModalComponent],
+  imports: [StoreDayPipe, CommonModule, ModalComponent, VoidReasonModalComponent],
   templateUrl: './consumption-detail-modal.component.html',
   styleUrls: ['./consumption-detail-modal.component.css']
 })

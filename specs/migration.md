@@ -417,6 +417,15 @@ julio −4.034), y en octubre los montos coinciden uno a uno salvo 5.
 | `POST /api/migration/preview` (multipart `recaudaciones`, `pedidos`, `cutoffDate`) | Valida y devuelve el resultado sin guardar. |
 | `POST /api/migration` (mismos campos) | Valida de nuevo y guarda todo, solo sin rechazadas. |
 
+## Estado de la importación
+
+- **Cuando** se entra a Migración y la importación ya se hizo **entonces** la pantalla lo dice antes de elegir
+  archivos («La migración histórica ya se hizo el <fecha> por <usuario>, con fecha de corte <día>. Solo se hace una
+  vez.») y deja los archivos, la fecha y los botones deshabilitados. `GET /api/migration/status` (permiso
+  `MIGRATION`) devuelve `imported`, `cutoffDate`, `importedBy` e `importedAt`. Pruebas en
+  `MigrationIntegrationTest`, `EndpointAuthorizationTest` y `migration.component.spec.ts` (tercera revisión,
+  29-10-2026).
+
 ## Tareas
 
 Antes de construir:

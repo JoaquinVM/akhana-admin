@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="!!consumptionId()"
   [title]="consumption() ? 'Consumo ' + consumption()!.consumptionNumber : 'Consumo'"
-  [subtitle]="consumption() ? (consumption()!.consumptionDate | date:'dd/MM/yyyy') + (consumption()!.consumedFor ? ' · para ' + consumption()!.consumedFor : '') : ''"
+  [subtitle]="consumption() ? (consumption()!.consumptionDate | storeDay) + (consumption()!.consumedFor ? ' · para ' + consumption()!.consumedFor : '') : ''"
   size="lg"
   (close)="onClose()">
 

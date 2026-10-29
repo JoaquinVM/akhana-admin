@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { MigrationFiles, MigrationResult } from './models/migration.models';
+import { MigrationFiles, MigrationResult, MigrationStatus } from './models/migration.models';
 
 // FIN-11: Revisar saves nothing; Importar validates again and saves all or nothing
 @Injectable({
@@ -10,6 +10,10 @@ import { MigrationFiles, MigrationResult } from './models/migration.models';
 export class MigrationService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/migration';
+
+  status(): Observable<MigrationStatus> {
+    return this.http.get<MigrationStatus>(`${this.apiUrl}/status`);
+  }
 
   preview(files: MigrationFiles): Observable<MigrationResult> {
     return this.http.post<MigrationResult>(`${this.apiUrl}/preview`, this.form(files));

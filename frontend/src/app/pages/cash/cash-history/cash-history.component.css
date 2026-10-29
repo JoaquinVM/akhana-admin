@@ -246,3 +246,15 @@
 
 .table-empty h4 { margin: 0 0 0.25rem; color: #1e293b; }
 .table-empty p { margin: 0; font-size: 0.8125rem; }
+
+/* Phones: the filters and the counter go on their own lines */
+@media (max-width: 640px) {
+  .filters-card {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .status-filters {
+    flex-wrap: wrap;
+  }
+}

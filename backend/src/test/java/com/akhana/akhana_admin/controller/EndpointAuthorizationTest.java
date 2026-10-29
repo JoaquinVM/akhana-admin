@@ -317,6 +317,7 @@ class EndpointAuthorizationTest {
                 adminOnly(get, "/api/reports/consumptions/export", null),
                 adminOnly(post, "/api/migration/preview", MIGRATION_FILES),
                 adminOnly(post, "/api/migration", MIGRATION_FILES),
+                adminOnly(get, "/api/migration/status", null),
                 // Usuarios
                 adminOnly(get, "/api/users", null),
                 adminOnly(get, "/api/users/" + ID, null),

@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="!!purchaseId()"
   [title]="purchase() ? 'Pedido ' + purchase()!.purchaseNumber : 'Pedido'"
-  [subtitle]="purchase() ? purchase()!.supplierName + ' · ' + (purchase()!.purchaseDate | date:'dd/MM/yyyy') : ''"
+  [subtitle]="purchase() ? purchase()!.supplierName + ' · ' + (purchase()!.purchaseDate | storeDay) : ''"
   size="lg"
   (close)="onClose()">
 
@@ -88,7 +88,7 @@
           <span>{{ deliveryTypeLabel(p.deliveryType) }}</span>
           <span class="status-badge" [ngClass]="'delivery-' + p.deliveryStatus">{{ deliveryStatusLabel(p.deliveryStatus) }}</span>
           @if (p.deliveryDate) {
-            <span class="hint">{{ p.deliveryStatus === 'ENTREGADO' ? 'entregado el' : 'estimado para el' }} {{ p.deliveryDate | date:'dd/MM/yyyy' }}</span>
+            <span class="hint">{{ p.deliveryStatus === 'ENTREGADO' ? 'entregado el' : 'estimado para el' }} {{ p.deliveryDate | storeDay }}</span>
           }
           @if (isEditable()) {
             <button type="button" class="btn btn-ghost btn-sm" (click)="startDeliveryEdit()">Cambiar entrega</button>

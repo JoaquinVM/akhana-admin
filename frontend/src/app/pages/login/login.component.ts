@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
-export const SESSION_ENDED = 'Su sesión terminó: venció o se cambió la contraseña en otro equipo. Vuelva a ingresar.';
+export const SESSION_ENDED = 'Su sesión terminó: venció, se cambió la contraseña o el usuario fue dado de baja. Vuelva a ingresar.';
 
 @Component({
   selector: 'app-login',

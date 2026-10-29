@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PurchaseService } from '../../core/purchase/purchase.service';
@@ -19,16 +19,20 @@ import { PurchaseDetailModalComponent } from './components/purchase-detail-modal
 import { PayablesViewComponent } from './components/payables-view/payables-view.component';
 import { CreditorService } from '../../core/debt/creditor.service';
 import { Creditor } from '../../core/debt/models/debt.models';
+import { StoreDayPipe } from '../../shared/utils/store-day.pipe';
 
 // 'ANULADO' filters by purchase status (COM-09); the rest by payment status of the registered ones
 export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus | 'ANULADO';
 
 export type PurchasesTab = 'ORDERS' | 'PAYABLES';
 
+// Rows drawn at a time: the history has hundreds of purchases and drawing them all at once is slow on a phone
+export const PAGE_SIZE = 100;
+
 @Component({
   selector: 'app-purchases',
   standalone: true,
-  imports: [CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent, PayablesViewComponent],
+  imports: [StoreDayPipe, CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent, PayablesViewComponent],
   templateUrl: './purchases.component.html',
   styleUrls: ['./purchases.component.css']
 })
@@ -53,6 +57,9 @@ export class PurchasesComponent implements OnInit {
   payablesRefresh = signal<number>(0);
 
   purchases = signal<Purchase[]>([]);
+  visibleCount = signal<number>(PAGE_SIZE);
+  visiblePurchases = computed(() => this.purchases().slice(0, this.visibleCount()));
+  hiddenCount = computed(() => Math.max(0, this.purchases().length - this.visibleCount()));
   suppliers = signal<Supplier[]>([]);
   accounts = signal<PaymentAccount[]>([]);
   // DEU-02: only active people pay purchases
@@ -95,6 +102,7 @@ export class PurchasesComponent implements OnInit {
     }).subscribe({
       next: purchases => {
         this.purchases.set(purchases);
+        this.visibleCount.set(PAGE_SIZE);
         this.isLoading.set(false);
       },
       error: () => {
@@ -102,6 +110,10 @@ export class PurchasesComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  showMore(): void {
+    this.visibleCount.update((count) => count + PAGE_SIZE);
   }
 
   setStatusFilter(filter: PaymentStatusFilter): void {

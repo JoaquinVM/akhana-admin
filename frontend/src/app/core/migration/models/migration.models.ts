@@ -53,3 +53,11 @@ export interface MigrationFiles {
   pedidos: File;
   cutoffDate: string;
 }
+
+// FIN-11: whether the one-time import was already done
+export interface MigrationStatus {
+  imported: boolean;
+  cutoffDate: string | null;
+  importedBy: string | null;
+  importedAt: string | null;
+}

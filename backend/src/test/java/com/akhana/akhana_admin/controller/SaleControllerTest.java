@@ -217,6 +217,21 @@ class SaleControllerTest {
     }
 
     @Test
+    @DisplayName("Un choque con un índice único (dos guardados a la vez) responde 409 en español, no un error 500")
+    void uniqueIndexConflict() throws Exception {
+        when(saleService.voidSale(eq(saleId), any(VoidSaleRequest.class), eq("admin")))
+            .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate key value"));
+
+        mockMvc.perform(post("/api/sales/{id}/void", saleId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"voidReason\": \"error\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value(
+                "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualice la pantalla y revise antes de intentar de nuevo."));
+    }
+
+    @Test
     @DisplayName("Un cuerpo ilegible o un parámetro inválido responden un mensaje en español, sin detalles técnicos")
     void unreadableBodyAndBadParameter() throws Exception {
         mockMvc.perform(post("/api/sales")

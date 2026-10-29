@@ -353,6 +353,10 @@ class MigrationIntegrationTest {
         assertThatThrownBy(() -> migrationService.preview("Akhana Recaudaciones.xlsx", validRecaudaciones(),
             "Akhana Pedidos.xlsx", validPedidos(), CUTOFF))
             .hasMessage(MigrationService.ALREADY_DONE);
+        // The screen says it before any file is chosen
+        assertThat(migrationService.status().imported()).isTrue();
+        assertThat(migrationService.status().cutoffDate()).isEqualTo(CUTOFF);
+        assertThat(migrationService.status().importedBy()).isEqualTo("it-migration");
     }
 
     @Test

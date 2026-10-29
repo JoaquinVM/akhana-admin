@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.dto.MigrationResponse;
+import com.akhana.akhana_admin.dto.MigrationStatusResponse;
 import com.akhana.akhana_admin.dto.MigrationResponse.*;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
@@ -225,6 +226,14 @@ public class MigrationServiceImpl implements MigrationService {
             }
             return false;
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MigrationStatusResponse status() {
+        return historicalImportRepository.findFirstByOrderByImportedAtAsc()
+            .map(done -> new MigrationStatusResponse(true, done.getCutoffDate(), done.getImportedBy(), done.getImportedAt()))
+            .orElse(new MigrationStatusResponse(false, null, null, null));
     }
 
     @Override

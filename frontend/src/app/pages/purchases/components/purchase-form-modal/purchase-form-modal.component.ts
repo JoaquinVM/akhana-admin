@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { storeToday } from '../../../../shared/utils/store-date';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
@@ -51,12 +52,9 @@ export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-// Local date (yyyy-MM-dd) for the purchase date field
+// Store day (yyyy-MM-dd) for the purchase date field: the server rejects a date after today in Bolivia
 export function todayIso(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
+  return storeToday();
 }
 
 @Component({
@@ -285,7 +283,9 @@ export class PurchaseFormModalComponent {
 
   createProduct(): void {
     const draft = this.newProduct();
-    if (!draft.code.trim() || !draft.name.trim() || !draft.categoryId || !draft.buyPrice || !draft.sellPrice) {
+    // CAT-01: the cost may be 0 (the server warns); the price must be above 0, which the server checks
+    if (!draft.code.trim() || !draft.name.trim() || !draft.categoryId || draft.buyPrice === null
+        || draft.sellPrice === null) {
       this.newProductError.set('Complete código, nombre, categoría, costo y precio de venta.');
       return;
     }
@@ -322,7 +322,8 @@ export class PurchaseFormModalComponent {
       return {
         productId: line.product.id,
         quantity: Number(line.quantity),
-        unitCost: round2(Number(line.unitCost)),
+        // Sent as typed: the server rejects more than 2 decimals instead of rounding them away
+        unitCost: Number(line.unitCost),
         updateProductCost,
         newSellPrice: updateProductCost ? this.chosenSellPrice(line) : null
       };

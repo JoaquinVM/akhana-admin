@@ -1,9 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { MigrationService } from '../../core/migration/migration.service';
-import { MigrationFiles, MigrationMovementTotal, MigrationResult } from '../../core/migration/models/migration.models';
+import { MigrationFiles, MigrationMovementTotal, MigrationResult, MigrationStatus } from '../../core/migration/models/migration.models';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { buildXlsx } from '../../shared/utils/xlsx-writer';
+import { StoreDayPipe } from '../../shared/utils/store-day.pipe';
 
 type FileKey = 'recaudaciones' | 'pedidos';
 
@@ -11,7 +12,7 @@ type FileKey = 'recaudaciones' | 'pedidos';
 @Component({
   selector: 'app-migration',
   standalone: true,
-  imports: [DecimalPipe, ConfirmModalComponent],
+  imports: [StoreDayPipe, DatePipe, DecimalPipe, ConfirmModalComponent],
   templateUrl: './migration.component.html',
   styleUrls: ['./migration.component.css']
 })
@@ -25,8 +26,19 @@ export class MigrationComponent {
   isBusy = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   confirmOpen = signal<boolean>(false);
+  // FIN-11 runs once: when it was already done the screen says so and offers nothing
+  status = signal<MigrationStatus | null>(null);
+  alreadyDone = computed(() => !!this.status()?.imported || !!this.result()?.imported);
 
-  canReview = computed(() => !!this.recaudaciones() && !!this.pedidos() && !!this.cutoffDate() && !this.isBusy());
+  constructor() {
+    this.migrationService.status().subscribe({
+      next: (status) => this.status.set(status),
+      error: () => this.status.set(null)
+    });
+  }
+
+  canReview = computed(() => !!this.recaudaciones() && !!this.pedidos() && !!this.cutoffDate() && !this.isBusy()
+    && !this.alreadyDone());
 
   // All or nothing: with a single rejected row nothing is imported
   canImport = computed(() => {

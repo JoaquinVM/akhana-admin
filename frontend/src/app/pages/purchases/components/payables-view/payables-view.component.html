@@ -31,7 +31,7 @@
             @for (purchase of group.purchases; track purchase.id) {
               <tr>
                 <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
-                <td>{{ purchase.purchaseDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ purchase.purchaseDate | storeDay }}</td>
                 <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
                 <td class="text-right"><strong>Bs {{ purchase.balance | number:'1.2-2' }}</strong></td>

@@ -494,6 +494,18 @@ textarea.form-control {
   gap: 0.25rem;
 }
 
+/* Phones: the pills scroll inside their group instead of widening the page */
+@media (max-width: 767px) {
+  .filter-pill-group {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .filter-pill-group > * {
+    flex-shrink: 0;
+  }
+}
+
 .filter-pill {
   display: inline-flex;
   align-items: center;

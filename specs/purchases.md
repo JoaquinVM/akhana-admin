@@ -41,7 +41,16 @@ fecha del pedido, líneas, costo de envío, total y comentario. Auditoría de al
 - **Cuando** el costo unitario de una línea es negativo **entonces** se rechaza; un costo 0 se acepta
   (bonificación).
 - **Cuando** el costo unitario tiene más de 2 decimales (30,555) **entonces** se rechaza con «El costo unitario de
-  '<producto>' admite hasta 2 decimales.», en vez de redondearse sin aviso (segunda revisión, 29-10-2026).
+  '<producto>' admite hasta 2 decimales.», en vez de redondearse sin aviso (segunda revisión, 29-10-2026). Desde la
+  tercera revisión la pantalla envía el costo tal como se escribió (antes lo redondeaba y la regla nunca llegaba al
+  servidor).
+- **Cuando** se crea un producto nuevo desde una línea (COM-03) con costo 0 **entonces** se crea (CAT-01, con el aviso
+  del servidor); antes la pantalla lo bloqueaba pidiendo un costo. Pruebas en `purchase-form-modal.component.spec.ts`.
+- **Cuando** se lista Pedidos (más de 500 con el historial) **entonces** se dibujan de a 100 con «Mostrar 100 más»,
+  y al cambiar un filtro las filas actuales quedan (atenuadas) hasta que llega la respuesta, en vez de borrarse y
+  volver a dibujarse todas: cambiar de filtro tardaba 1 a 2 s. Las fechas del pedido y de entrega se muestran como
+  día de la tienda (pipe `storeDay`), y «hoy» del formulario es el de Bolivia aunque el equipo tenga otra zona
+  horaria. Pruebas en `purchases.component.spec.ts`, `store-day.pipe.spec.ts` y `store-date.spec.ts`.
 - **Cuando** una línea usa un producto eliminado **entonces** se rechaza; los inactivos se aceptan (se compran
   aunque no se vendan aún).
 - **Cuando** se registra el pedido **entonces** cada línea guarda copia del nombre y código del producto, y el

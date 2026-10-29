@@ -22,7 +22,7 @@ export class AuthService {
   // Reactive State via Angular Signals
   private readonly _currentUser = signal<UserSession | null>(this.restoreSession());
 
-  // Set when the server rejects the token of an open session (expired, or the password changed elsewhere), so
+  // Set when the server rejects the token of an open session (expired, password changed elsewhere, user removed), so
   // the login screen can say why it is back there
   private sessionEnded = false;
   readonly currentUser = this._currentUser.asReadonly();

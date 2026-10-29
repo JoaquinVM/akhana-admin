@@ -11,6 +11,7 @@ import {
 } from '../../core/consumption/models/consumption.models';
 import { ConsumptionFormModalComponent } from './components/consumption-form-modal/consumption-form-modal.component';
 import { ConsumptionDetailModalComponent } from './components/consumption-detail-modal/consumption-detail-modal.component';
+import { StoreDayPipe } from '../../shared/utils/store-day.pipe';
 
 export type ConsumptionStatusFilter = 'ALL' | ConsumptionStatus;
 
@@ -18,7 +19,7 @@ export type ConsumptionStatusFilter = 'ALL' | ConsumptionStatus;
 @Component({
   selector: 'app-consumptions',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConsumptionFormModalComponent, ConsumptionDetailModalComponent],
+  imports: [StoreDayPipe, CommonModule, FormsModule, ConsumptionFormModalComponent, ConsumptionDetailModalComponent],
   templateUrl: './consumptions.component.html',
   styleUrls: ['./consumptions.component.css']
 })

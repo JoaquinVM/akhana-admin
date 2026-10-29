@@ -14,29 +14,36 @@
     </div>
   </header>
 
+  @if (status()?.imported) {
+    <div class="alert alert-info migration-done" role="status">
+      La migración histórica ya se hizo el {{ status()!.importedAt | date:'dd/MM/yyyy HH:mm' }} por {{ status()!.importedBy }},
+      con fecha de corte {{ status()!.cutoffDate | storeDay }}. Solo se hace una vez.
+    </div>
+  }
+
   <section class="card migration-form">
     <div class="form-row">
       <label class="form-label" for="migration-recaudaciones">Akhana Recaudaciones (.xlsx)</label>
       <input id="migration-recaudaciones" type="file" class="form-control"
              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-             [disabled]="isBusy() || !!result()?.imported" (change)="onFileSelected('recaudaciones', $event)" />
+             [disabled]="isBusy() || alreadyDone()" (change)="onFileSelected('recaudaciones', $event)" />
       <p class="form-hint">Hojas Ventas, Transacc., Cierre de Caja, Consumos, Detalle Pedidos y Productos.</p>
     </div>
     <div class="form-row">
       <label class="form-label" for="migration-pedidos">Akhana Pedidos (.xlsx)</label>
       <input id="migration-pedidos" type="file" class="form-control"
              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-             [disabled]="isBusy() || !!result()?.imported" (change)="onFileSelected('pedidos', $event)" />
+             [disabled]="isBusy() || alreadyDone()" (change)="onFileSelected('pedidos', $event)" />
       <p class="form-hint">Hoja Pedidos, con las columnas Proveedor y Monto pagado agregadas.</p>
     </div>
     <div class="form-row form-row-date">
       <label class="form-label" for="migration-cutoff">Fecha de corte</label>
       <input id="migration-cutoff" type="date" class="form-control" [value]="cutoffDate()"
-             [disabled]="isBusy() || !!result()?.imported" (change)="onCutoffChange($event)" />
+             [disabled]="isBusy() || alreadyDone()" (change)="onCutoffChange($event)" />
       <p class="form-hint">El último día que se migra; el sistema registra desde el día siguiente.</p>
     </div>
     <div class="form-actions">
-      <button type="button" class="btn btn-secondary" (click)="review()" [disabled]="!canReview() || !!result()?.imported">
+      <button type="button" class="btn btn-secondary" (click)="review()" [disabled]="!canReview()">
         {{ isBusy() && !confirmOpen() ? 'Revisando…' : 'Revisar' }}
       </button>
       <button type="button" class="btn btn-primary" (click)="askImport()" [disabled]="!canImport()">Importar</button>

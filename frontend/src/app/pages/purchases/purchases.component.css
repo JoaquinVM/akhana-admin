@@ -145,3 +145,16 @@
   color: #1e5631;
   border-bottom-color: #1e5631;
 }
+
+/* «Mostrar más» under the purchases table */
+.show-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+/* A filter reloading keeps the rows, dimmed */
+.is-reloading {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}

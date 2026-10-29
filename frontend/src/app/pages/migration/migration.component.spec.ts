@@ -31,6 +31,7 @@ describe('MigrationComponent', () => {
 
   beforeEach(async () => {
     migrationService = {
+      status: vi.fn().mockReturnValue(of({ imported: false, cutoffDate: null, importedBy: null, importedAt: null })),
       preview: vi.fn().mockReturnValue(of(clean)),
       importHistory: vi.fn().mockReturnValue(of({ ...clean, imported: true }))
     };
@@ -103,5 +104,19 @@ describe('MigrationComponent', () => {
 
     expect(text()).toContain('La migración histórica ya se hizo.');
     expect(component.result()).toBeNull();
+  });
+
+  it('FIN-11: si ya se importó lo dice al entrar y no ofrece revisar ni importar', () => {
+    migrationService.status.mockReturnValue(of({
+      imported: true, cutoffDate: '2026-10-26', importedBy: 'admin', importedAt: '2026-10-27T14:00:00Z'
+    }));
+    const again = TestBed.createComponent(MigrationComponent);
+    again.detectChanges();
+
+    const text = again.nativeElement.textContent;
+    expect(text).toContain('La migración histórica ya se hizo');
+    expect(text).toContain('26/10/2026');
+    expect(again.componentInstance.alreadyDone()).toBe(true);
+    expect(again.nativeElement.querySelector('#migration-recaudaciones').disabled).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { PurchasesComponent } from './purchases.component';
 import { PurchaseService } from '../../core/purchase/purchase.service';
 import { CreditorService } from '../../core/debt/creditor.service';
@@ -89,5 +89,29 @@ describe('PurchasesComponent', () => {
     component.onPurchaseSaved(purchase);
     expect(component.isFormOpen()).toBe(false);
     expect(component.detailPurchaseId()).toBe('pur-1');
+  });
+
+  it('dibuja de a 100 pedidos y «Mostrar más» agrega los siguientes', () => {
+    const many = Array.from({ length: 230 }, (_, i) => ({ ...purchase, id: 'pur-' + i, purchaseNumber: 'PED-' + i }));
+    purchaseService.getPurchases.mockReturnValue(of(many));
+    component.loadPurchases();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(100);
+    expect(fixture.nativeElement.querySelector('.show-more-row').textContent).toContain('Mostrar 100 más (130 sin mostrar)');
+
+    component.showMore();
+    component.showMore();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(230);
+    expect(fixture.nativeElement.querySelector('.show-more-row')).toBeNull();
+  });
+
+  it('al cambiar un filtro mantiene las filas mientras carga', () => {
+    purchaseService.getPurchases.mockReturnValue(new Subject());
+    component.setStatusFilter('PAGADO');
+    fixture.detectChanges();
+    expect(component.isLoading()).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('Cargando pedidos');
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
   });
 });

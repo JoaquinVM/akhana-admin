@@ -21,6 +21,7 @@ import { TransactionsTableComponent } from './components/transactions-table/tran
 import { TransactionFormModalComponent } from './components/transaction-form-modal/transaction-form-modal.component';
 import { TransactionEditModalComponent } from './components/transaction-edit-modal/transaction-edit-modal.component';
 import { TransactionVoidModalComponent } from './components/transaction-void-modal/transaction-void-modal.component';
+import { storeDayEndIso, storeDayStartIso, storeMonthStart, storeToday } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-transactions',
@@ -134,14 +135,9 @@ export class TransactionsComponent implements OnInit {
   }
 
   setDefaultDateRange(): void {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    // First day of the current month (YYYY-MM-01)
-    this.startDate.set(`${year}-${month}-01`);
-    // Today (YYYY-MM-DD)
-    this.endDate.set(`${year}-${month}-${day}`);
+    // The current month up to today, in store days
+    this.startDate.set(storeMonthStart());
+    this.endDate.set(storeToday());
   }
 
   loadMetadata(): void {
@@ -201,31 +197,15 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
+  // Store days (America/La_Paz) as instants, like the server's day ranges
   private formatStartOfDayIso(dateStr: string): string | undefined {
-    if (!dateStr) return undefined;
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return undefined;
-    const year = Number(parts[0]);
-    const month = Number(parts[1]);
-    const day = Number(parts[2]);
-    if (!year || !month || !day) return undefined;
-    // Start of the local day: 00:00:00.000 as a UTC ISO instant
-    const start = new Date(year, month - 1, day, 0, 0, 0, 0);
-    return isNaN(start.getTime()) ? undefined : start.toISOString();
+    return dateStr ? storeDayStartIso(dateStr) : undefined;
   }
 
   private formatEndOfDayIso(dateStr: string): string | undefined {
-    if (!dateStr) return undefined;
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return undefined;
-    const year = Number(parts[0]);
-    const month = Number(parts[1]);
-    const day = Number(parts[2]);
-    if (!year || !month || !day) return undefined;
-    // End of the local day: 23:59:59.999 as a UTC ISO instant
-    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
-    return isNaN(end.getTime()) ? undefined : end.toISOString();
+    return dateStr ? storeDayEndIso(dateStr) : undefined;
   }
+
 
   onFilterChange(): void {
     this.loadTransactions();

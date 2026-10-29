@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.MigrationResponse;
+import com.akhana.akhana_admin.dto.MigrationStatusResponse;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.MigrationService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,11 @@ import java.time.LocalDate;
 public class MigrationController {
 
     private final MigrationService migrationService;
+
+    @GetMapping("/status")
+    public ResponseEntity<MigrationStatusResponse> status() {
+        return ResponseEntity.ok(migrationService.status());
+    }
 
     @PostMapping("/preview")
     public ResponseEntity<MigrationResponse> preview(

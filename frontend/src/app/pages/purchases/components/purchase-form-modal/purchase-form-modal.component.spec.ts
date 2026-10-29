@@ -159,4 +159,33 @@ describe('PurchaseFormModalComponent', () => {
     expect(round2(1.005)).toBe(1.01);
     expect(round2(0.1 + 0.2)).toBe(0.3);
   });
+
+  it('CAT-01: crea el producto nuevo con costo 0 (el servidor avisa) y lo agrega como línea', () => {
+    const created = product({ id: 'p-9', code: 'BON-1', name: 'Bonificación', buyPrice: 0, sellPrice: 12 });
+    productService.createProduct.mockReturnValue(of(created));
+    component.supplierId.set('sup-1');
+    component.openNewProduct();
+    component.patchNewProduct({ code: 'BON-1', name: 'Bonificación', categoryId: 'c-1', buyPrice: 0, sellPrice: 12 });
+    component.createProduct();
+
+    expect(component.newProductError()).toBeNull();
+    expect(productService.createProduct).toHaveBeenCalledWith(expect.objectContaining({ buyPrice: 0, sellPrice: 12 }));
+    expect(component.lines()[0].product.id).toBe('p-9');
+  });
+
+  it('sin costo escrito no crea el producto', () => {
+    component.supplierId.set('sup-1');
+    component.openNewProduct();
+    component.patchNewProduct({ code: 'X', name: 'X', categoryId: 'c-1', buyPrice: null, sellPrice: 12 });
+    component.createProduct();
+    expect(component.newProductError()).toBe('Complete código, nombre, categoría, costo y precio de venta.');
+    expect(productService.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('el costo de la línea se envía como se escribió, para que el servidor rechace más de 2 decimales', () => {
+    component.supplierId.set('sup-1');
+    component.addProduct(tea);
+    component.onCostChange(0, '30.555');
+    expect(component.buildRequest().items[0].unitCost).toBe(30.555);
+  });
 });

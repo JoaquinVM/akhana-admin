@@ -73,7 +73,7 @@
             @for (consumption of consumptions(); track consumption.id) {
               <tr [class.voided-row]="consumption.status === 'ANULADO'">
                 <td><span class="consumption-number">{{ consumption.consumptionNumber }}</span></td>
-                <td>{{ consumption.consumptionDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ consumption.consumptionDate | storeDay }}</td>
                 <td>{{ consumption.consumedFor || '—' }}</td>
                 <td class="comment-cell">{{ consumption.comment || '' }}</td>
                 <td class="text-right">Bs {{ consumption.totalAmount | number:'1.2-2' }}</td>

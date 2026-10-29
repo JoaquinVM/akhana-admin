@@ -2,12 +2,13 @@ import { Component, effect, inject, input, output, signal } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { PAYMENT_STATUS_LABELS, Payables, Purchase, PurchasePaymentStatus } from '../../../../core/purchase/models/purchase.models';
+import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
 
 // COM-08: purchases with a balance per supplier; the server computes the balance
 @Component({
   selector: 'app-payables-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [StoreDayPipe, CommonModule],
   templateUrl: './payables-view.component.html',
   styleUrls: ['./payables-view.component.css']
 })

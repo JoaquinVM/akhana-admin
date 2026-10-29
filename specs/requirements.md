@@ -98,7 +98,7 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **RG-01** Nada se borra físicamente: productos, ventas, pedidos, movimientos y usuarios usan baja lógica o anulación.
 - **RG-02** Todo registro guarda auditoría: quién y cuándo creó, modificó, eliminó o anuló. La genera el servidor, nunca el cliente.
 - **RG-03** Toda anulación exige motivo (sin largo mínimo) y revierte su efecto en caja y cuentas (y en stock desde la V2).
-- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error. Todo error llega al usuario en español, sin detalles técnicos.
+- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error. Todo error llega al usuario en español, sin detalles técnicos; dos guardados iguales a la vez responden un conflicto, no un error del servidor.
 - **RG-05** Toda operación que mueve dinero es atómica: todo o nada, en una sola transacción de base de datos.
 
 ### 3.2 Catálogo
