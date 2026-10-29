@@ -9,6 +9,8 @@ import { ConfirmModalComponent } from '../../../../shared/components/confirm-mod
 import { AuditModalComponent } from '../../../../shared/components/audit-modal/audit-modal.component';
 import { CustomerDetailModalComponent } from '../customer-detail-modal/customer-detail-modal.component';
 import { SaleDetailModalComponent } from '../../../../shared/components/sale-detail-modal/sale-detail-modal.component';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // '' = active and inactive (deleted left out)
 export type CustomerStatusFilter = '' | CustomerStatus;
@@ -24,7 +26,7 @@ interface CustomerDraft {
 @Component({
   selector: 'app-customers-view',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     FormsModule,
     ModalComponent,
@@ -38,6 +40,7 @@ interface CustomerDraft {
 })
 export class CustomersViewComponent implements OnInit {
   // The collection accounts come from the Deudas endpoint (/api/debts/accounts)
+  private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
   private readonly customerService = inject(CustomerService);
 
@@ -182,6 +185,7 @@ export class CustomersViewComponent implements OnInit {
       : this.customerService.createCustomer(request);
     call.subscribe({
       next: () => {
+        this.toast.success(editing ? 'Cliente actualizado.' : 'Cliente creado.');
         this.isSubmitting.set(false);
         this.isFormOpen.set(false);
         this.loadCustomers();
@@ -208,6 +212,7 @@ export class CustomersViewComponent implements OnInit {
     this.isDeleting.set(true);
     this.customerService.deleteCustomer(customer.id).subscribe({
       next: () => {
+        this.toast.success('Cliente dado de baja.');
         this.isDeleting.set(false);
         this.toDelete.set(null);
         this.loadCustomers();

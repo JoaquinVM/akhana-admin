@@ -94,7 +94,7 @@
               <td class="text-right">Bs {{ line.product.buyPrice | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}</td>
               <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right">
-                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea">✕</button>
+                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
               </td>
             </tr>
           } @empty {

@@ -6,6 +6,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { CustomerService } from '../../../../core/debt/customer.service';
 import { CustomerHistory, CustomerHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 // DEU-06 and DEU-07: the customer's history with the receivable after each entry, collection and its void
 @Component({
@@ -16,6 +17,7 @@ import { formatBs } from '../../../../shared/utils/money';
   styleUrls: ['./customer-detail-modal.component.css']
 })
 export class CustomerDetailModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly customerService = inject(CustomerService);
 
   customerId = input<string | null>(null);
@@ -108,6 +110,7 @@ export class CustomerDetailModalComponent {
       comment: comment.length > 0 ? comment : null
     }).subscribe({
       next: updated => {
+        this.toast.success('Cobro registrado.');
         this.setHistory(updated);
         this.isCollecting.set(false);
         this.changed.emit();
@@ -140,6 +143,7 @@ export class CustomerDetailModalComponent {
     this.voidError.set(null);
     this.customerService.voidCollection(history.customer.id, target.id, { voidReason }).subscribe({
       next: updated => {
+        this.toast.success('Cobro anulado.');
         this.setHistory(updated);
         this.isVoiding.set(false);
         this.voidTarget.set(null);

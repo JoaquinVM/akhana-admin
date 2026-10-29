@@ -1,6 +1,6 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Cierre y Arqueo de Caja"
+  title="Cierre y arqueo de caja"
   subtitle="Conteo físico de gaveta por cortes o declaración directa del monto final"
   size="xl"
   [closeOnBackdrop]="false"
@@ -10,7 +10,7 @@
     <!-- Expected, counted and difference -->
     <div class="balance-summary-strip">
       <div class="balance-chip">
-        <span class="chip-label">Efectivo Esperado</span>
+        <span class="chip-label">Efectivo esperado</span>
         <span class="chip-val expected">Bs {{ expectedCash() | number:'1.2-2' }}</span>
       </div>
 
@@ -22,7 +22,7 @@
       </div>
 
       <div class="balance-chip">
-        <span class="chip-label">Total Contado en Cierre</span>
+        <span class="chip-label">Total contado al cierre</span>
         <span class="chip-val declared">
           Bs {{ (form.get('closingAmount')?.value || 0) | number:'1.2-2' }}
         </span>
@@ -67,7 +67,7 @@
             <line x1="8" y1="10" x2="16" y2="10" />
             <line x1="8" y1="14" x2="12" y2="14" />
           </svg>
-          <span>Arqueo Detallado (Billetes y Monedas)</span>
+          <span>Arqueo detallado (billetes y monedas)</span>
         </button>
         <button
           type="button"
@@ -78,7 +78,7 @@
             <path d="M12 20h9" />
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
           </svg>
-          <span>Conteo Global Directo</span>
+          <span>Conteo directo</span>
         </button>
       </div>
 
@@ -227,7 +227,7 @@
       <div class="direct-input-container">
         <div class="form-group">
           <label for="closingAmount" class="form-label">
-            <span>Monto Total de Cierre en Efectivo (Bs) <span class="required-mark">*</span></span>
+            <span>Monto contado en efectivo (Bs) <span class="required-mark">*</span></span>
           </label>
           <div class="input-with-prefix">
             <span class="currency-prefix">Bs</span>
@@ -279,7 +279,7 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>Confirmar y Cerrar Caja</span>
+            <span>Confirmar y cerrar caja</span>
           }
         </button>
       </div>

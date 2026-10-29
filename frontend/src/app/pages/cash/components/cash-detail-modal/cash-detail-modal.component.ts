@@ -2,11 +2,12 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CashSessionDetail } from '../../../../core/cash/models/cash.models';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-cash-detail-modal',
   standalone: true,
-  imports: [CommonModule, ModalComponent],
+  imports: [IconComponent, CommonModule, ModalComponent],
   templateUrl: './cash-detail-modal.component.html',
   styleUrls: ['./cash-detail-modal.component.css']
 })

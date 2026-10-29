@@ -9,6 +9,8 @@ import { AuditModalComponent } from '../../../../shared/components/audit-modal/a
 import { SaleDetailModalComponent } from '../../../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { CreditorDetailModalComponent } from '../creditor-detail-modal/creditor-detail-modal.component';
 import { PurchaseDetailModalComponent } from '../../../purchases/components/purchase-detail-modal/purchase-detail-modal.component';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // '' = active and inactive (deleted left out)
 export type CreditorStatusFilter = '' | CreditorStatus;
@@ -24,7 +26,7 @@ interface CreditorDraft {
 @Component({
   selector: 'app-creditors-view',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     FormsModule,
     ModalComponent,
@@ -38,6 +40,7 @@ interface CreditorDraft {
   styleUrls: ['./creditors-view.component.css']
 })
 export class CreditorsViewComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
 
   readonly statusFilters: { value: CreditorStatusFilter; label: string }[] = [
@@ -183,6 +186,7 @@ export class CreditorsViewComponent implements OnInit {
       : this.creditorService.createCreditor(request);
     call.subscribe({
       next: () => {
+        this.toast.success(editing ? 'Persona actualizada.' : 'Persona creada.');
         this.isSubmitting.set(false);
         this.isFormOpen.set(false);
         this.loadCreditors();
@@ -209,6 +213,7 @@ export class CreditorsViewComponent implements OnInit {
     this.isDeleting.set(true);
     this.creditorService.deleteCreditor(creditor.id).subscribe({
       next: () => {
+        this.toast.success('Persona dada de baja.');
         this.isDeleting.set(false);
         this.toDelete.set(null);
         this.loadCreditors();

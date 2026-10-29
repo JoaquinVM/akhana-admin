@@ -75,10 +75,10 @@ describe('CashSessionInfoModalComponent', () => {
     fixture.detectChanges();
 
     const textContent = fixture.nativeElement.textContent;
-    // No debe mostrar "ABIERTA", "Abierta" ni "Caja Abierta" en el contenido del modal
+    // No debe mostrar "ABIERTA", "Abierta" ni "Caja abierta" en el contenido del modal
     expect(fixture.debugElement.query(By.css('.badge-active'))).toBeNull();
     expect(fixture.debugElement.query(By.css('.status-badge'))).toBeNull();
-    expect(textContent).not.toContain('Caja Abierta');
+    expect(textContent).not.toContain('Caja abierta');
     expect(textContent).not.toContain('ABIERTA');
   });
 

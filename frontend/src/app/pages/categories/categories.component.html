@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Categorías</span>
       </nav>
-      <h1 class="page-title">Gestión de Categorías</h1>
+      <h1 class="page-title">Categorías</h1>
       <p class="page-subtitle">Administración del catálogo de familias y clasificación cromática de productos</p>
     </div>
     <div class="header-actions">
@@ -16,7 +16,7 @@
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>Nueva Categoría</span>
+        <span>Nueva categoría</span>
       </button>
     </div>
   </header>
@@ -72,7 +72,7 @@
           aria-label="Buscar categorías"
         />
         @if (searchTerm()) {
-          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda">✕</button>
+          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda"><app-icon name="close" /></button>
         }
       </div>
       <div class="total-counter">
@@ -108,7 +108,7 @@
             <tr>
               <td colspan="5">
                 <div class="table-empty">
-                  <div class="table-empty-icon">🏷️</div>
+                  <div class="table-empty-icon"><app-icon name="tag" /></div>
                   <h4 class="table-empty-title">No se encontraron categorías</h4>
                   <p class="table-empty-desc">
                     @if (searchTerm()) {
@@ -116,7 +116,7 @@
                     } @else if (selectedStatusFilter() === 'ELIMINADO') {
                       No hay categorías eliminadas en el historial.
                     } @else {
-                      Aún no hay categorías registradas. Pulsa en "+ Nueva Categoría" para comenzar.
+                      Aún no hay categorías registradas. Pulsa en "+ Nueva categoría" para comenzar.
                     }
                   </p>
                 </div>
@@ -159,7 +159,7 @@
                     <button
                       type="button"
                       class="btn-icon btn-audit"
-                      title="Consultar Auditoría"
+                      title="Consultar auditoría"
                       (click)="openAuditModal(category)"
                       aria-label="Consultar auditoría">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -210,7 +210,7 @@
   <!-- closeOnBackdrop=false, as required -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Categoría' : 'Nueva Categoría'"
+    [title]="isEditing() ? 'Editar Categoría' : 'Nueva categoría'"
     [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la categoría' : 'Complete la información para registrar una nueva categoría en el catálogo'"
     size="md"
     [closeOnBackdrop]="false"
@@ -231,7 +231,7 @@
 
       <div class="form-group">
         <label for="category-name" class="form-label">
-          Nombre de la Categoría <span class="required-mark">*</span>
+          Nombre de la categoría <span class="required-mark">*</span>
           @if (isFieldModified('name')) {
             <span class="field-modified-badge">Modificado</span>
           }
@@ -306,7 +306,7 @@
           @if (isSubmitting()) {
             Guardando...
           } @else if (isEditing()) {
-            Guardar Cambios
+            Guardar cambios
           } @else {
             Crear Categoría
           }
@@ -343,7 +343,7 @@
   <!-- Shared audit modal (closeOnBackdrop=true) -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
-    title="Auditoría de Categoría"
+    title="Auditoría de la categoría"
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">

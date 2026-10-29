@@ -1,5 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { IconComponent } from '../icon/icon.component';
 
 export interface AuditField {
   key: string;
@@ -29,7 +30,7 @@ const DEFAULT_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-audit-modal',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [IconComponent, CommonModule, DatePipe],
   templateUrl: './audit-modal.component.html',
   styleUrls: ['./audit-modal.component.css']
 })

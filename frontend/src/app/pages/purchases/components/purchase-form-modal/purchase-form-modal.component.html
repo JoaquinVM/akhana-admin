@@ -15,13 +15,9 @@
     <div class="form-grid form-grid-3">
       <div class="form-group">
         <label class="form-label" for="purchase-supplier">Proveedor <span class="required-mark">*</span></label>
-        <select id="purchase-supplier" class="form-control" name="supplierId"
-                [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event)">
-          <option value="">Seleccione…</option>
-          @for (supplier of activeSuppliers(); track supplier.id) {
-            <option [value]="supplier.id">{{ supplier.name }}</option>
-          }
-        </select>
+        <app-search-select inputId="purchase-supplier" name="supplierId" placeholder="Seleccione…"
+                           [options]="supplierOptions()"
+                           [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event ?? '')" />
       </div>
       <div class="form-group">
         <label class="form-label" for="purchase-date">Fecha del pedido</label>
@@ -98,7 +94,7 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="np-buy">Costo (Bs)</label>
-            <input id="np-buy" type="number" min="0.01" step="0.01" class="form-control" name="npBuy"
+            <input id="np-buy" type="number" min="0" step="0.01" class="form-control" name="npBuy"
                    [ngModel]="newProduct().buyPrice" (ngModelChange)="patchNewProduct({ buyPrice: $event })" />
           </div>
           <div class="form-group">
@@ -146,7 +142,7 @@
               </td>
               <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right">
-                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea">✕</button>
+                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
               </td>
             </tr>
             @if (costDiffers(line)) {

@@ -5,12 +5,13 @@ import { ReportExportButtonComponent } from '../export-button/report-export-butt
 import { ReportService } from '../../../../core/report/report.service';
 import { SalesByDayReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // FIN-10 / CON-03: sales by store day, with month subtotals; replaces Resumen Ventas Diario
 @Component({
   selector: 'app-sales-by-day-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
+  imports: [IconComponent, CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './sales-by-day-report.component.html',
   styleUrls: ['./sales-by-day-report.component.css']
 })

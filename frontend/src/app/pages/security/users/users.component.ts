@@ -10,11 +10,13 @@ import { Role } from '../../../core/auth/models/auth.models';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
+import { ToastService } from '../../../shared/components/toast/toast.service';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
@@ -26,6 +28,7 @@ import { AuditModalComponent } from '../../../shared/components/audit-modal/audi
   styleUrls: ['./users.component.css']
 })
 export class UsersComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly userService = inject(UserService);
   readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
@@ -186,6 +189,7 @@ export class UsersComponent implements OnInit {
 
     this.userService.createUser(request).subscribe({
       next: () => {
+        this.toast.success('Usuario creado.');
         this.isCreating.set(false);
         this.closeCreateModal();
         this.loadUsers(this.currentPage());
@@ -279,6 +283,7 @@ export class UsersComponent implements OnInit {
 
     this.userService.updateUser(user.id, request).subscribe({
       next: (updatedUser) => {
+        this.toast.success(`Usuario ${updatedUser.username} actualizado.`);
         this.isUpdating.set(false);
         this.closeEditModal();
         // If the edited user is the signed-in one, refresh the profile (role and permissions) for the navbar
@@ -324,6 +329,7 @@ export class UsersComponent implements OnInit {
 
     this.userService.deleteUser(user.id).subscribe({
       next: () => {
+        this.toast.success('Usuario dado de baja.');
         this.isDeleting.set(false);
         this.isDeleteModalOpen.set(false);
         this.userToDelete.set(null);

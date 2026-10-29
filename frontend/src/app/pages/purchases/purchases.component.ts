@@ -20,6 +20,7 @@ import { PayablesViewComponent } from './components/payables-view/payables-view.
 import { CreditorService } from '../../core/debt/creditor.service';
 import { Creditor } from '../../core/debt/models/debt.models';
 import { StoreDayPipe } from '../../shared/utils/store-day.pipe';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 // 'ANULADO' filters by purchase status (COM-09); the rest by payment status of the registered ones
 export type PaymentStatusFilter = 'ALL' | PurchasePaymentStatus | 'ANULADO';
@@ -32,7 +33,7 @@ export const PAGE_SIZE = 100;
 @Component({
   selector: 'app-purchases',
   standalone: true,
-  imports: [StoreDayPipe, CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent, PayablesViewComponent],
+  imports: [IconComponent, StoreDayPipe, CommonModule, FormsModule, PurchaseFormModalComponent, PurchaseDetailModalComponent, PayablesViewComponent],
   templateUrl: './purchases.component.html',
   styleUrls: ['./purchases.component.css']
 })

@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Proveedores</span>
       </nav>
-      <h1 class="page-title">Gestión de Proveedores</h1>
+      <h1 class="page-title">Proveedores</h1>
       <p class="page-subtitle">Administración del catálogo de proveedores y trazabilidad de compras</p>
     </div>
     <div class="header-actions">
@@ -16,7 +16,7 @@
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>Nuevo Proveedor</span>
+        <span>Nuevo proveedor</span>
       </button>
     </div>
   </header>
@@ -90,7 +90,7 @@
           aria-label="Buscar proveedores"
         />
         @if (searchTerm()) {
-          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda">✕</button>
+          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda"><app-icon name="close" /></button>
         }
       </div>
       <div class="total-counter">
@@ -126,7 +126,7 @@
             <tr>
               <td colspan="5">
                 <div class="table-empty">
-                  <div class="table-empty-icon">📦</div>
+                  <div class="table-empty-icon"><app-icon name="package" /></div>
                   <h4 class="table-empty-title">No se encontraron proveedores</h4>
                   <p class="table-empty-desc">
                     @if (searchTerm()) {
@@ -134,7 +134,7 @@
                     } @else if (selectedStatusFilter() === 'ELIMINADO') {
                       No hay proveedores eliminados en el historial.
                     } @else {
-                      Aún no hay proveedores registrados con el estado seleccionado. Pulsa en "+ Nuevo Proveedor" para comenzar.
+                      Aún no hay proveedores registrados con el estado seleccionado. Pulsa en "+ Nuevo proveedor" para comenzar.
                     }
                   </p>
                 </div>
@@ -173,7 +173,7 @@
                       type="button"
                       class="btn-icon btn-audit"
                       (click)="openAuditModal(supplier)"
-                      title="Consultar Auditoría"
+                      title="Consultar auditoría"
                       aria-label="Consultar auditoría">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10" />
@@ -187,7 +187,7 @@
                         type="button"
                         class="btn-icon btn-edit"
                         (click)="openEditModal(supplier)"
-                        title="Editar Proveedor"
+                        title="Editar proveedor"
                         aria-label="Editar proveedor">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -200,7 +200,7 @@
                         type="button"
                         class="btn-icon btn-delete"
                         (click)="openDeleteModal(supplier)"
-                        title="Eliminar Proveedor"
+                        title="Eliminar proveedor"
                         aria-label="Eliminar proveedor">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6" />
@@ -223,7 +223,7 @@
   <!-- Shared create / edit form modal (does NOT close on outside click) -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Proveedor' : 'Nuevo Proveedor'"
+    [title]="isEditing() ? 'Editar proveedor' : 'Nuevo proveedor'"
     [subtitle]="isEditing() ? 'Actualiza los datos del proveedor seleccionado' : 'Ingresa los datos para registrar el proveedor en el catálogo'"
     size="md"
     [closeOnBackdrop]="false"
@@ -253,7 +253,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label" for="supplier-name">
-            <span>Nombre o Razón Social <span class="required-mark">*</span></span>
+            <span>Nombre o razón social <span class="required-mark">*</span></span>
             @if (isFieldModified('name')) {
               <span class="field-modified-badge">Modificado</span>
             }
@@ -360,7 +360,7 @@
           @if (isSubmitting()) {
             <span class="spinner"></span>
           }
-          <span>{{ isEditing() ? 'Guardar Cambios' : 'Crear Proveedor' }}</span>
+          <span>{{ isEditing() ? 'Guardar cambios' : 'Crear Proveedor' }}</span>
         </button>
       </div>
     </form>
@@ -383,7 +383,7 @@
     [isOpen]="isConfirmModalOpen()"
     [title]="'¿Eliminar Proveedor?'"
     [message]="'¿Está seguro de que desea eliminar al proveedor \'' + (supplierToDelete()?.name || '') + '\'? El registro pasará a estado ELIMINADO de forma lógica y no podrá ser editado ni eliminado nuevamente.'"
-    [confirmText]="'Eliminar Proveedor'"
+    [confirmText]="'Eliminar proveedor'"
     [cancelText]="'Cancelar'"
     [variant]="'danger'"
     [isLoading]="isDeleting()"

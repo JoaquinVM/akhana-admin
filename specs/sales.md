@@ -25,6 +25,15 @@ El sistema SHALL proveer un buscador interactivo en el POS que permita filtrar y
 #### Scenario: Estructura de la pantalla de venta y del POS
 - **THEN** `register-sale` usa `app-sale-catalog` (buscador y productos rápidos) y `app-cart-line` (cada fila del carrito, con `CartItem` y sus funciones en `register-sale/cart-item.ts`); el POS usa `app-pos-kpis` (las cinco cifras) y `app-cash-expenses` (gastos de la caja y su anulación, como `app-cash-transfers`). Todos los componentes del POS usan `input()`/`output()`; el modal de cobro reinicia sus montos con un `effect` solo al abrirse. El POS ya no reemplaza la pantalla por «Cargando…» cada vez que refresca la caja abierta: eso destruía y recreaba el formulario de retiro, cuyo aviso de efectivo volvía a pedir la caja, en un bucle de pedidos a `/cash-sessions/current` al abrir la pestaña Ingresos / Retiros. En celular, la fila del carrito pasa a dos renglones y la pantalla de venta no tiene scroll horizontal. Pruebas en `pos.component.spec.ts`, `cash-expenses.component.spec.ts`, `pos-kpis.component.spec.ts` y `cart-line.component.spec.ts`.
 
+#### Scenario: Interfaz común de todas las pantallas (mejoras de UX, 29-10-2026)
+- **THEN** guardar o anular algo en Productos, Proveedores, Categorías, Etiquetas, Compras, Deudas, Consumos, Finanzas y Usuarios muestra un aviso abajo a la derecha por 4 segundos («Pedido PED-000029 registrado.», «Producto X actualizado.»; `app-toast` y `ToastService`), igual que el POS ya lo hacía con su banner; los errores siguen junto al formulario.
+- **THEN** el proveedor se elige con un buscador (`app-search-select`: escribir filtra sin importar tildes, flechas y Enter eligen, Escape cierra, se maneja con teclado) en Productos y en el formulario de pedido; hay unos 100 proveedores.
+- **THEN** Productos dibuja de a 100 filas con «Mostrar 100 más», como Pedidos; una búsqueda o un filtro vuelve a la primera página.
+- **THEN** en celulares y tabletas (una columna) la pantalla de venta deja el botón «Cobrar (Bs …)» fijo abajo, para cobrar sin bajar hasta el final.
+- **THEN** los títulos coinciden con el menú («Proveedores», «Usuarios», «Cuentas», «Transacciones», «Punto de venta», «Registrar venta») y los botones y etiquetas llevan mayúscula solo al inicio («Nuevo producto», «Registrar gasto»); los nombres propios (Caja como cuenta, Bisa, QR, POS) se mantienen.
+- **THEN** los íconos son SVG del mismo estilo en todas las pantallas (`app-icon`); ya no hay emojis, que se ven distinto en cada teléfono.
+- Pruebas en `toast.component.spec.ts`, `search-select.component.spec.ts`, `icon.component.spec.ts`, `products.component.spec.ts` y `purchase-form-modal.component.spec.ts`.
+
 ### Requirement: Productos rápidos organizados en grupos configurables
 El sistema SHALL disponer de una sección de accesos directos ("Productos Rápidos") en el POS organizada por grupos, permitiendo agregar productos al carrito en un solo clic e incrementando la cantidad si ya existen en la venta.
 

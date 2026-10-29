@@ -1,10 +1,11 @@
 import { Component, HostListener, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [IconComponent, CommonModule],
   templateUrl: './modal.component.html',
   styleUrls: ['./modal.component.css']
 })

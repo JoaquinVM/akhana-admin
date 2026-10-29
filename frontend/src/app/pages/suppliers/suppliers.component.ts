@@ -7,13 +7,15 @@ import { SupplierService } from '../../core/supplier/supplier.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type SupplierStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -24,6 +26,7 @@ export type SupplierStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | '
   styleUrls: ['./suppliers.component.css']
 })
 export class SuppliersComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly supplierService = inject(SupplierService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -277,6 +280,7 @@ export class SuppliersComponent implements OnInit {
     if (this.isEditing() && this.selectedSupplierId()) {
       this.supplierService.updateSupplier(this.selectedSupplierId()!, request).subscribe({
         next: (updated) => {
+          this.toast.success(`Proveedor ${updated.name} actualizado.`);
           this.suppliers.update(prev => prev.map(s => s.id === updated.id ? updated : s));
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -292,6 +296,7 @@ export class SuppliersComponent implements OnInit {
     } else {
       this.supplierService.createSupplier(request).subscribe({
         next: (created) => {
+          this.toast.success(`Proveedor ${created.name} creado.`);
           this.suppliers.update(prev => [...prev, created]);
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -329,6 +334,7 @@ export class SuppliersComponent implements OnInit {
     this.isDeleting.set(true);
     this.supplierService.deleteSupplier(supplier.id).subscribe({
       next: () => {
+        this.toast.success('Proveedor eliminado.');
         // En backend cambia a ELIMINADO.
         if (this.selectedStatusFilter() === 'ACTIVE_INACTIVE' || this.selectedStatusFilter() === 'ACTIVO' || this.selectedStatusFilter() === 'INACTIVO') {
           this.suppliers.update(prev => prev.filter(s => s.id !== supplier.id));

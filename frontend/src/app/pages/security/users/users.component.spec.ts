@@ -112,7 +112,7 @@ describe('UsersComponent', () => {
       expect(component.isCreateModalOpen()).toBe(true);
 
       component.createForm.patchValue({
-        fullName: 'Nuevo Usuario',
+        fullName: 'Nuevo usuario',
         username: 'nuevo_user',
         password: 'password123',
         confirmPassword: 'password_distinto'
@@ -139,7 +139,7 @@ describe('UsersComponent', () => {
 
       component.createForm.patchValue({
         role: 'ADMINISTRATOR',
-        fullName: 'Nuevo Usuario',
+        fullName: 'Nuevo usuario',
         username: 'nuevo_user',
         password: 'password123',
         confirmPassword: 'password123'
@@ -147,7 +147,7 @@ describe('UsersComponent', () => {
 
       component.submitCreate();
       expect(mockUserService.createUser).toHaveBeenCalledWith({
-        fullName: 'Nuevo Usuario',
+        fullName: 'Nuevo usuario',
         username: 'nuevo_user',
         password: 'password123',
         role: 'ADMINISTRATOR'

@@ -7,10 +7,10 @@
         <span class="breadcrumb-separator">/</span>
         <a class="breadcrumb-link" (click)="cancelAndReturn()">POS</a>
         <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumb-item active">Registrar Venta</span>
+        <span class="breadcrumb-item active">Registrar venta</span>
       </nav>
       <div class="title-with-actions">
-        <h1 class="page-title">Registrar y Cobrar Venta</h1>
+        <h1 class="page-title">Registrar venta</h1>
         @if (cashService.currentSession()) {
           <span class="session-badge">Caja #{{ cashService.currentSession()?.sessionNumber }}</span>
         }
@@ -71,7 +71,7 @@
               <circle cx="20" cy="21" r="1" />
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
-            <h3 class="cart-title">Detalle de la Venta</h3>
+            <h3 class="cart-title">Detalle de la venta</h3>
             <span class="cart-badge">{{ cartCount() }} ítems</span>
           </div>
 
@@ -131,13 +131,13 @@
         <!-- Money summary -->
         <div class="cart-summary-section">
           <div class="summary-line">
-            <span class="sum-label">Subtotal Bruto:</span>
+            <span class="sum-label">Subtotal bruto:</span>
             <span class="sum-value">Bs {{ subtotalGross() | number:'1.2-2' }}</span>
           </div>
 
           @if (discountItemsTotal() > 0) {
             <div class="summary-line text-discount">
-              <span class="sum-label">Descuentos por Ítem:</span>
+              <span class="sum-label">Descuentos por ítem:</span>
               <span class="sum-value">- Bs {{ discountItemsTotal() | number:'1.2-2' }}</span>
             </div>
           }
@@ -149,7 +149,7 @@
 
           @if (!atCost() && !onlyFreeLines()) {
             <div class="summary-line discount-global-row">
-              <label class="sum-label" for="globalDiscount">Descuento General:</label>
+              <label class="sum-label" for="globalDiscount">Descuento general:</label>
               <div class="global-discount-input-wrap">
                 <span class="currency-prefix">Bs</span>
                 <input
@@ -167,13 +167,13 @@
 
           @if (discountTotal() > 0) {
             <div class="summary-line text-discount font-bold">
-              <span class="sum-label">Total Descuentos Acumulados:</span>
+              <span class="sum-label">Total de descuentos:</span>
               <span class="sum-value">- Bs {{ discountTotal() | number:'1.2-2' }}</span>
             </div>
           }
 
           <div class="total-charge-line">
-            <div class="total-title">{{ atCost() ? 'Total al costo' : 'Total a Cobrar' }}</div>
+            <div class="total-title">{{ atCost() ? 'Total al costo' : 'Total a cobrar' }}</div>
             <div class="total-amount-display">Bs {{ totalAmount() | number:'1.2-2' }}</div>
           </div>
         </div>

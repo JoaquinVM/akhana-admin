@@ -333,9 +333,9 @@ describe('PosComponent', () => {
     expect(expensesTable.nativeElement.textContent).toContain('- Bs 45.00');
     expect(expensesTable.nativeElement.textContent).not.toContain('Cuenta');
 
-    // Debe mostrar botón Registrar Gasto en cabecera
+    // Debe mostrar botón Registrar gasto en cabecera
     const headerBtn = fixture.debugElement.query(By.css('.transactions-header-action button'));
-    expect(headerBtn.nativeElement.textContent).toContain('Registrar Gasto');
+    expect(headerBtn.nativeElement.textContent).toContain('Registrar gasto');
   });
 
   it('no debe contabilizar gastos anulados como gastos activos en el contador', () => {
@@ -410,14 +410,14 @@ describe('PosComponent', () => {
     const headerButtons = headerActions.queryAll(By.css('button'));
     const expenseBtnInHeader = headerButtons.find(b => b.nativeElement.textContent.includes('Gasto de Caja'));
     expect(expenseBtnInHeader).toBeUndefined();
-    // Solo deben estar Información y Cerrar Caja
+    // Solo deben estar Información y Cerrar caja
     expect(headerButtons.length).toBe(2);
     expect(headerButtons[0].nativeElement.textContent).toContain('Información');
-    expect(headerButtons[1].nativeElement.textContent).toContain('Cerrar Caja');
+    expect(headerButtons[1].nativeElement.textContent).toContain('Cerrar caja');
   });
 
-  it('debe mostrar el indicador Gastos de Caja y el efectivo esperado en gaveta calculado por el servidor', () => {
-    // Configurar sesión: Inicial 200, Ventas Efectivo 850, Ventas QR 300
+  it('debe mostrar el indicador Gastos de caja y el efectivo esperado en gaveta calculado por el servidor', () => {
+    // Configurar sesión: Inicial 200, Ventas en efectivo 850, Ventas QR 300
     mockCashService.currentSession.set({
       ...mockSession,
       openingAmount: 200.0,
@@ -455,11 +455,11 @@ describe('PosComponent', () => {
     const kpiCards = fixture.debugElement.queryAll(By.css('.kpi-card'));
     expect(kpiCards.length).toBe(5);
 
-    const expensesKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Gastos de Caja'));
+    const expensesKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Gastos de caja'));
     expect(expensesKpi).toBeTruthy();
     expect(expensesKpi!.nativeElement.textContent).toContain('Bs 120.00');
 
-    const expectedKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Efectivo Esperado en Gaveta'));
+    const expectedKpi = kpiCards.find(card => card.nativeElement.textContent.includes('Efectivo esperado en gaveta'));
     expect(expectedKpi).toBeTruthy();
     expect(expectedKpi!.nativeElement.textContent).toContain('Bs 930.00');
 

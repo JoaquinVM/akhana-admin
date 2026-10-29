@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Transacciones</span>
       </nav>
-      <h1 class="page-title">Transacciones Financieras</h1>
+      <h1 class="page-title">Transacciones</h1>
       <p class="page-subtitle">Registro, auditoría y control de todos los movimientos económicos del negocio</p>
     </div>
 
@@ -17,14 +17,14 @@
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Registrar Ingreso</span>
+        <span>Registrar ingreso</span>
       </button>
 
       <button type="button" class="btn btn-expense" (click)="openExpenseModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Registrar Gasto</span>
+        <span>Registrar gasto</span>
       </button>
 
       <button type="button" class="btn btn-transfer" (click)="openTransferModal()">
@@ -41,7 +41,7 @@
 
   <!-- Account balances bar -->
   <section class="accounts-summary-bar">
-    <span class="bar-title">Saldos Actuales:</span>
+    <span class="bar-title">Saldos actuales:</span>
     <div class="accounts-chips">
       @for (acc of accounts(); track acc.id) {
         <div class="account-chip">
@@ -157,7 +157,7 @@
   <!-- Shared audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
-    title="Auditoría de Transacción"
+    title="Auditoría del movimiento"
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">

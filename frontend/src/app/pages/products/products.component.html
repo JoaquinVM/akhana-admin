@@ -17,7 +17,7 @@
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>Nuevo Producto</span>
+        <span>Nuevo producto</span>
       </button>
     </div>
   </header>
@@ -85,7 +85,7 @@
             class="btn-clear-search"
             (click)="searchTerm.set('')"
             aria-label="Limpiar búsqueda">
-            ✕
+            <app-icon name="close" />
           </button>
         }
       </div>
@@ -150,7 +150,7 @@
             <tr>
               <td colspan="9">
                 <div class="table-empty">
-                  <div class="table-empty-icon">🍃</div>
+                  <div class="table-empty-icon"><app-icon name="inbox" /></div>
                   <h4 class="table-empty-title">No se encontraron productos</h4>
                   <p class="table-empty-desc">
                     @if (searchTerm()) {
@@ -158,14 +158,14 @@
                     } @else if (selectedStatusFilter() === 'ELIMINADO') {
                       No hay productos eliminados en el catálogo.
                     } @else {
-                      Aún no hay productos registrados. Pulsa en "+ Nuevo Producto" para comenzar.
+                      Aún no hay productos registrados. Pulsa en "+ Nuevo producto" para comenzar.
                     }
                   </p>
                 </div>
               </td>
             </tr>
           } @else {
-            @for (product of filteredProducts(); track product.id) {
+            @for (product of visibleProducts(); track product.id) {
               <tr [attr.data-id]="product.id">
                 <td>
                   <span class="product-code">{{ product.code }}</span>
@@ -249,7 +249,7 @@
                       type="button"
                       class="btn-icon btn-audit"
                       (click)="openAuditModal(product)"
-                      title="Consultar Auditoría"
+                      title="Consultar auditoría"
                       aria-label="Consultar auditoría">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10" />
@@ -264,7 +264,7 @@
                         type="button"
                         class="btn-icon btn-edit"
                         (click)="openEditModal(product)"
-                        title="Editar Producto"
+                        title="Editar producto"
                         aria-label="Editar producto">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -277,7 +277,7 @@
                         type="button"
                         class="btn-icon btn-delete"
                         (click)="openDeleteModal(product)"
-                        title="Eliminar Producto"
+                        title="Eliminar producto"
                         aria-label="Eliminar producto">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6" />
@@ -295,12 +295,19 @@
         </tbody>
       </table>
     </div>
+    @if (hiddenCount() > 0) {
+      <div class="show-more-row">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="showMore()">
+          Mostrar {{ hiddenCount() < 100 ? hiddenCount() : 100 }} más ({{ hiddenCount() }} sin mostrar)
+        </button>
+      </div>
+    }
   </div>
 
   <!-- Form modal (create and edit) -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Producto' : 'Nuevo Producto'"
+    [title]="isEditing() ? 'Editar producto' : 'Nuevo producto'"
     [subtitle]="isEditing() ? 'Modifica los datos del producto seleccionado' : 'Ingresa la información comercial y características del nuevo producto'"
     [closeOnBackdrop]="false"
     size="lg"
@@ -344,7 +351,7 @@
         <!-- Name -->
         <div class="form-group flex-2">
           <label class="form-label" for="product-name">
-            <span>Nombre del Producto <span class="required-mark">*</span></span>
+            <span>Nombre del producto <span class="required-mark">*</span></span>
             @if (isFieldModified('name')) {
               <span class="field-modified-badge">Modificado</span>
             }
@@ -423,39 +430,14 @@
               <span class="field-modified-badge">Modificado</span>
             }
           </label>
-          <div
-            id="product-supplier-trigger"
-            class="custom-select-trigger"
-            tabindex="0"
+          <!-- 97 suppliers: a list with a search box -->
+          <app-search-select
+            inputId="product-supplier-trigger"
+            formControlName="supplierId"
+            placeholder="Seleccionar proveedor…"
+            [options]="supplierOptions()"
             [class.is-modified]="isFieldModified('supplierId')"
-            [class.has-error]="productForm.get('supplierId')?.touched && productForm.get('supplierId')?.errors?.['required']"
-            (click)="toggleSupplierDropdown()"
-            (keydown.enter)="toggleSupplierDropdown()"
-            (keydown.space)="toggleSupplierDropdown()">
-            @if (selectedSupplierObject(); as sup) {
-              <span class="custom-select-value">{{ sup.name }} ({{ sup.code }})</span>
-            } @else {
-              <span class="text-placeholder">Seleccionar proveedor...</span>
-            }
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-
-          @if (isSupplierDropdownOpen()) {
-            <div class="custom-dropdown-menu">
-              @for (sup of suppliers(); track sup.id) {
-                <div class="dropdown-item" (click)="selectSupplier(sup)">
-                  <span class="custom-select-value">{{ sup.name }} ({{ sup.code }})</span>
-                </div>
-              }
-              @if (suppliers().length === 0) {
-                <div class="dropdown-item text-placeholder" style="cursor: default">
-                  No hay proveedores disponibles
-                </div>
-              }
-            </div>
-          }
+            [invalid]="!!(productForm.get('supplierId')?.touched && productForm.get('supplierId')?.errors?.['required'])" />
           @if (productForm.get('supplierId')?.touched && productForm.get('supplierId')?.errors?.['required']) {
             <span class="field-error">El proveedor es obligatorio.</span>
           }
@@ -506,7 +488,7 @@
       <!-- Tag multiselect -->
       <div class="form-group">
         <label class="form-label">
-          <span>Etiquetas (Opcional)</span>
+          <span>Etiquetas (opcional)</span>
           @if (isFieldModified('tagIds')) {
             <span class="field-modified-badge">Modificado</span>
           }
@@ -682,7 +664,7 @@
         <!-- Buy price -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-buy-price">
-            <span>Precio de Compra <span class="required-mark">*</span></span>
+            <span>Precio de compra <span class="required-mark">*</span></span>
             @if (isFieldModified('buyPrice')) {
               <span class="field-modified-badge">Modificado</span>
             }
@@ -708,7 +690,7 @@
         <!-- Sell price -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-sell-price">
-            <span>Precio de Venta <span class="required-mark">*</span></span>
+            <span>Precio de venta <span class="required-mark">*</span></span>
             @if (isFieldModified('sellPrice')) {
               <span class="field-modified-badge">Modificado</span>
             }
@@ -759,7 +741,7 @@
       <!-- Description -->
       <div class="form-group">
         <label class="form-label" for="product-description">
-          <span>Descripción (Opcional)</span>
+          <span>Descripción (opcional)</span>
           @if (isFieldModified('description')) {
             <span class="field-modified-badge">Modificado</span>
           }
@@ -786,7 +768,7 @@
             <span class="spinner-small"></span>
             <span>Guardando...</span>
           } @else {
-            <span>{{ isEditing() ? 'Guardar Cambios' : 'Guardar Producto' }}</span>
+            <span>{{ isEditing() ? 'Guardar cambios' : 'Guardar producto' }}</span>
           }
         </button>
       </div>
@@ -814,9 +796,9 @@
   <!-- Logical delete confirmation modal -->
   <app-confirm-modal
     [isOpen]="isConfirmDeleteOpen()"
-    title="Eliminar Producto"
+    title="Eliminar producto"
     [message]="'¿Estás seguro de eliminar el producto ' + (productToDelete()?.name || '') + ' (' + (productToDelete()?.code || '') + ')? Se realizará una eliminación lógica y sus datos de auditoría se conservarán.'"
-    confirmText="Eliminar Producto"
+    confirmText="Eliminar producto"
     cancelText="Cancelar"
     variant="danger"
     [isLoading]="isDeleting()"
@@ -827,7 +809,7 @@
   <!-- Audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
-    title="Auditoría del Producto"
+    title="Auditoría del producto"
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">

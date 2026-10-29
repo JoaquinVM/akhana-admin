@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, DestroyRef, HostListener } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -24,6 +24,9 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
@@ -42,10 +45,12 @@ function suggestedDrafts(): PresentationDraft[] {
   return SUGGESTED_PRESENTATIONS.map((p) => ({ id: null, name: p.name, weightKg: p.weightKg, fixedPrice: null, active: true }));
 }
 
+export const PRODUCTS_PAGE_SIZE = 100;
+
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [
+  imports: [IconComponent, SearchSelectComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -57,6 +62,7 @@ function suggestedDrafts(): PresentationDraft[] {
   styleUrls: ['./products.component.css']
 })
 export class ProductsComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly productService = inject(ProductService);
   private readonly categoryService = inject(CategoryService);
   private readonly supplierService = inject(SupplierService);
@@ -98,7 +104,6 @@ export class ProductsComponent implements OnInit {
 
   // Custom select dropdowns in the form
   isCategoryDropdownOpen = signal<boolean>(false);
-  isSupplierDropdownOpen = signal<boolean>(false);
   isStatusDropdownOpen = signal<boolean>(false);
   isTagDropdownOpen = signal<boolean>(false);
 
@@ -154,6 +159,19 @@ export class ProductsComponent implements OnInit {
   });
 
   // Products filtered and sorted by name A-Z
+  // Rows drawn at a time (the catalog has ~850 products); a new search or filter starts again from the first page
+  visibleCount = signal<number>(PRODUCTS_PAGE_SIZE);
+  visibleProducts = computed(() => this.filteredProducts().slice(0, this.visibleCount()));
+  hiddenCount = computed(() => Math.max(0, this.filteredProducts().length - this.visibleCount()));
+  private readonly resetVisible = effect(() => {
+    this.filteredProducts();
+    untracked(() => this.visibleCount.set(PRODUCTS_PAGE_SIZE));
+  });
+
+  showMore(): void {
+    this.visibleCount.update((count) => count + PRODUCTS_PAGE_SIZE);
+  }
+
   filteredProducts = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const statusFilter = this.selectedStatusFilter();
@@ -208,6 +226,9 @@ export class ProductsComponent implements OnInit {
   });
 
   // Supplier selected in the form
+  supplierOptions = computed<SearchSelectOption[]>(() =>
+    this.suppliers().map((s) => ({ value: s.id, label: s.name, hint: s.code })));
+
   selectedSupplierObject = computed<Supplier | null>(() => {
     this.formVersion();
     const supId = this.productForm.get('supplierId')?.value;
@@ -406,7 +427,6 @@ export class ProductsComponent implements OnInit {
 
   closeAllDropdowns(): void {
     this.isCategoryDropdownOpen.set(false);
-    this.isSupplierDropdownOpen.set(false);
     this.isStatusDropdownOpen.set(false);
     this.isTagDropdownOpen.set(false);
   }
@@ -421,19 +441,6 @@ export class ProductsComponent implements OnInit {
     this.productForm.patchValue({ categoryId: category.id });
     this.productForm.get('categoryId')?.markAsTouched();
     this.isCategoryDropdownOpen.set(false);
-    this.formVersion.update(v => v + 1);
-  }
-
-  toggleSupplierDropdown(): void {
-    const open = !this.isSupplierDropdownOpen();
-    this.closeAllDropdowns();
-    this.isSupplierDropdownOpen.set(open);
-  }
-
-  selectSupplier(supplier: Supplier): void {
-    this.productForm.patchValue({ supplierId: supplier.id });
-    this.productForm.get('supplierId')?.markAsTouched();
-    this.isSupplierDropdownOpen.set(false);
     this.formVersion.update(v => v + 1);
   }
 
@@ -624,6 +631,7 @@ export class ProductsComponent implements OnInit {
     if (this.isEditing() && this.selectedProductId()) {
       this.productService.updateProduct(this.selectedProductId()!, request).subscribe({
         next: (updated) => {
+          this.toast.success(`Producto ${updated.name} actualizado.`);
           this.products.update(prev => prev.map(p => p.id === updated.id ? updated : p));
           this.saveWarnings.set(updated.warnings ?? []);
           this.isSubmitting.set(false);
@@ -638,6 +646,7 @@ export class ProductsComponent implements OnInit {
     } else {
       this.productService.createProduct(request).subscribe({
         next: (created) => {
+          this.toast.success(`Producto ${created.name} creado.`);
           this.products.update(prev => [...prev, created]);
           this.saveWarnings.set(created.warnings ?? []);
           this.isSubmitting.set(false);
@@ -719,6 +728,7 @@ export class ProductsComponent implements OnInit {
     this.isDeleting.set(true);
     this.productService.deleteProduct(product.id).subscribe({
       next: () => {
+        this.toast.success('Producto eliminado.');
         if (this.selectedStatusFilter() === 'ELIMINADO') {
           this.products.update(prev => prev.map(p => p.id === product.id ? { ...p, status: 'ELIMINADO' as const } : p));
         } else {

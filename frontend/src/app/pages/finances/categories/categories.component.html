@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Categorías</span>
       </nav>
-      <h1 class="page-title">Categorías Financieras</h1>
+      <h1 class="page-title">Categorías financieras</h1>
       <p class="page-subtitle">Clasifica y organiza los ingresos y gastos operativos del negocio</p>
     </div>
 
@@ -17,7 +17,7 @@
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Nueva Categoría</span>
+        <span>Nueva categoría</span>
       </button>
     </div>
   </header>
@@ -111,7 +111,7 @@
                 <td>
                   @if (category.isSalesDefault) {
                     <span class="badge-sales-default" title="Categoría predeterminada para registrar ingresos por ventas del POS">
-                      ★ Ventas (Predeterminada)
+                      <app-icon name="star" /> Ventas (predeterminada)
                     </span>
                   } @else {
                     <span class="text-muted">-</span>
@@ -170,7 +170,7 @@
   <!-- Create/edit category modal -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Categoría Financiera' : 'Nueva Categoría Financiera'"
+    [title]="isEditing() ? 'Editar Categoría Financiera' : 'Nueva categoría Financiera'"
     [subtitle]="isEditing() ? 'Modifica los datos de la categoría seleccionada' : 'Registra una categoría para ingresos o gastos'"
     [size]="'md'"
     (close)="closeFormModal()">
@@ -183,7 +183,7 @@
       }
 
       <div class="form-group">
-        <label for="cat-name" class="form-label required">Nombre de la Categoría</label>
+        <label for="cat-name" class="form-label required">Nombre de la categoría</label>
         <input
           id="cat-name"
           type="text"
@@ -206,7 +206,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label required">Tipo de Flujo</label>
+        <label class="form-label required">Tipo de movimiento</label>
         <div class="type-radio-group">
           <label class="radio-card" [class.selected]="categoryForm.get('type')?.value === 'INGRESO'">
             <input type="radio" formControlName="type" value="INGRESO" />
@@ -257,7 +257,7 @@
   <!-- Audit modal -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
-    title="Auditoría de Categoría"
+    title="Auditoría de la categoría"
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">

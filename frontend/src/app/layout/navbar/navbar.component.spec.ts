@@ -192,7 +192,7 @@ describe('NavbarComponent', () => {
     expect(roleBadgeEl.nativeElement.textContent.trim()).toBe('Administrador');
   });
 
-  it('debe invocar authService.logout() al hacer clic en Cerrar Sesión', () => {
+  it('debe invocar authService.logout() al hacer clic en Cerrar sesión', () => {
     const logoutBtn = fixture.debugElement.query(By.css('.logout-btn'));
     logoutBtn.nativeElement.click();
 

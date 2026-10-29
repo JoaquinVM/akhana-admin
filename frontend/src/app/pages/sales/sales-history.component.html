@@ -74,7 +74,7 @@
       <div class="table-loading">Cargando ventas…</div>
     } @else if (sales().length === 0) {
       <div class="table-empty">
-        <div class="table-empty-icon">🧾</div>
+        <div class="table-empty-icon"><app-icon name="receipt" /></div>
         <h4 class="table-empty-title">No hay ventas</h4>
         <p class="table-empty-desc">
           {{ hasFilters() ? 'Ninguna venta coincide con los filtros elegidos.' : 'Las ventas registradas en el POS aparecerán aquí.' }}

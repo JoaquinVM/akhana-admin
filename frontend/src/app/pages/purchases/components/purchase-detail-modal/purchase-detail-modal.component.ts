@@ -22,6 +22,7 @@ import {
 import { Creditor } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
 import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-purchase-detail-modal',
@@ -31,6 +32,7 @@ import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
   styleUrls: ['./purchase-detail-modal.component.css']
 })
 export class PurchaseDetailModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly purchaseService = inject(PurchaseService);
 
   purchaseId = input<string | null>(null);
@@ -184,6 +186,7 @@ export class PurchaseDetailModalComponent {
       notes: this.paysFromAccount() && notes.length > 0 ? notes : null
     }).subscribe({
       next: updated => {
+        this.toast.success('Pago registrado.');
         this.purchase.set(updated);
         this.resetPaymentForm(updated);
         this.isPaying.set(false);
@@ -221,6 +224,7 @@ export class PurchaseDetailModalComponent {
       deliveryDate: this.deliveryDate() || null
     }).subscribe({
       next: updated => {
+        this.toast.success('Entrega actualizada.');
         this.purchase.set(updated);
         this.isEditingDelivery.set(false);
         this.isSavingDelivery.set(false);
@@ -257,6 +261,7 @@ export class PurchaseDetailModalComponent {
       : this.purchaseService.voidPayment(purchase.id, target.id, { voidReason });
     request.subscribe({
       next: updated => {
+        this.toast.success(target === 'PURCHASE' ? `Pedido ${updated.purchaseNumber} anulado.` : 'Pago anulado.');
         this.purchase.set(updated);
         this.resetPaymentForm(updated);
         this.isVoiding.set(false);

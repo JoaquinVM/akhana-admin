@@ -7,6 +7,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 // DEU-03 and DEU-04: the person's history with the balance after each entry, repayment and its void
 @Component({
@@ -17,6 +18,7 @@ import { formatBs } from '../../../../shared/utils/money';
   styleUrls: ['./creditor-detail-modal.component.css']
 })
 export class CreditorDetailModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
 
   creditorId = input<string | null>(null);
@@ -137,6 +139,7 @@ export class CreditorDetailModalComponent {
       concept: this.repaymentConcept()
     }).subscribe({
       next: updated => {
+        this.toast.success('Devolución registrada.');
         this.setHistory(updated);
         this.isRepaying.set(false);
         this.changed.emit();
@@ -169,6 +172,7 @@ export class CreditorDetailModalComponent {
     this.voidError.set(null);
     this.creditorService.voidRepayment(history.creditor.id, target.id, { voidReason }).subscribe({
       next: updated => {
+        this.toast.success('Devolución anulada.');
         this.setHistory(updated);
         this.isVoiding.set(false);
         this.voidTarget.set(null);

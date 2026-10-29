@@ -9,6 +9,8 @@ import { round2, todayIso } from '../../../purchases/components/purchase-form-mo
 import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
 import { PresentationPickerComponent } from '../../../../shared/components/presentation-picker/presentation-picker.component';
 import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 export interface ConsumptionLineDraft {
   product: Product;
@@ -23,11 +25,12 @@ const MAX_MATCHES = 8;
 @Component({
   selector: 'app-consumption-form-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, PresentationPickerComponent],
+  imports: [IconComponent, CommonModule, FormsModule, ModalComponent, PresentationPickerComponent],
   templateUrl: './consumption-form-modal.component.html',
   styleUrls: ['./consumption-form-modal.component.css']
 })
 export class ConsumptionFormModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly consumptionService = inject(ConsumptionService);
 
   isOpen = input<boolean>(false);
@@ -186,6 +189,7 @@ export class ConsumptionFormModalComponent {
     this.formError.set(null);
     this.consumptionService.registerConsumption(this.buildRequest()).subscribe({
       next: consumption => {
+        this.toast.success(`Consumo ${consumption.consumptionNumber} registrado.`);
         this.isSubmitting.set(false);
         this.saved.emit(consumption);
       },

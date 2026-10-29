@@ -56,7 +56,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="quick-svg">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
         </svg>
-        <h3 class="quick-title">Productos Rápidos</h3>
+        <h3 class="quick-title">Productos rápidos</h3>
       </div>
 
       <button
@@ -67,7 +67,7 @@
           <circle cx="12" cy="12" r="3" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
-        <span>Configurar Grupos</span>
+        <span>Configurar grupos</span>
       </button>
     </div>
 
@@ -105,7 +105,7 @@
             </div>
           } @empty {
             <div class="quick-empty-hint">
-              <p>No hay productos en el grupo "{{ currentGrp.name }}". Usa "Configurar Grupos" para añadirlos.</p>
+              <p>No hay productos en el grupo "{{ currentGrp.name }}". Usa "Configurar grupos" para añadirlos.</p>
             </div>
           }
         </div>
@@ -114,7 +114,7 @@
       <div class="quick-empty-groups">
         <p>No existen grupos de productos rápidos configurados aún.</p>
         <button type="button" class="btn btn-outline btn-sm" (click)="configure.emit()">
-          Crear Primer Grupo
+          Crear el primer grupo
         </button>
       </div>
     }

@@ -7,6 +7,7 @@ import {
   CategoryAmount, TransactionsByCategoryMonth, TransactionsByCategoryReport, TransferAmount
 } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 interface ReportLine {
   key: string;
@@ -22,7 +23,7 @@ const transferKey = (t: TransferAmount) => `${t.sourceAccountId}>${t.destination
 @Component({
   selector: 'app-transactions-by-category-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
+  imports: [IconComponent, CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './transactions-by-category-report.component.html',
   styleUrls: ['../sales-by-day/sales-by-day-report.component.css', './transactions-by-category-report.component.css']
 })

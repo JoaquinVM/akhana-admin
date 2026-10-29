@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Etiquetas</span>
       </nav>
-      <h1 class="page-title">Gestión de Etiquetas</h1>
+      <h1 class="page-title">Etiquetas</h1>
       <p class="page-subtitle">Administración del catálogo de etiquetas y descriptores cromáticos de productos</p>
     </div>
     <div class="header-actions">
@@ -16,7 +16,7 @@
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>Nueva Etiqueta</span>
+        <span>Nueva etiqueta</span>
       </button>
     </div>
   </header>
@@ -72,7 +72,7 @@
           aria-label="Buscar etiquetas"
         />
         @if (searchTerm()) {
-          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda">✕</button>
+          <button type="button" class="btn-clear-search" (click)="searchTerm.set('')" aria-label="Limpiar búsqueda"><app-icon name="close" /></button>
         }
       </div>
       <div class="total-counter">
@@ -107,7 +107,7 @@
             <tr>
               <td colspan="4">
                 <div class="table-empty">
-                  <div class="table-empty-icon">🏷️</div>
+                  <div class="table-empty-icon"><app-icon name="tag" /></div>
                   <h4 class="table-empty-title">No se encontraron etiquetas</h4>
                   <p class="table-empty-desc">
                     @if (searchTerm()) {
@@ -115,7 +115,7 @@
                     } @else if (selectedStatusFilter() === 'ELIMINADO') {
                       No hay etiquetas eliminadas en el historial.
                     } @else {
-                      Aún no hay etiquetas registradas. Pulsa en "+ Nueva Etiqueta" para comenzar.
+                      Aún no hay etiquetas registradas. Pulsa en "+ Nueva etiqueta" para comenzar.
                     }
                   </p>
                 </div>
@@ -151,7 +151,7 @@
                     <button
                       type="button"
                       class="btn-icon btn-audit"
-                      title="Consultar Auditoría"
+                      title="Consultar auditoría"
                       (click)="openAuditModal(tag)"
                       aria-label="Consultar auditoría">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -202,7 +202,7 @@
   <!-- closeOnBackdrop=false, as required -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Etiqueta' : 'Nueva Etiqueta'"
+    [title]="isEditing() ? 'Editar Etiqueta' : 'Nueva etiqueta'"
     [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la etiqueta' : 'Complete la información para registrar una nueva etiqueta en el catálogo'"
     size="md"
     [closeOnBackdrop]="false"
@@ -276,7 +276,7 @@
           @if (isSubmitting()) {
             Guardando...
           } @else if (isEditing()) {
-            Guardar Cambios
+            Guardar cambios
           } @else {
             Crear Etiqueta
           }
@@ -313,7 +313,7 @@
   <!-- Shared audit modal (closeOnBackdrop=true) -->
   <app-audit-modal
     [isOpen]="isAuditModalOpen()"
-    title="Auditoría de Etiqueta"
+    title="Auditoría de la etiqueta"
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">

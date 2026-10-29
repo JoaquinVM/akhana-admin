@@ -1,6 +1,6 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Cobro de Venta"
+  title="Cobro de la venta"
   subtitle="Selecciona el método de pago y confirma la transacción"
   size="md"
   [closeOnBackdrop]="false"
@@ -10,7 +10,7 @@
     <!-- Highlighted total -->
     <div class="checkout-total-banner">
       <div class="total-banner-details">
-        <span class="total-banner-label">Total a Cobrar</span>
+        <span class="total-banner-label">Total a cobrar</span>
         <span class="total-banner-count">{{ cartCount() }} {{ cartCount() === 1 ? 'producto' : 'productos' }} en la venta</span>
       </div>
       <div class="total-banner-price">
@@ -137,7 +137,7 @@
             <rect x="2" y="5" width="13" height="9" rx="1.5" />
             <rect x="11" y="10" width="11" height="9" rx="1.5" />
           </svg>
-          <span>Mixto (Efe + QR)</span>
+          <span>Mixto (efectivo + QR)</span>
         </button>
       </div>
 
@@ -204,7 +204,7 @@
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
             </div>
-            <h4 class="qr-title">Cobro Digital con QR</h4>
+            <h4 class="qr-title">Cobro por QR</h4>
             <p class="qr-desc">
               Solicita al cliente el escaneo del código QR por el importe de <strong>Bs {{ amountDue() | number:'1.2-2' }}</strong>.
             </p>
@@ -321,12 +321,12 @@
         (click)="handleConfirm()">
         @if (isSubmitting()) {
           <span class="spinner-small"></span>
-          <span>Procesando Venta...</span>
+          <span>Registrando venta…</span>
         } @else {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span>Confirmar Venta</span>
+          <span>Confirmar venta</span>
         }
       </button>
     </div>

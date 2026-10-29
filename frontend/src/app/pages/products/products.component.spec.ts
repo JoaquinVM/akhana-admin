@@ -266,7 +266,7 @@ describe('ProductsComponent', () => {
 
     component.productForm.patchValue({
       code: 'PROD-NEW',
-      name: 'Nuevo Producto',
+      name: 'Nuevo producto',
       categoryId: 'cat-1',
       supplierId: 'sup-1',
       buyPrice: 30,
@@ -278,7 +278,7 @@ describe('ProductsComponent', () => {
       ...mockProducts[0],
       id: 'prod-new',
       code: 'PROD-NEW',
-      name: 'Nuevo Producto'
+      name: 'Nuevo producto'
     };
 
     mockProductService.createProduct.mockReturnValue(of(newProd));
@@ -287,7 +287,7 @@ describe('ProductsComponent', () => {
 
     expect(mockProductService.createProduct).toHaveBeenCalledWith(expect.objectContaining({
       code: 'PROD-NEW',
-      name: 'Nuevo Producto',
+      name: 'Nuevo producto',
       categoryId: 'cat-1',
       supplierId: 'sup-1',
       buyPrice: 30,
@@ -447,21 +447,20 @@ describe('ProductsComponent', () => {
     expect(component.selectedSupplierObject()?.name).toBe('Distribuidora Botánica');
     expect(component.selectedStatusValue()).toBe('ACTIVO');
 
-    // Conmutar apertura de dropdown de proveedor
-    component.toggleSupplierDropdown();
-    expect(component.isSupplierDropdownOpen()).toBe(true);
-    expect(component.isCategoryDropdownOpen()).toBe(false);
-    expect(component.isStatusDropdownOpen()).toBe(false);
-
-    // Seleccionar proveedor
-    component.selectSupplier(mockSuppliers[0]);
+    // The supplier is a list with a search box (97 suppliers)
+    fixture.detectChanges();
+    const supplier: HTMLElement = fixture.nativeElement.querySelector('app-search-select');
+    (supplier.querySelector('.search-select-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const search = supplier.querySelector('.search-select-input') as HTMLInputElement;
+    search.value = mockSuppliers[0].name.slice(0, 4);
+    search.dispatchEvent(new Event('input'));
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(component.productForm.get('supplierId')?.value).toBe('sup-1');
-    expect(component.isSupplierDropdownOpen()).toBe(false);
 
     // Conmutar apertura de dropdown de estado
     component.toggleStatusDropdown();
     expect(component.isStatusDropdownOpen()).toBe(true);
-    expect(component.isSupplierDropdownOpen()).toBe(false);
 
     // Seleccionar nuevo estado
     component.selectStatus('INACTIVO');
@@ -495,5 +494,21 @@ describe('ProductsComponent', () => {
 
     component.closeAuditModal();
     expect(component.isAuditModalOpen()).toBe(false);
+  });
+
+  it('dibuja los productos de a 100 y una búsqueda vuelve a empezar desde la primera página', () => {
+    const many = Array.from({ length: 230 }, (_, i) => ({ ...mockProducts[0], id: 'p-' + i, code: 'C' + i, name: 'Producto ' + String(i).padStart(3, '0') }));
+    component.products.set(many);
+    component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+    fixture.detectChanges();
+    expect(component.visibleProducts().length).toBe(100);
+    expect(fixture.nativeElement.querySelector('.show-more-row').textContent).toContain('Mostrar 100 más (130 sin mostrar)');
+
+    component.showMore();
+    expect(component.visibleProducts().length).toBe(200);
+
+    component.searchTerm.set('producto 1');
+    fixture.detectChanges();
+    expect(component.visibleCount()).toBe(100);
   });
 });

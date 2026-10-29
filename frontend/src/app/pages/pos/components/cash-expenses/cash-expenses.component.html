@@ -17,7 +17,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>Registrar Gasto</span>
+        <span>Registrar gasto</span>
       </button>
     </div>
   </div>
@@ -102,7 +102,7 @@
 <!-- Cash expense void modal -->
 <app-modal
   [isOpen]="voidTarget() !== null"
-  title="Anular Gasto de Caja"
+  title="Anular gasto de caja"
   [subtitle]="voidTarget() ? (voidTarget()?.description + ' - Bs ' + (voidTarget()?.amount | number:'1.2-2')) : ''"
   [size]="'md'"
   (close)="closeVoidModal()">
@@ -135,7 +135,7 @@
         @if (isVoiding()) {
           <span>Anulando...</span>
         } @else {
-          <span>Confirmar Anulación</span>
+          <span>Confirmar anulación</span>
         }
       </button>
     </div>

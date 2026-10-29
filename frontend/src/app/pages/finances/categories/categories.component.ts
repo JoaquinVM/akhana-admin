@@ -7,13 +7,15 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
+import { ToastService } from '../../../shared/components/toast/toast.service';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 export type CategoryTypeFilter = 'TODOS' | 'INGRESO' | 'GASTO';
 
 @Component({
   selector: 'app-financial-categories',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ModalComponent,
@@ -25,6 +27,7 @@ export type CategoryTypeFilter = 'TODOS' | 'INGRESO' | 'GASTO';
   styleUrls: ['./categories.component.css']
 })
 export class FinancialCategoriesComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly categoryService = inject(FinancialCategoryService);
   private readonly fb = inject(FormBuilder);
 
@@ -158,6 +161,7 @@ export class FinancialCategoriesComponent implements OnInit {
     if (this.isEditing() && this.selectedCategoryId()) {
       this.categoryService.updateCategory(this.selectedCategoryId()!, req).subscribe({
         next: () => {
+          this.toast.success('Categoría actualizada.');
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.loadCategories();
@@ -170,6 +174,7 @@ export class FinancialCategoriesComponent implements OnInit {
     } else {
       this.categoryService.createCategory(req).subscribe({
         next: () => {
+          this.toast.success('Categoría creada.');
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.loadCategories();
@@ -211,6 +216,7 @@ export class FinancialCategoriesComponent implements OnInit {
     this.isDeleting.set(true);
     this.categoryService.deleteCategory(cat.id).subscribe({
       next: () => {
+        this.toast.success('Categoría eliminada.');
         this.isDeleting.set(false);
         this.closeDeleteModal();
         this.loadCategories();

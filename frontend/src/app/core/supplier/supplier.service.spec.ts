@@ -93,7 +93,7 @@ describe('SupplierService', () => {
 
   it('TEST-SUP-SVC-02: debe enviar POST al crear un proveedor', () => {
     const request: SupplierRequest = {
-      name: 'Nuevo Proveedor',
+      name: 'Nuevo proveedor',
       code: 'PROV-999'
     };
 

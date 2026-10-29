@@ -22,6 +22,7 @@ import { TransactionFormModalComponent } from './components/transaction-form-mod
 import { TransactionEditModalComponent } from './components/transaction-edit-modal/transaction-edit-modal.component';
 import { TransactionVoidModalComponent } from './components/transaction-void-modal/transaction-void-modal.component';
 import { storeDayEndIso, storeDayStartIso, storeMonthStart, storeToday } from '../../../shared/utils/store-date';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-transactions',
@@ -40,6 +41,7 @@ import { storeDayEndIso, storeDayStartIso, storeMonthStart, storeToday } from '.
   styleUrls: ['./transactions.component.css']
 })
 export class TransactionsComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly transactionService = inject(FinancialTransactionService);
   private readonly accountService = inject(FinancialAccountService);
   private readonly categoryService = inject(FinancialCategoryService);
@@ -298,6 +300,7 @@ export class TransactionsComponent implements OnInit {
 
     this.transactionService.createTransaction(req).subscribe({
       next: () => {
+        this.toast.success('Ingreso registrado.');
         this.isSubmitting.set(false);
         this.closeActionModal();
         this.loadTransactions();
@@ -330,6 +333,7 @@ export class TransactionsComponent implements OnInit {
 
     this.transactionService.createTransaction(req).subscribe({
       next: () => {
+        this.toast.success('Gasto registrado.');
         this.isSubmitting.set(false);
         this.closeActionModal();
         this.loadTransactions();
@@ -368,6 +372,7 @@ export class TransactionsComponent implements OnInit {
 
     this.transactionService.createTransaction(req).subscribe({
       next: () => {
+        this.toast.success('Transferencia registrada.');
         this.isSubmitting.set(false);
         this.closeActionModal();
         this.loadTransactions();
@@ -405,6 +410,7 @@ export class TransactionsComponent implements OnInit {
 
     this.transactionService.updateTransaction(tx.id, req).subscribe({
       next: () => {
+        this.toast.success('Movimiento actualizado.');
         this.isSubmitting.set(false);
         this.closeActionModal();
         this.loadTransactions();
@@ -446,6 +452,7 @@ export class TransactionsComponent implements OnInit {
 
     this.transactionService.voidTransaction(tx.id, req).subscribe({
       next: () => {
+        this.toast.success('Movimiento anulado.');
         this.isVoiding.set(false);
         this.closeVoidModal();
         this.loadTransactions();

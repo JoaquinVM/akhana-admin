@@ -8,13 +8,15 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ColorPickerComponent } from '../../shared/components/color-picker/color-picker.component';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type CategoryStatusFilter = 'ACTIVO' | 'ELIMINADO';
 
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -26,6 +28,7 @@ export type CategoryStatusFilter = 'ACTIVO' | 'ELIMINADO';
   styleUrls: ['./categories.component.css']
 })
 export class CategoriesComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly categoryService = inject(CategoryService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -257,6 +260,7 @@ export class CategoriesComponent implements OnInit {
     if (this.isEditing() && this.selectedCategoryId()) {
       this.categoryService.updateCategory(this.selectedCategoryId()!, request).subscribe({
         next: (updated) => {
+          this.toast.success(`Categoría ${updated.name} actualizada.`);
           this.categories.update(prev => prev.map(c => c.id === updated.id ? updated : c));
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -272,6 +276,7 @@ export class CategoriesComponent implements OnInit {
     } else {
       this.categoryService.createCategory(request).subscribe({
         next: (created) => {
+          this.toast.success(`Categoría ${created.name} creada.`);
           this.categories.update(prev => [...prev, created]);
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -309,6 +314,7 @@ export class CategoriesComponent implements OnInit {
     this.isDeleting.set(true);
     this.categoryService.deleteCategory(category.id).subscribe({
       next: () => {
+        this.toast.success('Categoría eliminada.');
         // En backend cambia a ELIMINADO
         if (this.selectedStatusFilter() === 'ACTIVO') {
           this.categories.update(prev => prev.filter(c => c.id !== category.id));

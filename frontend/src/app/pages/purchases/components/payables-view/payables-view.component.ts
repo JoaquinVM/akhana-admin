@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { PAYMENT_STATUS_LABELS, Payables, Purchase, PurchasePaymentStatus } from '../../../../core/purchase/models/purchase.models';
 import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // COM-08: purchases with a balance per supplier; the server computes the balance
 @Component({
   selector: 'app-payables-view',
   standalone: true,
-  imports: [StoreDayPipe, CommonModule],
+  imports: [IconComponent, StoreDayPipe, CommonModule],
   templateUrl: './payables-view.component.html',
   styleUrls: ['./payables-view.component.css']
 })

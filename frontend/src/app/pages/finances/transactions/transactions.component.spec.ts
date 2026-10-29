@@ -333,7 +333,7 @@ describe('TransactionsComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Registrar Ingreso Manual');
+    expect(text).toContain('Registrar ingreso Manual');
     expect(text).toContain('Nota: La cuenta Caja no admite ingresos manuales directos.');
     expect(fixture.nativeElement.querySelector('#inc-acc')).not.toBeNull();
   });

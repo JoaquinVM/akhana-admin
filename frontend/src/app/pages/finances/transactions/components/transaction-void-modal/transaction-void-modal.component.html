@@ -1,6 +1,6 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Anular Transacción Financiera"
+  title="Anular movimiento"
   subtitle="La anulación revertirá automáticamente los saldos de las cuentas afectadas"
   [size]="'md'"
   (close)="close.emit()">
@@ -20,7 +20,7 @@
     </p>
 
     <div class="form-group">
-      <label for="void-reason" class="form-label">Motivo de Anulación <span class="required-mark">*</span></label>
+      <label for="void-reason" class="form-label">Motivo de anulación <span class="required-mark">*</span></label>
       <textarea
         id="void-reason"
         class="form-control"
@@ -33,7 +33,7 @@
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" (click)="close.emit()">Cancelar</button>
       <button type="button" class="btn btn-danger" [disabled]="isVoiding()" (click)="confirmed.emit()">
-        @if (isVoiding()) { <span>Anulando...</span> } @else { <span>Confirmar Anulación</span> }
+        @if (isVoiding()) { <span>Anulando...</span> } @else { <span>Confirmar anulación</span> }
       </button>
     </div>
   </div>

@@ -24,6 +24,9 @@ import {
   paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
 import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { SearchSelectComponent, SearchSelectOption } from '../../../../shared/components/search-select/search-select.component';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -61,11 +64,12 @@ export function todayIso(): string {
 @Component({
   selector: 'app-purchase-form-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [IconComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent],
   templateUrl: './purchase-form-modal.component.html',
   styleUrls: ['./purchase-form-modal.component.css']
 })
 export class PurchaseFormModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly purchaseService = inject(PurchaseService);
   private readonly productService = inject(ProductService);
   private readonly categoryService = inject(CategoryService);
@@ -110,6 +114,9 @@ export class PurchaseFormModalComponent {
   readonly maxDate = todayIso();
 
   activeSuppliers = computed(() => this.suppliers().filter(s => s.status === 'ACTIVO'));
+  // ~100 suppliers: chosen with a search box
+  supplierOptions = computed<SearchSelectOption[]>(() =>
+    this.activeSuppliers().map(s => ({ value: s.id, label: s.name, hint: s.code })));
 
   // Search matches: the purchase supplier's products first
   productMatches = computed(() => {
@@ -384,6 +391,7 @@ export class PurchaseFormModalComponent {
     this.formError.set(null);
     this.purchaseService.registerPurchase(this.buildRequest()).subscribe({
       next: purchase => {
+        this.toast.success(`Pedido ${purchase.purchaseNumber} registrado.`);
         this.isSubmitting.set(false);
         this.saved.emit(purchase);
       },

@@ -7,6 +7,7 @@ import { FinancialTransactionService } from '../../../core/finance/financial-tra
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-accounts',
@@ -22,6 +23,7 @@ import { ColorPickerComponent } from '../../../shared/components/color-picker/co
   styleUrls: ['./accounts.component.css']
 })
 export class AccountsComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly accountService = inject(FinancialAccountService);
   private readonly transactionService = inject(FinancialTransactionService);
   private readonly fb = inject(FormBuilder);
@@ -145,6 +147,7 @@ export class AccountsComponent implements OnInit {
     if (this.isEditing() && this.selectedAccountId()) {
       this.accountService.updateAccount(this.selectedAccountId()!, req).subscribe({
         next: () => {
+          this.toast.success('Cuenta actualizada.');
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.loadAccounts();
@@ -157,6 +160,7 @@ export class AccountsComponent implements OnInit {
     } else {
       this.accountService.createAccount(req).subscribe({
         next: () => {
+          this.toast.success('Cuenta creada.');
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
           this.loadAccounts();
@@ -200,6 +204,7 @@ export class AccountsComponent implements OnInit {
     this.isDeleting.set(true);
     this.accountService.deleteAccount(acc.id).subscribe({
       next: () => {
+        this.toast.success('Cuenta eliminada.');
         this.isDeleting.set(false);
         this.closeDeleteModal();
         this.loadAccounts();
@@ -236,6 +241,7 @@ export class AccountsComponent implements OnInit {
     this.openingBalanceError.set(null);
     this.accountService.setOpeningBalance(acc.id, this.openingBalanceControl.value!).subscribe({
       next: () => {
+        this.toast.success('Saldo al corte guardado.');
         this.isSavingOpeningBalance.set(false);
         this.closeOpeningBalanceModal();
         this.loadAccounts();

@@ -24,11 +24,11 @@ interface TransactionFormTexts {
 
 const TEXTS: Record<TransactionFormMode, TransactionFormTexts> = {
   INGRESO: {
-    title: 'Registrar Ingreso Manual',
+    title: 'Registrar ingreso Manual',
     subtitle: 'Registra un ingreso directo en una cuenta bancaria o billetera (Caja protegida)',
     idPrefix: 'inc',
-    submitLabel: 'Registrar Ingreso',
-    accountLabel: 'Cuenta de Destino',
+    submitLabel: 'Registrar ingreso',
+    accountLabel: 'Cuenta de destino',
     balanceLabel: 'Saldo actual',
     accountRequired: 'La cuenta de destino es obligatoria.',
     accountHint: 'Nota: La cuenta Caja no admite ingresos manuales directos.',
@@ -38,25 +38,25 @@ const TEXTS: Record<TransactionFormMode, TransactionFormTexts> = {
     notesPlaceholder: 'Detalles de referencia...'
   },
   GASTO: {
-    title: 'Registrar Gasto Manual',
+    title: 'Registrar gasto Manual',
     subtitle: 'Registra una salida de dinero de cualquier cuenta incluyendo Caja',
     idPrefix: 'exp',
-    submitLabel: 'Registrar Gasto',
-    accountLabel: 'Cuenta de Origen',
+    submitLabel: 'Registrar gasto',
+    accountLabel: 'Cuenta de origen',
     balanceLabel: 'Saldo',
     accountRequired: 'La cuenta de origen es obligatoria.',
     accountHint: null,
-    categoryLabel: 'Categoría de Gasto',
+    categoryLabel: 'Categoría de gasto',
     categoryRequired: 'La categoría de gasto es obligatoria.',
     descriptionPlaceholder: 'Motivo del gasto o compra',
     notesPlaceholder: 'Detalles de referencia...'
   },
   TRANSFERENCIA: {
-    title: 'Registrar Transferencia',
+    title: 'Registrar transferencia',
     subtitle: 'Traspaso de dinero entre dos cuentas financieras diferentes',
     idPrefix: 'trf',
-    submitLabel: 'Realizar Transferencia',
-    accountLabel: 'Cuenta de Origen',
+    submitLabel: 'Registrar transferencia',
+    accountLabel: 'Cuenta de origen',
     balanceLabel: 'Saldo',
     accountRequired: 'La cuenta de origen es obligatoria.',
     accountHint: null,

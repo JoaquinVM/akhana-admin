@@ -5,6 +5,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
 import { Consumption } from '../../../../core/consumption/models/consumption.models';
 import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 // CON-01: read-only detail with lines and audit; the void does not depend on the cash session
 @Component({
@@ -15,6 +16,7 @@ import { StoreDayPipe } from '../../../../shared/utils/store-day.pipe';
   styleUrls: ['./consumption-detail-modal.component.css']
 })
 export class ConsumptionDetailModalComponent {
+  private readonly toast = inject(ToastService);
   private readonly consumptionService = inject(ConsumptionService);
 
   consumptionId = input<string | null>(null);
@@ -79,6 +81,7 @@ export class ConsumptionDetailModalComponent {
     this.voidError.set(null);
     this.consumptionService.voidConsumption(consumption.id, { voidReason }).subscribe({
       next: updated => {
+        this.toast.success(`Consumo ${updated.consumptionNumber} anulado.`);
         this.consumption.set(updated);
         this.isVoiding.set(false);
         this.isVoidOpen.set(false);

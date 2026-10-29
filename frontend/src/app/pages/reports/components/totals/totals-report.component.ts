@@ -5,12 +5,13 @@ import { ReportExportButtonComponent } from '../export-button/report-export-butt
 import { ReportService } from '../../../../core/report/report.service';
 import { TotalsReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // FIN-10 / CON-03: sales and profit totals per month, with consumptions at cost and profit minus consumptions
 @Component({
   selector: 'app-totals-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
+  imports: [IconComponent, CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './totals-report.component.html',
   styleUrls: ['./totals-report.component.css']
 })

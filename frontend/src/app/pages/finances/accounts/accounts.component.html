@@ -7,7 +7,7 @@
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-item active">Cuentas</span>
       </nav>
-      <h1 class="page-title">Cuentas Financieras</h1>
+      <h1 class="page-title">Cuentas</h1>
       <p class="page-subtitle">Administra las cuentas de efectivo, bancos y billeteras electrónicas del negocio</p>
     </div>
 
@@ -17,7 +17,7 @@
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Nueva Cuenta</span>
+        <span>Nueva cuenta</span>
       </button>
     </div>
   </header>
@@ -25,12 +25,12 @@
   <!-- Summary banner / consolidated balance -->
   <section class="summary-banner">
     <div class="banner-stat">
-      <span class="stat-label">Saldo Total Consolidado</span>
+      <span class="stat-label">Saldo total consolidado</span>
       <span class="stat-value">Bs {{ totalBalance() | number:'1.2-2' }}</span>
     </div>
     <div class="banner-divider"></div>
     <div class="banner-stat">
-      <span class="stat-label">Cuentas Registradas</span>
+      <span class="stat-label">Cuentas registradas</span>
       <span class="stat-count">{{ accounts().length }}</span>
     </div>
   </section>
@@ -69,14 +69,14 @@
 
           <div class="card-body">
             <div class="balance-display">
-              <span class="balance-label">Saldo Actual</span>
+              <span class="balance-label">Saldo actual</span>
               <span class="balance-amount" [class.negative]="account.currentBalance < 0">
                 Bs {{ account.currentBalance | number:'1.2-2' }}
               </span>
             </div>
 
             <div class="balance-meta">
-              <span class="meta-label">Saldo Inicial:</span>
+              <span class="meta-label">Saldo inicial:</span>
               <span class="meta-value">Bs {{ account.initialBalance | number:'1.2-2' }}</span>
             </div>
           </div>
@@ -140,7 +140,7 @@
   <!-- Create/edit account modal -->
   <app-modal
     [isOpen]="isFormModalOpen()"
-    [title]="isEditing() ? 'Editar Cuenta Financiera' : 'Nueva Cuenta Financiera'"
+    [title]="isEditing() ? 'Editar Cuenta Financiera' : 'Nueva cuenta Financiera'"
     [subtitle]="isEditing() ? 'Modifica los datos de la cuenta seleccionada' : 'Registra una nueva cuenta para gestionar sus saldos'"
     [size]="'md'"
     (close)="closeFormModal()">
@@ -153,7 +153,7 @@
       }
 
       <div class="form-group">
-        <label for="acc-name" class="form-label required">Nombre de la Cuenta</label>
+        <label for="acc-name" class="form-label required">Nombre de la cuenta</label>
         <input
           id="acc-name"
           type="text"
@@ -177,7 +177,7 @@
 
       @if (!isEditing()) {
         <div class="form-group">
-          <label for="acc-initial-balance" class="form-label">Saldo Inicial (Bs.)</label>
+          <label for="acc-initial-balance" class="form-label">Saldo inicial (Bs)</label>
           <input
             id="acc-initial-balance"
             type="number"
@@ -327,7 +327,7 @@
     [isOpen]="isDeleteModalOpen()"
     title="¿Eliminar cuenta financiera?"
     [message]="'¿Estás seguro de que deseas eliminar la cuenta &quot;' + (accountToDelete()?.name || '') + '&quot;? Esta acción no se puede deshacer.'"
-    confirmText="Eliminar Cuenta"
+    confirmText="Eliminar cuenta"
     cancelText="Cancelar"
     variant="danger"
     [isLoading]="isDeleting()"

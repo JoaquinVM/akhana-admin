@@ -8,13 +8,15 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ColorPickerComponent } from '../../shared/components/color-picker/color-picker.component';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type TagStatusFilter = 'ACTIVO' | 'ELIMINADO';
 
 @Component({
   selector: 'app-tags',
   standalone: true,
-  imports: [
+  imports: [IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -26,6 +28,7 @@ export type TagStatusFilter = 'ACTIVO' | 'ELIMINADO';
   styleUrls: ['./tags.component.css']
 })
 export class TagsComponent implements OnInit {
+  private readonly toast = inject(ToastService);
   private readonly tagService = inject(TagService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -249,6 +252,7 @@ export class TagsComponent implements OnInit {
     if (this.isEditing() && this.selectedTagId()) {
       this.tagService.updateTag(this.selectedTagId()!, request).subscribe({
         next: (updated) => {
+          this.toast.success(`Etiqueta ${updated.name} actualizada.`);
           this.tags.update(prev => prev.map(t => t.id === updated.id ? updated : t));
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -264,6 +268,7 @@ export class TagsComponent implements OnInit {
     } else {
       this.tagService.createTag(request).subscribe({
         next: (created) => {
+          this.toast.success(`Etiqueta ${created.name} creada.`);
           this.tags.update(prev => [...prev, created]);
           this.isSubmitting.set(false);
           this.isFormModalOpen.set(false);
@@ -301,6 +306,7 @@ export class TagsComponent implements OnInit {
     this.isDeleting.set(true);
     this.tagService.deleteTag(tag.id).subscribe({
       next: () => {
+        this.toast.success('Etiqueta eliminada.');
         // En backend cambia a ELIMINADO
         if (this.selectedStatusFilter() === 'ACTIVO') {
           this.tags.update(prev => prev.filter(t => t.id !== tag.id));

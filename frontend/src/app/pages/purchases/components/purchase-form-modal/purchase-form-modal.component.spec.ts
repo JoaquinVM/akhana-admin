@@ -6,6 +6,7 @@ import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
 import { Product } from '../../../../core/product/models/product.models';
 import { Purchase } from '../../../../core/purchase/models/purchase.models';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 function product(overrides: Partial<Product>): Product {
   return {
@@ -204,5 +205,13 @@ describe('PurchaseFormModalComponent', () => {
     cost.dispatchEvent(enter);
     expect(enter.defaultPrevented).toBe(true);
     expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+  });
+
+  it('al registrar el pedido muestra el aviso de éxito', () => {
+    purchaseService.registerPurchase.mockReturnValue(of({ id: 'pur-9', purchaseNumber: 'PED-000029' } as Purchase));
+    component.supplierId.set('sup-1');
+    component.addProduct(tea);
+    component.submit();
+    expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000029 registrado.');
   });
 });

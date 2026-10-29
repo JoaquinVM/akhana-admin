@@ -1,6 +1,6 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Abrir Sesión de Caja"
+  title="Abrir caja"
   subtitle="Ingresa el fondo inicial en efectivo para iniciar las operaciones del turno compartido"
   size="md"
   [closeOnBackdrop]="false"
@@ -9,7 +9,7 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
     <div class="form-group">
       <label for="openingAmount" class="form-label">
-        <span>Monto Inicial en Efectivo (Bs) <span class="required-mark">*</span></span>
+        <span>Monto inicial en efectivo (Bs) <span class="required-mark">*</span></span>
       </label>
       <div class="input-with-prefix">
         <span class="currency-prefix">Bs</span>
@@ -48,9 +48,9 @@
     <div class="form-group">
       <label for="openingComment" class="form-label">
         @if (amountChanged()) {
-          <span>Comentario de Apertura <span class="required-mark">*</span></span>
+          <span>Comentario de apertura <span class="required-mark">*</span></span>
         } @else {
-          Comentario de Apertura (Opcional)
+          Comentario de apertura (Opcional)
         }
       </label>
       <textarea
@@ -84,7 +84,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span>Confirmar Apertura</span>
+          <span>Abrir caja</span>
         }
       </button>
     </div>

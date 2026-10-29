@@ -775,3 +775,10 @@
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+/* «Mostrar más» under the products table */
+.show-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+}

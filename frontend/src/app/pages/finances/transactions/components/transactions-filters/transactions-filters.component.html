@@ -28,11 +28,11 @@
         [value]="selectedType()"
         (change)="selectedType.set($any($event.target).value); filterChange.emit()">
         <option value="">Todos los tipos</option>
-        <option value="INGRESO_MANUAL">Ingreso Manual</option>
-        <option value="GASTO_MANUAL">Gasto Manual</option>
+        <option value="INGRESO_MANUAL">Ingreso manual</option>
+        <option value="GASTO_MANUAL">Gasto manual</option>
         <option value="TRANSFERENCIA">Transferencia</option>
         <option value="VENTA_INGRESO">Ventas POS</option>
-        <option value="SALDO_INICIAL">Saldo Inicial</option>
+        <option value="SALDO_INICIAL">Saldo inicial</option>
       </select>
     </div>
 

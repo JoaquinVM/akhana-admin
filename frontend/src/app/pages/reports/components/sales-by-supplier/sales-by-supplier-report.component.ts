@@ -5,12 +5,13 @@ import { ReportExportButtonComponent } from '../export-button/report-export-butt
 import { ReportService } from '../../../../core/report/report.service';
 import { SalesBySupplierReport } from '../../../../core/report/models/report.models';
 import { monthLabel } from '../../../../core/report/report-labels';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // FIN-10 / CON-03: sales by the product's current supplier and month; replaces Resumen Ventas
 @Component({
   selector: 'app-sales-by-supplier-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReportExportButtonComponent],
+  imports: [IconComponent, CommonModule, FormsModule, ReportExportButtonComponent],
   templateUrl: './sales-by-supplier-report.component.html',
   styleUrls: ['../sales-by-day/sales-by-day-report.component.css', './sales-by-supplier-report.component.css']
 })

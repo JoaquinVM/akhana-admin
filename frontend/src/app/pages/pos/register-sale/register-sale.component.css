@@ -391,3 +391,23 @@
   border-radius: 999px;
   padding: 1px 8px;
 }
+
+/* Phones and tablets (one column): the checkout button stays fixed at the bottom with the total, so the
+   operator can charge without scrolling past the catalog and the cart */
+@media (max-width: 1024px) {
+  .register-sale-page {
+    padding-bottom: 6rem;
+  }
+
+  .cart-checkout-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -8px 20px -12px rgba(15, 23, 42, 0.25);
+  }
+}

@@ -15,7 +15,7 @@
     @if (mode() === 'TRANSFERENCIA') {
       <div class="form-group">
         <label for="trf-src" class="form-label">
-          <span>Cuenta de Origen <span class="required-mark">*</span></span>
+          <span>Cuenta de origen <span class="required-mark">*</span></span>
         </label>
         <select
           id="trf-src"
@@ -34,7 +34,7 @@
 
       <div class="form-group">
         <label for="trf-dst" class="form-label">
-          <span>Cuenta de Destino <span class="required-mark">*</span></span>
+          <span>Cuenta de destino <span class="required-mark">*</span></span>
         </label>
         <select
           id="trf-dst"
@@ -96,7 +96,7 @@
     <div class="form-row">
       <div class="form-group">
         <label [for]="texts().idPrefix + '-amount'" class="form-label">
-          <span>Monto (Bs.) <span class="required-mark">*</span></span>
+          <span>Monto (Bs) <span class="required-mark">*</span></span>
         </label>
         <input
           [id]="texts().idPrefix + '-amount'"
@@ -147,7 +147,7 @@
     </div>
 
     <div class="form-group">
-      <label [for]="texts().idPrefix + '-notes'" class="form-label">Notas Adicionales (Opcional)</label>
+      <label [for]="texts().idPrefix + '-notes'" class="form-label">Notas adicionales (opcional)</label>
       <textarea
         [id]="texts().idPrefix + '-notes'"
         class="form-control"

@@ -11,6 +11,7 @@ import {
 } from '../../core/sale/models/sale.models';
 import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type SaleStatusFilter = 'ALL' | SaleStatus;
 
@@ -18,7 +19,7 @@ export type SaleStatusFilter = 'ALL' | SaleStatus;
 @Component({
   selector: 'app-sales-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, SalesTableComponent, SaleDetailModalComponent],
+  imports: [IconComponent, CommonModule, FormsModule, SalesTableComponent, SaleDetailModalComponent],
   templateUrl: './sales-history.component.html',
   styleUrls: ['./sales-history.component.css']
 })

@@ -1,6 +1,6 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Registrar Gasto de Caja"
+  title="Registrar gasto de caja"
   subtitle="Registra una salida de dinero directo de la gaveta de caja física"
   [size]="'md'"
   (close)="close.emit()">
@@ -13,17 +13,17 @@
     }
 
     <div class="form-group">
-      <label class="form-label">Cuenta de Origen</label>
+      <label class="form-label">Cuenta de origen</label>
       <div class="locked-account-badge">
         <span class="locked-dot"></span>
-        <span class="locked-name">Caja (Bloqueada)</span>
+        <span class="locked-name">Caja (bloqueada)</span>
       </div>
       <span class="form-hint">Los gastos de caja descuentan directamente de la gaveta física del turno actual.</span>
     </div>
 
     <div class="form-group">
       <label for="ce-category" class="form-label">
-        <span>Categoría de Gasto <span class="required-mark">*</span></span>
+        <span>Categoría de gasto <span class="required-mark">*</span></span>
       </label>
       <select
         id="ce-category"
@@ -42,7 +42,7 @@
 
     <div class="form-group">
       <label for="ce-amount" class="form-label">
-        <span>Monto del Gasto (Bs.) <span class="required-mark">*</span></span>
+        <span>Monto del gasto (Bs) <span class="required-mark">*</span></span>
       </label>
       <input
         id="ce-amount"
@@ -77,7 +77,7 @@
     </div>
 
     <div class="form-group">
-      <label for="ce-notes" class="form-label">Notas Adicionales (Opcional)</label>
+      <label for="ce-notes" class="form-label">Notas adicionales (opcional)</label>
       <textarea
         id="ce-notes"
         class="form-control"
@@ -94,7 +94,7 @@
         @if (isLoading()) {
           <span>Registrando...</span>
         } @else {
-          <span>Registrar Gasto</span>
+          <span>Registrar gasto</span>
         }
       </button>
     </div>
