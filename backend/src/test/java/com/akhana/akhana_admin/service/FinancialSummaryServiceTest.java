@@ -67,8 +67,10 @@ class FinancialSummaryServiceTest {
 
         assertNotNull(summary);
         assertEquals(new BigDecimal("350.00"), summary.getCashBalance());
-        assertEquals(new BigDecimal("1200.00"), summary.getBisaBalance());
-        assertEquals(new BigDecimal("500.00"), summary.getJoacoBalance());
+        // FIN-09: every account with its balance, whatever its name (no fixed Bisa or Joaco fields)
+        assertEquals(3, summary.getAccounts().size());
+        assertEquals(new BigDecimal("500.00"), summary.getAccounts().stream()
+                .filter(a -> a.getId().equals(joaco.getId())).findFirst().orElseThrow().getCurrentBalance());
         assertEquals(new BigDecimal("2050.00"), summary.getTotalBalance());
         assertEquals(bisa.getId(), summary.getQrAccountId());
         assertEquals("Cuenta bancaria BISA", summary.getQrAccountName());

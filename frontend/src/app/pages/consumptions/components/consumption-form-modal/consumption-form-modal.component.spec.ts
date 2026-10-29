@@ -112,4 +112,13 @@ describe('ConsumptionFormModalComponent', () => {
     component.submit();
     expect(component.formError()).toBe('La fecha del consumo no puede ser futura.');
   });
+
+  it('Enter en el buscador agrega el producto del código y no registra el consumo', () => {
+    const search: HTMLInputElement = fixture.nativeElement.querySelector('[data-product-search]');
+    component.productSearch.set('roq-1');
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    expect(component.lines().length).toBe(1);
+    expect(consumptionService.registerConsumption).not.toHaveBeenCalled();
+  });
 });

@@ -58,48 +58,7 @@
         </div>
       </article>
 
-      <!-- Main box -->
-      <article class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-label">Caja Principal</span>
-          <span class="kpi-icon cash-icon">💵</span>
-        </div>
-        <div class="kpi-body">
-          <span class="kpi-value" [class.negative]="data.cashBalance < 0">
-            Bs {{ data.cashBalance | number:'1.2-2' }}
-          </span>
-          <span class="kpi-desc">Efectivo físico disponible en caja</span>
-        </div>
-      </article>
-
-      <!-- Bisa account -->
-      <article class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-label">Cuenta Banco BISA</span>
-          <span class="kpi-icon bank-icon">🏦</span>
-        </div>
-        <div class="kpi-body">
-          <span class="kpi-value" [class.negative]="data.bisaBalance < 0">
-            Bs {{ data.bisaBalance | number:'1.2-2' }}
-          </span>
-          <span class="kpi-desc">Cuenta bancaria empresarial</span>
-        </div>
-      </article>
-
-      <!-- Joaco account -->
-      <article class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-label">Cuenta Joaco</span>
-          <span class="kpi-icon wallet-icon">💳</span>
-        </div>
-        <div class="kpi-body">
-          <span class="kpi-value" [class.negative]="data.joacoBalance < 0">
-            Bs {{ data.joacoBalance | number:'1.2-2' }}
-          </span>
-          <span class="kpi-desc">Cuenta corriente asociada</span>
-        </div>
-      </article>
-
+      <!-- FIN-09: each account's balance is in «Cuentas Registradas» below, whatever their names -->
       <!-- Active QR account -->
       <article class="kpi-card qr-card">
         <div class="kpi-header">

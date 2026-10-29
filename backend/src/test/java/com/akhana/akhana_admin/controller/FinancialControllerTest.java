@@ -184,8 +184,6 @@ class FinancialControllerTest {
     void testGetSummary() throws Exception {
         FinancialSummaryResponse summary = FinancialSummaryResponse.builder()
                 .cashBalance(new BigDecimal("500.00"))
-                .bisaBalance(new BigDecimal("1200.00"))
-                .joacoBalance(new BigDecimal("300.00"))
                 .totalBalance(new BigDecimal("2000.00"))
                 .qrAccountName("Cuenta bancaria BISA")
                 .build();

@@ -13,8 +13,6 @@ describe('FinanceSummaryComponent', () => {
   const mockSummaryData: FinancialSummary = {
     totalBalance: 3200,
     cashBalance: 500,
-    bisaBalance: 1700,
-    joacoBalance: 1000,
     qrAccountId: 'acc-bisa',
     qrAccountName: 'Cuenta bancaria BISA',
     accounts: [

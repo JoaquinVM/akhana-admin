@@ -88,8 +88,6 @@ describe('Finance Core Services', () => {
   it('FinanceSummaryService - getSummary debe actualizar el signal summary', () => {
     const mockSummary: FinancialSummary = {
       cashBalance: 500,
-      bisaBalance: 1000,
-      joacoBalance: 200,
       totalBalance: 1700,
       accounts: [],
       recentTransactions: []

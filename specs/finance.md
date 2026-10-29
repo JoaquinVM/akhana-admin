@@ -209,6 +209,10 @@ El sistema SHALL presentar en Finanzas → Resumen una vista ejecutiva con el sa
 - **THEN** el sistema exhibe tarjetas de saldo para cada cuenta principal con su color, el saldo consolidado total y una lista de los últimos movimientos registrados
 
 
+#### Scenario: Resumen con las cuentas reales (cuarta revisión, 29-10-2026)
+- **WHEN** se abre Finanzas › Resumen
+- **THEN** arriba se ven el saldo consolidado y la cuenta QR, y en «Cuentas Registradas» cada cuenta activa con su saldo. Antes había tarjetas fijas «Caja Principal», «Cuenta Banco BISA» y «Cuenta Joaco» (una cuenta que ya no existe, en Bs 0,00) y faltaba Efectivo; la respuesta ya no trae `bisaBalance` ni `joacoBalance`, que dependían del nombre de la cuenta. Pruebas en `FinancialSummaryServiceTest`.
+
 ## Notas de implementación
 
 Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.

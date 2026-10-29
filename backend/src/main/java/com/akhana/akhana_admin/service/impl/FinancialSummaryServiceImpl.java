@@ -31,8 +31,6 @@ public class FinancialSummaryServiceImpl implements FinancialSummaryService {
         List<FinancialTransaction> recentTransactions = financialTransactionRepository.findTop10ByOrderByTransactionDateDesc();
 
         BigDecimal cashBalance = BigDecimal.ZERO;
-        BigDecimal bisaBalance = BigDecimal.ZERO;
-        BigDecimal joacoBalance = BigDecimal.ZERO;
         BigDecimal totalBalance = BigDecimal.ZERO;
 
         UUID qrAccountId = null;
@@ -44,14 +42,6 @@ public class FinancialSummaryServiceImpl implements FinancialSummaryService {
 
             if (Boolean.TRUE.equals(acc.getIsCashAccount())) {
                 cashBalance = bal;
-            }
-            if (acc.getName() != null) {
-                String lower = acc.getName().toLowerCase();
-                if (lower.contains("bisa")) {
-                    bisaBalance = bal;
-                } else if (lower.contains("joaco")) {
-                    joacoBalance = bal;
-                }
             }
             if (Boolean.TRUE.equals(acc.getIsQrAccount())) {
                 qrAccountId = acc.getId();
@@ -69,8 +59,6 @@ public class FinancialSummaryServiceImpl implements FinancialSummaryService {
 
         return FinancialSummaryResponse.builder()
                 .cashBalance(cashBalance)
-                .bisaBalance(bisaBalance)
-                .joacoBalance(joacoBalance)
                 .totalBalance(totalBalance)
                 .qrAccountId(qrAccountId)
                 .qrAccountName(qrAccountName)

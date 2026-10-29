@@ -7,7 +7,7 @@
   [closeOnEscape]="false"
   (close)="onClose()">
 
-  <form class="consumption-form" (ngSubmit)="submit()">
+  <form class="consumption-form" (ngSubmit)="submit()" (keydown.enter)="onFormEnter($event)">
     @if (formError()) {
       <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
     }
@@ -36,7 +36,7 @@
       <h4 class="section-title">Productos</h4>
       <div class="product-search">
         <input type="text" class="form-control" placeholder="Buscar producto por nombre o código…"
-               name="productSearch" aria-label="Buscar producto"
+               name="productSearch" aria-label="Buscar producto" data-product-search
                [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)" />
         @if (productMatches().length > 0) {
           <ul class="product-matches" role="listbox">

@@ -23,6 +23,7 @@ import {
   PurchaseRequest,
   paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
+import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -182,6 +183,19 @@ export class PurchaseFormModalComponent {
   // COM-03: alert when the line cost differs from the registered cost
   costDiffers(line: PurchaseLineDraft): boolean {
     return round2(Number(line.unitCost) || 0) !== round2(line.product.buyPrice);
+  }
+
+  // Enter never submits the form (only its button does); in the product search it adds the product typed
+  onFormEnter(event: Event): void {
+    if (!stopImplicitSubmit(event)) {
+      return;
+    }
+    if ((event.target as HTMLElement).hasAttribute('data-product-search')) {
+      const product = productForEnter(this.productSearch(), this.products(), this.productMatches());
+      if (product) {
+        this.addProduct(product);
+      }
+    }
   }
 
   addProduct(product: Product): void {

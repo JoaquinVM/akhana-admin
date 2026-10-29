@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Product } from '../../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { QuickProductService } from '../../../../core/quick-product/quick-product.service';
+import { productForEnter } from '../../../../shared/utils/product-search';
 
 const MAX_RESULTS = 8;
 
@@ -57,11 +58,7 @@ export class SaleCatalogComponent {
 
   // Enter adds the product whose code is the one typed, or the only match; otherwise it waits for a click
   addFromSearch(): void {
-    const term = this.productSearchTerm().toLowerCase().trim();
-    if (!term) return;
-    const exact = this.products().find((p) => p.code.toLowerCase() === term);
-    const results = this.filteredSearchResults();
-    const product = exact ?? (results.length === 1 ? results[0] : null);
+    const product = productForEnter(this.productSearchTerm(), this.products(), this.filteredSearchResults());
     if (product) {
       this.choose(product);
     }

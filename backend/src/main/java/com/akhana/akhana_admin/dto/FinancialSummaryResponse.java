@@ -15,8 +15,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class FinancialSummaryResponse {
     private BigDecimal cashBalance;
-    private BigDecimal bisaBalance;
-    private BigDecimal joacoBalance;
     private BigDecimal totalBalance;
     private UUID qrAccountId;
     private String qrAccountName;

@@ -142,8 +142,6 @@ export interface VoidFinancialTransactionRequest {
 
 export interface FinancialSummary {
   cashBalance: number;
-  bisaBalance: number;
-  joacoBalance: number;
   totalBalance: number;
   qrAccountId?: string;
   qrAccountName?: string;

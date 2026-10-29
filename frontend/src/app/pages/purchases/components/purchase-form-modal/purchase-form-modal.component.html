@@ -1,13 +1,13 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Nuevo pedido"
-  subtitle="Proveedor, líneas, envío y comentario. Los pagos se registran desde el detalle."
+  subtitle="Proveedor, líneas, envío y un pago inicial opcional; los demás pagos se registran desde el detalle."
   size="xl"
   [closeOnBackdrop]="false"
   [closeOnEscape]="false"
   (close)="onClose()">
 
-  <form class="purchase-form" (ngSubmit)="submit()">
+  <form class="purchase-form" (ngSubmit)="submit()" (keydown.enter)="onFormEnter($event)">
     @if (formError()) {
       <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
     }
@@ -43,7 +43,7 @@
       <h4 class="section-title">Líneas</h4>
       <div class="product-search">
         <input type="text" class="form-control" placeholder="Buscar producto por nombre o código…"
-               name="productSearch" aria-label="Buscar producto"
+               name="productSearch" aria-label="Buscar producto" data-product-search
                [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)" />
         @if (productMatches().length > 0) {
           <ul class="product-matches" role="listbox">

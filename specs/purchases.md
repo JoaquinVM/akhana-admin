@@ -51,6 +51,11 @@ fecha del pedido, líneas, costo de envío, total y comentario. Auditoría de al
   volver a dibujarse todas: cambiar de filtro tardaba 1 a 2 s. Las fechas del pedido y de entrega se muestran como
   día de la tienda (pipe `storeDay`), y «hoy» del formulario es el de Bolivia aunque el equipo tenga otra zona
   horaria. Pruebas en `purchases.component.spec.ts`, `store-day.pipe.spec.ts` y `store-date.spec.ts`.
+- **Cuando** se presiona Enter en un campo del formulario de pedido **entonces** el pedido no se envía (antes Enter en
+  el buscador, la cantidad o el costo registraba el pedido, con su pago desde Caja); solo el botón «Registrar
+  pedido» lo registra. Enter en el buscador agrega el producto del código escrito o el único resultado, como en el
+  POS. Lo mismo en el formulario de consumo. Pruebas en `purchase-form-modal.component.spec.ts`,
+  `consumption-form-modal.component.spec.ts` y `product-search.spec.ts` (cuarta revisión, 29-10-2026).
 - **Cuando** una línea usa un producto eliminado **entonces** se rechaza; los inactivos se aceptan (se compran
   aunque no se vendan aún).
 - **Cuando** se registra el pedido **entonces** cada línea guarda copia del nombre y código del producto, y el

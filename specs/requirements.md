@@ -252,7 +252,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-01** Respaldo diario automático de la base, con una restauración probada antes de salir.
 - **NF-02** HTTPS obligatorio y expiración de sesión configurable.
 - **NF-03** Pruebas automáticas de las reglas de dinero (ventas, anulaciones, cierres, pagos de pedidos, deudas) antes de cada despliegue.
-- **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo.
+- **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo. Medido en local: la venta responde en 20–50 ms y el catálogo activo (590 KB, 60 KB comprimido desde la cuarta revisión) en 35–70 ms.
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 
 ## 5. Preguntas

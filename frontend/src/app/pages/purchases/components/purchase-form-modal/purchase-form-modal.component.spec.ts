@@ -188,4 +188,21 @@ describe('PurchaseFormModalComponent', () => {
     component.onCostChange(0, '30.555');
     expect(component.buildRequest().items[0].unitCost).toBe(30.555);
   });
+
+  it('Enter en el buscador agrega el producto del código y nunca envía el pedido; en un campo tampoco', () => {
+    component.supplierId.set('sup-1');
+    fixture.detectChanges();
+    const search: HTMLInputElement = fixture.nativeElement.querySelector('[data-product-search]');
+    component.productSearch.set('te-1');
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    expect(component.lines().map(l => l.product.id)).toEqual(['p-1']);
+    expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+
+    const cost: HTMLInputElement = fixture.nativeElement.querySelector('.lines-table input[type=number]');
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    cost.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+  });
 });

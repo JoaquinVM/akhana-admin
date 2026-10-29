@@ -8,6 +8,7 @@ import { Consumption, ConsumptionRequest } from '../../../../core/consumption/mo
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
 import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
 import { PresentationPickerComponent } from '../../../../shared/components/presentation-picker/presentation-picker.component';
+import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
 
 export interface ConsumptionLineDraft {
   product: Product;
@@ -108,6 +109,19 @@ export class ConsumptionFormModalComponent {
   }
 
   // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
+  // Enter never submits the form (only its button does); in the product search it adds the product typed
+  onFormEnter(event: Event): void {
+    if (!stopImplicitSubmit(event)) {
+      return;
+    }
+    if ((event.target as HTMLElement).hasAttribute('data-product-search')) {
+      const product = productForEnter(this.productSearch(), this.products(), this.productMatches());
+      if (product) {
+        this.addProduct(product);
+      }
+    }
+  }
+
   addProduct(product: Product): void {
     this.productSearch.set('');
     if (this.isWeighted(product) && activePresentations(product).length > 0) {
