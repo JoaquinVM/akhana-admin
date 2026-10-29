@@ -365,6 +365,37 @@ Sin explicación: pagos sin gasto (49 Misqui 238, 150 Solquifar 248, 343 Saltus 
 Aceite Borges 960 del 01-06, Vitabec 421 del 15-06, Apis 30, Sobres 45, Jorge Junio 100, Faltante sativa griegos
 40,50; y 4 envíos con categoría Pedido: Brownies Vikingos 30, Alulosas 15, Activaloe 50, Pastel de frutas 15).
 
+Revisado con el dueño el 29-10-2026. Corregido en la planilla, con un comentario en cada fila de Pedidos y Transacc.
+que explica el cambio o la diferencia:
+
+- Transacc. 708, 999 y 1010 (Cuñapizzas, Suerox, Vitaly) pasan a Pedido; Jorge Junio (531) a Otro gasto; los envíos
+  1083, 1160, 1359 y 1412 a Envio.
+- Pedido 161 Altramuz: Monto 100 (era 75); con el 195 suman 125 contra el gasto de 150: faltan 25, sin revisar.
+- Pedido 257 Fit Mit: Monto 325, la parte de la tienda. Fue un pedido conjunto con Tía Neida: sus 455 se pagaron de
+  Caja (Otro gasto, fila 767) y los devolvió el 11-08 (Otro Ingreso, fila 806).
+- Pedido 437 Madre Tierra: Monto 629 (se cobró 20 de más y se devolvió).
+- A Cuenta: 349 Glamazon con Fecha pago 02-09 y Caja (se deben 1.000); 483 Green Vibe con 23-10 y Caja (el 144 del
+  01-10 es el pedido 439).
+- Centavos (302, 431, 517): se dejan; comentario «Se pagó redondeado».
+- Lo demás sin explicación se deja como está, con comentario «P-43, sin revisar»: no cambia saldos (se cargan al
+  corte) ni pagos (los históricos no mueven dinero), solo el gasto Pedido de mayo y junio en los reportes.
+
+### Importación en la base local del 29-10
+
+Con los `.xlsx` del 29-10 y corte 27-10: Ventas 6.116, Transacc. 1.519, Cierre 145, Consumos 143, Pedidos 517 y
+Detalle Pedidos 927, todas importadas y 0 rechazadas; 22 avisos, 91 líneas sin identificar (4.741), deuda inicial con
+Mami 246. Saldos al corte cargados antes (Caja 3.392,90 del Cierre; Bisa 30.431,58 y Efectivo 16.332,04, sumas de
+Transacc. solo para la prueba local) y sin cambio después de importar. Para llegar a 0 rechazadas:
+
+- En Finanzas → Categorías se crearon Comida, Otro gasto, Envio, Utilidad y Devolucion (gasto) y Otro Ingreso
+  (ingreso). En producción se crean igual antes de revisar.
+- Detalle Pedidos 927 y 928 (Kefir Belen del 27-10) llevan el pedido 522; Ventas 4865 y 4866 quedan en 381 g y 263 g
+  (los kilos van hasta el gramo; el total no cambia) y la 5802 (22-10, Bs 27) con «Sin descripción».
+- Cierre de Caja: no había borrador; las filas sin fecha debajo del 27-10 solo tienen fórmulas en 0 y no se leen.
+
+Hallazgo: un pedido Pagado con Monto Envio se importa con un pago por el Monto, sin el envío, y queda en Por pagar
+por el envío (unos 40 pedidos, de 8 a 80, por ejemplo `PED-H00431`). Falta corregirlo antes de producción.
+
 ### Validación con la planilla del 26-10 (sin corregir)
 
 Con los productos de CAT-06 importados (sin «Se vende por») y las columnas nuevas vacías, la revisión tarda menos
@@ -413,8 +444,9 @@ Correcciones en la planilla (con el dueño, en otra sesión):
   pagado, Tipo Pago) con los gastos Pedido de Transacc. (fecha, monto, cuenta) y listar los que no tienen par;
   revisar con el dueño las diferencias (total 3.755,42, mayo +6.767, julio −4.034 y los 5 montos de octubre) y
   corregir en la planilla lo que sea error. Sin cambio de código: los pagos históricos siguen sin vínculo.
-  Comparación hecha el 29-10-2026 (abajo, «P-43 con la planilla del 29-10»); falta revisarla con el dueño.
-- [ ] Con el dueño, antes de migrar: precio de venta de los 16 productos rechazados por la importación que se usan en
+  Comparación hecha el 29-10-2026 y revisada con el dueño ese día (arriba, «P-43 con la planilla del 29-10»).
+- [x] Con el dueño, antes de migrar (hecho el 29-10-2026: precios con el último precio de venta, la gelatina a 17;
+  4866 a `FSE-GRA-ESP` 263 g, 5759 a 100 g a 0,09; A1 ya decía «Grupo»; productos reimportados): precio de venta de los 16 productos rechazados por la importación que se usan en
   el historial (12 filas de Ventas y 12 de Detalle Pedidos: `GRA-GEL-SSA`, `BEN-ESP-ACL-100GR`, `APQ-FID-QUI-1KG`,
   `IVL-REN`, `DES-HAR-COC-500GR`, `ORI-SRO-DOY-800GR`, `ORI-SRO-GRA-800GR` y 9 de Brisol `BRI-*`); Ventas filas 4866
   (`FSE-GRA-ESP-1LI` con Cant 262,5: se leería como 262,5 libras) y 5759 (`FSE-GRA-ESP` con Cant 1 a Bs 9: 1 g);
@@ -446,5 +478,8 @@ Construcción (rama `feat/migration`, 27-10-2026):
   planilla llevan «precio costo» en el comentario; en `MigrationServiceImpl` la regla «Regalo…»/«…rompió» →
   Consumos se cambió por un aviso en Revisar. `MigrationIntegrationTest` cubre el regalo sin «precio costo» (aviso
   y venta normal) y la rotura con «precio costo» (venta al costo). La pantalla no cambia: los avisos ya se muestran.
-- [ ] El día de la salida: vaciar la última fila del Cierre (borrador) antes de descargar el `.xlsx`, importar
-  productos (CAT-06), cargar saldos al corte (FIN-01), revisar e importar.
+- [ ] Pedido Pagado con Monto Envio: el pago histórico cubre Monto + envío, para que no quede en Por pagar
+  (hallazgo del 29-10-2026), con su caso en `MigrationIntegrationTest`.
+- [ ] El día de la salida: vaciar la última fila del Cierre (borrador) si la hay antes de descargar el `.xlsx`,
+  importar productos (CAT-06), crear las categorías de Transacc. en Finanzas, cargar saldos al corte (FIN-01),
+  revisar e importar. Ensayado en la base local el 29-10-2026 (arriba).
