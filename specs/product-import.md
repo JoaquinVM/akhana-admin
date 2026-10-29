@@ -209,5 +209,11 @@ newCategories[], newSuppliers[], newTags[], rows: [{ rowNumber, code, name, stat
 - [x] Frontend: botón Importar en `pages/products`, modal con Revisar / Importar, resumen y tabla de rechazadas,
   descarga `.xlsx`; pruebas Vitest del servicio y del modal.
 - [x] Validar con el `.xlsx` real de la planilla: 780 productos y 99 rechazadas sin la columna «Se vende por», y 794 productos y 42 presentaciones con los 14 frutos secos en Gramo. Hecho el 27-10-2026 (781 y 795 por una fila nueva en la planilla; rechazadas iguales). También `ProductImportIntegrationTest` contra PostgreSQL.
-- [ ] Probar en la app: Revisar e Importar con el archivo real y descargar las rechazadas.
+- [x] Probar en la app: Revisar e Importar con el archivo real y descargar las rechazadas (29-10-2026). El `.xlsx`
+  del 26-10, sin «Se vende por», sobre un catálogo que ya tenía `SAT-KEF-NAT-1L` y `FSE-NUE`: 880 filas, 780
+  importados, 5 ya existentes (el Kefir, `FSE-NUE` y sus 3 presentaciones), 95 rechazadas (15 sin código, 24 sin
+  precio, 15 con precio por gramo, 39 presentaciones de esas bases y 2 códigos repetidos) y 16 avisos (13 nombres
+  repetidos, porque el «Kefir Natural 1L» de Belen ya no choca con el de Sativa, y 3 con costo 0). La descarga trae
+  las 95 rechazadas sin las ya existentes. Repetida: 0 a importar, 787 ya existentes y 93 rechazadas. La conversión
+  con «Se vende por» Gramo queda para la planilla marcada por el dueño (cubierta por `ProductImportIntegrationTest`).
 - [x] Actualizar `specs/requirements.md` (CAT-06, P-02, tablero).

@@ -501,4 +501,7 @@ dueña como Pago a tercero. La exportación a Excel lleva las mismas columnas.
   de la importación; Revisar muestra «Líneas sin identificar» y la columna Sin identificar de los totales por mes
   (`unidentifiedLines`, `unidentifiedTotal`, `MonthTotals.unidentified`). Pruebas en `SaleRepositoryTest`
   (consultas y filtro), `ReportServiceTest`, `ReportExportServiceTest`, `MigrationIntegrationTest`,
-  `sales-by-day-report`, `totals-report` y `migration.component`. Falta verlo en la app.
+  `sales-by-day-report`, `totals-report` y `migration.component`. Probado en la app el 29-10-2026: VTA-000139 con
+  «Prueba POS-12 granola» Bs 20,00 sale del filtro «Por asignar» al cerrarla y pasa de Por asignar a Sin
+  identificar en ventas por día, totales y el Excel, sin tocar la utilidad. La confirmación decía todavía «costo 0:
+  toda la venta cuenta como utilidad»; ahora dice que suma al total y no a la utilidad.
