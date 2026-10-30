@@ -10,8 +10,8 @@ la migración sea mecánica, y lo que no tiene producto entra con los productos 
 Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales y las reglas de CAT-08 y CAT-11.
 
 Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_migration.sql`). Correcciones en la
-planilla hechas el 27-10-2026 (HOJITA cerrada) y el 28-10-2026 (filas de Ventas sin código); falta correrla el día de la salida,
-vaciando antes la última fila del Cierre (borrador).
+planilla hechas el 27-10-2026 (HOJITA cerrada) y el 28-10-2026 (filas de Ventas sin código); corrida en
+producción el 29-10-2026 con fecha de corte 27-10-2026 (abajo).
 
 ## Qué se migra y qué no
 
@@ -399,6 +399,18 @@ envío. Ensayo repetido ese día en la base local recreada vacía (respaldo en `
 repositorio): productos, Mami, `SIN-IDENT`, `TER-SAG-MAD`, 25 de P-42 inactivos, 6 categorías, saldos y el historial
 con 0 rechazadas. Quedan 20 pedidos en Por pagar, todos A Cuenta, Por Pagar o en consignación en la planilla.
 
+### Importación en producción del 29-10
+
+Sobre la base limpia (`restore.sh --replace`), con los `.xlsx` del 29-10 y corte 27-10 (el sistema registra desde
+el 28-10): no había borrador en el Cierre. Productos: 909 filas, 843 importados, 42 presentaciones y 24 rechazadas
+(sin código o sin precio, no usadas en el historial); `SIN-IDENT`, `TER-SAG-MAD`, Mami, Inciensos y Sagrada Madre
+creados y los 25 de P-42 inactivos. Las 6 categorías de Transacc. creadas. Saldos al corte del Resumen de la
+planilla, confirmados por el dueño: Caja 3.292,90 (caja final del 27-10, tras corregir el 26-10 a 9.716,90 con
+sobrante 111), Bisa 30.431,58 y Efectivo 16.352,04 (total 50.076,52, igual a «Dinero TOT»). Revisar e Importar
+dieron lo mismo que el ensayo local: 0 rechazadas, 22 avisos, 91 sin identificar (4.741) y deuda con Mami 246. Las
+ventas de cada mes más las al costo y las de Mami dan el «Ventas» de Transacc. (octubre 57.220,50 + 15 + 246 =
+57.481,50). Saldos sin cambio después de importar.
+
 ### Validación con la planilla del 26-10 (sin corregir)
 
 Con los productos de CAT-06 importados (sin «Se vende por») y las columnas nuevas vacías, la revisión tarda menos
@@ -496,9 +508,9 @@ Construcción (rama `feat/migration`, 27-10-2026):
   y venta normal) y la rotura con «precio costo» (venta al costo). La pantalla no cambia: los avisos ya se muestran.
 - [x] Pedido Pagado con Monto Envio: el pago histórico cubre Monto + envío, para que no quede en Por pagar
   (hallazgo del 29-10-2026), con su caso en `MigrationIntegrationTest` (29-10-2026).
-- [ ] El día de la salida: vaciar la última fila del Cierre (borrador) si la hay antes de descargar el `.xlsx`,
+- [x] El día de la salida: vaciar la última fila del Cierre (borrador) si la hay antes de descargar el `.xlsx`,
   importar productos (CAT-06), crear las categorías de Transacc. en Finanzas, cargar saldos al corte (FIN-01),
-  revisar e importar. Ensayado en la base local el 29-10-2026 (arriba).
+  revisar e importar. Hecho en producción el 29-10-2026 (arriba).
 
 ## Notas
 

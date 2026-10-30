@@ -20,9 +20,9 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-10 | ✅ Completo | — | `cash.md` |
 | POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
-| Finanzas | FIN-01 a FIN-09 | ✅ Completo | Cargar los saldos al corte el día de la salida | `finance.md` |
+| Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
-| Migración | CAT-06, FIN-11 | 🟡 Parcial | Construida y ensayada en la base local con 0 rechazadas; falta correrla en producción el día de la salida | `migration.md` |
+| Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
 | Producción | NF-01, NF-02, NF-05 | ✅ Completo | `v1.0.0` en el VPS con HTTPS por Tailscale, respaldo diario a B2 y restauración probada; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
@@ -338,7 +338,6 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
 - [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
-- [ ] El día de la salida, en producción (`migration.md`): volver a la base limpia (`restore.sh --replace /opt/akhana/base-limpia-v1.dump`); vaciar la última fila del Cierre si es borrador y descargar las planillas; preparar el catálogo; crear las categorías de Transacc.; cargar los saldos al corte de Caja, Bisa y Efectivo; importar el historial.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.
 - [ ] Reportes, fase 2: comparar dos semanas con las tablas dinámicas (`reports.md`).

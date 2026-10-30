@@ -242,7 +242,7 @@ En el VPS (con el dueño), en este orden:
 - [x] Desde una sesión por Tailscale: `setup-server.sh --lock`; comprobar desde fuera de la red que la IP pública no
   responde en ningún puerto.
 - [x] Prueba de restauración en el VPS y en la Mac (arriba); anotar en «Validación».
-- [ ] El día de la salida, antes de migrar: `restore.sh --replace /opt/akhana/base-limpia-v1.dump` (la base recién
+- [x] El día de la salida, antes de migrar (29-10-2026): `restore.sh --replace /opt/akhana/base-limpia-v1.dump` (la base recién
   desplegada, con el admin definitivo) para quitar la copia de prueba.
 
 ## Validación
