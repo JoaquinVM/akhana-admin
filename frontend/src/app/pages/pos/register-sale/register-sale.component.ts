@@ -22,7 +22,7 @@ import {
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
 import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
-import { CartLineComponent } from '../components/cart-line/cart-line.component';
+import { SaleCartComponent } from '../components/sale-cart/sale-cart.component';
 import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineName } from './cart-item';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
@@ -50,7 +50,7 @@ export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libre
     FormsModule,
     QuickProductsConfigModalComponent,
     SaleCatalogComponent,
-    CartLineComponent,
+    SaleCartComponent,
     CheckoutModalComponent,
     ModalComponent,
     PresentationPickerComponent,
