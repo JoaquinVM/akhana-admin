@@ -59,6 +59,9 @@
         <span class="kpi-label">Tickets</span>
         <strong class="kpi-value">{{ d.current.tickets }}</strong>
         <ng-container *ngTemplateOutlet="delta; context: { $implicit: changePercent(d.current.tickets, d.previous.tickets) }" />
+        @if (d.payments.historicalSales > 0) {
+          <span class="kpi-note">Incluye {{ d.payments.historicalSales }} {{ d.payments.historicalSales === 1 ? 'día migrado' : 'días migrados' }} de la planilla (1 por día)</span>
+        }
       </article>
       <article class="card kpi">
         <span class="kpi-label">Ticket promedio</span>
@@ -152,6 +155,12 @@
               <small>{{ percentOf(d.payments.credit, paymentTotal()) | number:'1.0-0' }} %</small></span></li>
           }
         </ul>
+        @if (d.payments.historicalSales > 0) {
+          <p class="aside-line">
+            Sin dato de cobro: Bs {{ d.payments.historicalTotal | number:'1.2-2' }} de {{ d.payments.historicalSales }}
+            {{ d.payments.historicalSales === 1 ? 'día migrado' : 'días migrados' }} de la planilla.
+          </p>
+        }
       </section>
 
       <section class="card" aria-labelledby="cash-title">

@@ -13,9 +13,12 @@ import java.util.UUID;
 @org.springframework.stereotype.Repository
 public interface DashboardRepository extends Repository<Sale, UUID> {
 
-    // DSH-02: how the active sales of the range were paid, one row of {cash, QR, credit}. Every sale type counts:
-    // it is the money that came in (or is owed) for them, as in the cash session (CAJ)
-    @Query(value = "SELECT COALESCE(SUM(amount_cash), 0), COALESCE(SUM(amount_qr), 0), COALESCE(SUM(credit_amount), 0) " +
+    // DSH-02: how the active sales of the range were paid, one row of {cash, QR, credit, historical total,
+    // historical sales}. Every sale type counts: it is the money that came in (or is owed) for them, as in the cash
+    // session (CAJ). Historical sales (FIN-11) are one per day of the spreadsheet without how they were paid (P-32)
+    @Query(value = "SELECT COALESCE(SUM(amount_cash), 0), COALESCE(SUM(amount_qr), 0), COALESCE(SUM(credit_amount), 0), " +
+                   "COALESCE(SUM(total_amount) FILTER (WHERE historical_import_id IS NOT NULL), 0), " +
+                   "COUNT(*) FILTER (WHERE historical_import_id IS NOT NULL) " +
                    "FROM sales WHERE status = 'COMPLETADA' AND created_at >= :from AND created_at < :to",
            nativeQuery = true)
     List<Object[]> sumPayments(@Param("from") Instant from, @Param("to") Instant to);

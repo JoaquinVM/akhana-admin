@@ -22,6 +22,9 @@ export interface DashboardPayments {
   cash: number;
   qr: number;
   credit: number;
+  // FIN-11, P-32: spreadsheet days, one sale each without how it was paid
+  historicalTotal: number;
+  historicalSales: number;
 }
 
 export interface DashboardRankRow {

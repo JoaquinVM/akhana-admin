@@ -31,7 +31,7 @@ describe('DashboardComponent', () => {
       { date: '2026-09-02', sales: 1500, profit: 450 },
       { date: '2026-09-03', sales: 0, profit: 0 }
     ],
-    payments: { cash: 1500, qr: 1245, credit: 104 },
+    payments: { cash: 1500, qr: 1245, credit: 104, historicalTotal: 2100, historicalSales: 2 },
     topProductsBySales: [{ id: 'p1', name: 'Nuez pelada', quantity: 3.5, sales: 450, profit: 90 },
       { id: 'p2', name: 'Maní', quantity: 10, sales: 100, profit: 40 }],
     topProductsByProfit: [{ id: 'p1', name: 'Nuez pelada', quantity: 3.5, sales: 450, profit: 90 },
@@ -106,6 +106,8 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Efectivo');
     expect(text).toContain('Bs 1,245.00');
     expect(text).toContain('Crédito');
+    expect(text).toContain('Sin dato de cobro: Bs 2,100.00 de 2 días migrados de la planilla.');
+    expect(text).toContain('Incluye 2 días migrados de la planilla (1 por día)');
   });
 
   it('DSH-03: cambia el orden de los productos entre venta y utilidad', () => {

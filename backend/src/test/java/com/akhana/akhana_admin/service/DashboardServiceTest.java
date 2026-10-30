@@ -68,7 +68,8 @@ class DashboardServiceTest {
         dashboardService = new DashboardServiceImpl(reportService, dashboardRepository, consumptionRepository,
                 cashSessionService, financialSummaryService, purchaseService, creditorService, customerService);
         when(dashboardRepository.sumPayments(any(), any())).thenReturn(List.<Object[]>of(
-                new Object[] {new BigDecimal("1200.00"), new BigDecimal("800.50"), new BigDecimal("104.00")}));
+                new Object[] {new BigDecimal("1200.00"), new BigDecimal("800.50"), new BigDecimal("104.00"),
+                        new BigDecimal("2745"), 1L}));
         when(cashSessionService.findCurrentSession()).thenReturn(Optional.empty());
         when(financialSummaryService.getSummary()).thenReturn(FinancialSummaryResponse.builder()
                 .totalBalance(new BigDecimal("5000"))
@@ -157,6 +158,8 @@ class DashboardServiceTest {
         assertEquals(new BigDecimal("1200.00"), dashboard.payments().cash());
         assertEquals(new BigDecimal("800.50"), dashboard.payments().qr());
         assertEquals(new BigDecimal("104.00"), dashboard.payments().credit());
+        assertEquals(new BigDecimal("2745.00"), dashboard.payments().historicalTotal());
+        assertEquals(1, dashboard.payments().historicalSales());
     }
 
     @Test
