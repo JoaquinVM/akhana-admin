@@ -15,7 +15,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
-| Proveedores y compras | COM-01 a COM-09 | ✅ Completo | — | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11, COM-12 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-10 | ✅ Completo | — | `cash.md` |
@@ -128,8 +128,10 @@ Detalle en `purchases.md`.
 - **COM-06** Un pago desde la caja genera un gasto de Caja con categoría Pedido vinculado al pedido y baja el efectivo esperado. Los movimientos de un pedido solo se gestionan desde Compras.
 - **COM-07** Entrega con tipo (en puerta, terminal, en tienda), estado (pendiente, entregado) y fecha.
 - **COM-08** Vista de pedidos por pagar con saldo por pedido, por proveedor y total.
-- **COM-09** Un pedido o un pago solo se corrige anulándolo con motivo, lo que revierte el dinero; no se anula si tiene movimientos de una caja cerrada.
+- **COM-09** Un pago se corrige anulándolo con motivo y un pedido, anulándolo o editándolo (COM-11); la anulación revierte el dinero y no se hace si hay movimientos de una caja cerrada.
 - **COM-10** · V2 — Cajas vinculadas a su unidad (Caja x12 = 12 × Barra Chia) con «Abrir caja». En la V1 la caja es un producto aparte.
+- **COM-11** Un pedido registrado (no anulado ni histórico) se edita en cualquier estado de entrega o pago, con motivo obligatorio: cabecera, entrega, envío y líneas (agregar lo que llegó sin pedirse, cambiar cantidad o costo, quitar lo que faltó con baja lógica), con producto nuevo y precio sugerido como en COM-03 (P-51).
+- **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 
@@ -329,6 +331,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-48 | ¿Qué concepto se propone al devolverle a Mami? | Primero «Pago a tercero» por lo pendiente de sus ventas; si no queda, «Pedido». |
 | P-49 | ¿Qué cliente propone el cobro de la venta al costo? | «Sin cliente»; al dar crédito se propone el único cliente activo. |
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
+| P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
 
 ## 6. Hoja de ruta
 
