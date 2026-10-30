@@ -1,0 +1,264 @@
+<div class="dashboard-page">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Ventas normales; al costo y consumos aparte. Lo anulado no cuenta.</p>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-pill-group" role="group" aria-label="Período">
+      @for (p of periods; track p.value) {
+        <button type="button" class="filter-pill" [class.active]="period() === p.value"
+                [attr.aria-pressed]="period() === p.value" (click)="selectPeriod(p.value)">
+          {{ p.label }}
+        </button>
+      }
+    </div>
+    @if (period() === 'RANGE') {
+      <label class="filter-field">
+        <span>Desde</span>
+        <input type="date" class="form-control" aria-label="Desde"
+               [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+      </label>
+      <label class="filter-field">
+        <span>Hasta</span>
+        <input type="date" class="form-control" aria-label="Hasta"
+               [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+      </label>
+    }
+    @if (dashboard(); as d) {
+      <p class="period-hint">
+        {{ dayLabel(d.from) }} – {{ dayLabel(d.to) }}, comparado con {{ dayLabel(d.previousFrom) }} – {{ dayLabel(d.previousTo) }}
+      </p>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+  }
+
+  @if (isLoading() && !dashboard()) {
+    <div class="card loading">Cargando dashboard…</div>
+  }
+
+  @if (dashboard(); as d) {
+    <section class="kpis" [class.is-loading]="isLoading()" aria-label="Indicadores del período">
+      <article class="card kpi">
+        <span class="kpi-label">Ventas</span>
+        <strong class="kpi-value">Bs {{ d.current.sales | number:'1.2-2' }}</strong>
+        <ng-container *ngTemplateOutlet="delta; context: { $implicit: changePercent(d.current.sales, d.previous.sales) }" />
+      </article>
+      <article class="card kpi">
+        <span class="kpi-label">Utilidad</span>
+        <strong class="kpi-value">Bs {{ d.current.profit | number:'1.2-2' }}</strong>
+        <ng-container *ngTemplateOutlet="delta; context: { $implicit: changePercent(d.current.profit, d.previous.profit) }" />
+        <span class="kpi-note">Margen {{ d.current.margin != null ? (d.current.margin | number:'1.2-2') + ' %' : '—' }}</span>
+      </article>
+      <article class="card kpi">
+        <span class="kpi-label">Tickets</span>
+        <strong class="kpi-value">{{ d.current.tickets }}</strong>
+        <ng-container *ngTemplateOutlet="delta; context: { $implicit: changePercent(d.current.tickets, d.previous.tickets) }" />
+      </article>
+      <article class="card kpi">
+        <span class="kpi-label">Ticket promedio</span>
+        <strong class="kpi-value">
+          {{ d.current.averageTicket != null ? 'Bs ' + (d.current.averageTicket | number:'1.2-2') : '—' }}
+        </strong>
+        <ng-container *ngTemplateOutlet="delta; context: { $implicit: changePercent(d.current.averageTicket, d.previous.averageTicket) }" />
+      </article>
+    </section>
+    <p class="aside-line">
+      Al costo: {{ d.current.atCostSales }} {{ d.current.atCostSales === 1 ? 'venta' : 'ventas' }} por
+      Bs {{ d.current.atCostTotal | number:'1.2-2' }} · Consumos al costo: Bs {{ d.current.consumptionTotal | number:'1.2-2' }}
+    </p>
+
+    <section class="card chart-card" aria-labelledby="sales-chart-title">
+      <div class="card-head">
+        <h2 id="sales-chart-title" class="card-title">Ventas por día</h2>
+        <div class="legend">
+          <span class="legend-item"><span class="swatch swatch-line"></span>Período</span>
+          <span class="legend-item"><span class="swatch swatch-dashed"></span>Período anterior</span>
+        </div>
+      </div>
+      <div class="line-chart" (mouseleave)="hoverIndex.set(null)">
+        <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" preserveAspectRatio="none" role="img"
+             aria-label="Ventas por día del período y del período anterior">
+          @for (g of gridLines(); track g.value) {
+            <line class="grid" x1="0" [attr.x2]="chartWidth" [attr.y1]="g.y" [attr.y2]="g.y" />
+          }
+          <path class="series-previous" [attr.d]="previousPath()" />
+          <path class="series-current" [attr.d]="currentPath()" />
+          @if (hovered(); as h) {
+            <line class="crosshair" [attr.x1]="h.x" [attr.x2]="h.x" y1="0" [attr.y2]="chartHeight" />
+          }
+          @for (s of hoverSlots(); track s.index) {
+            <rect class="hit" [attr.x]="s.x" y="0" [attr.width]="s.width" [attr.height]="chartHeight"
+                  (mouseenter)="hoverIndex.set(s.index)" (click)="hoverIndex.set(s.index)" />
+          }
+        </svg>
+        @for (g of gridLines(); track g.value) {
+          <span class="axis-label" [style.top.%]="(g.y / chartHeight) * 100">{{ g.value | number:'1.0-0' }}</span>
+        }
+        @if (hovered(); as h) {
+          <div class="tooltip" [style.left.%]="h.leftPercent" [class.flip]="h.leftPercent > 60">
+            <strong>{{ dayLabel(h.day.date) }}</strong>
+            <span>Ventas Bs {{ h.day.sales | number:'1.2-2' }}</span>
+            <span>Utilidad Bs {{ h.day.profit | number:'1.2-2' }}</span>
+            @if (h.previous) {
+              <span class="muted">{{ dayLabel(h.previous.date) }}: Bs {{ h.previous.sales | number:'1.2-2' }}</span>
+            }
+          </div>
+        }
+      </div>
+      <div class="x-axis">
+        <span>{{ shortDayLabel(d.days[0]?.date) }}</span>
+        <span>{{ shortDayLabel(d.days[d.days.length - 1]?.date) }}</span>
+      </div>
+      <details class="table-view">
+        <summary>Ver tabla</summary>
+        <div class="table-responsive">
+          <table class="table compact">
+            <thead><tr><th>Día</th><th class="num">Ventas</th><th class="num">Utilidad</th></tr></thead>
+            <tbody>
+              @for (day of d.days; track day.date) {
+                <tr><td>{{ dayLabel(day.date) }}</td><td class="num">{{ day.sales | number:'1.2-2' }}</td>
+                  <td class="num">{{ day.profit | number:'1.2-2' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <div class="grid-2">
+      <section class="card" aria-labelledby="payments-title">
+        <h2 id="payments-title" class="card-title">Cómo se cobró</h2>
+        @if (paymentTotal() > 0) {
+          <div class="stacked-bar" role="img"
+               [attr.aria-label]="'Efectivo ' + (percentOf(d.payments.cash, paymentTotal()) | number:'1.0-0') + ' %, QR ' + (percentOf(d.payments.qr, paymentTotal()) | number:'1.0-0') + ' %'">
+            <span class="segment pay-cash" [style.flex-grow]="d.payments.cash"></span>
+            <span class="segment pay-qr" [style.flex-grow]="d.payments.qr"></span>
+            <span class="segment pay-credit" [style.flex-grow]="d.payments.credit"></span>
+          </div>
+        }
+        <ul class="value-list">
+          <li><span class="swatch pay-cash"></span>Efectivo<span class="value">Bs {{ d.payments.cash | number:'1.2-2' }}
+            <small>{{ percentOf(d.payments.cash, paymentTotal()) | number:'1.0-0' }} %</small></span></li>
+          <li><span class="swatch pay-qr"></span>QR<span class="value">Bs {{ d.payments.qr | number:'1.2-2' }}
+            <small>{{ percentOf(d.payments.qr, paymentTotal()) | number:'1.0-0' }} %</small></span></li>
+          @if (d.payments.credit > 0) {
+            <li><span class="swatch pay-credit"></span>Crédito<span class="value">Bs {{ d.payments.credit | number:'1.2-2' }}
+              <small>{{ percentOf(d.payments.credit, paymentTotal()) | number:'1.0-0' }} %</small></span></li>
+          }
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="cash-title">
+        <h2 id="cash-title" class="card-title">Caja actual</h2>
+        @if (d.now.cash.open) {
+          <p class="status status-open">Abierta · caja N.º {{ d.now.cash.sessionNumber }}</p>
+          <ul class="value-list">
+            <li>Abrió<span class="value">{{ d.now.cash.openedBy }} · {{ d.now.cash.openedAt | date:'dd/MM HH:mm':'-0400' }}</span></li>
+            <li>Caja inicial<span class="value">Bs {{ d.now.cash.openingAmount | number:'1.2-2' }}</span></li>
+            <li>Ventas ({{ d.now.cash.salesCount }})<span class="value">Bs {{ d.now.cash.totalSales | number:'1.2-2' }}</span></li>
+            <li><strong>Efectivo esperado</strong><span class="value"><strong>Bs {{ d.now.cash.expectedCash | number:'1.2-2' }}</strong></span></li>
+          </ul>
+        } @else {
+          <p class="status status-closed">Cerrada</p>
+        }
+      </section>
+    </div>
+
+    <div class="grid-2">
+      <section class="card" aria-labelledby="products-title">
+        <div class="card-head">
+          <h2 id="products-title" class="card-title">Top productos</h2>
+          <ng-container *ngTemplateOutlet="rankToggle; context: { $implicit: productsBy, label: 'Ordenar productos' }" />
+        </div>
+        <ng-container *ngTemplateOutlet="rank; context: { $implicit: products(), by: productsBy() }" />
+      </section>
+      <section class="card" aria-labelledby="suppliers-title">
+        <div class="card-head">
+          <h2 id="suppliers-title" class="card-title">Top proveedores</h2>
+          <ng-container *ngTemplateOutlet="rankToggle; context: { $implicit: suppliersBy, label: 'Ordenar proveedores' }" />
+        </div>
+        <ng-container *ngTemplateOutlet="rank; context: { $implicit: suppliers(), by: suppliersBy() }" />
+      </section>
+    </div>
+
+    <div class="grid-2">
+      <section class="card" aria-labelledby="expenses-title">
+        <div class="card-head">
+          <h2 id="expenses-title" class="card-title">Gastos por categoría</h2>
+          <span class="card-total">Bs {{ d.expenseTotal | number:'1.2-2' }}</span>
+        </div>
+        @if (d.expenses.length === 0) {
+          <p class="empty">Sin gastos en el período.</p>
+        } @else {
+          <ul class="bars">
+            @for (e of d.expenses; track e.categoryId ?? e.categoryName) {
+              <li>
+                <div class="bar-label"><span>{{ e.categoryName }}</span><span class="value">Bs {{ e.amount | number:'1.2-2' }}</span></div>
+                <div class="bar-track"><div class="bar-fill" [style.width.%]="percentOf(e.amount, expenseMax())"></div></div>
+              </li>
+            }
+          </ul>
+        }
+        <p class="aside-line">Sin transferencias entre cuentas.</p>
+      </section>
+
+      <section class="card" aria-labelledby="balances-title">
+        <h2 id="balances-title" class="card-title">Saldos y deudas</h2>
+        <ul class="value-list">
+          @for (a of d.now.accounts; track a.id) {
+            <li><span class="swatch" [style.background]="a.color || '#94a3b8'"></span>{{ a.name }}
+              <span class="value">Bs {{ a.balance | number:'1.2-2' }}</span></li>
+          }
+          <li class="total"><strong>Total</strong><span class="value"><strong>Bs {{ d.now.totalBalance | number:'1.2-2' }}</strong></span></li>
+        </ul>
+        <ul class="value-list debts">
+          <li>Por pagar a proveedores<span class="value">Bs {{ d.now.payables | number:'1.2-2' }}</span></li>
+          <li>Por devolver a personas<span class="value">Bs {{ d.now.creditorsDebt | number:'1.2-2' }}</span></li>
+          <li>Por cobrar<span class="value">Bs {{ d.now.receivables | number:'1.2-2' }}</span></li>
+        </ul>
+      </section>
+    </div>
+  }
+</div>
+
+<ng-template #delta let-value>
+  @if (value == null) {
+    <span class="kpi-delta neutral">Sin comparación</span>
+  } @else {
+    <span class="kpi-delta" [class.up]="value > 0" [class.down]="value < 0" [class.neutral]="value === 0">
+      {{ value > 0 ? '▲' : value < 0 ? '▼' : '=' }} {{ (value < 0 ? -value : value) | number:'1.1-1' }} % vs anterior
+    </span>
+  }
+</ng-template>
+
+<ng-template #rankToggle let-by let-label="label">
+  <div class="toggle" role="group" [attr.aria-label]="label">
+    <button type="button" [class.active]="by() === 'sales'" [attr.aria-pressed]="by() === 'sales'" (click)="by.set('sales')">Venta</button>
+    <button type="button" [class.active]="by() === 'profit'" [attr.aria-pressed]="by() === 'profit'" (click)="by.set('profit')">Utilidad</button>
+  </div>
+</ng-template>
+
+<ng-template #rank let-rows let-by="by">
+  @if (rows.length === 0) {
+    <p class="empty">Sin ventas en el período.</p>
+  } @else {
+    <ol class="bars">
+      @for (r of rows; track r.id ?? r.name; let i = $index) {
+        <li>
+          <div class="bar-label">
+            <span class="rank-name">{{ i + 1 }}. {{ r.name }}</span>
+            <span class="value">Bs {{ (by === 'sales' ? r.sales : r.profit) | number:'1.2-2' }}
+              <small>{{ by === 'sales' ? 'util. ' + (r.profit | number:'1.2-2') : 'venta ' + (r.sales | number:'1.2-2') }}</small></span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" [style.width.%]="barPercent(by === 'sales' ? r.sales : r.profit, rows, by)"></div></div>
+        </li>
+      }
+    </ol>
+  }
+</ng-template>

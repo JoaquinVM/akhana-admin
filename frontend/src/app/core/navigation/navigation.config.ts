@@ -22,6 +22,7 @@ export const PERMISSIONS = {
   FINANCES_ACCOUNTS: 'FINANCES_ACCOUNTS',
   FINANCES_CATEGORIES: 'FINANCES_CATEGORIES',
   REPORTS: 'REPORTS',
+  DASHBOARD: 'DASHBOARD',
   USERS: 'USERS',
   MIGRATION: 'MIGRATION'
 } as const;
@@ -43,7 +44,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'ADMINISTRATOR',
     label: 'Administrador',
-    description: 'Todas las pantallas: lo del operador más finanzas, reportes, migración y usuarios.'
+    description: 'Todas las pantallas: lo del operador más dashboard, finanzas, reportes, migración y usuarios.'
   }
 ];
 
@@ -86,6 +87,12 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     id: 'finances',
     label: 'Finanzas',
     children: [
+      {
+        label: 'Dashboard',
+        route: '/dashboard',
+        caption: 'Inicio',
+        permissionKey: PERMISSIONS.DASHBOARD
+      },
       {
         label: 'Resumen',
         route: '/finances/summary',

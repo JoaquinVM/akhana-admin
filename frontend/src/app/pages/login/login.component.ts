@@ -57,7 +57,7 @@ export class LoginComponent {
       next: (response) => {
         this.isLoading.set(false);
         this.loginForm.enable();
-        this.router.navigate([response.mustChangePassword ? '/change-password' : '/pos']);
+        this.router.navigate([response.mustChangePassword ? '/change-password' : '/']);
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);

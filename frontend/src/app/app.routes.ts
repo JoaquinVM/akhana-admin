@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
 import { ChangePasswordComponent } from './pages/change-password/change-password.component';
@@ -18,6 +19,10 @@ import { UsersComponent } from './pages/security/users/users.component';
 import { authGuard, guestGuard, sessionGuard } from './core/auth/auth.guard';
 import { permissionGuard } from './core/auth/permission.guard';
 import { PERMISSIONS } from './core/navigation/navigation.config';
+import { AuthService } from './core/auth/auth.service';
+
+// DSH-04: whoever has the dashboard starts there; everyone else in the POS
+export const homeRedirect = () => inject(AuthService).hasPermission(PERMISSIONS.DASHBOARD) ? 'dashboard' : 'pos';
 
 export const routes: Routes = [
   {
@@ -90,6 +95,13 @@ export const routes: Routes = [
         component: FinancialCategoriesComponent,
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.FINANCES_CATEGORIES }
+      },
+      {
+        path: 'dashboard',
+        // Lazy loaded: the initial bundle is over its budget (DSH-01 to DSH-04)
+        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.DASHBOARD }
       },
       {
         path: 'reports',
@@ -165,7 +177,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'pos',
+        redirectTo: homeRedirect,
         pathMatch: 'full'
       }
     ]
