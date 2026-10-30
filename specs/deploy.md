@@ -383,6 +383,8 @@ Despliegue continuo en el VPS, primera versión por el pipeline (`v1.0.1`, `c191
   en unos 40 s con la versión anterior atendiendo, sacó el respaldo `pre-deploy` (672 KB) con el backend detenido y
   quedó sana a las 12:43:30: corte de unos 36 s. `last-result` y `deployed` quedaron en `c1919e4` y el checkout en
   `v1.0.1`.
+- El dueño comprobó en producción que el buscador del POS muestra el proveedor en cada resultado (POS-01, llegado con
+  `v1.0.1`).
 
 En el VPS (Contabo, Ubuntu 24.04.5, 8 GB, US East), con `v1.0.0` (`6fbdbf1`) y una copia de la base local:
 
