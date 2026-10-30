@@ -66,7 +66,7 @@ describe('LoginComponent', () => {
       username: 'admin',
       password: 'password123'
     });
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/pos']);
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
     expect(component.isLoading()).toBe(false);
   });
 

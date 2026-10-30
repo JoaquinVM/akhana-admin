@@ -54,7 +54,7 @@ export class ChangePasswordComponent {
       next: () => {
         this.isLoading.set(false);
         this.form.enable();
-        this.router.navigate(['/pos']);
+        this.router.navigate(['/']);
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);

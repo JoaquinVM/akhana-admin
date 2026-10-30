@@ -54,6 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ConsumptionController.class,
         CreditorController.class,
         CustomerController.class,
+        DashboardController.class,
         DebtController.class,
         FinancialAccountController.class,
         FinancialCategoryController.class,
@@ -162,6 +163,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
+    @MockitoBean private DashboardService dashboardService;
     @MockitoBean private ReportService reportService;
     @MockitoBean private ReportExportService reportExportService;
     @MockitoBean private SaleService saleService;
@@ -304,6 +306,8 @@ class EndpointAuthorizationTest {
                 adminOnly(put, "/api/finances/categories/" + ID + "/sales-default", null),
                 adminOnly(delete, "/api/finances/categories/" + ID, null),
                 adminOnly(get, "/api/finances/summary", null),
+                // Dashboard (DSH-01 to DSH-04)
+                adminOnly(get, "/api/dashboard", null),
                 // Reportes
                 adminOnly(get, "/api/reports/sales-by-day", null),
                 adminOnly(get, "/api/reports/sales-by-supplier", null),

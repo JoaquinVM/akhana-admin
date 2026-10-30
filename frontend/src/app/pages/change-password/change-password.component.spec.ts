@@ -60,7 +60,7 @@ describe('ChangePasswordComponent', () => {
     component.onSubmit();
 
     expect(authServiceSpy.changePassword).toHaveBeenCalledWith({ currentPassword: 'initial-pass', newPassword: 'new-strong-pass' });
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/pos']);
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
   });
 
   it('should show the backend validation message', () => {

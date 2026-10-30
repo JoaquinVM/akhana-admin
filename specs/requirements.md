@@ -22,6 +22,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
+| Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
@@ -80,7 +81,7 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 | Anular ventas y gastos de caja (en el POS) | Sí | Sí |
 | Anular pedidos o pagos (en Compras) | Sí | Sí |
 | Devoluciones a personas y cobros a la tienda amiga, y sus anulaciones (en Deudas) | Sí | Sí |
-| Finanzas, reportes, migración histórica, usuarios | No | Sí |
+| Dashboard, finanzas, reportes, migración histórica, usuarios | No | Sí |
 
 ### 2.3 Criterio para dejar las planillas
 
@@ -219,6 +220,15 @@ Detalle en `users.md`.
 - **INV-03** Kardex por producto y rango de fechas, con saldo después de cada movimiento.
 - **INV-04** Stock mínimo por producto y listado de productos bajo mínimo.
 - **INV-05** Conteo físico: se registra lo contado, se muestra la diferencia y, al confirmar, se generan los ajustes.
+
+### 3.11 Dashboard · V1
+
+Detalle en `dashboard.md`. Solo Administrador (permiso propio, P-33) y su pantalla de inicio; el operador sigue entrando al POS.
+
+- **DSH-01** Indicadores del período (hoy, semana, mes o rango): ventas, utilidad, margen, tickets y ticket promedio de las ventas normales, con el cambio contra el período anterior; al costo y consumos aparte.
+- **DSH-02** Ventas y utilidad por día del período junto al período anterior, y cómo se cobró (efectivo, QR, crédito).
+- **DSH-03** Top 10 de productos y de proveedores por venta o por utilidad, y gastos por categoría sin transferencias.
+- **DSH-04** Ahora mismo: estado de la caja abierta, saldo por cuenta y total, por pagar a proveedores, por devolver a personas y por cobrar.
 
 ## 4. Requerimientos técnicos y de seguridad
 

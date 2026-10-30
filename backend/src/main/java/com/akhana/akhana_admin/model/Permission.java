@@ -36,6 +36,8 @@ public enum Permission {
     FINANCES_CATEGORIES,
     /** Reports of sales, profit, transactions and consumptions (FIN-10, CON-03). */
     REPORTS,
+    /** Dashboard with the period's indicators, charts and current balances (DSH-01 to DSH-04). */
+    DASHBOARD,
     /** Users and their roles. */
     USERS,
     /** One-time historical migration of the spreadsheets (FIN-11). */
