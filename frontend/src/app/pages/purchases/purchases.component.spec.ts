@@ -16,7 +16,7 @@ describe('PurchasesComponent', () => {
   const purchase = {
     id: 'pur-1', purchaseNumber: 'PED-000001', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
     status: 'REGISTRADO', itemsTotal: 300, shippingCost: 25, totalAmount: 325, paidAmount: 0, balance: 300,
-    paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountName: null,
+    paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountId: null, updatedBy: null, updatedAt: null, revisions: [], shippingAccountName: null,
     deliveryType: 'TERMINAL', deliveryStatus: 'PENDIENTE', deliveryDate: null, createdBy: 'operator',
     createdAt: '2026-10-25T12:00:00Z', voidedBy: null, voidedAt: null, voidReason: null, items: [], payments: []
   } as Purchase;

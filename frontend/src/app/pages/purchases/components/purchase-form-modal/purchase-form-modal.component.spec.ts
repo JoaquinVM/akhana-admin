@@ -29,6 +29,7 @@ describe('PurchaseFormModalComponent', () => {
   beforeEach(async () => {
     purchaseService = {
       registerPurchase: vi.fn().mockReturnValue(of({ id: 'pur-1' } as Purchase)),
+      updatePurchase: vi.fn().mockReturnValue(of({ id: 'pur-7', purchaseNumber: 'PED-000007' } as Purchase)),
       getPriceSuggestion: vi.fn().mockReturnValue(of({
         productId: 'p-1', currentCost: 10, currentSellPrice: 15, currentPercentageProfit: 50, newCost: 12.3, suggestedSellPrice: 19
       }))
@@ -223,5 +224,82 @@ describe('PurchaseFormModalComponent', () => {
     component.addProduct(tea);
     component.submit();
     expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000029 registrado.');
+  });
+  describe('COM-11: edición', () => {
+    const editable = {
+      id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
+      status: 'REGISTRADO', itemsTotal: 300, shippingCost: 25, totalAmount: 325, paidAmount: 300, balance: 0,
+      paymentStatus: 'PAGADO', consignment: false, comment: 'Semanal', shippingAccountId: 'acc-bisa',
+      shippingAccountName: 'Bisa', deliveryType: 'EN_TIENDA', deliveryStatus: 'ENTREGADO', deliveryDate: '2026-10-26',
+      createdBy: 'operator', createdAt: '2026-10-25T12:00:00Z', updatedBy: null, updatedAt: null, voidedBy: null,
+      voidedAt: null, voidReason: null, payments: [], revisions: [],
+      items: [
+        { id: 'it-1', productId: 'p-1', productName: 'Té verde', productCode: 'TE-1', saleUnit: 'UNIT', quantity: 24,
+          unitCost: 10, subtotal: 240, previousUnitCost: 10, costUpdated: false },
+        { id: 'it-2', productId: 'p-2', productName: 'Nueces', productCode: 'NUE-1', saleUnit: 'KILOGRAM', quantity: 1.5,
+          unitCost: 40, subtotal: 60, previousUnitCost: 40, costUpdated: false }
+      ]
+    } as Purchase;
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('purchase', editable);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+    });
+
+    it('carga el pedido con sus líneas y el producto del catálogo, sin pago inicial', () => {
+      expect(component.isEdit()).toBe(true);
+      expect(component.supplierId()).toBe('sup-1');
+      expect(component.shippingAccountId()).toBe('acc-bisa');
+      expect(component.lines().map(l => [l.itemId, l.product.sellPrice])).toEqual([['it-1', 15], ['it-2', 60]]);
+      expect(component.itemsTotal()).toBe(300);
+      expect(fixture.nativeElement.querySelector('#purchase-initial-source')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#purchase-edit-reason')).not.toBeNull();
+    });
+
+    it('agrega lo no pedido, quita lo que faltó y envía las líneas conservadas con su id y el motivo', () => {
+      component.removeLine(1);
+      component.addProduct(product({ id: 'p-3', code: 'CH-1', name: 'Barra Chia', buyPrice: 5 }));
+      component.onQuantityChange(0, 26);
+      component.reason.set('  Faltaron las nueces  ');
+      component.submit();
+
+      const [id, request] = purchaseService.updatePurchase.mock.calls[0];
+      expect(id).toBe('pur-7');
+      expect(request.reason).toBe('Faltaron las nueces');
+      expect('initialPayment' in request).toBe(false);
+      expect(request.items.map((i: any) => [i.productId, i.itemId, i.quantity])).toEqual([['p-1', 'it-1', 26], ['p-3', undefined, 1]]);
+      expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000007 actualizado.');
+    });
+
+    it('exige el motivo antes de guardar', () => {
+      component.onQuantityChange(0, 20);
+      component.submit();
+      expect(component.formError()).toBe('Escriba el motivo del cambio.');
+      expect(purchaseService.updatePurchase).not.toHaveBeenCalled();
+    });
+
+    it('COM-12: alerta que el gasto de envío se rehace al cambiar monto o cuenta', () => {
+      expect(component.shippingChanged()).toBe(false);
+      component.shippingCost.set(30);
+      fixture.detectChanges();
+      expect(component.shippingChanged()).toBe(true);
+      expect(fixture.nativeElement.querySelector('.alert-warning')?.textContent)
+        .toContain('Se anulará el gasto de envío de Bs 25.00');
+      component.shippingCost.set(25);
+      component.shippingAccountId.set('acc-caja');
+      expect(component.shippingChanged()).toBe(true);
+    });
+
+    it('muestra el error del servidor (total menor a lo pagado)', () => {
+      purchaseService.updatePurchase.mockReturnValue(throwError(() => ({ error: {
+        message: 'El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anule primero el pago.' } })));
+      component.removeLine(1);
+      component.reason.set('Faltaron las nueces');
+      component.submit();
+      expect(component.formError()).toContain('anule primero el pago');
+    });
   });
 });

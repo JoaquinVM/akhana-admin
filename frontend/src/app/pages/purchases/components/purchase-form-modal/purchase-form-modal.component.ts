@@ -21,6 +21,7 @@ import {
   PurchaseItemRequest,
   PurchasePaymentRequest,
   PurchaseRequest,
+  PurchaseUpdateRequest,
   paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
 import { productForEnter, searchProducts, stopImplicitSubmit } from '../../../../shared/utils/product-search';
@@ -39,6 +40,8 @@ export interface PurchaseLineDraft {
   priceChoice: PriceChoice;
   customPrice: number | null;
   suggestion: PriceSuggestion | null;
+  // COM-11: the purchase line it edits; absent for a new line
+  itemId?: string | null;
 }
 
 export interface NewProductDraft {
@@ -78,6 +81,8 @@ export class PurchaseFormModalComponent {
   accounts = input<PaymentAccount[]>([]);
   // Active people who can pay the purchase for the business (DEU-02)
   creditors = input<Creditor[]>([]);
+  // COM-11: the purchase to edit; null registers a new one
+  purchase = input<Purchase | null>(null);
 
   saved = output<Purchase>();
   close = output<void>();
@@ -98,6 +103,8 @@ export class PurchaseFormModalComponent {
   initialPaymentSource = signal<string>('');
   initialPaymentAmount = signal<number | null>(null);
   lines = signal<PurchaseLineDraft[]>([]);
+  // COM-11: every edit needs a reason
+  reason = signal<string>('');
 
   products = signal<Product[]>([]);
   productSearch = signal<string>('');
@@ -128,6 +135,18 @@ export class PurchaseFormModalComponent {
   totalAmount = computed(() => round2(this.itemsTotal() + (Number(this.shippingCost()) || 0)));
   needsShippingAccount = computed(() => (Number(this.shippingCost()) || 0) > 0);
 
+  isEdit = computed(() => this.purchase() !== null);
+  // COM-12: a different shipping (amount or account) voids its expense and records a new one
+  shippingChanged = computed(() => {
+    const purchase = this.purchase();
+    if (!purchase) {
+      return false;
+    }
+    const shipping = round2(Number(this.shippingCost()) || 0);
+    return shipping !== round2(purchase.shippingCost)
+      || (shipping > 0 && this.shippingAccountId() !== (purchase.shippingAccountId ?? ''));
+  });
+
   constructor() {
     effect(() => {
       if (this.isOpen()) {
@@ -142,6 +161,11 @@ export class PurchaseFormModalComponent {
   }
 
   private reset(): void {
+    const purchase = this.purchase();
+    if (purchase) {
+      this.fillFrom(purchase);
+      return;
+    }
     this.supplierId.set('');
     this.purchaseDate.set(todayIso());
     this.consignment.set(false);
@@ -154,6 +178,46 @@ export class PurchaseFormModalComponent {
     this.initialPaymentSource.set('');
     this.initialPaymentAmount.set(null);
     this.lines.set([]);
+    this.reason.set('');
+    this.productSearch.set('');
+    this.showNewProduct.set(false);
+    this.newProduct.set(this.emptyNewProduct());
+    this.newProductError.set(null);
+    this.formError.set(null);
+    this.isSubmitting.set(false);
+  }
+
+  // COM-11: the form starts with the purchase as it is; its lines take the catalog product once it loads
+  private fillFrom(purchase: Purchase): void {
+    this.supplierId.set(purchase.supplierId);
+    this.purchaseDate.set(purchase.purchaseDate);
+    this.consignment.set(purchase.consignment);
+    this.comment.set(purchase.comment ?? '');
+    this.shippingCost.set(purchase.shippingCost);
+    this.shippingAccountId.set(purchase.shippingAccountId ?? '');
+    this.deliveryType.set(purchase.deliveryType);
+    this.deliveryStatus.set(purchase.deliveryStatus);
+    this.deliveryDate.set(purchase.deliveryDate ?? '');
+    this.initialPaymentSource.set('');
+    this.initialPaymentAmount.set(null);
+    this.lines.set(purchase.items.map(item => ({
+      product: {
+        id: item.productId,
+        code: item.productCode ?? '',
+        name: item.productName,
+        saleUnit: item.saleUnit,
+        buyPrice: item.unitCost,
+        sellPrice: 0
+      } as Product,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      updateCost: false,
+      priceChoice: 'SUGGESTED',
+      customPrice: null,
+      suggestion: null,
+      itemId: item.id
+    })));
+    this.reason.set('');
     this.productSearch.set('');
     this.showNewProduct.set(false);
     this.newProduct.set(this.emptyNewProduct());
@@ -165,7 +229,15 @@ export class PurchaseFormModalComponent {
   private loadProducts(): void {
     this.productService.getProducts().subscribe({
       // POS-11: special products are not purchased
-      next: products => this.products.set(products.filter(p => !isSpecialProduct(p))),
+      next: products => {
+        this.products.set(products.filter(p => !isSpecialProduct(p)));
+        // Edited lines compare their cost with the current catalog cost (COM-03)
+        const byId = new Map(products.map(p => [p.id, p]));
+        this.lines.update(lines => lines.map(line => {
+          const product = byId.get(line.product.id);
+          return product ? { ...line, product } : line;
+        }));
+      },
       error: () => this.formError.set('No se pudo cargar el catálogo de productos.')
     });
   }
@@ -337,7 +409,9 @@ export class PurchaseFormModalComponent {
         // Sent as typed: the server rejects more than 2 decimals instead of rounding them away
         unitCost: Number(line.unitCost),
         updateProductCost,
-        newSellPrice: updateProductCost ? this.chosenSellPrice(line) : null
+        newSellPrice: updateProductCost ? this.chosenSellPrice(line) : null,
+        // COM-11: only the lines of the edited purchase carry their id
+        ...(line.itemId ? { itemId: line.itemId } : {})
       };
     });
     const shipping = round2(Number(this.shippingCost()) || 0);
@@ -355,6 +429,12 @@ export class PurchaseFormModalComponent {
       deliveryDate: this.deliveryDate() || null,
       initialPayment: this.buildInitialPayment()
     };
+  }
+
+  // COM-11: the same purchase without the first payment, with the reason
+  buildUpdateRequest(): PurchaseUpdateRequest {
+    const { initialPayment: _, ...request } = this.buildRequest();
+    return { ...request, reason: this.reason().trim() };
   }
 
   private buildInitialPayment(): PurchasePaymentRequest | null {
@@ -378,6 +458,11 @@ export class PurchaseFormModalComponent {
       this.formError.set('Ingrese el monto del pago inicial.');
       return;
     }
+    const purchase = this.purchase();
+    if (purchase) {
+      this.submitEdit(purchase);
+      return;
+    }
     this.isSubmitting.set(true);
     this.formError.set(null);
     this.purchaseService.registerPurchase(this.buildRequest()).subscribe({
@@ -389,6 +474,26 @@ export class PurchaseFormModalComponent {
       error: err => {
         this.isSubmitting.set(false);
         this.formError.set(err.error?.message || 'No se pudo registrar el pedido.');
+      }
+    });
+  }
+
+  private submitEdit(purchase: Purchase): void {
+    if (!this.reason().trim()) {
+      this.formError.set('Escriba el motivo del cambio.');
+      return;
+    }
+    this.isSubmitting.set(true);
+    this.formError.set(null);
+    this.purchaseService.updatePurchase(purchase.id, this.buildUpdateRequest()).subscribe({
+      next: updated => {
+        this.toast.success(`Pedido ${updated.purchaseNumber} actualizado.`);
+        this.isSubmitting.set(false);
+        this.saved.emit(updated);
+      },
+      error: err => {
+        this.isSubmitting.set(false);
+        this.formError.set(err.error?.message || 'No se pudo guardar el pedido.');
       }
     });
   }

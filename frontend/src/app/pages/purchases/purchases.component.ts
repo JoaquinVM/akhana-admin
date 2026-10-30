@@ -72,6 +72,8 @@ export class PurchasesComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   isFormOpen = signal<boolean>(false);
+  // COM-11: the purchase being edited in the form; null registers a new one
+  editPurchase = signal<Purchase | null>(null);
   detailPurchaseId = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -156,12 +158,33 @@ export class PurchasesComponent implements OnInit {
   }
 
   openForm(): void {
+    this.editPurchase.set(null);
     this.isFormOpen.set(true);
+  }
+
+  // COM-11: the form replaces the detail while editing and gives it back on close
+  openEdit(purchase: Purchase): void {
+    this.detailPurchaseId.set(null);
+    this.editPurchase.set(purchase);
+    this.isFormOpen.set(true);
+  }
+
+  closeForm(): void {
+    const edited = this.editPurchase();
+    this.isFormOpen.set(false);
+    this.editPurchase.set(null);
+    if (edited) {
+      this.detailPurchaseId.set(edited.id);
+    }
   }
 
   onPurchaseSaved(purchase: Purchase): void {
     this.isFormOpen.set(false);
+    this.editPurchase.set(null);
     this.loadPurchases();
+    if (purchase.revisions?.length) {
+      this.payablesRefresh.update(n => n + 1);
+    }
     this.detailPurchaseId.set(purchase.id);
   }
 

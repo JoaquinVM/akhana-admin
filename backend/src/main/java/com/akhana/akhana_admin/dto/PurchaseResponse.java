@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.dto;
 
 import com.akhana.akhana_admin.model.DeliveryStatus;
 import com.akhana.akhana_admin.model.DeliveryType;
+import com.akhana.akhana_admin.model.FinancialAccount;
 import com.akhana.akhana_admin.model.Purchase;
 import com.akhana.akhana_admin.model.PurchasePaymentStatus;
 import com.akhana.akhana_admin.model.PurchaseStatus;
@@ -31,35 +32,43 @@ public record PurchaseResponse(
     PurchasePaymentStatus paymentStatus,
     boolean consignment,
     String comment,
+    UUID shippingAccountId,
     String shippingAccountName,
     DeliveryType deliveryType,
     DeliveryStatus deliveryStatus,
     LocalDate deliveryDate,
     String createdBy,
     Instant createdAt,
+    String updatedBy,
+    Instant updatedAt,
     String voidedBy,
     Instant voidedAt,
     String voidReason,
     List<PurchaseItemResponse> items,
     List<PurchasePaymentResponse> payments,
+    // COM-12: edits, the most recent first
+    List<PurchaseRevisionResponse> revisions,
     // FIN-11: migrated from the spreadsheet; it only accepts new payments
     boolean historical
 ) {
     public static PurchaseResponse summary(Purchase purchase) {
-        return of(purchase, null, List.of(), List.of());
+        return of(purchase, null, List.of(), List.of(), List.of());
     }
 
-    public static PurchaseResponse detail(Purchase purchase, String shippingAccountName) {
+    public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount) {
         return of(
             purchase,
-            shippingAccountName,
-            purchase.getItems().stream().map(PurchaseItemResponse::fromEntity).toList(),
-            purchase.getPayments().stream().map(PurchasePaymentResponse::fromEntity).toList()
+            shippingAccount,
+            // Lines removed while editing are only in the revisions (COM-11)
+            purchase.getItems().stream().filter(item -> !item.isRemoved()).map(PurchaseItemResponse::fromEntity).toList(),
+            purchase.getPayments().stream().map(PurchasePaymentResponse::fromEntity).toList(),
+            purchase.getRevisions().stream().map(PurchaseRevisionResponse::fromEntity).toList()
         );
     }
 
-    private static PurchaseResponse of(Purchase purchase, String shippingAccountName,
-                                       List<PurchaseItemResponse> items, List<PurchasePaymentResponse> payments) {
+    private static PurchaseResponse of(Purchase purchase, FinancialAccount shippingAccount,
+                                       List<PurchaseItemResponse> items, List<PurchasePaymentResponse> payments,
+                                       List<PurchaseRevisionResponse> revisions) {
         return new PurchaseResponse(
             purchase.getId(),
             purchase.getPurchaseNumber(),
@@ -75,17 +84,21 @@ public record PurchaseResponse(
             purchase.getPaymentStatus(),
             Boolean.TRUE.equals(purchase.getConsignment()),
             purchase.getComment(),
-            shippingAccountName,
+            shippingAccount != null ? shippingAccount.getId() : null,
+            shippingAccount != null ? shippingAccount.getName() : null,
             purchase.getDeliveryType(),
             purchase.getDeliveryStatus(),
             purchase.getDeliveryDate(),
             purchase.getCreatedBy(),
             purchase.getCreatedAt(),
+            purchase.getUpdatedBy(),
+            purchase.getUpdatedAt(),
             purchase.getVoidedBy(),
             purchase.getVoidedAt(),
             purchase.getVoidReason(),
             items,
             payments,
+            revisions,
             purchase.isHistorical()
         );
     }

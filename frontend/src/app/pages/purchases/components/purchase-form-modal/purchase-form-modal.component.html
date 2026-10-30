@@ -1,7 +1,9 @@
 <app-modal
   [isOpen]="isOpen()"
-  title="Nuevo pedido"
-  subtitle="Proveedor, líneas, envío y un pago inicial opcional; los demás pagos se registran desde el detalle."
+  [title]="isEdit() ? 'Editar pedido ' + purchase()!.purchaseNumber : 'Nuevo pedido'"
+  [subtitle]="isEdit()
+    ? 'Agregue lo que llegó sin pedirse, cambie cantidades o costos y quite lo que faltó. Los pagos se registran y anulan desde el detalle.'
+    : 'Proveedor, líneas, envío y un pago inicial opcional; los demás pagos se registran desde el detalle.'"
   size="xl"
   [closeOnBackdrop]="false"
   [closeOnEscape]="false"
@@ -125,7 +127,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (line of lines(); track line.product.id; let i = $index) {
+          @for (line of lines(); track line.itemId ?? line.product.id; let i = $index) {
             <tr>
               <td>
                 <span class="line-name">{{ line.product.name }}</span>
@@ -220,6 +222,14 @@
           </select>
         </div>
       }
+      @if (shippingChanged() && purchase()!.shippingCost > 0) {
+        <div class="form-group">
+          <div class="alert alert-warning" role="alert">
+            <span>Se anulará el gasto de envío de Bs {{ purchase()!.shippingCost | number:'1.2-2' }}
+              en {{ purchase()!.shippingAccountName }} y se registrará uno nuevo.</span>
+          </div>
+        </div>
+      }
       <div class="form-group">
         <label class="form-label" for="purchase-comment">Comentario</label>
         <input id="purchase-comment" class="form-control" name="comment" maxlength="500"
@@ -259,6 +269,7 @@
       </div>
     </div>
 
+    @if (!isEdit()) {
     <div class="form-grid form-grid-3">
       <div class="form-group">
         <label class="form-label" for="purchase-initial-source">Pago inicial</label>
@@ -292,6 +303,17 @@
         </div>
       }
     </div>
+    } @else {
+      <div class="form-group">
+        <label class="form-label" for="purchase-edit-reason">Motivo del cambio <span class="required-mark">*</span></label>
+        <input id="purchase-edit-reason" class="form-control" name="reason" maxlength="500"
+               placeholder="Ej.: llegó 1 caja que no se pidió, faltó la miel"
+               [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
+        @if (purchase()!.paidAmount > 0) {
+          <span class="form-hint">Pagado Bs {{ purchase()!.paidAmount | number:'1.2-2' }}: el total de las líneas no puede quedar menor.</span>
+        }
+      </div>
+    }
 
     <div class="totals">
       <div><span>Total líneas</span><strong>Bs {{ itemsTotal() | number:'1.2-2' }}</strong></div>
@@ -302,7 +324,11 @@
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" (click)="onClose()" [disabled]="isSubmitting()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Registrando…' : 'Registrar pedido' }}
+        @if (isEdit()) {
+          {{ isSubmitting() ? 'Guardando…' : 'Guardar cambios' }}
+        } @else {
+          {{ isSubmitting() ? 'Registrando…' : 'Registrar pedido' }}
+        }
       </button>
     </div>
   </form>

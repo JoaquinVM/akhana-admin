@@ -42,6 +42,8 @@ export class PurchaseDetailModalComponent {
 
   // Emits the updated purchase after a payment, a delivery change or a void, to refresh the list
   updated = output<Purchase>();
+  // COM-11: opens the purchase form to edit this purchase
+  edit = output<Purchase>();
   close = output<void>();
 
   purchase = signal<Purchase | null>(null);

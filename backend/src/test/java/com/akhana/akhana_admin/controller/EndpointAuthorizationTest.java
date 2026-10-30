@@ -96,6 +96,8 @@ class EndpointAuthorizationTest {
             {"name":"Granel","code":"GR"}""";
     private static final String PURCHASE = """
             {"supplierId":"%s","items":[{"productId":"%s","quantity":1,"unitCost":5.00}]}""".formatted(ID, ID);
+    private static final String PURCHASE_UPDATE = """
+            {"supplierId":"%s","items":[{"productId":"%s","quantity":1,"unitCost":5.00}],"reason":"Llegó otro"}""".formatted(ID, ID);
     private static final String PURCHASE_PAYMENT = """
             {"accountId":"%s","amount":50.00}""".formatted(ID);
     private static final String PURCHASE_DELIVERY = """
@@ -246,6 +248,7 @@ class EndpointAuthorizationTest {
                 both(get, "/api/purchases", null),
                 both(get, "/api/purchases/" + ID, null),
                 both(post, "/api/purchases", PURCHASE),
+                both(put, "/api/purchases/" + ID, PURCHASE_UPDATE),
                 both(post, "/api/purchases/" + ID + "/payments", PURCHASE_PAYMENT),
                 both(get, "/api/purchases/payment-accounts", null),
                 both(get, "/api/purchases/price-suggestion?productId=" + ID + "&newCost=12.30", null),

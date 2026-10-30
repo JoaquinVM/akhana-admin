@@ -7,7 +7,7 @@ import { Purchase, PurchasePayment } from '../../../../core/purchase/models/purc
 const basePurchase: Purchase = {
   id: 'pur-1', purchaseNumber: 'PED-000001', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
   status: 'REGISTRADO', itemsTotal: 300, shippingCost: 25, totalAmount: 325, paidAmount: 0, balance: 300,
-  paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountName: 'Bisa',
+  paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountId: null, updatedBy: null, updatedAt: null, revisions: [], shippingAccountName: 'Bisa',
   deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE', deliveryDate: null, createdBy: 'operator',
   createdAt: '2026-10-25T12:00:00Z', voidedBy: null, voidedAt: null, voidReason: null,
   items: [{
@@ -139,5 +139,22 @@ describe('PurchaseDetailModalComponent', () => {
     expect(purchaseService.voidPayment).toHaveBeenCalledWith('pur-1', 'pay-1', { voidReason: 'Duplicado' });
     expect(component.voidError()).toBe('El pago se hizo en una caja cerrada; no se puede anular.');
     expect(component.voidTarget()).toBe(payment);
+  });
+  it('COM-11 y COM-12: «Editar pedido» emite el pedido y el historial muestra los cambios', () => {
+    purchaseService.getPurchaseById.mockReturnValue(of({ ...basePurchase, revisions: [{
+      id: 'rev-1', reason: 'Faltó la miel', changes: 'Línea quitada: Miel · Total: Bs 320,00 → Bs 300,00',
+      revisedBy: 'operator', revisedAt: '2026-10-26T15:00:00Z' }] }));
+    fixture.componentRef.setInput('purchaseId', 'pur-2');
+    fixture.detectChanges();
+    const edited = vi.fn();
+    component.edit.subscribe(edited);
+
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('Historial de cambios');
+    expect(text).toContain('Línea quitada: Miel');
+    const button = Array.from(document.body.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Editar pedido')) as HTMLButtonElement;
+    button.click();
+    expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 'pur-1' }));
   });
 });

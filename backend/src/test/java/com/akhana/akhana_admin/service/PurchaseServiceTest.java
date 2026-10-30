@@ -8,6 +8,7 @@ import com.akhana.akhana_admin.dto.PurchasePaymentRequest;
 import com.akhana.akhana_admin.dto.PurchasePaymentResponse;
 import com.akhana.akhana_admin.dto.PurchaseRequest;
 import com.akhana.akhana_admin.dto.PurchaseResponse;
+import com.akhana.akhana_admin.dto.PurchaseUpdateRequest;
 import com.akhana.akhana_admin.dto.VoidPurchaseRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
@@ -966,5 +967,213 @@ class PurchaseServiceTest {
         order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
         order.verify(creditorRepository).findAllByIdForUpdate(any());
         order.verify(financialAccountRepository).findAllByIdForUpdate(any());
+    }
+
+    // ---------------------------------------------------------------- COM-11, COM-12
+
+    private PurchaseItem nutsLine;
+    private PurchaseItem teaLine;
+
+    // Nueces 1,5 kg a Bs 40 (60) + Té verde 24 a Bs 10 (240) = Bs 300, delivered, shipping Bs 0
+    private Purchase editablePurchase(String paid) {
+        Purchase purchase = existingPurchase("300.00", paid);
+        purchase.setDeliveryStatus(DeliveryStatus.ENTREGADO);
+        purchase.setDeliveryDate(purchase.getPurchaseDate());
+        nutsLine = PurchaseItem.builder().id(UUID.randomUUID()).purchase(purchase).product(nuts).productName("Nueces")
+            .quantity(new BigDecimal("1.500")).unitCost(new BigDecimal("40.00")).subtotal(new BigDecimal("60.00"))
+            .previousUnitCost(new BigDecimal("40.00")).build();
+        teaLine = PurchaseItem.builder().id(UUID.randomUUID()).purchase(purchase).product(tea).productName("Té verde")
+            .quantity(new BigDecimal("24.000")).unitCost(new BigDecimal("10.00")).subtotal(new BigDecimal("240.00"))
+            .previousUnitCost(new BigDecimal("10.00")).build();
+        purchase.getItems().addAll(List.of(nutsLine, teaLine));
+        return purchase;
+    }
+
+    private PurchaseItemRequest kept(PurchaseItem item, String quantity, String unitCost) {
+        return new PurchaseItemRequest(item.getProduct().getId(), new BigDecimal(quantity), new BigDecimal(unitCost),
+            false, null, item.getId());
+    }
+
+    private PurchaseUpdateRequest edit(Purchase purchase, List<PurchaseItemRequest> items, String shipping,
+                                       UUID shippingAccountId, String reason) {
+        return new PurchaseUpdateRequest(purchase.getSupplier().getId(), purchase.getPurchaseDate(), items,
+            new BigDecimal(shipping), shippingAccountId, false, null, purchase.getDeliveryType(),
+            purchase.getDeliveryStatus(), purchase.getDeliveryDate(), reason);
+    }
+
+    @Test
+    @DisplayName("COM-11: agregar lo que llegó sin pedirse, cambiar cantidad y quitar lo que faltó recalcula totales y audita")
+    void updatePurchase_addsChangesAndRemovesLines() {
+        Purchase purchase = editablePurchase("0.00");
+        Product chia = Product.builder().id(UUID.randomUUID()).code("CH-1").name("Barra Chia").saleUnit(SaleUnit.UNIT)
+            .buyPrice(new BigDecimal("5.00")).sellPrice(new BigDecimal("8.00")).status(ProductStatus.ACTIVO).build();
+        when(productRepository.findById(chia.getId())).thenReturn(Optional.of(chia));
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(teaLine, "20", "10.00"),
+            new PurchaseItemRequest(chia.getId(), new BigDecimal("2"), new BigDecimal("5.00"), false, null)),
+            "0", null, "  Faltaron las nueces y llegaron 2 barras  "), "operator");
+
+        assertThat(nutsLine.isRemoved()).isTrue();
+        assertThat(nutsLine.getRemovedBy()).isEqualTo("operator");
+        assertThat(res.items()).extracting(i -> i.productName()).containsExactly("Té verde", "Barra Chia");
+        assertThat(res.items().get(1).previousUnitCost()).isEqualByComparingTo("5.00");
+        assertThat(teaLine.getSubtotal()).isEqualByComparingTo("200.00");
+        assertThat(res.itemsTotal()).isEqualByComparingTo("210.00");
+        assertThat(res.totalAmount()).isEqualByComparingTo("210.00");
+        assertThat(res.balance()).isEqualByComparingTo("210.00");
+        assertThat(res.updatedBy()).isEqualTo("operator");
+        assertThat(res.revisions()).hasSize(1);
+        assertThat(res.revisions().get(0).reason()).isEqualTo("Faltaron las nueces y llegaron 2 barras");
+        assertThat(res.revisions().get(0).revisedBy()).isEqualTo("operator");
+        assertThat(res.revisions().get(0).changes()).isEqualTo("Cantidad de Té verde: 24 → 20 · "
+            + "Línea agregada: Barra Chia × 2 a Bs 5,00 · Línea quitada: Nueces · Total: Bs 300,00 → Bs 210,00");
+        verifyNoInteractions(financialAccountRepository);
+    }
+
+    @Test
+    @DisplayName("COM-11: un pedido pagado al que se agrega una línea queda A cuenta con el saldo nuevo")
+    void updatePurchase_paidPurchaseGetsBalance() {
+        Purchase purchase = editablePurchase("300.00");
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"), kept(teaLine, "26", "10")), "0", null, "Llegaron 2 tés más"), "operator");
+
+        assertThat(res.itemsTotal()).isEqualByComparingTo("320.00");
+        assertThat(res.paidAmount()).isEqualByComparingTo("300.00");
+        assertThat(res.balance()).isEqualByComparingTo("20.00");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.A_CUENTA);
+    }
+
+    @Test
+    @DisplayName("COM-12: el total no queda menor a lo pagado (también lo pagado por una persona); igual se acepta")
+    void updatePurchase_totalBelowPaidRejected() {
+        Purchase purchase = editablePurchase("300.00");
+        purchase.getPayments().add(PurchasePayment.builder().id(UUID.randomUUID()).purchase(purchase).creditor(mami)
+            .amount(new BigDecimal("300.00")).status(PurchasePaymentRecordStatus.ACTIVO).build());
+
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase,
+            List.of(kept(teaLine, "24", "10")), "0", null, "Faltaron las nueces"), "operator"))
+            .hasMessage("El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anule primero el pago.");
+        verify(purchaseRepository, never()).save(any());
+
+        // A rejected edit rolls back; the unit test starts again from the same purchase
+        Purchase again = editablePurchase("300.00");
+        PurchaseResponse res = purchaseService.updatePurchase(again.getId(), edit(again, List.of(
+            kept(nutsLine, "1", "60"), kept(teaLine, "24", "10")), "0", null, "Otro costo de nueces"), "operator");
+        assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
+        assertThat(res.revisions().get(0).changes()).isEqualTo(
+            "Cantidad de Nueces: 1,500 → 1 · Costo de Nueces: Bs 40,00 → Bs 60,00");
+    }
+
+    @Test
+    @DisplayName("COM-11: motivo obligatorio, sin cambios, producto cambiado, línea repetida, anulado e histórico se rechazan")
+    void updatePurchase_rejections() {
+        Purchase purchase = editablePurchase("0.00");
+        List<PurchaseItemRequest> same = List.of(kept(nutsLine, "1.5", "40"), kept(teaLine, "24", "10"));
+
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase, same, "0", null, "  "), "op"))
+            .hasMessage("El motivo del cambio es obligatorio.");
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase, same, "0", null, "Nada"), "op"))
+            .hasMessage("No hay cambios para guardar.");
+        PurchaseItemRequest otherProduct = new PurchaseItemRequest(tea.getId(), BigDecimal.ONE, BigDecimal.TEN, false, null,
+            nutsLine.getId());
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            edit(purchase, List.of(otherProduct), "0", null, "Cambio"), "op"))
+            .hasMessage("No se cambia el producto de una línea: quítela y agregue otra.");
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            edit(purchase, List.of(kept(teaLine, "1", "10"), kept(teaLine, "2", "10")), "0", null, "Cambio"), "op"))
+            .hasMessage("La línea de 'Té verde' está repetida.");
+
+        purchase.setHistoricalImportId(UUID.randomUUID());
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            edit(purchase, List.of(kept(teaLine, "1", "10")), "0", null, "Cambio"), "op"))
+            .hasMessage("El pedido es histórico (migrado de la planilla): solo se le pueden registrar pagos.");
+        purchase.setStatus(PurchaseStatus.ANULADO);
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            edit(purchase, List.of(kept(teaLine, "1", "10")), "0", null, "Cambio"), "op"))
+            .hasMessage("El pedido está anulado.");
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("COM-12: cambiar el envío anula el gasto de Bisa, devuelve el monto y registra el nuevo en Caja")
+    void updatePurchase_redoesShipping() {
+        Purchase purchase = editablePurchase("0.00");
+        purchase.setShippingCost(new BigDecimal("25.00"));
+        purchase.setTotalAmount(new BigDecimal("325.00"));
+        FinancialTransaction oldShipping = purchaseExpense(purchase, bisa, "25.00", null);
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId()))
+            .thenReturn(List.of(oldShipping));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(openSession));
+        lockAccounts(bisa, caja);
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"), kept(teaLine, "24", "10")), "30.00", caja.getId(), "El envío costó 30"), "operator");
+
+        assertThat(oldShipping.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+        assertThat(oldShipping.getVoidReason()).isEqualTo("El envío costó 30");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1025.00");
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("470.00");
+        ArgumentCaptor<FinancialTransaction> saved = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository, atLeastOnce()).save(saved.capture());
+        FinancialTransaction newShipping = saved.getAllValues().stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO).findFirst().orElseThrow();
+        assertThat(newShipping.getAmount()).isEqualByComparingTo("30.00");
+        assertThat(newShipping.getCategory()).isEqualTo(transporte);
+        assertThat(newShipping.getCashSessionId()).isEqualTo(openSession.getId());
+        assertThat(newShipping.getDescription()).isEqualTo("Envío pedido PED-000001");
+        assertThat(res.shippingCost()).isEqualByComparingTo("30.00");
+        assertThat(res.totalAmount()).isEqualByComparingTo("330.00");
+        assertThat(res.itemsTotal()).isEqualByComparingTo("300.00");
+        assertThat(res.revisions().get(0).changes()).isEqualTo("Envío: Bs 25,00 (Bisa) → Bs 30,00 (Caja)");
+        var order = inOrder(purchaseRepository, cashSessionRepository, financialAccountRepository);
+        order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
+        order.verify(cashSessionRepository).findByStatusForUpdate(CashSessionStatus.ABIERTA);
+        order.verify(financialAccountRepository).findAllByIdForUpdate(Set.of(bisa.getId(), caja.getId()));
+    }
+
+    @Test
+    @DisplayName("COM-12: el envío pagado en una caja cerrada no se cambia; sin cambio de envío su gasto no se toca")
+    void updatePurchase_shippingInClosedSession() {
+        Purchase purchase = editablePurchase("0.00");
+        purchase.setShippingCost(new BigDecimal("25.00"));
+        FinancialTransaction oldShipping = purchaseExpense(purchase, caja, "25.00", openSession.getId());
+        when(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId()))
+            .thenReturn(List.of(oldShipping));
+        CashSession closed = CashSession.builder().id(openSession.getId()).status(CashSessionStatus.CERRADA).build();
+        when(cashSessionRepository.findByIdForUpdate(openSession.getId())).thenReturn(Optional.of(closed));
+
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"), kept(teaLine, "24", "10")), "0", null, "Sin envío"), "operator"))
+            .hasMessage("El envío se pagó en una caja cerrada; no se puede cambiar.");
+        assertThat(oldShipping.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+
+        purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"), kept(teaLine, "25", "10")), "25.00", caja.getId(), "Llegó 1 té más"), "operator");
+        assertThat(oldShipping.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    @DisplayName("COM-11: el costo distinto confirmado al editar actualiza el producto con el precio elegido (COM-03)")
+    void updatePurchase_updatesProductCost() {
+        Purchase purchase = editablePurchase("0.00");
+        PurchaseItemRequest teaAt12 = new PurchaseItemRequest(tea.getId(), new BigDecimal("24"), new BigDecimal("12.00"),
+            true, new BigDecimal("18.00"), teaLine.getId());
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"), teaAt12), "0", null, "Llegó a otro costo"), "operator");
+
+        assertThat(tea.getBuyPrice()).isEqualByComparingTo("12.00");
+        assertThat(tea.getSellPrice()).isEqualByComparingTo("18.00");
+        assertThat(teaLine.getCostUpdated()).isTrue();
+        ArgumentCaptor<ProductPriceChange> change = ArgumentCaptor.forClass(ProductPriceChange.class);
+        verify(productPriceChangeRepository).save(change.capture());
+        assertThat(change.getValue().getPurchaseId()).isEqualTo(purchase.getId());
+        assertThat(change.getValue().getSource()).isEqualTo(PriceChangeSource.PURCHASE);
+        assertThat(res.itemsTotal()).isEqualByComparingTo("348.00");
+        assertThat(res.revisions().get(0).changes()).contains("Costo de Té verde: Bs 10,00 → Bs 12,00",
+            "Producto Té verde: costo Bs 10,00 → Bs 12,00, precio Bs 15,00 → Bs 18,00");
     }
 }

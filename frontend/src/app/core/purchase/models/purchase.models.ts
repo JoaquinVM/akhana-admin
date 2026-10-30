@@ -77,19 +77,33 @@ export interface Purchase {
   paymentStatus: PurchasePaymentStatus;
   consignment: boolean;
   comment: string | null;
+  shippingAccountId: string | null;
   shippingAccountName: string | null;
   deliveryType: DeliveryType;
   deliveryStatus: DeliveryStatus;
   deliveryDate: string | null;
   createdBy: string;
   createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
   items: PurchaseItem[];
   payments: PurchasePayment[];
+  // COM-12: edits, the most recent first
+  revisions: PurchaseRevision[];
   // FIN-11: migrated from the spreadsheet; only takes payments while it has a balance
   historical?: boolean;
+}
+
+// COM-12: who edited a purchase, when, why and what changed
+export interface PurchaseRevision {
+  id: string;
+  reason: string;
+  changes: string;
+  revisedBy: string;
+  revisedAt: string;
 }
 
 export interface PurchaseItemRequest {
@@ -99,6 +113,8 @@ export interface PurchaseItemRequest {
   // COM-03: only if the user confirmed the cost alert
   updateProductCost: boolean;
   newSellPrice: number | null;
+  // COM-11: the line it keeps when editing; absent for a new line
+  itemId?: string | null;
 }
 
 export interface PurchaseRequest {
@@ -114,6 +130,11 @@ export interface PurchaseRequest {
   deliveryDate: string | null;
   // Optional first payment, from an account or made by a person (COM-05, DEU-02)
   initialPayment: PurchasePaymentRequest | null;
+}
+
+// COM-11: the whole purchase as it should be, without payments, with a mandatory reason
+export interface PurchaseUpdateRequest extends Omit<PurchaseRequest, 'initialPayment'> {
+  reason: string;
 }
 
 export interface PurchaseDeliveryRequest {
