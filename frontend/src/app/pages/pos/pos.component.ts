@@ -13,18 +13,15 @@ import { OpenCashModalComponent } from '../cash/components/open-cash-modal/open-
 import { CloseCashModalComponent } from '../cash/components/close-cash-modal/close-cash-modal.component';
 import { CashSessionInfoModalComponent } from '../cash/components/cash-session-info-modal/cash-session-info-modal.component';
 import { VoidSaleModalComponent } from './components/void-sale-modal/void-sale-modal.component';
-import { CashTransfersComponent } from './components/cash-transfers/cash-transfers.component';
 import { CashExpenseModalComponent } from './components/cash-expense-modal/cash-expense-modal.component';
-import { CashExpensesComponent } from './components/cash-expenses/cash-expenses.component';
 import { PosKpisComponent } from './components/pos-kpis/pos-kpis.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
-import { SalesTableComponent } from '../../shared/components/sales-table/sales-table.component';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
 import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { formatBs } from '../../shared/utils/money';
-
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
 import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
+import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
 
 @Component({
   selector: 'app-pos',
@@ -35,14 +32,12 @@ import { PosClosedStateComponent } from './components/pos-closed-state/pos-close
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
     VoidSaleModalComponent,
-    CashTransfersComponent,
     CashExpenseModalComponent,
-    CashExpensesComponent,
     PosKpisComponent,
     PosFeedbackBannerComponent,
     PosClosedStateComponent,
     SaleDetailModalComponent,
-    SalesTableComponent
+    SessionTransactionsComponent
   ],
   templateUrl: './pos.component.html',
   styleUrls: ['./pos.component.css']
@@ -52,9 +47,6 @@ export class PosComponent implements OnInit {
   readonly cashService = inject(CashService);
   private readonly saleService = inject(SaleService);
   private readonly transactionService = inject(FinancialTransactionService);
-
-  // View selector: Ventas, Compras or Ingresos/Retiros de caja
-  activeTab = signal<'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'>('VENTAS');
 
   // Modal visibility
   isOpenModalVisible = signal<boolean>(false);
@@ -83,7 +75,6 @@ export class PosComponent implements OnInit {
   activeExpenses = computed(() =>
     this.recentExpenses().filter((e) => e.status === 'ACTIVO')
   );
-  activeExpensesCount = computed(() => this.activeExpenses().length);
   totalExpensesAmount = computed(() =>
     this.activeExpenses().reduce((sum, e) => sum + e.amount, 0)
   );
@@ -94,10 +85,6 @@ export class PosComponent implements OnInit {
   ngOnInit(): void {
     this.checkNavigationState();
     this.loadCurrentSession();
-  }
-
-  setActiveTab(tab: 'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS'): void {
-    this.activeTab.set(tab);
   }
 
   private checkNavigationState(): void {

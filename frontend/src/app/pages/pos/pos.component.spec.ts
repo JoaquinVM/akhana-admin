@@ -10,6 +10,7 @@ import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
 
 describe('PosComponent', () => {
   let component: PosComponent;
@@ -58,6 +59,9 @@ describe('PosComponent', () => {
 
   let mockTransactionService: any;
   let mockCategoryService: any;
+
+  const transactionsCard = (): SessionTransactionsComponent =>
+    fixture.debugElement.query(By.directive(SessionTransactionsComponent)).componentInstance;
 
   beforeEach(async () => {
     mockCashService = {
@@ -280,7 +284,7 @@ describe('PosComponent', () => {
   });
 
   it('debe tener seleccionada la opción Ventas por defecto y mostrar el selector visual de contenido', () => {
-    expect(component.activeTab()).toBe('VENTAS');
+    expect(transactionsCard().activeTab()).toBe('VENTAS');
 
     const viewPillGroup = fixture.debugElement.query(By.css('.view-pill-group'));
     expect(viewPillGroup).toBeTruthy();
@@ -316,10 +320,10 @@ describe('PosComponent', () => {
     };
 
     component.recentExpenses.set([mockExpense]);
-    component.setActiveTab('COMPRAS');
+    transactionsCard().setActiveTab('COMPRAS');
     fixture.detectChanges();
 
-    expect(component.activeTab()).toBe('COMPRAS');
+    expect(transactionsCard().activeTab()).toBe('COMPRAS');
 
     const pills = fixture.debugElement.queryAll(By.css('.view-pill'));
     expect(pills[0].nativeElement.classList.contains('active')).toBe(false);
@@ -357,8 +361,9 @@ describe('PosComponent', () => {
     };
 
     component.recentExpenses.set([activeExpense, voidedExpense]);
+    fixture.detectChanges();
 
-    expect(component.activeExpensesCount()).toBe(1);
+    expect(transactionsCard().activeExpensesCount()).toBe(1);
     expect(component.totalExpensesAmount()).toBe(50.0);
     expect(component.recentExpenses().length).toBe(2);
   });
@@ -390,13 +395,13 @@ describe('PosComponent', () => {
   });
 
   it('debe alternar de regreso a Ventas mostrando el listado actual sin cambios', () => {
-    component.setActiveTab('COMPRAS');
+    transactionsCard().setActiveTab('COMPRAS');
     fixture.detectChanges();
-    expect(component.activeTab()).toBe('COMPRAS');
+    expect(transactionsCard().activeTab()).toBe('COMPRAS');
 
-    component.setActiveTab('VENTAS');
+    transactionsCard().setActiveTab('VENTAS');
     fixture.detectChanges();
-    expect(component.activeTab()).toBe('VENTAS');
+    expect(transactionsCard().activeTab()).toBe('VENTAS');
 
     const salesTable = fixture.debugElement.query(By.css('.table'));
     expect(salesTable).toBeTruthy();
