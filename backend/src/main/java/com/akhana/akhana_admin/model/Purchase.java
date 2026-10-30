@@ -111,6 +111,12 @@ public class Purchase {
     @Builder.Default
     private List<PurchasePayment> payments = new ArrayList<>();
 
+    // COM-12: edits with who, when, why and what changed, the most recent first
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL)
+    @OrderBy("revisedAt DESC")
+    @Builder.Default
+    private List<PurchaseRevision> revisions = new ArrayList<>();
+
     public BigDecimal getBalance() {
         BigDecimal balance = itemsTotal.subtract(paidAmount);
         return balance.signum() > 0 ? balance : BigDecimal.ZERO.setScale(2);

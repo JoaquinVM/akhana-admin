@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -50,4 +51,15 @@ public class PurchaseItem {
     @Column(name = "cost_updated", nullable = false)
     @Builder.Default
     private Boolean costUpdated = false;
+
+    // COM-11: removed while editing the purchase (it did not arrive); it stays out of the totals and the detail
+    @Column(name = "removed_by", length = 100)
+    private String removedBy;
+
+    @Column(name = "removed_at")
+    private Instant removedAt;
+
+    public boolean isRemoved() {
+        return removedAt != null;
+    }
 }

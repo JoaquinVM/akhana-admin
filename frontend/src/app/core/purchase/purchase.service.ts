@@ -10,6 +10,7 @@ import {
   PurchaseFilters,
   PurchasePaymentRequest,
   PurchaseRequest,
+  PurchaseUpdateRequest,
   VoidPurchaseRequest
 } from './models/purchase.models';
 
@@ -46,6 +47,10 @@ export class PurchaseService {
 
   registerPurchase(request: PurchaseRequest): Observable<Purchase> {
     return this.http.post<Purchase>(this.apiUrl, request);
+  }
+
+  updatePurchase(purchaseId: string, request: PurchaseUpdateRequest): Observable<Purchase> {
+    return this.http.put<Purchase>(`${this.apiUrl}/${purchaseId}`, request);
   }
 
   registerPayment(purchaseId: string, request: PurchasePaymentRequest): Observable<Purchase> {

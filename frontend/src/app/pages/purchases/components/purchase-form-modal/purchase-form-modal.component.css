@@ -182,3 +182,10 @@
     justify-content: flex-start;
   }
 }
+
+/* COM-12: the shipping expense is redone */
+.alert-warning {
+  background-color: var(--color-warning-bg);
+  border-color: rgba(245, 184, 0, 0.35);
+  color: var(--color-warning);
+}

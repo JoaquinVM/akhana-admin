@@ -66,6 +66,14 @@ public class PurchaseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<PurchaseResponse> updatePurchase(
+            @PathVariable UUID id,
+            @Valid @RequestBody PurchaseUpdateRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(purchaseService.updatePurchase(id, request, extractUsername(authentication)));
+    }
+
     @PostMapping("/{id}/payments")
     public ResponseEntity<PurchaseResponse> registerPayment(
             @PathVariable UUID id,

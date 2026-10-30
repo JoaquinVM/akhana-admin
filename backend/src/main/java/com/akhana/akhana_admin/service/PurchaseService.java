@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.dto.PurchaseDeliveryRequest;
 import com.akhana.akhana_admin.dto.PurchasePaymentRequest;
 import com.akhana.akhana_admin.dto.PurchaseRequest;
 import com.akhana.akhana_admin.dto.PurchaseResponse;
+import com.akhana.akhana_admin.dto.PurchaseUpdateRequest;
 import com.akhana.akhana_admin.dto.VoidPurchaseRequest;
 import com.akhana.akhana_admin.model.DeliveryStatus;
 import com.akhana.akhana_admin.model.PurchasePaymentStatus;
@@ -26,6 +27,8 @@ public interface PurchaseService {
     PurchaseResponse getPurchaseById(UUID id);
 
     PurchaseResponse registerPurchase(PurchaseRequest request, String username);
+
+    PurchaseResponse updatePurchase(UUID purchaseId, PurchaseUpdateRequest request, String username);
 
     PurchaseResponse registerPayment(UUID purchaseId, PurchasePaymentRequest request, String username);
 

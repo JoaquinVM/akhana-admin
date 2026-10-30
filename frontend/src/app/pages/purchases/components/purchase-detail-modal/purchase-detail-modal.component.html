@@ -169,6 +169,19 @@
         </div>
       }
 
+      @if (p.revisions?.length) {
+        <h4 class="section-title">Historial de cambios</h4>
+        <ul class="revisions">
+          @for (revision of p.revisions; track revision.id) {
+            <li class="revision">
+              <span class="revision-meta">{{ revision.revisedAt | date:'dd/MM/yyyy HH:mm' }} · {{ revision.revisedBy }}</span>
+              <span class="revision-reason">{{ revision.reason }}</span>
+              <span class="revision-changes">{{ revision.changes }}</span>
+            </li>
+          }
+        </ul>
+      }
+
       @if (canPay()) {
         <form class="payment-form" (ngSubmit)="registerPayment()">
           <h4 class="section-title">Registrar pago</h4>
@@ -226,7 +239,10 @@
       <div class="detail-footer">
         <p class="audit">Registrado por {{ p.createdBy }} el {{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
         @if (isEditable()) {
-          <button type="button" class="btn btn-danger btn-sm" (click)="openVoid('PURCHASE')">Anular pedido</button>
+          <div class="footer-actions">
+            <button type="button" class="btn btn-outline btn-sm" (click)="edit.emit(p)">Editar pedido</button>
+            <button type="button" class="btn btn-danger btn-sm" (click)="openVoid('PURCHASE')">Anular pedido</button>
+          </div>
         }
       </div>
     </div>

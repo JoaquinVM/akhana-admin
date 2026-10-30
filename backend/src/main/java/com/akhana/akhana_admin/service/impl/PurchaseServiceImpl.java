@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -37,6 +38,12 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String FUTURE_DELIVERY_DATE = "La fecha de entrega no puede ser futura.";
     static final String DELIVERY_BEFORE_PURCHASE = "La fecha de entrega no puede ser anterior a la fecha del pedido.";
     static final String PAYMENT_SOURCE_REQUIRED = "Elija una cuenta o una persona como origen del pago.";
+    static final String EDIT_REASON_REQUIRED = "El motivo del cambio es obligatorio.";
+    static final String NO_CHANGES = "No hay cambios para guardar.";
+    static final String LINE_PRODUCT_CHANGED = "No se cambia el producto de una línea: quítela y agregue otra.";
+    static final String REPEATED_LINE = "La línea de '%s' está repetida.";
+    static final String TOTAL_BELOW_PAID = "El total del pedido (%s) no puede ser menor a lo pagado (%s); anule primero el pago.";
+    static final String CLOSED_SESSION_SHIPPING = "El envío se pagó en una caja cerrada; no se puede cambiar.";
 
     private final PurchaseRepository purchaseRepository;
     private final SupplierRepository supplierRepository;
@@ -54,6 +61,9 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     /** Locked cash session (only for Caja) and account that pay a movement. */
     private record Payer(FinancialAccount account, CashSession session) {}
+
+    /** Validated quantity, cost and subtotal of a purchase line (COM-02). */
+    private record LineValues(BigDecimal quantity, BigDecimal unitCost, BigDecimal subtotal) {}
 
     /** Validated delivery of a purchase (COM-07). */
     private record Delivery(DeliveryType type, DeliveryStatus status, LocalDate date) {}
@@ -101,13 +111,18 @@ public class PurchaseServiceImpl implements PurchaseService {
             .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + id));
         Set<UUID> paymentTxIds = new HashSet<>();
         purchase.getPayments().forEach(p -> paymentTxIds.add(p.getFinancialTransactionId()));
-        // The shipping expense is the purchase movement that no payment points to (P-24)
-        String shippingAccountName = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(id).stream()
+        // The shipping expense is the purchase movement that no payment points to (P-24); after an edit the active
+        // one, or the last one when the purchase is voided (COM-12)
+        List<FinancialTransaction> shipping = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(id).stream()
             .filter(tx -> !paymentTxIds.contains(tx.getId()))
-            .map(tx -> tx.getSourceAccount().getName())
-            .findFirst()
+            .toList();
+        FinancialAccount shippingAccount = shipping.stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO)
+            .reduce((first, second) -> second)
+            .or(() -> shipping.isEmpty() ? Optional.empty() : Optional.of(shipping.get(shipping.size() - 1)))
+            .map(FinancialTransaction::getSourceAccount)
             .orElse(null);
-        return PurchaseResponse.detail(purchase, shippingAccountName);
+        return PurchaseResponse.detail(purchase, shippingAccount);
     }
 
     @Override
@@ -135,41 +150,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         BigDecimal itemsTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         for (PurchaseItemRequest itemReq : request.items()) {
-            Product product = productRepository.findById(itemReq.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemReq.productId()));
-            if (product.getStatus() == ProductStatus.ELIMINADO) {
-                throw new IllegalArgumentException("El producto '" + product.getName() + "' está eliminado.");
-            }
-            ProductServiceImpl.ensureNotSpecial(product);
-
-            BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
-            if (itemReq.unitCost() == null || itemReq.unitCost().signum() < 0) {
-                throw new IllegalArgumentException("El costo unitario de '" + product.getName() + "' no puede ser negativo.");
-            }
-            // Like the catalog prices, a cost has at most 2 decimals; it is not rounded silently
-            if (itemReq.unitCost().stripTrailingZeros().scale() > 2) {
-                throw new IllegalArgumentException(String.format(COST_SCALE, product.getName()));
-            }
-            BigDecimal unitCost = itemReq.unitCost().setScale(2, RoundingMode.HALF_UP);
-            BigDecimal subtotal = unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
-
-            boolean costChanges = Boolean.TRUE.equals(itemReq.updateProductCost()) && unitCost.compareTo(currentCost) != 0;
-            if (costChanges) {
-                costUpdates.add(planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts));
-            }
-
-            items.add(PurchaseItem.builder()
-                .product(product)
-                .productName(product.getName())
-                .productCode(product.getCode())
-                .quantity(quantity)
-                .unitCost(unitCost)
-                .subtotal(subtotal)
-                .previousUnitCost(currentCost)
-                .costUpdated(costChanges)
-                .build());
-            itemsTotal = itemsTotal.add(subtotal);
+            PurchaseItem item = newLine(itemReq, costUpdates, updatedProducts);
+            items.add(item);
+            itemsTotal = itemsTotal.add(item.getSubtotal());
         }
 
         BigDecimal shippingCost = request.shippingCost() != null
@@ -245,7 +228,211 @@ public class PurchaseServiceImpl implements PurchaseService {
             saved = purchaseRepository.save(saved);
         }
 
-        return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account().getName() : null);
+        return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account() : null);
+    }
+
+    @Override
+    public PurchaseResponse updatePurchase(UUID purchaseId, PurchaseUpdateRequest request, String username) {
+        if (request.reason() == null || request.reason().isBlank()) {
+            throw new IllegalArgumentException(EDIT_REASON_REQUIRED);
+        }
+        String reason = request.reason().trim();
+        if (request.items() == null || request.items().isEmpty()) {
+            throw new IllegalArgumentException(NO_ITEMS);
+        }
+
+        // Lock order: purchase, then cash session, then accounts (T-14)
+        Purchase purchase = lockPurchase(purchaseId);
+        if (purchase.getStatus() == PurchaseStatus.ANULADO) {
+            throw new IllegalStateException(VOIDED_PURCHASE);
+        }
+        if (purchase.isHistorical()) {
+            throw new IllegalStateException(HISTORICAL_PURCHASE);
+        }
+        List<String> changes = new ArrayList<>();
+
+        // Header, validated as when registering (COM-02, COM-07)
+        Supplier supplier = purchase.getSupplier();
+        if (!supplier.getId().equals(request.supplierId())) {
+            supplier = supplierRepository.findById(request.supplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + request.supplierId()));
+            if (supplier.getStatus() != SupplierStatus.ACTIVO) {
+                throw new IllegalArgumentException("El proveedor '" + supplier.getName() + "' no está activo.");
+            }
+            changes.add("Proveedor: " + purchase.getSupplier().getName() + " → " + supplier.getName());
+        }
+        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
+        LocalDate purchaseDate = request.purchaseDate() != null ? request.purchaseDate() : purchase.getPurchaseDate();
+        if (purchaseDate.isAfter(today)) {
+            throw new IllegalArgumentException(FUTURE_DATE);
+        }
+        trackChange(changes, "Fecha", purchase.getPurchaseDate(), purchaseDate);
+        Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
+            purchaseDate, today);
+        trackChange(changes, "Tipo de entrega", purchase.getDeliveryType(), delivery.type());
+        trackChange(changes, "Estado de entrega", purchase.getDeliveryStatus(), delivery.status());
+        trackChange(changes, "Fecha de entrega", purchase.getDeliveryDate(), delivery.date());
+        boolean consignment = Boolean.TRUE.equals(request.consignment());
+        if (consignment != Boolean.TRUE.equals(purchase.getConsignment())) {
+            changes.add(consignment ? "Pasa a consignación" : "Deja de ser consignación");
+        }
+        String comment = request.comment() != null && !request.comment().isBlank() ? request.comment().trim() : null;
+        if (!Objects.equals(comment, purchase.getComment())) {
+            changes.add("Comentario cambiado");
+        }
+
+        // Lines: kept (and changed) by id, added without id, removed when missing (COM-11)
+        Map<UUID, PurchaseItem> activeLines = new LinkedHashMap<>();
+        purchase.getItems().stream().filter(item -> !item.isRemoved()).forEach(item -> activeLines.put(item.getId(), item));
+        Set<UUID> keptLines = new HashSet<>();
+        List<PurchaseItem> addedLines = new ArrayList<>();
+        List<CostUpdate> costUpdates = new ArrayList<>();
+        Set<UUID> updatedProducts = new HashSet<>();
+        BigDecimal itemsTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        Instant now = Instant.now();
+
+        for (PurchaseItemRequest itemReq : request.items()) {
+            if (itemReq.itemId() == null) {
+                PurchaseItem item = newLine(itemReq, costUpdates, updatedProducts);
+                item.setPurchase(purchase);
+                addedLines.add(item);
+                itemsTotal = itemsTotal.add(item.getSubtotal());
+                changes.add("Línea agregada: " + item.getProductName() + " × " + quantityText(item.getQuantity())
+                    + " a " + StoreFormat.money(item.getUnitCost()));
+                continue;
+            }
+            PurchaseItem item = activeLines.get(itemReq.itemId());
+            if (item == null) {
+                throw new ResourceNotFoundException("Línea no encontrada con ID: " + itemReq.itemId());
+            }
+            if (!keptLines.add(item.getId())) {
+                throw new IllegalArgumentException(String.format(REPEATED_LINE, item.getProductName()));
+            }
+            if (!item.getProduct().getId().equals(itemReq.productId())) {
+                throw new IllegalArgumentException(LINE_PRODUCT_CHANGED);
+            }
+            Product product = item.getProduct();
+            LineValues values = lineValues(product, itemReq);
+            if (planCostUpdateIfConfirmed(product, values.unitCost(), itemReq, costUpdates, updatedProducts)) {
+                item.setCostUpdated(true);
+            }
+            if (values.quantity().compareTo(item.getQuantity()) != 0) {
+                changes.add("Cantidad de " + item.getProductName() + ": " + quantityText(item.getQuantity())
+                    + " → " + quantityText(values.quantity()));
+            }
+            if (values.unitCost().compareTo(item.getUnitCost()) != 0) {
+                changes.add("Costo de " + item.getProductName() + ": " + StoreFormat.money(item.getUnitCost())
+                    + " → " + StoreFormat.money(values.unitCost()));
+            }
+            item.setQuantity(values.quantity());
+            item.setUnitCost(values.unitCost());
+            item.setSubtotal(values.subtotal());
+            itemsTotal = itemsTotal.add(values.subtotal());
+        }
+        for (PurchaseItem item : activeLines.values()) {
+            if (!keptLines.contains(item.getId())) {
+                item.setRemovedBy(username);
+                item.setRemovedAt(now);
+                changes.add("Línea quitada: " + item.getProductName());
+            }
+        }
+        for (CostUpdate update : costUpdates) {
+            changes.add("Producto " + update.product().getName() + ": costo " + StoreFormat.money(update.product().getBuyPrice())
+                + " → " + StoreFormat.money(update.newCost()) + ", precio " + StoreFormat.money(update.product().getSellPrice())
+                + " → " + StoreFormat.money(update.newSellPrice()));
+        }
+
+        // What was paid, by accounts or people, is never left above the total (COM-12)
+        if (itemsTotal.compareTo(purchase.getPaidAmount()) < 0) {
+            throw new IllegalArgumentException(String.format(TOTAL_BELOW_PAID, StoreFormat.money(itemsTotal),
+                StoreFormat.money(purchase.getPaidAmount())));
+        }
+        if (itemsTotal.compareTo(purchase.getItemsTotal()) != 0) {
+            changes.add("Total: " + StoreFormat.money(purchase.getItemsTotal()) + " → " + StoreFormat.money(itemsTotal));
+        }
+
+        // Shipping: a change voids its Transporte expense and records a new one (COM-12, P-24)
+        BigDecimal shippingCost = request.shippingCost() != null
+            ? request.shippingCost().setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        if (shippingCost.signum() < 0) {
+            throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
+        }
+        Set<UUID> paymentTxIds = new HashSet<>();
+        purchase.getPayments().forEach(p -> paymentTxIds.add(p.getFinancialTransactionId()));
+        List<FinancialTransaction> shippingTxs = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchaseId).stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO && !paymentTxIds.contains(tx.getId()))
+            .toList();
+        UUID currentShippingAccountId = shippingTxs.isEmpty() ? null : shippingTxs.get(0).getSourceAccount().getId();
+        UUID newShippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
+        boolean shippingChanges = shippingCost.compareTo(purchase.getShippingCost()) != 0
+            || (newShippingAccountId != null && !newShippingAccountId.equals(currentShippingAccountId));
+        if (shippingChanges && shippingCost.signum() > 0 && newShippingAccountId == null) {
+            throw new IllegalArgumentException(SHIPPING_ACCOUNT_REQUIRED);
+        }
+
+        if (changes.isEmpty() && !shippingChanges) {
+            throw new IllegalArgumentException(NO_CHANGES);
+        }
+
+        if (shippingChanges) {
+            FinancialCategory shippingCategory = shippingCost.signum() > 0
+                ? financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_SHIPPING)
+                    .orElseThrow(() -> new IllegalStateException(SHIPPING_CATEGORY_MISSING))
+                : null;
+            // Lock order: the open session for a new Caja expense and the session of the old one (rejected when
+            // closed), then the old and new accounts together by id (T-14)
+            lockPayers(newShippingAccountId);
+            shippingTxs.stream().map(FinancialTransaction::getCashSessionId).filter(Objects::nonNull).distinct()
+                .forEach(sessionId -> cashSessionRepository.findByIdForUpdate(sessionId)
+                    .filter(cs -> cs.getStatus() == CashSessionStatus.ABIERTA)
+                    .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_SHIPPING)));
+            Set<UUID> shippingAccounts = new HashSet<>();
+            shippingTxs.forEach(tx -> shippingAccounts.add(tx.getSourceAccount().getId()));
+            if (newShippingAccountId != null) shippingAccounts.add(newShippingAccountId);
+            if (!shippingAccounts.isEmpty()) {
+                financialAccountRepository.findAllByIdForUpdate(shippingAccounts);
+            }
+
+            String oldShipping = shippingText(purchase.getShippingCost(), shippingTxs.isEmpty() ? null
+                : shippingTxs.get(0).getSourceAccount().getName());
+            voidExpenses(shippingTxs, CLOSED_SESSION_SHIPPING, reason, username, now);
+            String newShipping = shippingText(shippingCost, null);
+            if (shippingCategory != null) {
+                Payer payer = lockPayer(newShippingAccountId);
+                recordExpense(payer, shippingCategory, shippingCost, purchase,
+                    "Envío pedido " + purchase.getPurchaseNumber(), null, username);
+                newShipping = shippingText(shippingCost, payer.account().getName());
+            }
+            changes.add("Envío: " + oldShipping + " → " + newShipping);
+        }
+
+        purchase.setSupplier(supplier);
+        purchase.setPurchaseDate(purchaseDate);
+        purchase.setDeliveryType(delivery.type());
+        purchase.setDeliveryStatus(delivery.status());
+        purchase.setDeliveryDate(delivery.date());
+        purchase.setConsignment(consignment);
+        purchase.setComment(comment);
+        purchase.getItems().addAll(addedLines);
+        purchase.setItemsTotal(itemsTotal);
+        purchase.setShippingCost(shippingCost);
+        purchase.setTotalAmount(itemsTotal.add(shippingCost));
+        purchase.getRevisions().add(0, PurchaseRevision.builder()
+            .purchase(purchase)
+            .reason(reason)
+            .changes(String.join(" · ", changes))
+            .revisedBy(username)
+            .revisedAt(now)
+            .build());
+        purchase.setUpdatedBy(username);
+        purchase.setUpdatedAt(now);
+        purchaseRepository.save(purchase);
+
+        for (CostUpdate update : costUpdates) {
+            applyCostUpdate(update, purchaseId, username, now);
+        }
+        return getPurchaseById(purchaseId);
     }
 
     @Override
@@ -466,6 +653,85 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     static String formatPurchaseNumber(long sequenceValue) {
         return String.format("PED-%06d", sequenceValue);
+    }
+
+    // A new line (COM-02): the product cannot be deleted or special; it keeps the product cost of this moment
+    private PurchaseItem newLine(PurchaseItemRequest itemReq, List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
+        Product product = productRepository.findById(itemReq.productId())
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemReq.productId()));
+        if (product.getStatus() == ProductStatus.ELIMINADO) {
+            throw new IllegalArgumentException("El producto '" + product.getName() + "' está eliminado.");
+        }
+        ProductServiceImpl.ensureNotSpecial(product);
+
+        LineValues values = lineValues(product, itemReq);
+        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+        boolean costChanges = planCostUpdateIfConfirmed(product, values.unitCost(), itemReq, costUpdates, updatedProducts);
+        return PurchaseItem.builder()
+            .product(product)
+            .productName(product.getName())
+            .productCode(product.getCode())
+            .quantity(values.quantity())
+            .unitCost(values.unitCost())
+            .subtotal(values.subtotal())
+            .previousUnitCost(currentCost)
+            .costUpdated(costChanges)
+            .build();
+    }
+
+    private static LineValues lineValues(Product product, PurchaseItemRequest itemReq) {
+        BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
+        if (itemReq.unitCost() == null || itemReq.unitCost().signum() < 0) {
+            throw new IllegalArgumentException("El costo unitario de '" + product.getName() + "' no puede ser negativo.");
+        }
+        // Like the catalog prices, a cost has at most 2 decimals; it is not rounded silently
+        if (itemReq.unitCost().stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException(String.format(COST_SCALE, product.getName()));
+        }
+        BigDecimal unitCost = itemReq.unitCost().setScale(2, RoundingMode.HALF_UP);
+        return new LineValues(quantity, unitCost, unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    // COM-03: only when the user confirmed it and the line cost differs from the product cost
+    private boolean planCostUpdateIfConfirmed(Product product, BigDecimal unitCost, PurchaseItemRequest itemReq,
+                                              List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
+        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+        boolean costChanges = Boolean.TRUE.equals(itemReq.updateProductCost()) && unitCost.compareTo(currentCost) != 0;
+        if (costChanges) {
+            costUpdates.add(planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts));
+        }
+        return costChanges;
+    }
+
+    private static void trackChange(List<String> changes, String label, Object before, Object after) {
+        if (!Objects.equals(before, after)) {
+            changes.add(label + ": " + changeText(before) + " → " + changeText(after));
+        }
+    }
+
+    // The words of the screens: 30/10/2026, «En tienda», «Entregado»
+    private static String changeText(Object value) {
+        return switch (value) {
+            case null -> "—";
+            case LocalDate date -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            case DeliveryType type -> switch (type) {
+                case EN_PUERTA -> "En puerta";
+                case TERMINAL -> "En terminal";
+                case EN_TIENDA -> "En tienda";
+            };
+            case DeliveryStatus status -> status == DeliveryStatus.ENTREGADO ? "Entregado" : "Pendiente";
+            default -> value.toString();
+        };
+    }
+
+    private static String quantityText(BigDecimal quantity) {
+        return quantity.stripTrailingZeros().scale() <= 0
+            ? quantity.setScale(0, RoundingMode.HALF_UP).toPlainString()
+            : StoreFormat.number(quantity, 3);
+    }
+
+    private static String shippingText(BigDecimal amount, String accountName) {
+        return StoreFormat.money(amount) + (accountName != null ? " (" + accountName + ")" : "");
     }
 
     private CostUpdate planCostUpdate(Product product, BigDecimal newCost, BigDecimal requestedSellPrice, Set<UUID> updatedProducts) {

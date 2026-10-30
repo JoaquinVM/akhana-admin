@@ -244,7 +244,7 @@ se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo ha
 ## COM-12 · Efectos de la edición en el dinero y auditoría
 
 - **Cuando** el nuevo total de las líneas es menor a lo pagado (pagos de cuentas y de personas, DEU-02)
-  **entonces** se rechaza: «El total del pedido (Bs 250.00) no puede ser menor a lo pagado (Bs 300.00); anule
+  **entonces** se rechaza: «El total del pedido (Bs 250,00) no puede ser menor a lo pagado (Bs 300,00); anule
   primero el pago.» Igual a lo pagado se acepta (queda Pagado). Las deudas con personas no cambian.
 - **Cuando** cambia el envío (monto o cuenta) **entonces** la pantalla alerta «Se anulará el gasto de envío de
   Bs X en <cuenta> y se registrará uno nuevo» y, al guardar, el gasto de Transporte anterior queda `ANULADO` con el
@@ -254,8 +254,8 @@ se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo ha
 - **Cuando** el envío no cambia **entonces** su gasto no se toca.
 - Bloqueo en orden: pedido, caja, cuentas del envío anterior y nuevo juntas por id (T-14). Todo en una transacción.
 - **Cuando** se guarda una edición **entonces** queda una fila en `purchase_revisions` con quién, cuándo, motivo y el
-  resumen de lo que cambió, armado en el servidor (ej. «Línea agregada: Barra Chia × 2 a Bs 10.00 · Cantidad de
-  Maní: 3 → 2 · Línea quitada: Pasas · Total: Bs 300.00 → Bs 280.00»), y el pedido guarda `updated_by` y
+  resumen de lo que cambió, armado en el servidor (ej. «Cantidad de Maní: 3 → 2 · Línea agregada: Barra Chia × 2 a
+  Bs 10,00 · Línea quitada: Pasas · Total: Bs 300,00 → Bs 280,00»), y el pedido guarda `updated_by` y
   `updated_at`. El detalle muestra el historial de cambios, del más reciente al más antiguo.
 
 ## Categorías de sistema
@@ -297,6 +297,8 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] Frontend: entrega en el formulario y el detalle, filtro de entrega y de anulados, pestaña Por pagar,
   anulación de pedido y de pago con motivo.
 - [ ] Pago por persona (DEU-02), con el módulo Deudas.
-- [ ] Migración `V20__purchase_edit.sql`: `purchase_items.removed_at/removed_by` y `purchase_revisions` (COM-11, COM-12).
-- [ ] `PurchaseService.updatePurchase` con líneas, COM-03, envío rehecho y revisión; pruebas en `PurchaseServiceTest`.
-- [ ] Frontend: «Editar» en el detalle, formulario en modo edición con motivo y alerta de envío, historial de cambios.
+- [x] Migración `V20__purchase_edit.sql`: `purchase_items.removed_at/removed_by` y `purchase_revisions` (COM-11, COM-12).
+- [x] `PurchaseService.updatePurchase` con líneas, COM-03, envío rehecho y revisión; pruebas en `PurchaseServiceTest`.
+- [x] Frontend: «Editar» en el detalle, formulario en modo edición con motivo y alerta de envío, historial de cambios.
+  Pruebas en `purchase-form-modal.component.spec.ts` y `purchase-detail-modal.component.spec.ts`; verificado en el
+  navegador con la base local (edición con línea nueva, cantidad, envío rehecho y rechazo por total menor a lo pagado).

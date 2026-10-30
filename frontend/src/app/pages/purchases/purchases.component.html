@@ -153,13 +153,15 @@
     [suppliers]="suppliers()"
     [accounts]="accounts()"
     [creditors]="creditors()"
+    [purchase]="editPurchase()"
     (saved)="onPurchaseSaved($event)"
-    (close)="isFormOpen.set(false)" />
+    (close)="closeForm()" />
 
   <app-purchase-detail-modal
     [purchaseId]="detailPurchaseId()"
     [accounts]="accounts()"
     [creditors]="creditors()"
     (updated)="onUpdated($event)"
+    (edit)="openEdit($event)"
     (close)="detailPurchaseId.set(null)" />
 </div>
