@@ -1,4 +1,4 @@
-# Producción (NF-01, NF-02, NF-05)
+# Producción (NF-01, NF-02, NF-05, NF-06)
 
 Servidor de producción de la V1: un VPS con la app detrás de HTTPS, accesible solo para los equipos de la tienda, con
 respaldo diario de la base guardado fuera del VPS y una restauración probada antes de la salida.
@@ -120,7 +120,7 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 | `TZ` | `America/La_Paz` |
 | `BACKUP_REMOTE` | Remoto cifrado de rclone, p. ej. `akhana-crypt:` |
 | `BACKUP_KEEP_LOCAL_DAYS`, `BACKUP_KEEP_REMOTE_DAYS` | `7` y `60` |
-| `HEALTHCHECK_BACKUP_URL`, `HEALTHCHECK_RESTORE_URL` | URLs de aviso de healthchecks.io (D-3) |
+| `HEALTHCHECK_BACKUP_URL`, `HEALTHCHECK_RESTORE_URL`, `HEALTHCHECK_DEPLOY_URL` | URLs de aviso de healthchecks.io (D-3, NF-06) |
 | `WEB_PORT` | `8081` (nginx en `127.0.0.1`) |
 
 - **Cuando** falta una variable obligatoria
@@ -138,13 +138,16 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 
 - **Cuando** se construyen las imágenes (`deploy/deploy.sh`)
 - **Entonces** el backend se compila en una imagen multi-etapa (Gradle → JRE 21, usuario sin privilegios) y el
-  frontend con `npm ci && npm run build` en una imagen de nginx. Las pruebas no corren en el VPS: se corren antes de
-  subir a `main` (NF-03, flujo de `CLAUDE.md`).
+  frontend con `npm ci && npm run build` en una imagen de nginx. Las pruebas no corren en el VPS: las corre GitHub
+  Actions antes de que una versión llegue a la rama `production` (NF-03, NF-06).
 
-- **Cuando** se despliega una versión (`deploy/deploy.sh` en el VPS)
-- **Entonces** el script baja `main` de GitHub (solo avance rápido), hace un respaldo previo local
-  (`backup.sh --tag pre-deploy --local-only`), reconstruye las imágenes, levanta con `docker compose up -d` y espera a que el
-  backend responda sano; si no responde en 3 minutos, lo informa con las últimas líneas del log.
+- **Cuando** se despliega una versión (`deploy/deploy.sh [--ref production|<tag>|<commit>]` en el VPS; sin `--ref`,
+  la rama `production`)
+- **Entonces** el script baja de GitHub la versión pedida y la deja en el checkout, guarda las imágenes actuales como
+  `:rollback`, construye las nuevas mientras la versión actual sigue atendiendo, detiene el backend, hace un respaldo
+  previo local (`backup.sh --tag pre-deploy --local-only`), levanta con `docker compose up -d` y espera a que el
+  backend responda sano (hasta 3 minutos). Si algo falla, vuelve solo a la versión anterior (NF-06, «Volver atrás»).
+  Dos despliegues no corren a la vez (`flock`).
 
 - **Cuando** el backend arranca con migraciones nuevas
 - **Entonces** Flyway las aplica antes de aceptar peticiones (T-01); el respaldo previo permite volver atrás.
@@ -163,6 +166,85 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 - **Cuando** se quiere probar el compose de producción en la Mac
 - **Entonces** `docker compose -f deploy/docker-compose.prod.yml --env-file .env up` levanta todo en
   `http://localhost:8081`, sin Tailscale.
+
+## NF-06 · Despliegue continuo
+
+Decidido con el dueño: **pull desde el VPS** (GitHub no entra al servidor ni guarda ningún secreto suyo), disparado
+por un **tag `v*`** (el dueño elige cuándo se reinicia la app) y con **vuelta atrás automática**.
+
+```
+git push origin v1.0.1 ─► GitHub Actions (ci.yml): pruebas backend + frontend + build + shellcheck
+                              │ todo verde y el tag está en main
+                              ▼
+                        rama production = commit del tag
+                              ▲ cada 2 min (deploy key de solo lectura)
+VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit> ─► healthchecks.io
+```
+
+### Integración continua
+
+- **Cuando** se sube a `main` o se abre un pull request
+- **Entonces** GitHub Actions corre `./gradlew test` contra un Postgres 17 del propio runner, `npm test -- --watch=false`,
+  `npm run build` y `shellcheck` de `deploy/`; las claves de esa base y de JWT son descartables, generadas en la
+  corrida (ningún secreto de producción en GitHub). Si fallan las pruebas del backend, el informe queda como artefacto
+  7 días.
+
+- **Cuando** se sube un tag `v*` (`git tag v1.0.1 && git push origin v1.0.1`) y todo pasa
+- **Entonces** el job «Release to production» comprueba que el commit del tag está en `main` y mueve la rama
+  `production` a ese commit (`GITHUB_TOKEN` con permiso `contents: write`, solo en ese job). Si algo falla o el tag no
+  está en `main`, `production` no se mueve y no se despliega nada.
+
+- **Cuando** se sube a `main` sin tag
+- **Entonces** se prueba pero no se despliega.
+
+### Despliegue en el VPS
+
+- **Cuando** corre el timer `akhana-deploy` (cada 2 minutos, como root, sin puertos abiertos)
+- **Entonces** `deploy-watch.sh` consulta la rama `production` con la deploy key de solo lectura que ya usa el VPS; si
+  cambió desde la última vez, anota el commit como visto y corre `deploy.sh --ref <commit>`. Cada corrida avisa a
+  `HEALTHCHECK_DEPLOY_URL`: verde si el último despliegue salió bien, rojo (con el final del log) si falló. Si el aviso
+  deja de llegar, el VPS o el timer están caídos y healthchecks.io manda un correo. El log queda en
+  `journalctl -u akhana-deploy`.
+
+- **Cuando** una versión falla al desplegarse
+- **Entonces** se intenta una sola vez: el timer no la reintenta cada 2 minutos. La siguiente versión llega con un tag
+  nuevo.
+
+- **Cuando** se despliega a mano una versión distinta de `production` (`deploy.sh --ref v1.0.0`)
+- **Entonces** el timer la respeta hasta que `production` vuelva a moverse.
+
+### Volver atrás
+
+- **Cuando** falla el build, el respaldo previo, el arranque o la espera de salud
+- **Entonces** `deploy.sh`, sin intervención:
+  1. deja de desplegar la versión nueva y muestra las últimas líneas del log del backend;
+  2. vuelve a poner las imágenes `:rollback` (las de la versión que estaba corriendo, sin reconstruir);
+  3. si la versión fallida aplicó migraciones de Flyway, restaura el respaldo `pre-deploy` que se sacó con el backend
+     detenido (`restore.sh --replace <archivo> --yes`, que guarda antes un `pre-restore`): no se pierde ninguna venta,
+     porque desde el respaldo nada escribió en la base;
+  4. vuelve el checkout al commit anterior, levanta y espera la salud;
+  5. termina con error y healthchecks.io queda en rojo hasta el próximo despliegue bueno.
+  Si falla el build, la versión anterior nunca dejó de atender.
+
+- **Cuando** una versión ya desplegada y sana resulta tener un error
+- **Entonces** se vuelve a un tag anterior desde GitHub: Actions → CI → «Run workflow» → elegir el tag (solo los que
+  ya tienen `ci.yml`, desde `v1.0.1`). Se prueba otra vez y `production` vuelve a ese commit. Si la versión mala
+  aplicó una migración, la versión anterior la ignora (Flyway no valida migraciones futuras) y Hibernate solo exige
+  las columnas que conoce; si la migración borró o renombró algo, además hay que restaurar a mano el respaldo
+  `pre-deploy` de ese despliegue (`restore.sh --replace /var/backups/akhana/akhana-<fecha>-pre-deploy.dump`).
+  Sin GitHub, en el VPS: `deploy.sh --ref v1.0.0`.
+
+### Instalación (una vez, en el VPS)
+
+- **Cuando** `main` ya tiene `ci.yml` y `deploy-watch.sh`, y en el VPS se corre como root
+  `git -C /opt/akhana/app pull --ff-only`, se instalan las unidades (`install -m 644
+  /opt/akhana/app/deploy/systemd/akhana-deploy.* /etc/systemd/system/ && systemctl daemon-reload && systemctl enable
+  --now akhana-deploy.timer`) y se agrega `HEALTHCHECK_DEPLOY_URL` a `/opt/akhana/.env`
+- **Entonces** `systemctl list-timers 'akhana-*'` muestra los tres timers y, mientras no haya rama `production`, cada
+  corrida solo avisa «todavía no hay rama production». `setup-server.sh` instala y activa el timer en un VPS nuevo.
+
+- **Cuando** se crea el chequeo `akhana-deploy` en healthchecks.io
+- **Entonces** tiene periodo de 2 minutos y 30 de gracia (un despliegue con build tarda unos 5).
 
 ## NF-01 · Respaldo diario fuera del VPS
 
@@ -245,6 +327,18 @@ En el VPS (con el dueño), en este orden:
 - [x] El día de la salida, antes de migrar (29-10-2026): `restore.sh --replace /opt/akhana/base-limpia-v1.dump` (la base recién
   desplegada, con el admin definitivo) para quitar la copia de prueba.
 
+Despliegue continuo (NF-06, rama `feat/cd`):
+
+- [x] `.github/workflows/ci.yml`: pruebas backend y frontend, build, `shellcheck` y job de release que mueve
+  `production` solo con un tag `v*` en `main`.
+- [x] `deploy/deploy.sh` con `--ref`, imágenes `:rollback`, respaldo con el backend detenido, vuelta atrás automática
+  (con restauración si hubo migración) y `flock`; `restore.sh --replace ... --yes`.
+- [x] `deploy/deploy-watch.sh` y las unidades `akhana-deploy` (service + timer); `setup-server.sh` activa el timer.
+- [x] Probar en la Mac: despliegue por el timer, versión fallida con migración y vuelta atrás (ver «Validación»).
+- [ ] Integrar `feat/cd` a `main` (con el sí del dueño) y ver CI en verde en GitHub.
+- [ ] En el VPS: `pull`, instalar el timer, chequeo `akhana-deploy` en healthchecks.io y `HEALTHCHECK_DEPLOY_URL`.
+- [ ] Primer despliegue real con un tag (`v1.0.1`) de un cambio inocuo; anotarlo en «Validación».
+
 ## Validación
 
 En la Mac (rama `feat/deploy`), con una copia de la base local que tiene el historial importado:
@@ -257,6 +351,20 @@ En la Mac (rama `feat/deploy`), con una copia de la base local que tiene el hist
 - `backup.sh` sacó, verificó y subió el respaldo (remoto local en lugar de B2); `restore.sh --check latest` lo bajó y
   coincidió en todo: Flyway 18, 845 productos, 91 ventas, 6.116 líneas, 1.522 movimientos, 517 pedidos y 145 cajas.
 - Un fallo simulado (archivo inexistente) termina con error y pasa por el aviso de fallo.
+
+Despliegue continuo en la Mac (rama `feat/cd`), con un clon, un remoto local en lugar de GitHub y
+`deploy-watch.sh` corrido a mano (lo que hace el timer):
+
+- `actionlint` sin errores en `ci.yml`; `shellcheck -x` sin advertencias en `deploy/`.
+- Sin base corriendo, mover `production` desplegó la versión (primer despliegue, sin respaldo) con los tres servicios
+  sanos; la corrida siguiente no hizo nada.
+- Versión con una migración buena (`V20`, crea una tabla) y otra que falla (`V21`): el backend no arrancó, el script
+  restauró el `pre-deploy` (antes guardó un `pre-restore`), volvió al commit anterior y quedó sano; la tabla de `V20`
+  no existe y Flyway quedó en 19. La corrida siguiente no la reintentó.
+- Versión inocua después del fallo: respaldo `pre-deploy` con el backend detenido y despliegue sano (corte de unos
+  12 s en la Mac); el cambio se ve en la web.
+- Versión que no compila: falló en el build, se devolvieron las imágenes `:rollback` y el backend no se reinició.
+- `deploy.sh --ref <commit anterior>` a mano: desplegó esa versión y el timer no la pisó.
 
 En el VPS (Contabo, Ubuntu 24.04.5, 8 GB, US East), con `v1.0.0` (`6fbdbf1`) y una copia de la base local:
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Akhana Admin: deploy the production branch when CI moves it (NF-06)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/akhana/app/deploy/deploy-watch.sh
+TimeoutStartSec=30min

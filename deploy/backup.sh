@@ -19,7 +19,7 @@ run_log=$(mktemp)
 trap 'rm -f "$run_log"' EXIT
 exec > >(tee -a "$run_log") 2>&1
 
-# shellcheck disable=SC2317  # called from the ERR trap
+# shellcheck disable=SC2317,SC2329  # called from the ERR trap
 on_error() {
     log "ERROR: el respaldo falló (línea $1)"
     [[ -z $tag ]] && ping_check "${HEALTHCHECK_BACKUP_URL:-}" fail "$(tail -c 9000 "$run_log")"

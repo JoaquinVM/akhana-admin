@@ -23,7 +23,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
-| Producción | NF-01, NF-02, NF-05 | ✅ Completo | `v1.0.0` en el VPS con HTTPS por Tailscale, respaldo diario a B2 y restauración probada; falta Tailscale en la PC de caja y el celular | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06 | ✅ Completo | `v1.0.0` en el VPS con HTTPS, respaldo a B2 y restauración probada; despliegue continuo por tag (NF-06) probado en la Mac: falta integrarlo, instalar el timer en el VPS y el primer tag; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -254,6 +254,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-03** Pruebas automáticas de las reglas de dinero (ventas, anulaciones, cierres, pagos de pedidos, deudas) antes de cada despliegue.
 - **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo. Medido en local: la venta responde en 20–50 ms y el catálogo activo (590 KB, 60 KB comprimido desde la cuarta revisión) en 35–70 ms.
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
+- **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
 
 ## 5. Preguntas
 
@@ -338,6 +339,7 @@ Las planillas se dejan al terminar la fase 2, después de dos semanas en paralel
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
 - [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
+- [ ] Despliegue continuo (NF-06): integrar `feat/cd` a `main`, instalar el timer `akhana-deploy` en el VPS y desplegar `v1.0.1` (`deploy.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.
 - [ ] Reportes, fase 2: comparar dos semanas con las tablas dinámicas (`reports.md`).

@@ -68,10 +68,10 @@ if [[ ! -f $AKHANA_DIR/.env ]]; then
     log "Creado $AKHANA_DIR/.env: completarlo antes del primer despliegue"
 fi
 
-log "Timers de respaldo y prueba de restauración"
+log "Timers de respaldo, prueba de restauración y despliegue continuo"
 install -m 644 "$DEPLOY_DIR"/systemd/akhana-*.service "$DEPLOY_DIR"/systemd/akhana-*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now akhana-backup.timer akhana-restore-check.timer
+systemctl enable --now akhana-backup.timer akhana-restore-check.timer akhana-deploy.timer
 systemctl list-timers 'akhana-*' --no-pager
 
 cat <<'NEXT'
@@ -79,7 +79,7 @@ cat <<'NEXT'
 Siguientes pasos (specs/deploy.md):
   1. tailscale up --ssh --hostname akhana
   2. rclone config (remoto b2 y remoto crypt "akhana-crypt") y guardar las claves en el gestor de contraseñas
-  3. completar /opt/akhana/.env y correr /opt/akhana/app/deploy/deploy.sh
+  3. completar /opt/akhana/.env: el timer akhana-deploy despliega la rama production (último tag probado)
   4. tailscale serve --bg --https=443 http://127.0.0.1:8081
   5. desde Tailscale: setup-server.sh --lock
 NEXT

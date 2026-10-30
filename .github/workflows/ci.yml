@@ -1,0 +1,118 @@
+# Continuous integration and delivery (NF-03, NF-06; specs/deploy.md).
+# Every push to main and every pull request runs the backend and frontend tests and the production build.
+# A tag v* on a commit of main that passes them moves the `production` branch to that commit; the VPS polls
+# that branch (deploy/deploy-watch.sh) and deploys it. GitHub never reaches the VPS and holds no secret of it.
+# Rollback: Actions > CI > Run workflow > pick an earlier tag (it is tested again and then deployed).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: akhana
+          POSTGRES_USER: akhana
+          POSTGRES_PASSWORD: ci-only-db-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U akhana -d akhana"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    # Throwaway values for the CI database and app; production secrets live only in /opt/akhana/.env
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/akhana
+      DB_USERNAME: akhana
+      DB_PASSWORD: ci-only-db-password
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ci-only-admin-password
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test
+        run: |
+          JWT_SECRET=$(openssl rand -hex 32)
+          export JWT_SECRET
+          ./gradlew test --no-daemon
+      - name: Test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: backend/build/reports/tests/test
+          retention-days: 7
+
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test -- --watch=false
+      - run: npm run build
+
+  deploy-scripts:
+    name: Deploy scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck -x -P SCRIPTDIR deploy/*.sh
+
+  release:
+    name: Release to production
+    needs: [backend, frontend, deploy-scripts]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The tag must point to a commit of main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) no está en main: no se despliega"
+            exit 1
+          fi
+      - name: Move the production branch
+        run: |
+          git push --force origin "$GITHUB_SHA:refs/heads/production"
+          echo "production -> $GITHUB_REF_NAME ($GITHUB_SHA). El VPS lo despliega en menos de 2 minutos." >> "$GITHUB_STEP_SUMMARY"

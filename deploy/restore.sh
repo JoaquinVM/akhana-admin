@@ -2,7 +2,8 @@
 # Restore of a PostgreSQL backup (NF-01, specs/deploy.md).
 #   restore.sh --check [latest|<file>]   restores into a temporary database, compares it with the live one
 #                                        and drops it; never touches the real database (weekly timer).
-#   restore.sh --replace <file|latest>   replaces the real database (asks to type RESTAURAR).
+#   restore.sh --replace <file|latest> [--yes]   replaces the real database (asks to type RESTAURAR; --yes
+#                                        skips it, used by deploy.sh to roll back a failed version).
 # <file> is a local path or a file name in BACKUP_REMOTE; "latest" is the newest file in BACKUP_REMOTE.
 set -Eeuo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -10,6 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 CHECK_DB=akhana_restore_check
 mode=${1:-}
 source_arg=${2:-latest}
+confirm=${3:-}
 [[ $mode == --check || $mode == --replace ]] || { sed -n '2,6p' "$0"; exit 2; }
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/akhana-restore.XXXXXX")
@@ -17,7 +19,7 @@ run_log=$work_dir/run.log
 trap 'rm -rf "$work_dir"' EXIT
 exec > >(tee -a "$run_log") 2>&1
 
-# shellcheck disable=SC2317  # called from the ERR trap
+# shellcheck disable=SC2317,SC2329  # called from the ERR trap
 on_error() {
     log "ERROR: la restauración falló (línea $1)"
     [[ $mode == --check ]] && ping_check "${HEALTHCHECK_RESTORE_URL:-}" fail "$(tail -c 9000 "$run_log")"
@@ -100,8 +102,10 @@ replace() {
     file=$(fetch_backup)
     echo "Esto REEMPLAZA la base $DB_NAME por $(basename "$file"). Lo registrado después del respaldo se pierde"
     echo "(antes se guarda una copia de la base actual en $BACKUP_DIR)."
-    read -r -p "Escribe RESTAURAR para seguir: " answer
-    [[ $answer == RESTAURAR ]] || { echo "Cancelado."; exit 1; }
+    if [[ $confirm != --yes ]]; then
+        read -r -p "Escribe RESTAURAR para seguir: " answer
+        [[ $answer == RESTAURAR ]] || { echo "Cancelado."; exit 1; }
+    fi
 
     log "Deteniendo el backend"
     compose stop api
