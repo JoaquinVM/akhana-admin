@@ -28,6 +28,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
 import { formatBs } from '../../../shared/utils/money';
+import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
 
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
 export const WEIGHT_STEP_KG = 0.1;
@@ -40,8 +41,6 @@ export function cartKey(product: Product, presentation: ProductPresentation | nu
 export type { CartItem } from './cart-item';
 
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
-
-import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
 
 @Component({
   selector: 'app-register-sale',
