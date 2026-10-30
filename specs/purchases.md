@@ -1,7 +1,7 @@
 # Compras (pedidos)
 
 Detalle del módulo Compras de la V1 (sección 3.3 de `specs/requirements.md`), con los mismos IDs.
-Alcance: COM-01 a COM-09. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
+Alcance: COM-01 a COM-09, COM-11 y COM-12. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
 queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
@@ -180,7 +180,7 @@ agrupados por proveedor (`GET /api/purchases/payables`).
 
 ## COM-09 · Anulación de pedidos y pagos
 
-Un pedido o un pago registrado no se edita: se corrige anulándolo con motivo (RG-03). Lo hace quien entra a
+Un pago registrado no se edita: se corrige anulándolo con motivo (RG-03); un pedido se anula o se edita (COM-11). Lo hace quien entra a
 Compras, operador o administrador (tabla 2.2, P-33). La anulación revierte el dinero: los gastos vinculados al
 pedido (`financial_transactions.purchase_id`) quedan `ANULADO` con el mismo motivo, usuario y fecha, la cuenta
 recupera el monto y, si eran de Caja, el efectivo esperado se recalcula. Bloqueo en orden: pedido, caja de sus
@@ -212,6 +212,52 @@ movimientos, personas, cuentas (T-14).
 - Un pedido anulado se sigue viendo en el listado (filtro Anulado) y en su detalle, con el motivo; no admite
   pagos ni cambios de entrega.
 
+## COM-11 · Edición de pedidos
+
+Caso típico: llega algo que no se pidió, falta un producto o llega otra cantidad o costo (P-51). Se edita desde el
+detalle con «Editar», que abre el mismo formulario del alta con el pedido cargado (sin el pago inicial: los pagos
+se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo hace quien entra a Compras (P-33).
+
+- **Cuando** el pedido está anulado **entonces** se rechaza: «El pedido está anulado.»; si es histórico, «El pedido
+  es histórico (migrado de la planilla): solo se le pueden registrar pagos.»
+- **Cuando** el pedido está pendiente o entregado, por pagar, a cuenta o pagado **entonces** se puede editar.
+- **Cuando** el motivo falta o está en blanco **entonces** se rechaza: «El motivo del cambio es obligatorio.»
+  (siempre, P-51).
+- **Cuando** se envía el pedido sin ningún cambio **entonces** se rechaza: «No hay cambios para guardar.»
+- **Cuando** llega un producto que no se pidió **entonces** se agrega como línea nueva, con las mismas reglas de
+  COM-02 (cantidad, costo, producto eliminado) y su costo registrado de ese momento (`previous_unit_cost`).
+- **Cuando** llega otra cantidad o a otro costo **entonces** se cambia en la línea y se recalcula su subtotal; la
+  línea conserva el costo registrado de cuando se agregó.
+- **Cuando** falta un producto **entonces** su línea se quita: baja lógica (`removed_at`, `removed_by`), sale del
+  detalle y del total, y queda en el historial de cambios. El pedido debe conservar al menos una línea.
+- **Cuando** una línea existente llega con otro producto **entonces** se rechaza: «No se cambia el producto de una
+  línea: quítela y agregue otra.»
+- **Cuando** el producto no existe en el catálogo **entonces** se crea desde la línea, como en el alta (COM-03).
+- **Cuando** el costo de una línea nueva o cambiada difiere del costo del producto **entonces** se alerta y se
+  propone el precio de venta igual que en el alta (COM-03, P-29), con la fila en `product_price_changes` vinculada
+  al pedido.
+- **Cuando** se cambian proveedor, fecha, consignación, comentario o entrega **entonces** se validan como en el alta
+  (proveedor activo si cambia, fecha no futura, COM-07).
+- **Cuando** cambia el total de las líneas **entonces** se recalculan `items_total`, `total_amount`, saldo y estado
+  de pago: un pedido Pagado de Bs 300,00 al que se agrega una línea de Bs 20,00 queda A cuenta con saldo Bs 20,00.
+
+## COM-12 · Efectos de la edición en el dinero y auditoría
+
+- **Cuando** el nuevo total de las líneas es menor a lo pagado (pagos de cuentas y de personas, DEU-02)
+  **entonces** se rechaza: «El total del pedido (Bs 250.00) no puede ser menor a lo pagado (Bs 300.00); anule
+  primero el pago.» Igual a lo pagado se acepta (queda Pagado). Las deudas con personas no cambian.
+- **Cuando** cambia el envío (monto o cuenta) **entonces** la pantalla alerta «Se anulará el gasto de envío de
+  Bs X en <cuenta> y se registrará uno nuevo» y, al guardar, el gasto de Transporte anterior queda `ANULADO` con el
+  motivo, la cuenta recupera el monto y se registra el nuevo como en COM-02 (envío 0: sin gasto nuevo).
+- **Cuando** el gasto de envío anterior fue en una caja cerrada **entonces** se rechaza: «El envío se pagó en una
+  caja cerrada; no se puede cambiar.»; si fue de Caja con la caja abierta, el efectivo esperado se recalcula.
+- **Cuando** el envío no cambia **entonces** su gasto no se toca.
+- Bloqueo en orden: pedido, caja, cuentas del envío anterior y nuevo juntas por id (T-14). Todo en una transacción.
+- **Cuando** se guarda una edición **entonces** queda una fila en `purchase_revisions` con quién, cuándo, motivo y el
+  resumen de lo que cambió, armado en el servidor (ej. «Línea agregada: Barra Chia × 2 a Bs 10.00 · Cantidad de
+  Maní: 3 → 2 · Línea quitada: Pasas · Total: Bs 300.00 → Bs 280.00»), y el pedido guarda `updated_by` y
+  `updated_at`. El detalle muestra el historial de cambios, del más reciente al más antiguo.
+
 ## Categorías de sistema
 
 Pedido y Transporte son categorías de gasto que el código necesita, como Ventas: la migración les pone
@@ -227,6 +273,7 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 | GET | `/api/purchases/{id}` | Detalle con líneas y pagos |
 | POST | `/api/purchases` | Registrar pedido (COM-02, COM-03) |
 | POST | `/api/purchases/{id}/payments` | Registrar pago (COM-05, COM-06) |
+| PUT | `/api/purchases/{id}` | Editar pedido con motivo (COM-11, COM-12) |
 | PUT | `/api/purchases/{id}/delivery` | Cambiar entrega (COM-07) |
 | POST | `/api/purchases/{id}/void` | Anular pedido (COM-09) |
 | POST | `/api/purchases/{id}/payments/{paymentId}/void` | Anular pago (COM-09) |
@@ -250,3 +297,6 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] Frontend: entrega en el formulario y el detalle, filtro de entrega y de anulados, pestaña Por pagar,
   anulación de pedido y de pago con motivo.
 - [ ] Pago por persona (DEU-02), con el módulo Deudas.
+- [ ] Migración `V20__purchase_edit.sql`: `purchase_items.removed_at/removed_by` y `purchase_revisions` (COM-11, COM-12).
+- [ ] `PurchaseService.updatePurchase` con líneas, COM-03, envío rehecho y revisión; pruebas en `PurchaseServiceTest`.
+- [ ] Frontend: «Editar» en el detalle, formulario en modo edición con motivo y alerta de envío, historial de cambios.
