@@ -61,70 +61,19 @@
           (discountChange)="updateUnitDiscount($event.key, $event.value)"
           (remove)="removeFromCart($event)" />
 
-        <!-- Money summary -->
-        <div class="cart-summary-section">
-          <div class="summary-line">
-            <span class="sum-label">Subtotal bruto:</span>
-            <span class="sum-value">Bs {{ subtotalGross() | number:'1.2-2' }}</span>
-          </div>
-
-          @if (discountItemsTotal() > 0) {
-            <div class="summary-line text-discount">
-              <span class="sum-label">Descuentos por ítem:</span>
-              <span class="sum-value">- Bs {{ discountItemsTotal() | number:'1.2-2' }}</span>
-            </div>
-          }
-
-          <div class="summary-line">
-            <span class="sum-label">Subtotal tras Descuentos:</span>
-            <span class="sum-value">Bs {{ subtotalPostItems() | number:'1.2-2' }}</span>
-          </div>
-
-          @if (!atCost() && !onlyFreeLines()) {
-            <div class="summary-line discount-global-row">
-              <label class="sum-label" for="globalDiscount">Descuento general:</label>
-              <div class="global-discount-input-wrap">
-                <span class="currency-prefix">Bs</span>
-                <input
-                  id="globalDiscount"
-                  type="number"
-                  step="0.50"
-                  min="0"
-                  [max]="normalSubtotal()"
-                  class="form-control form-control-sm text-right"
-                  [ngModel]="globalDiscount()"
-                  (ngModelChange)="updateGlobalDiscount($event)" />
-              </div>
-            </div>
-          }
-
-          @if (discountTotal() > 0) {
-            <div class="summary-line text-discount font-bold">
-              <span class="sum-label">Total de descuentos:</span>
-              <span class="sum-value">- Bs {{ discountTotal() | number:'1.2-2' }}</span>
-            </div>
-          }
-
-          <div class="total-charge-line">
-            <div class="total-title">{{ atCost() ? 'Total al costo' : 'Total a cobrar' }}</div>
-            <div class="total-amount-display">Bs {{ totalAmount() | number:'1.2-2' }}</div>
-          </div>
-        </div>
-
-        <!-- Button to go to checkout (next step, in a modal) -->
-        <div class="cart-checkout-actions">
-          <button
-            type="button"
-            class="btn btn-primary btn-lg btn-proceed-checkout"
-            [disabled]="cartItems().length === 0 || totalAmount() <= 0"
-            (click)="openCheckoutModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
-            <span>Cobrar (Bs {{ totalAmount() | number:'1.2-2' }})</span>
-          </button>
-        </div>
+        <app-cart-summary
+          [subtotalGross]="subtotalGross()"
+          [discountItemsTotal]="discountItemsTotal()"
+          [subtotalPostItems]="subtotalPostItems()"
+          [globalDiscount]="globalDiscount()"
+          [maxGlobalDiscount]="normalSubtotal()"
+          [discountTotal]="discountTotal()"
+          [totalAmount]="totalAmount()"
+          [atCost]="atCost()"
+          [onlyFreeLines]="onlyFreeLines()"
+          [canCheckout]="cartItems().length > 0 && totalAmount() > 0"
+          (globalDiscountChange)="updateGlobalDiscount($event)"
+          (checkout)="openCheckoutModal()" />
       </div>
     </div>
   </div>

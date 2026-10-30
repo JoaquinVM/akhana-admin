@@ -1,0 +1,131 @@
+:host {
+  display: block;
+}
+
+.currency-prefix {
+  position: absolute;
+  left: 0.3rem;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.cart-summary-section {
+  padding: 0.75rem 1.15rem;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: #475569;
+}
+
+.sum-value {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.text-discount { color: #dc2626 !important; }
+.text-discount .sum-value { color: #dc2626 !important; }
+.font-bold { font-weight: 700; }
+
+.discount-global-row { align-items: center; }
+
+.global-discount-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 72px;
+}
+
+.global-discount-input-wrap .currency-prefix { left: 0.4rem; }
+.global-discount-input-wrap .form-control {
+  padding-left: 1.35rem;
+  padding-right: 0.35rem;
+  font-size: 0.8125rem;
+  height: 28px;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Hide the browser's number spinners in the general discount */
+.global-discount-input-wrap input::-webkit-outer-spin-button,
+.global-discount-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.total-charge-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.6rem;
+  border-top: 2px dashed #cbd5e1;
+}
+
+.total-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.total-amount-display {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--primary-color, #2e5b27);
+}
+
+/* Cart checkout button */
+.cart-checkout-actions {
+  padding: 0.85rem 1.15rem 1.15rem;
+}
+
+.btn-proceed-checkout {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(46, 91, 39, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-proceed-checkout:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(46, 91, 39, 0.28);
+}
+
+.btn-icon-svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Phones and tablets (one column): the checkout button stays fixed at the bottom with the total, so the
+   operator can charge without scrolling past the catalog and the cart */
+@media (max-width: 1024px) {
+  .cart-checkout-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -8px 20px -12px rgba(15, 23, 42, 0.25);
+  }
+}
