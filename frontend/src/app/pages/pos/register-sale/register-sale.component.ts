@@ -1,6 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CashService } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
@@ -23,6 +21,7 @@ import { QuickProductsConfigModalComponent } from '../components/quick-products-
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
 import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
 import { SaleCartComponent } from '../components/sale-cart/sale-cart.component';
+import { CartSummaryComponent } from '../components/cart-summary/cart-summary.component';
 import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineName } from './cart-item';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
@@ -46,11 +45,10 @@ export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libre
   selector: 'app-register-sale',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
     QuickProductsConfigModalComponent,
     SaleCatalogComponent,
     SaleCartComponent,
+    CartSummaryComponent,
     CheckoutModalComponent,
     ModalComponent,
     PresentationPickerComponent,

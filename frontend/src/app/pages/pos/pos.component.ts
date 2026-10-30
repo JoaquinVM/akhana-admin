@@ -1,5 +1,4 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CashService } from '../../core/cash/cash.service';
 import { SaleService } from '../../core/sale/sale.service';
@@ -27,7 +26,6 @@ import { SessionTransactionsComponent } from './components/session-transactions/
   selector: 'app-pos',
   standalone: true,
   imports: [
-    CommonModule,
     OpenCashModalComponent,
     CloseCashModalComponent,
     CashSessionInfoModalComponent,
