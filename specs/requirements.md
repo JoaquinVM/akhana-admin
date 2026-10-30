@@ -19,7 +19,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-10 | ✅ Completo | — | `cash.md` |
-| POS y ventas | POS-01 a POS-13 | ✅ Completo | Buscador de productos unificado (POS-01) en `feat/product-search`, sin integrar a `main` | `sales.md` |
+| POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
