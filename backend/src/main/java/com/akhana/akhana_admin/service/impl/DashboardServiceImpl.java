@@ -151,8 +151,11 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private static Payments payments(List<Object[]> rows) {
-        Object[] row = rows.isEmpty() ? new Object[] {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO} : rows.getFirst();
-        return new Payments(money((BigDecimal) row[0]), money((BigDecimal) row[1]), money((BigDecimal) row[2]));
+        Object[] row = rows.isEmpty()
+            ? new Object[] {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0L}
+            : rows.getFirst();
+        return new Payments(money((BigDecimal) row[0]), money((BigDecimal) row[1]), money((BigDecimal) row[2]),
+            money((BigDecimal) row[3]), ((Number) row[4]).longValue());
     }
 
     /**

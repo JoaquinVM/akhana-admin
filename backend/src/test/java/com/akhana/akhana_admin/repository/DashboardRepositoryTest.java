@@ -59,6 +59,14 @@ class DashboardRepositoryTest {
         insertSale("AC", "CREDITO", "AL_COSTO", "0.00", "0.00", "15.00", DAY);
         UUID voided = insertSale("V", "EFECTIVO", "NORMAL", "99.00", "0.00", "0.00", DAY);
         jdbc.update("UPDATE sales SET status = 'ANULADA', voided_by = 'it-repo', voided_at = now(), void_reason = 'IT' WHERE id = ?", voided);
+        // A spreadsheet day (FIN-11, P-32): one historical sale without how it was paid
+        UUID historicalImport = jdbc.queryForObject(
+                "INSERT INTO historical_imports (cutoff_date, imported_by) VALUES ('2001-06-30', 'it-repo') RETURNING id",
+                UUID.class);
+        jdbc.update("INSERT INTO sales (sale_number, payment_method, sale_type, total_amount, subtotal_amount, "
+                        + "historical_import_id, created_by, created_at) "
+                        + "VALUES (?, 'HISTORICO', 'NORMAL', 300.00, 300.00, ?, 'it-dash', ?)",
+                "ITD-" + suffix + "-H", historicalImport, Timestamp.from(DAY));
         // The day after, outside the range
         insertSale("N", "QR", "NORMAL", "0.00", "7.00", "0.00", TO.plusSeconds(60));
 
@@ -67,6 +75,8 @@ class DashboardRepositoryTest {
         assertEquals("60", plain(row[0]));
         assertEquals("20", plain(row[1]));
         assertEquals("15", plain(row[2]));
+        assertEquals("300", plain(row[3]));
+        assertEquals(1L, ((Number) row[4]).longValue());
     }
 
     @Test

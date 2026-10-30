@@ -48,8 +48,12 @@ public record DashboardResponse(LocalDate from,
     public record DayPoint(LocalDate date, BigDecimal sales, BigDecimal profit) {
     }
 
-    /** What the period's active sales were paid with. */
-    public record Payments(BigDecimal cash, BigDecimal qr, BigDecimal credit) {
+    /**
+     * What the period's active sales were paid with. Historical sales (FIN-11) are one per spreadsheet day without
+     * how they were paid (P-32): their total and count go apart, and each counts as one ticket.
+     */
+    public record Payments(BigDecimal cash, BigDecimal qr, BigDecimal credit, BigDecimal historicalTotal,
+                           long historicalSales) {
     }
 
     /** A product or supplier with its normal sales; {@code id} is null for historical lines without supplier. */

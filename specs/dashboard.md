@@ -38,6 +38,9 @@ Botones **Hoy · Semana · Mes · Rango**. Semana es del lunes a hoy; Rango mues
 - **Cuando** hay una venta al costo de Bs 104,00 y consumos por Bs 35,50 **entonces** no cambian ventas, utilidad
   ni margen: van en una línea aparte («Al costo: 1 venta por Bs 104,00 · Consumos al costo: Bs 35,50»).
 - **Cuando** no hay ventas en el período **entonces** margen y ticket promedio quedan en «—».
+- **Cuando** el período incluye días migrados de la planilla (FIN-11) **entonces** cada día es una sola venta
+  histórica (P-32): Tickets lo aclara («Incluye 25 días migrados de la planilla (1 por día)») y el ticket promedio
+  solo es real desde el corte (27-10-2026).
 - Cada tarjeta muestra el cambio % contra el período anterior («▲ 9,8 % vs anterior»), o «Sin comparación» si el
   anterior es 0. El período anterior es:
   - del 1 a un día posterior del mismo mes → los mismos días del mes anterior (1-30 oct con 1-30 sep; 1-31 mar
@@ -55,9 +58,12 @@ Botones **Hoy · Semana · Mes · Rango**. Semana es del lunes a hoy; Rango mues
 - **Cuando** el 02-10 hay ventas por Bs 100,00 con costo Bs 60,00 y el 01 y el 03 no hay **entonces** la línea
   tiene 3 puntos: 0, 100,00 (utilidad 40,00) y 0.
 - **Cómo se cobró**: suma de `amount_cash`, `amount_qr` y `credit_amount` de las ventas activas del período, de
-  todo tipo (también al costo), con barra apilada y % de cada uno; Crédito solo aparece si hay.
+  todo tipo (también al costo), con barra apilada y % de cada uno; Crédito solo aparece si hay. Las ventas
+  históricas no guardan cómo se cobraron (P-32): su total va aparte, «Sin dato de cobro: Bs … de N días migrados de
+  la planilla».
 - **Cuando** hay una venta en efectivo de 50, una mixta 10 + 20 QR, una al costo a crédito de 15 y una anulada de
-  99 **entonces** Efectivo 60,00, QR 20,00 y Crédito 15,00.
+  99, y un día migrado de Bs 300,00 **entonces** Efectivo 60,00, QR 20,00, Crédito 15,00 y sin dato de cobro
+  Bs 300,00 de 1 día migrado.
 
 ## DSH-03 · Top productos, proveedores y gastos
 
@@ -99,4 +105,7 @@ el bloque «ahora». Todo se suma en la base y en el servidor; al navegador lleg
   costo fuera del top), `EndpointAuthorizationTest`, `dashboard.service.spec.ts` y `dashboard.component.spec.ts`.
 - [x] Gráficos con SVG y HTML propios, sin librería (0 kB más en el bundle inicial por gráficos); colores de cobro
   revisados para daltonismo, con valores y % visibles al lado.
+- [x] Revisión en el navegador con la base local (30-10-2026): del 1 al 30-10 ventas, utilidad, tickets, al costo y
+  consumos iguales a Reportes → Totales; sin scroll horizontal a 375 px. Con el historial, el cobro solo sumaba lo
+  del POS: se agregó el total sin dato de cobro de los días migrados.
 - [ ] Revisar en producción con el dueño que Ventas y Utilidad del mes coincidan con Reportes → Totales.
