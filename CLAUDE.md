@@ -63,9 +63,12 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 - Una tarea o modulo por sesion. Al terminar: respuesta breve con que cambio, que falta y como probarlo.
 - Correr solo las pruebas de lo que se toco; la suite completa al cerrar el modulo.
 - `pos.component.html` es muy grande: si hay que cambiarlo, proponer dividirlo en componentes antes.
-- Git: una rama por modulo (`feat/<modulo>`) creada desde `main`, commits convencionales (`feat(purchases): ...`).
-  Al cerrar la sesion, con las pruebas pasando, preguntar al usuario si subir a `main` (merge fast-forward si se
-  puede, y push); no hacerlo sin su si. Si las pruebas fallan, no se hace merge y se reporta.
+- Git: una rama por modulo (`feat/<modulo>`, `fix/<tema>`) creada desde `main`, commits convencionales
+  (`feat(purchases): ...`). Nunca push directo a `main`. Al cerrar la sesion, con las pruebas locales pasando: push
+  de la rama y PR a `main`; esperar CI en verde y preguntar al usuario si mergear ("Rebase and merge", historia
+  lineal); no hacerlo sin su si. Si CI o las pruebas fallan, no se mergea y se reporta.
+- Despliegue: un tag `vX.Y.Z` sobre `main` con CI en verde despliega en el VPS (NF-06, `deploy.md`); crearlo solo
+  con el si del usuario.
 - Avance: la tabla de la seccion 1 de `specs/requirements.md` es el tablero del proyecto. Al cerrar cada sesion,
   en el mismo commit: actualizar la fila del modulo (una linea: estado y que falta) y borrar de «Proximos pasos» lo
   terminado (queda en git). No agregar historia ni fechas al tablero.
