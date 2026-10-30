@@ -240,7 +240,10 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
 - **Cuando** `main` ya tiene `ci.yml` y `deploy-watch.sh`, y en el VPS se corre como root
   `git -C /opt/akhana/app pull --ff-only`, se instalan las unidades (`install -m 644
   /opt/akhana/app/deploy/systemd/akhana-deploy.* /etc/systemd/system/ && systemctl daemon-reload && systemctl enable
-  --now akhana-deploy.timer`) y se agrega `HEALTHCHECK_DEPLOY_URL` a `/opt/akhana/.env`
+  --now akhana-deploy.timer`) y se agrega `HEALTHCHECK_DEPLOY_URL` a `/opt/akhana/.env`. En un VPS que ya corría
+  una versión, antes se anota cuál (`git -C /opt/akhana/app rev-parse "v1.0.0^{commit}" >
+  /opt/akhana/state/deployed`): si no, la vuelta atrás del primer despliegue iría al commit del checkout recién bajado
+  y no al que estaba corriendo.
 - **Entonces** `systemctl list-timers 'akhana-*'` muestra los tres timers y, mientras no haya rama `production`, cada
   corrida solo avisa «todavía no hay rama production». `setup-server.sh` instala y activa el timer en un VPS nuevo.
 
@@ -328,7 +331,7 @@ En el VPS (con el dueño), en este orden:
 - [x] El día de la salida, antes de migrar (29-10-2026): `restore.sh --replace /opt/akhana/base-limpia-v1.dump` (la base recién
   desplegada, con el admin definitivo) para quitar la copia de prueba.
 
-Despliegue continuo (NF-06, rama `feat/cd`):
+Despliegue continuo (NF-06):
 
 - [x] `.github/workflows/ci.yml`: pruebas backend y frontend, build, `shellcheck` y job de release que mueve
   `production` solo con un tag `v*` en `main`.
@@ -336,9 +339,11 @@ Despliegue continuo (NF-06, rama `feat/cd`):
   (con restauración si hubo migración) y `flock`; `restore.sh --replace ... --yes`.
 - [x] `deploy/deploy-watch.sh` y las unidades `akhana-deploy` (service + timer); `setup-server.sh` activa el timer.
 - [x] Probar en la Mac: despliegue por el timer, versión fallida con migración y vuelta atrás (ver «Validación»).
-- [ ] Integrar `feat/cd` a `main` (con el sí del dueño) y ver CI en verde en GitHub.
-- [ ] En el VPS: `pull`, instalar el timer, chequeo `akhana-deploy` en healthchecks.io y `HEALTHCHECK_DEPLOY_URL`.
-- [ ] Primer despliegue real con un tag (`v1.0.1`) de un cambio inocuo; anotarlo en «Validación».
+- [x] Integrar a `main` y ver CI en verde en GitHub (la primera corrida destapó pruebas que dependían de la zona
+  horaria de la máquina; corregidas).
+- [x] En el VPS: `pull`, anotar `v1.0.0` como desplegada e instalar el timer.
+- [x] Primer despliegue real con el tag `v1.0.1` (ver «Validación»).
+- [ ] Opcional: chequeo `akhana-deploy` en healthchecks.io y `HEALTHCHECK_DEPLOY_URL` en `/opt/akhana/.env`.
 
 ## Validación
 
@@ -366,6 +371,18 @@ Despliegue continuo en la Mac (rama `feat/cd`), con un clon, un remoto local en 
   12 s en la Mac); el cambio se ve en la web.
 - Versión que no compila: falló en el build, se devolvieron las imágenes `:rollback` y el backend no se reinició.
 - `deploy.sh --ref <commit anterior>` a mano: desplegó esa versión y el timer no la pisó.
+
+Despliegue continuo en el VPS, primera versión por el pipeline (`v1.0.1`, `c1919e4`, sobre `v1.0.0`):
+
+- CI en GitHub: la primera corrida en `main` falló en dos pruebas de rangos de fecha que usaban la zona de la máquina
+  (el runner está en UTC); corregidas, `main` quedó en verde. CI del tag `v1.0.1`: pruebas, build y `shellcheck` en
+  verde, y el job de release movió `production` a `c1919e4` (12:40:41).
+- Antes del tag, con el timer instalado, cada corrida consultó GitHub con la deploy key de root y no hizo nada (sin
+  rama `production`).
+- La primera corrida después del release (12:42:11) tomó `c1919e4`, anotó `v1.0.0` como versión anterior, construyó
+  en unos 40 s con la versión anterior atendiendo, sacó el respaldo `pre-deploy` (672 KB) con el backend detenido y
+  quedó sana a las 12:43:30: corte de unos 36 s. `last-result` y `deployed` quedaron en `c1919e4` y el checkout en
+  `v1.0.1`.
 
 En el VPS (Contabo, Ubuntu 24.04.5, 8 GB, US East), con `v1.0.0` (`6fbdbf1`) y una copia de la base local:
 
