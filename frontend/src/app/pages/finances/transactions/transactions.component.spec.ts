@@ -5,6 +5,7 @@ import { FinancialAccountService } from '../../../core/finance/financial-account
 import { FinancialCategoryService } from '../../../core/finance/financial-category.service';
 import { SaleService } from '../../../core/sale/sale.service';
 import { of } from 'rxjs';
+import { storeMonthStart, storeToday } from '../../../shared/utils/store-date';
 import {
   FinancialAccount,
   FinancialCategory,
@@ -122,14 +123,9 @@ describe('TransactionsComponent', () => {
     expect(component.categories().length).toBe(2);
   });
 
-  it('debe inicializar el rango de fechas por defecto con primer día del mes y día actual en formato YYYY-MM-DD', () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    expect(component.startDate()).toBe(`${year}-${month}-01`);
-    expect(component.endDate()).toBe(`${year}-${month}-${day}`);
+  it('debe inicializar el rango de fechas por defecto con primer día del mes y día actual de la tienda en formato YYYY-MM-DD', () => {
+    expect(component.startDate()).toBe(storeMonthStart());
+    expect(component.endDate()).toBe(storeToday());
   });
 
   it('debe enviar a getTransactions el inicio del día (00:00:00) y fin del día (23:59:59) en formato Instant ISO', () => {
@@ -137,8 +133,9 @@ describe('TransactionsComponent', () => {
     component.endDate.set('2026-10-08');
     component.loadTransactions();
 
-    const expectedStart = new Date(2026, 9, 1, 0, 0, 0, 0).toISOString();
-    const expectedEnd = new Date(2026, 9, 8, 23, 59, 59, 999).toISOString();
+    // Days of the store (UTC-4), whatever the time zone of the machine running the tests
+    const expectedStart = '2026-10-01T04:00:00.000Z';
+    const expectedEnd = '2026-10-09T03:59:59.999Z';
 
     expect(mockTransactionService.getTransactions).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -153,8 +150,8 @@ describe('TransactionsComponent', () => {
     component.endDate.set('2026-10-08');
     component.loadTransactions();
 
-    const expectedStart = new Date(2026, 9, 8, 0, 0, 0, 0).toISOString();
-    const expectedEnd = new Date(2026, 9, 8, 23, 59, 59, 999).toISOString();
+    const expectedStart = '2026-10-08T04:00:00.000Z';
+    const expectedEnd = '2026-10-09T03:59:59.999Z';
 
     expect(mockTransactionService.getTransactions).toHaveBeenCalledWith(
       expect.objectContaining({

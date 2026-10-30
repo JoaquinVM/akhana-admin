@@ -186,7 +186,8 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
 - **Cuando** se sube a `main` o se abre un pull request
 - **Entonces** GitHub Actions corre `./gradlew test` contra un Postgres 17 del propio runner, `npm test -- --watch=false`,
   `npm run build` y `shellcheck` de `deploy/`; las claves de esa base y de JWT son descartables, generadas en la
-  corrida (ningún secreto de producción en GitHub). Si fallan las pruebas del backend, el informe queda como artefacto
+  corrida (ningún secreto de producción en GitHub). El runner está en UTC: las pruebas no dependen de la zona horaria
+  de la máquina (los días de la tienda son UTC-4 en cualquier equipo, `store-date.ts`). Si fallan las pruebas del backend, el informe queda como artefacto
   7 días.
 
 - **Cuando** se sube un tag `v*` (`git tag v1.0.1 && git push origin v1.0.1`) y todo pasa
