@@ -16,6 +16,15 @@ El sistema SHALL proveer un buscador interactivo en el POS que permita filtrar y
 - **WHEN** el usuario selecciona un producto que ya existe en el detalle de la venta actual
 - **THEN** el sistema incrementa la cantidad existente en `1` unidad en lugar de duplicar la fila
 
+#### Scenario: Búsqueda similar y con todos los resultados (POS-01)
+- **WHEN** el operador escribe en cualquier buscador de productos (POS, modal de productos rápidos, Compras, Consumos o la pantalla Productos)
+- **THEN** encuentra por código, nombre, proveedor, categoría y etiqueta, sin importar mayúsculas ni tildes («kefir» encuentra «Kéfir») y con las palabras en cualquier orden («cereza kefir»); todas las palabras deben coincidir
+- **THEN** ve **todas** las coincidencias, ordenadas por relevancia (código exacto, nombre exacto, nombre que empieza igual, palabra en el código o el nombre, y al final proveedor, categoría o etiqueta), con «N resultados» y scroll; en Compras los del proveedor del pedido siguen primero
+- **WHEN** ningún producto tiene todas las palabras
+- **THEN** acepta errores de tipeo: una letra de diferencia desde 4 letras y dos desde 8 («pitsacho», «kefri cerza»); con coincidencias exactas no se mezclan las parecidas
+- **THEN** cada pantalla mantiene sus reglas: el POS y los productos rápidos solo activos (los rápidos sin especiales), Compras y Consumos sin eliminados, Productos según el filtro de estado
+- **NOTA** Antes el POS, Compras y Consumos cortaban en 8 resultados sin avisar y los cinco buscadores repetían la misma lógica (solo código o nombre, con tildes). Ahora todos usan `searchProducts` de `shared/utils/product-search.ts`, en el frontend porque el catálogo (~880) ya está en memoria: sin migración ni llamadas por tecla. Pruebas en `product-search.spec.ts`, `sale-catalog.component.spec.ts` y `purchase-form-modal.component.spec.ts`; verificado en la app con la base local («kefir»: 79 resultados en el POS; «sativa» en Productos: 65).
+
 ---
 
 #### Scenario: Enter agrega por código (pendientes de la segunda revisión, 29-10-2026)

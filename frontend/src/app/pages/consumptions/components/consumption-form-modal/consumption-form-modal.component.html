@@ -35,11 +35,12 @@
     <div class="lines-header">
       <h4 class="section-title">Productos</h4>
       <div class="product-search">
-        <input type="text" class="form-control" placeholder="Buscar producto por nombre o código…"
+        <input type="text" class="form-control" placeholder="Buscar producto por código, nombre o proveedor…"
                name="productSearch" aria-label="Buscar producto" data-product-search
                [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)" />
         @if (productMatches().length > 0) {
           <ul class="product-matches" role="listbox">
+            <li class="matches-count">{{ productMatches().length }} {{ productMatches().length === 1 ? 'resultado' : 'resultados' }}</li>
             @for (product of productMatches(); track product.id) {
               <li>
                 <button type="button" class="match-item" (click)="addProduct(product)">

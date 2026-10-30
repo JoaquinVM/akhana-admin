@@ -8,7 +8,7 @@ import { Consumption, ConsumptionRequest } from '../../../../core/consumption/mo
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
 import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
 import { PresentationPickerComponent } from '../../../../shared/components/presentation-picker/presentation-picker.component';
-import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
+import { productForEnter, searchProducts, stopImplicitSubmit } from '../../../../shared/utils/product-search';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
@@ -19,7 +19,6 @@ export interface ConsumptionLineDraft {
   quantity: number;
 }
 
-const MAX_MATCHES = 8;
 
 // CON-01: the server sets the cost from the product's buy_price; here it is only shown for reference
 @Component({
@@ -53,17 +52,9 @@ export class ConsumptionFormModalComponent {
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
 
-  productMatches = computed(() => {
-    const term = this.productSearch().trim().toLowerCase();
-    if (term.length === 0) {
-      return [];
-    }
-    return this.products()
-      .filter(p => p.status !== 'ELIMINADO')
-      .filter(p => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
-      .slice(0, MAX_MATCHES);
-  });
+  // Every search match, best first
+  productMatches = computed(() =>
+    searchProducts(this.productSearch(), this.products().filter(p => p.status !== 'ELIMINADO')));
 
   total = computed(() => round2(this.lines().reduce((sum, line) => sum + this.lineSubtotal(line), 0)));
 

@@ -7,6 +7,7 @@ import { ProductService } from '../../../../core/product/product.service';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { Product, isSpecialProduct } from '../../../../core/product/models/product.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { searchProducts } from '../../../../shared/utils/product-search';
 
 // Without a search the grid only suggests a few products; a search shows every match (POS-02)
 const SUGGESTIONS_WITHOUT_SEARCH = 10;
@@ -139,14 +140,9 @@ export class QuickProductsConfigModalComponent implements OnInit {
   }
 
   get filteredCatalogProducts(): Product[] {
-    const term = this.productSearchTerm().toLowerCase().trim();
     const all = this.catalogProducts();
-    if (!term) return all.slice(0, SUGGESTIONS_WITHOUT_SEARCH);
-    return all.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.code.toLowerCase().includes(term)
-    );
+    if (!this.productSearchTerm().trim()) return all.slice(0, SUGGESTIONS_WITHOUT_SEARCH);
+    return searchProducts(this.productSearchTerm(), all);
   }
 
   handleClose(): void {

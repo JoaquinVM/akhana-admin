@@ -26,6 +26,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
+import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
@@ -158,7 +159,7 @@ export class ProductsComponent implements OnInit {
     return this.productForm.get('specialType')?.value === 'THIRD_PARTY';
   });
 
-  // Products filtered and sorted by name A-Z
+  // Products filtered by status and search (POS-01 search rules)
   // Rows drawn at a time (the catalog has ~850 products); a new search or filter starts again from the first page
   visibleCount = signal<number>(PRODUCTS_PAGE_SIZE);
   visibleProducts = computed(() => this.filteredProducts().slice(0, this.visibleCount()));
@@ -173,7 +174,7 @@ export class ProductsComponent implements OnInit {
   }
 
   filteredProducts = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
+    const term = this.searchTerm();
     const statusFilter = this.selectedStatusFilter();
     let list = this.products();
 
@@ -187,15 +188,11 @@ export class ProductsComponent implements OnInit {
       list = list.filter(p => p.status === 'ELIMINADO');
     }
 
-    const filtered = term.length === 0
-      ? list
-      : list.filter(p =>
-          p.code.toLowerCase().includes(term) ||
-          p.name.toLowerCase().includes(term)
-        );
-
-    // Orden inicial obligatorio: Nombre ascendente (A-Z)
-    return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+    // A search orders by relevance; without one, by name A-Z
+    if (term.trim().length > 0) {
+      return searchProducts(term, list);
+    }
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   });
 
   // Fixed profit, computed

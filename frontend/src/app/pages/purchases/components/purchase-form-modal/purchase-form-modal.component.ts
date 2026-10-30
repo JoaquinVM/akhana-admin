@@ -23,7 +23,7 @@ import {
   PurchaseRequest,
   paymentSourceFields
 } from '../../../../core/purchase/models/purchase.models';
-import { productForEnter, stopImplicitSubmit } from '../../../../shared/utils/product-search';
+import { productForEnter, searchProducts, stopImplicitSubmit } from '../../../../shared/utils/product-search';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../../../shared/components/search-select/search-select.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
@@ -50,7 +50,6 @@ export interface NewProductDraft {
   sellPrice: number | null;
 }
 
-const MAX_MATCHES = 8;
 
 export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -118,19 +117,11 @@ export class PurchaseFormModalComponent {
   supplierOptions = computed<SearchSelectOption[]>(() =>
     this.activeSuppliers().map(s => ({ value: s.id, label: s.name, hint: s.code })));
 
-  // Search matches: the purchase supplier's products first
+  // Every search match: the purchase supplier's products first, then by relevance
   productMatches = computed(() => {
-    const term = this.productSearch().trim().toLowerCase();
-    if (term.length === 0) {
-      return [];
-    }
     const supplierId = this.supplierId();
-    return this.products()
-      .filter(p => p.status !== 'ELIMINADO')
-      .filter(p => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
-      .sort((a, b) => Number(b.supplierId === supplierId) - Number(a.supplierId === supplierId)
-        || a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
-      .slice(0, MAX_MATCHES);
+    return searchProducts(this.productSearch(), this.products().filter(p => p.status !== 'ELIMINADO'))
+      .sort((a, b) => Number(b.supplierId === supplierId) - Number(a.supplierId === supplierId));
   });
 
   itemsTotal = computed(() => round2(this.lines().reduce((sum, line) => sum + this.lineSubtotal(line), 0)));

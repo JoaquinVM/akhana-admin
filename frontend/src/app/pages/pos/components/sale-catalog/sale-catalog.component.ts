@@ -4,9 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Product } from '../../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { QuickProductService } from '../../../../core/quick-product/quick-product.service';
-import { productForEnter } from '../../../../shared/utils/product-search';
-
-const MAX_RESULTS = 8;
+import { productForEnter, searchProducts } from '../../../../shared/utils/product-search';
 
 /**
  * Left column of the register-sale screen: product search (POS-01) and quick product groups (POS-02).
@@ -39,13 +37,8 @@ export class SaleCatalogComponent {
     return groups.find((g) => g.id === currentId) ?? groups[0];
   });
 
-  readonly filteredSearchResults = computed<Product[]>(() => {
-    const term = this.productSearchTerm().toLowerCase().trim();
-    if (!term) return [];
-    return this.products()
-      .filter((p) => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
-      .slice(0, MAX_RESULTS);
-  });
+  // Every match, best first; the dropdown scrolls (POS-01)
+  readonly filteredSearchResults = computed<Product[]>(() => searchProducts(this.productSearchTerm(), this.products()));
 
   selectGroup(groupId: string): void {
     this.activeGroupId.set(groupId);

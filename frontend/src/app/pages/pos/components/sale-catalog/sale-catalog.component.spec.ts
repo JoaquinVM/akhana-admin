@@ -38,9 +38,23 @@ describe('SaleCatalogComponent', () => {
     const results = fixture.debugElement.queryAll(By.css('.search-result-item'));
     expect(results.length).toBe(3);
 
-    results[2].nativeElement.click();
+    // The exact name comes first
+    results[0].nativeElement.click();
     expect(add).toHaveBeenCalledWith(pistacho);
     expect(component.productSearchTerm()).toBe('');
+  });
+
+  it('POS-01: muestra todos los resultados, sin el tope de 8, y cuántos son', () => {
+    const kefirs = Array.from({ length: 12 }, (_, i) =>
+      ({ id: `k${i}`, code: `KEF-${i}`, name: `Kéfir ${i}`, supplierName: 'Lácteos Sur', sellPrice: 10 }));
+    fixture.componentRef.setInput('products', [tab100, ...kefirs]);
+    component.productSearchTerm.set('kefir');
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('.search-result-item')).length).toBe(12);
+    expect(fixture.nativeElement.querySelector('.search-results-count').textContent).toContain('12 resultados');
+
+    component.productSearchTerm.set('lacteos');
+    expect(component.filteredSearchResults().length).toBe(12);
   });
 
   it('Enter agrega el producto cuyo código es el escrito, aunque haya más resultados', () => {

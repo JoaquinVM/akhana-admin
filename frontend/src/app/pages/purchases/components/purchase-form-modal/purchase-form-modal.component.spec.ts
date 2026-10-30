@@ -64,6 +64,16 @@ describe('PurchaseFormModalComponent', () => {
     expect(component.productMatches()[0].id).toBe('p-2');
   });
 
+  it('el buscador muestra todos los resultados y busca por proveedor, sin tildes', () => {
+    const many = Array.from({ length: 10 }, (_, i) =>
+      product({ id: `g-${i}`, code: `GR-${i}`, name: `Almendra ${i}`, supplierName: 'Frutos Andinos' }));
+    component.products.set([tea, nuts, ...many]);
+    component.productSearch.set('andinos');
+    expect(component.productMatches().length).toBe(10);
+    component.productSearch.set('te verde');
+    expect(component.productMatches()).toEqual([tea]);
+  });
+
   it('COM-02: agrega líneas con el costo registrado y calcula subtotales en escala 2', () => {
     component.addProduct(nuts);
     component.onQuantityChange(0, 1.5);

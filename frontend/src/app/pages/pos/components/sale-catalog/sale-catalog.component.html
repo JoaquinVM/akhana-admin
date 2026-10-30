@@ -9,7 +9,7 @@
       <input
         type="text"
         class="form-control form-control-search"
-        placeholder="Buscar por código o nombre de producto..."
+        placeholder="Buscar por código, nombre o proveedor..."
         [ngModel]="productSearchTerm()"
         (ngModelChange)="productSearchTerm.set($event)"
         (keydown.enter)="addFromSearch()" />
@@ -29,11 +29,15 @@
     <!-- Live results dropdown -->
     @if (filteredSearchResults().length > 0) {
       <div class="search-dropdown-results">
+        <div class="search-results-count">{{ filteredSearchResults().length }} {{ filteredSearchResults().length === 1 ? 'resultado' : 'resultados' }}</div>
         @for (prod of filteredSearchResults(); track prod.id) {
           <div class="search-result-item" (click)="choose(prod)">
             <div class="res-info">
               <span class="res-code">{{ prod.code }}</span>
               <strong class="res-name">{{ prod.name }}</strong>
+              @if (prod.supplierName) {
+                <span class="res-supplier">{{ prod.supplierName }}</span>
+              }
             </div>
             <div class="res-price">
               @if (prod.specialType) {

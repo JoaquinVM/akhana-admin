@@ -19,7 +19,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-10 | ✅ Completo | — | `cash.md` |
-| POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
+| POS y ventas | POS-01 a POS-13 | ✅ Completo | Buscador de productos unificado (POS-01) en `feat/product-search`, sin integrar a `main` | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
@@ -170,7 +170,7 @@ Detalle en `cash.md`.
 
 Detalle en `sales.md`.
 
-- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito.
+- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
