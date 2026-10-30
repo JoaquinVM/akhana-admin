@@ -62,7 +62,8 @@ Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 - Leer solo los archivos que se indiquen o los del patron de referencia. No recorrer todo el repo.
 - Una tarea o modulo por sesion. Al terminar: respuesta breve con que cambio, que falta y como probarlo.
 - Correr solo las pruebas de lo que se toco; la suite completa al cerrar el modulo.
-- `pos.component.html` es muy grande: si hay que cambiarlo, proponer dividirlo en componentes antes.
+- POS (`pages/pos/`) y la venta (`pos/register-sale/`) ya estan divididos en `pos/components/`: el estado vive en el
+  padre y los hijos usan `input()`/`output()`. Lo nuevo va en un componente hijo, sin volver a agrandar los HTML padre.
 - Git: una rama por modulo (`feat/<modulo>`, `fix/<tema>`) creada desde `main`, commits convencionales
   (`feat(purchases): ...`). Nunca push directo a `main`. Al cerrar la sesion, con las pruebas locales pasando: push
   de la rama y PR a `main`; esperar CI en verde y preguntar al usuario si mergear ("Rebase and merge", historia
