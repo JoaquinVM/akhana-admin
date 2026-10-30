@@ -45,6 +45,15 @@ El sistema SHALL disponer de una sección de accesos directos ("Productos Rápid
 - **WHEN** el usuario abre el modal de configuración de productos rápidos
 - **THEN** el sistema permite crear nuevos grupos, renombrarlos, asignar productos activos a cada grupo y eliminar grupos
 
+#### Scenario: Búsqueda de productos en el modal de configuración (POS-02)
+- **WHEN** el usuario escribe un nombre o código en «Agregar productos del catálogo»
+- **THEN** ve todas las coincidencias entre los productos activos no especiales, con el número de resultados, en una grilla
+  con scroll (sin búsqueda solo sugiere 10); el catálogo se vuelve a pedir cada vez que se abre el modal, así un
+  producto creado con el POS abierto aparece sin recargar la página
+- **NOTA** Antes mostraba solo las primeras 15 en orden alfabético: con 79 productos «kefir», «Agua Kefir Tamarindo
+  2L» no aparecía. `GET /api/products` no está paginado (la paginación es solo de la tabla de Productos). Pruebas en
+  `quick-products-config-modal.component.spec.ts`; verificado en la app con la base local.
+
 #### Scenario: Reordenamiento visual mediante drag and drop
 - **WHEN** el usuario arrastra y suelta grupos para modificar su orden o arrastra productos para cambiar su secuencia dentro de un grupo
 - **THEN** el sistema actualiza la posición visual y persiste el nuevo ordenamiento en la base de datos de manera inmediata

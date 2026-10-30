@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -7,6 +7,9 @@ import { ProductService } from '../../../../core/product/product.service';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { Product, isSpecialProduct } from '../../../../core/product/models/product.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+
+// Without a search the grid only suggests a few products; a search shows every match (POS-02)
+const SUGGESTIONS_WITHOUT_SEARCH = 10;
 
 @Component({
   selector: 'app-quick-products-config-modal',
@@ -27,17 +30,28 @@ export class QuickProductsConfigModalComponent implements OnInit {
   newGroupName = signal<string>('');
   selectedGroupId = signal<string | null>(null);
 
+  constructor() {
+    // The modal stays mounted in register-sale: reload the catalog on each opening so new products show up
+    effect(() => {
+      if (this.isOpen()) {
+        untracked(() => this.loadCatalog());
+      }
+    });
+  }
+
   ngOnInit(): void {
+    const groups = this.quickProductService.groups();
+    if (groups.length > 0 && !this.selectedGroupId()) {
+      this.selectedGroupId.set(groups[0].id);
+    }
+  }
+
+  private loadCatalog(): void {
     this.productService.getProducts(undefined, 'ACTIVO').subscribe({
       // POS-11: special products ask for name and price; they are not quick products
       next: (products) => this.catalogProducts.set(products.filter((p) => !isSpecialProduct(p))),
       error: () => this.catalogProducts.set([])
     });
-
-    const groups = this.quickProductService.groups();
-    if (groups.length > 0 && !this.selectedGroupId()) {
-      this.selectedGroupId.set(groups[0].id);
-    }
   }
 
   get selectedGroup(): QuickProductGroup | null {
@@ -127,14 +141,12 @@ export class QuickProductsConfigModalComponent implements OnInit {
   get filteredCatalogProducts(): Product[] {
     const term = this.productSearchTerm().toLowerCase().trim();
     const all = this.catalogProducts();
-    if (!term) return all.slice(0, 10);
-    return all
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.code.toLowerCase().includes(term)
-      )
-      .slice(0, 15);
+    if (!term) return all.slice(0, SUGGESTIONS_WITHOUT_SEARCH);
+    return all.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        p.code.toLowerCase().includes(term)
+    );
   }
 
   handleClose(): void {

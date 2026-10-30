@@ -149,6 +149,10 @@
               (ngModelChange)="productSearchTerm.set($event)" />
           </div>
 
+          @if (productSearchTerm().trim()) {
+            <p class="catalog-results-count">{{ filteredCatalogProducts.length }} resultado(s)</p>
+          }
+
           <div class="catalog-results-grid">
             @for (cp of filteredCatalogProducts; track cp.id) {
               <div

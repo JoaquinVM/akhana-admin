@@ -135,6 +135,34 @@ describe('QuickProductsConfigModalComponent', () => {
     });
   });
 
+  it('al buscar muestra todas las coincidencias, no solo las primeras 15 (POS-02)', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      ...mockProduct2,
+      id: `kef-${i}`,
+      code: `KEF-${String(i).padStart(2, '0')}`,
+      name: `Agua Kefir ${String(i).padStart(2, '0')}`
+    }));
+    component.catalogProducts.set([mockProduct1, ...many]);
+    component.productSearchTerm.set('kefir');
+
+    const results = component.filteredCatalogProducts;
+    expect(results.length).toBe(40);
+    expect(results.some((p) => p.name === 'Agua Kefir 39')).toBe(true);
+  });
+
+  it('recarga el catálogo cada vez que se abre, para ver productos creados después (POS-02)', () => {
+    fixture.componentRef.setInput('isOpen', false);
+    fixture.detectChanges();
+    mockProductService.getProducts.mockClear();
+    mockProductService.getProducts.mockReturnValue(of([mockProduct1, mockProduct2, { ...mockProduct2, id: 'prod-3', code: 'P003', name: 'Nuevo' }]));
+
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+
+    expect(mockProductService.getProducts).toHaveBeenCalledWith(undefined, 'ACTIVO');
+    expect(component.catalogProducts().length).toBe(3);
+  });
+
   it('debe emitir close al invocar handleClose()', () => {
     let closed = false;
     component.close.subscribe(() => (closed = true));
