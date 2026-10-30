@@ -343,7 +343,8 @@ Despliegue continuo (NF-06):
   horaria de la máquina; corregidas).
 - [x] En el VPS: `pull`, anotar `v1.0.0` como desplegada e instalar el timer.
 - [x] Primer despliegue real con el tag `v1.0.1` (ver «Validación»).
-- [ ] Opcional: chequeo `akhana-deploy` en healthchecks.io y `HEALTHCHECK_DEPLOY_URL` en `/opt/akhana/.env`.
+- [x] Chequeo `akhana-deploy` en healthchecks.io (2 min, 30 de gracia) y `HEALTHCHECK_DEPLOY_URL` en `/opt/akhana/.env`;
+  el primer aviso llegó en verde.
 
 ## Validación
 
