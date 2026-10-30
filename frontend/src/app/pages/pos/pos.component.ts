@@ -24,6 +24,7 @@ import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { formatBs } from '../../shared/utils/money';
 
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
+import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
 
 @Component({
   selector: 'app-pos',
@@ -39,6 +40,7 @@ import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos
     CashExpensesComponent,
     PosKpisComponent,
     PosFeedbackBannerComponent,
+    PosClosedStateComponent,
     SaleDetailModalComponent,
     SalesTableComponent
   ],

@@ -63,41 +63,7 @@
 
   <!-- State 2: cash closed / sales disabled -->
   @else if (!cashService.currentSession()) {
-    <div class="pos-closed-card">
-      <div class="closed-hero-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="hero-lock-svg">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      </div>
-      <h2 class="closed-hero-title">Caja cerrada</h2>
-      <p class="closed-hero-desc">
-        Para comenzar a registrar ventas y operar en el terminal POS, es necesario iniciar la apertura del turno ingresando el fondo inicial en efectivo.
-      </p>
-
-      <div class="closed-hero-actions">
-        <button
-          type="button"
-          class="btn btn-primary btn-lg"
-          (click)="openCashModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-            <circle cx="12" cy="12" r="3" />
-            <path d="M6 12h.01M18 12h.01" />
-          </svg>
-          <span>Abrir caja</span>
-        </button>
-      </div>
-
-      <div class="closed-hero-hint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hint-icon-svg">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-        <span>El registro de transacciones permanecerá inhabilitado hasta que se aperture la sesión compartida.</span>
-      </div>
-    </div>
+    <app-pos-closed-state (openCash)="openCashModal()" />
   }
 
   <!-- State 3: cash open / live operation -->
