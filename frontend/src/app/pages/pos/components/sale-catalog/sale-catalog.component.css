@@ -81,8 +81,15 @@
   color: var(--text-muted, #6b7280);
 }
 
+/* Code and supplier share one line so the supplier adds no height; a long supplier is cut with … */
+.res-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .res-supplier {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-muted, #6b7280);
 }
 
@@ -103,6 +110,8 @@
 .res-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .res-code {
@@ -118,6 +127,8 @@
 
 .res-price {
   display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   align-items: center;
   gap: 0.75rem;
   font-family: var(--font-mono, monospace);

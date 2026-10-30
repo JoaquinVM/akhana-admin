@@ -156,7 +156,7 @@ describe('QuickProductsConfigModalComponent', () => {
 
     const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.catalog-item-card'));
     expect(cards.length).toBe(2);
-    expect(cards[0].querySelector('.cp-supplier')?.textContent?.trim()).toBe('Sup1');
+    expect(cards[0].querySelector('.cp-supplier')?.textContent?.trim()).toBe('· Sup1');
     expect(cards[1].querySelector('.cp-supplier')).toBeNull();
   });
 

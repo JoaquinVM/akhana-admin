@@ -57,6 +57,19 @@ describe('SaleCatalogComponent', () => {
     expect(component.filteredSearchResults().length).toBe(12);
   });
 
+  it('POS-01: muestra el proveedor en la línea del código, y nada si no tiene', () => {
+    const kefir = { id: 'k1', code: 'BEI-AKE-1L', name: 'Agua de Kefir', supplierName: 'Beautiful Imilla', sellPrice: 26 };
+    fixture.componentRef.setInput('products', [kefir, tab100]);
+    component.productSearchTerm.set('kefir');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.res-meta').textContent.trim()).toBe('BEI-AKE-1L · Beautiful Imilla');
+
+    component.productSearchTerm.set('pistacho 100');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.res-meta').textContent.trim()).toBe('PAT-TAB-PIS-100G');
+    expect(fixture.nativeElement.querySelector('.res-supplier')).toBeNull();
+  });
+
   it('Enter agrega el producto cuyo código es el escrito, aunque haya más resultados', () => {
     const add = vi.fn();
     component.add.subscribe(add);

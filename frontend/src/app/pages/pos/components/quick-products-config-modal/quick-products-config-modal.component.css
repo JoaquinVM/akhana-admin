@@ -265,6 +265,7 @@
 .card-text {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   margin-bottom: 8px;
 }
 
@@ -282,10 +283,17 @@
   margin: 2px 0;
 }
 
+/* Code and supplier share one line so the supplier adds no height; a long supplier is cut with … */
+.cp-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.68rem;
+}
+
 .cp-supplier {
   font-size: 0.68rem;
   color: #64748b;
-  overflow-wrap: anywhere;
 }
 
 .cp-price {

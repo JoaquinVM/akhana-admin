@@ -33,11 +33,13 @@
         @for (prod of filteredSearchResults(); track prod.id) {
           <div class="search-result-item" (click)="choose(prod)">
             <div class="res-info">
-              <span class="res-code">{{ prod.code }}</span>
+              <span class="res-meta">
+                <span class="res-code">{{ prod.code }}</span>
+                @if (prod.supplierName) {
+                  <span class="res-supplier"> · {{ prod.supplierName }}</span>
+                }
+              </span>
               <strong class="res-name">{{ prod.name }}</strong>
-              @if (prod.supplierName) {
-                <span class="res-supplier">{{ prod.supplierName }}</span>
-              }
             </div>
             <div class="res-price">
               @if (prod.specialType) {
