@@ -161,6 +161,9 @@
                 <div class="card-text">
                   <span class="cp-code">{{ cp.code }}</span>
                   <span class="cp-name">{{ cp.name }}</span>
+                  @if (cp.supplierName) {
+                    <span class="cp-supplier">{{ cp.supplierName }}</span>
+                  }
                   <span class="cp-price">Bs {{ cp.sellPrice | number:'1.2-2' }}</span>
                 </div>
 

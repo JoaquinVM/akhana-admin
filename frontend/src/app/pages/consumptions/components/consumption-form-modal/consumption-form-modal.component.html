@@ -45,7 +45,7 @@
               <li>
                 <button type="button" class="match-item" (click)="addProduct(product)">
                   <span class="match-name">{{ product.name }}{{ product.status === 'INACTIVO' ? ' (inactivo)' : '' }}</span>
-                  <span class="match-meta">{{ product.code }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  <span class="match-meta">{{ product.code }}{{ product.supplierName ? ' · ' + product.supplierName : '' }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
                 </button>
               </li>
             }

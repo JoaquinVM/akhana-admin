@@ -282,6 +282,12 @@
   margin: 2px 0;
 }
 
+.cp-supplier {
+  font-size: 0.68rem;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
 .cp-price {
   font-size: 0.78rem;
   font-weight: 700;

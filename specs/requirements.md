@@ -170,7 +170,7 @@ Detalle en `cash.md`.
 
 Detalle en `sales.md`.
 
-- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia.
+- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.

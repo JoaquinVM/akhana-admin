@@ -44,6 +44,17 @@ describe('ConsumptionFormModalComponent', () => {
     expect(component.productMatches().map(p => p.id)).toEqual(['p-3']);
   });
 
+  it('POS-01: el resultado muestra el proveedor, y nada si no tiene', () => {
+    fixture.componentRef.setInput('products', [roquin, product({ id: 'p-5', code: 'ROQ-2', name: 'Roquin mini', supplierName: '' })]);
+    component.productSearch.set('roquin');
+    fixture.detectChanges();
+
+    const metas: string[] = Array.from(fixture.nativeElement.querySelectorAll('.match-meta'))
+      .map((el: any) => el.textContent.trim());
+    expect(metas[0]).toContain('ROQ-1 · Granel · costo');
+    expect(metas[1]).toContain('ROQ-2 · costo');
+  });
+
   it('CON-01: el mismo producto suma cantidad y el total va al costo', () => {
     component.addProduct(roquin);
     component.addProduct(roquin);

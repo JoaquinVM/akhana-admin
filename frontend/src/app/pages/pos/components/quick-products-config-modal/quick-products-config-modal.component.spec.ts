@@ -150,6 +150,16 @@ describe('QuickProductsConfigModalComponent', () => {
     expect(results.some((p) => p.name === 'Agua Kefir 39')).toBe(true);
   });
 
+  it('muestra el proveedor de cada producto del catálogo, y nada si no tiene (POS-01)', () => {
+    component.catalogProducts.set([mockProduct1, { ...mockProduct2, supplierName: '' }]);
+    fixture.detectChanges();
+
+    const cards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.catalog-item-card'));
+    expect(cards.length).toBe(2);
+    expect(cards[0].querySelector('.cp-supplier')?.textContent?.trim()).toBe('Sup1');
+    expect(cards[1].querySelector('.cp-supplier')).toBeNull();
+  });
+
   it('recarga el catálogo cada vez que se abre, para ver productos creados después (POS-02)', () => {
     fixture.componentRef.setInput('isOpen', false);
     fixture.detectChanges();
