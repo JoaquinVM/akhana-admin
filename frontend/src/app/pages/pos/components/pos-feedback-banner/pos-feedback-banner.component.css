@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.feedback-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.feedback-banner.success {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.feedback-banner.error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.feedback-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.feedback-icon-svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-close-feedback {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.btn-close-feedback:hover {
+  opacity: 1;
+}
+
+.btn-close-svg {
+  width: 14px;
+  height: 14px;
+}

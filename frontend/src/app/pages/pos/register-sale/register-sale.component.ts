@@ -41,6 +41,8 @@ export type { CartItem } from './cart-item';
 
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
 
+import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
+
 @Component({
   selector: 'app-register-sale',
   standalone: true,
@@ -53,7 +55,8 @@ export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libre
     CheckoutModalComponent,
     ModalComponent,
     PresentationPickerComponent,
-    FreeLineFormComponent
+    FreeLineFormComponent,
+    PosFeedbackBannerComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']

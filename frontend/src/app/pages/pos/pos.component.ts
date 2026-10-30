@@ -23,6 +23,8 @@ import { FinancialTransactionService } from '../../core/finance/financial-transa
 import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { formatBs } from '../../shared/utils/money';
 
+import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
+
 @Component({
   selector: 'app-pos',
   standalone: true,
@@ -36,6 +38,7 @@ import { formatBs } from '../../shared/utils/money';
     CashExpenseModalComponent,
     CashExpensesComponent,
     PosKpisComponent,
+    PosFeedbackBannerComponent,
     SaleDetailModalComponent,
     SalesTableComponent
   ],
