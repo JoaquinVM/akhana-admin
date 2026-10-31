@@ -36,6 +36,8 @@ export interface CreditorHistoryEntry {
   type: CreditorHistoryEntryType;
   id: string;
   date: string;
+  // CAJ-11: day it counts for (yyyy-MM-dd); date is the real time it was recorded
+  operationDate?: string | null;
   amount: number;
   purchaseId: string | null;
   purchaseNumber: string | null;
@@ -105,6 +107,8 @@ export interface CustomerHistoryEntry {
   type: CustomerHistoryEntryType;
   id: string;
   date: string;
+  // CAJ-11: day it counts for (yyyy-MM-dd); date is the real time it was recorded
+  operationDate?: string | null;
   // SALE: the credit part; COLLECTION: what was collected
   amount: number;
   saleId: string | null;

@@ -90,6 +90,8 @@ export interface Sale {
   creditAmount?: number;
   // FIN-11: migrated from the spreadsheet; never voided or edited
   historical?: boolean;
+  // CAJ-11: day it counts for (yyyy-MM-dd, the day of its session); createdAt is the real time it was recorded
+  operationDate?: string | null;
 }
 
 export interface CashSessionSummary {
@@ -112,6 +114,8 @@ export interface CashSessionSummary {
   salesCount: number;
   // FIN-11: session from the Cierre de Caja sheet
   historical?: boolean;
+  // CAJ-11: day its sales and movements count for (yyyy-MM-dd); openedAt is the real time it was opened
+  operationDate?: string | null;
 }
 
 export interface CashSessionDetail extends CashSessionSummary {

@@ -145,7 +145,13 @@
             <tbody>
               @for (payment of p.payments; track payment.id) {
                 <tr [class.voided-row]="payment.status === 'ANULADO'">
-                  <td>{{ payment.paymentDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    @if (dayMark(payment.operationDate, payment.paymentDate); as mark) {
+                      <span class="day-mark" title="Cuenta para el día de su caja">{{ mark }}</span>
+                    } @else {
+                      {{ payment.paymentDate | date:'dd/MM/yyyy HH:mm' }}
+                    }
+                  </td>
                   <td>{{ sourceName(payment) }}</td>
                   <td>
                     {{ payment.createdBy }}

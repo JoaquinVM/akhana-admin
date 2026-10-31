@@ -34,6 +34,13 @@
           <span class="field-value">{{ sale.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
         </div>
 
+        @if (dayMark(sale); as mark) {
+          <div class="info-field">
+            <span class="field-label">Día de operación</span>
+            <span class="field-value"><span class="day-mark">{{ mark }}</span></span>
+          </div>
+        }
+
         <div class="info-field">
           <span class="field-label">Usuario</span>
           <span class="field-value">{{ sale.createdBy }}</span>

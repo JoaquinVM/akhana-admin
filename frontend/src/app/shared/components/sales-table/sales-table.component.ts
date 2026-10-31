@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, Sale } from '../../../core/sale/models/sale.models';
+import { operationDayLabel } from '../../utils/store-date';
 
 // Reusable sales list (POS-09): history and, in void mode, the POS session
 @Component({
@@ -20,6 +21,11 @@ export class SalesTableComponent {
 
   viewDetail = output<Sale>();
   voidSale = output<Sale>();
+
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:20» when it counts for another day than the one it was recorded
+  dayMark(sale: Sale): string | null {
+    return operationDayLabel(sale.operationDate, sale.createdAt);
+  }
 
   methodLabel(method: PaymentMethod): string {
     return PAYMENT_METHOD_LABELS[method] ?? method;

@@ -51,6 +51,8 @@ export interface PurchasePayment {
   creditorName: string | null;
   amount: number;
   paymentDate: string;
+  // CAJ-11: day it counts for (yyyy-MM-dd); paymentDate is the real time it was recorded
+  operationDate?: string | null;
   financialTransactionId: string | null;
   status: 'ACTIVO' | 'ANULADO';
   createdBy: string;

@@ -21,7 +21,7 @@ import { TransactionsTableComponent } from './components/transactions-table/tran
 import { TransactionFormModalComponent } from './components/transaction-form-modal/transaction-form-modal.component';
 import { TransactionEditModalComponent } from './components/transaction-edit-modal/transaction-edit-modal.component';
 import { TransactionVoidModalComponent } from './components/transaction-void-modal/transaction-void-modal.component';
-import { storeDayEndIso, storeDayStartIso, storeMonthStart, storeToday } from '../../../shared/utils/store-date';
+import { storeMonthStart, storeToday } from '../../../shared/utils/store-date';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Component({
@@ -158,18 +158,13 @@ export class TransactionsComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
+    // CAJ-11: days of operation, both inclusive
     const params: TransactionFilterParams = {};
     if (this.startDate()) {
-      const startIso = this.formatStartOfDayIso(this.startDate());
-      if (startIso) {
-        params.startDate = startIso;
-      }
+      params.from = this.startDate();
     }
     if (this.endDate()) {
-      const endIso = this.formatEndOfDayIso(this.endDate());
-      if (endIso) {
-        params.endDate = endIso;
-      }
+      params.to = this.endDate();
     }
     if (this.selectedType()) {
       params.type = this.selectedType() as FinancialTransactionType;
@@ -197,15 +192,6 @@ export class TransactionsComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
-  }
-
-  // Store days (America/La_Paz) as instants, like the server's day ranges
-  private formatStartOfDayIso(dateStr: string): string | undefined {
-    return dateStr ? storeDayStartIso(dateStr) : undefined;
-  }
-
-  private formatEndOfDayIso(dateStr: string): string | undefined {
-    return dateStr ? storeDayEndIso(dateStr) : undefined;
   }
 
 
