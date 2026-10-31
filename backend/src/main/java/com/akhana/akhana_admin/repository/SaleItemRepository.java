@@ -44,6 +44,6 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, UUID> {
                @Param("at") Instant at);
 
     // POS-13: third-party lines of a person, voided sales included, for the debt history
-    @Query("SELECT i FROM SaleItem i JOIN FETCH i.sale s WHERE i.creditor.id = :creditorId ORDER BY s.createdAt")
+    @Query("SELECT i FROM SaleItem i JOIN FETCH i.sale s WHERE i.creditor.id = :creditorId ORDER BY s.operationDate, s.createdAt")
     List<SaleItem> findThirdPartyLinesByCreditorId(@Param("creditorId") UUID creditorId);
 }

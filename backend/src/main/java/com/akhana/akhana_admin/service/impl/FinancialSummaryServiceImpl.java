@@ -118,6 +118,7 @@ public class FinancialSummaryServiceImpl implements FinancialSummaryService {
                 .type(tx.getType())
                 .amount(tx.getAmount())
                 .transactionDate(tx.getTransactionDate())
+                .operationDate(tx.getOperationDate())
                 .description(tx.getDescription())
                 .notes(tx.getNotes())
                 .status(tx.getStatus())

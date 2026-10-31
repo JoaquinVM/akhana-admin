@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,8 +34,9 @@ public class FinancialTransactionController {
     @PreAuthorize("hasAnyAuthority('FINANCES_TRANSACTIONS', 'FINANCES_ACCOUNTS')")
     @GetMapping
     public ResponseEntity<List<FinancialTransactionResponse>> getTransactions(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
+            // CAJ-11: days of operation, inclusive
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) FinancialTransactionType type,
             @RequestParam(required = false) UUID accountId,
             @RequestParam(required = false) UUID categoryId,
@@ -43,7 +44,7 @@ public class FinancialTransactionController {
             @RequestParam(required = false) String search
     ) {
         List<FinancialTransactionResponse> transactions = financialTransactionService.getTransactions(
-                startDate, endDate, type, accountId, categoryId, status, search
+                from, to, type, accountId, categoryId, status, search
         );
         return ResponseEntity.ok(transactions);
     }
