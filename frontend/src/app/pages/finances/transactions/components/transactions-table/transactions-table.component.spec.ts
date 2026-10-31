@@ -29,6 +29,16 @@ describe('TransactionsTableComponent', () => {
     fixture = TestBed.createComponent(TransactionsTableComponent);
   });
 
+  it('CAJ-11: marca el movimiento de una caja cargado pasada la medianoche', () => {
+    const root = render([
+      { ...baseTx, id: 'tx-same', transactionDate: '2026-10-07T14:30:00Z', operationDate: '2026-10-07' },
+      { ...baseTx, id: 'tx-late', transactionDate: '2026-11-01T04:30:00Z', operationDate: '2026-10-31' }
+    ]);
+    const rows = root.querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('.day-mark')).toBeNull();
+    expect(rows[1].querySelector('.day-mark')?.textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
+  });
+
   it('debe mostrar editar y anular en un movimiento manual activo del sistema', () => {
     const el = render([baseTx]);
 

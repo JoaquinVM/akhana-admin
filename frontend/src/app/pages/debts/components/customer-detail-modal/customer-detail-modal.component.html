@@ -31,7 +31,13 @@
           <tbody>
             @for (entry of h.entries; track entry.id) {
               <tr [class.voided-row]="entry.voided">
-                <td>{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  @if (dayMark(entry.operationDate, entry.date); as mark) {
+                    <span class="day-mark" title="Cuenta para el día de su caja">{{ mark }}</span>
+                  } @else {
+                    {{ entry.date | date:'dd/MM/yyyy HH:mm' }}
+                  }
+                </td>
                 <td>
                   @if (entry.type === 'SALE') {
                     <span class="entry-title">Venta al costo {{ entry.saleNumber }}</span>

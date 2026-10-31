@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FinancialTransaction } from '../../../../../core/finance/models/finance.models';
+import { operationDayLabel } from '../../../../../shared/utils/store-date';
 
 // Money movements list with its row actions
 @Component({
@@ -11,6 +12,11 @@ import { FinancialTransaction } from '../../../../../core/finance/models/finance
   styleUrls: ['./transactions-table.component.css']
 })
 export class TransactionsTableComponent {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:30» when it counts for another day than the one it was recorded
+  dayMark(tx: FinancialTransaction): string | null {
+    return operationDayLabel(tx.operationDate, tx.transactionDate);
+  }
+
   transactions = input<FinancialTransaction[]>([]);
 
   saleDetailRequested = output<string>();

@@ -26,8 +26,8 @@ export class FinancialTransactionService {
     let params = new HttpParams();
 
     if (filter) {
-      if (filter.startDate) params = params.set('startDate', filter.startDate);
-      if (filter.endDate) params = params.set('endDate', filter.endDate);
+      if (filter.from) params = params.set('from', filter.from);
+      if (filter.to) params = params.set('to', filter.to);
       if (filter.type) params = params.set('type', filter.type);
       if (filter.accountId) params = params.set('accountId', filter.accountId);
       if (filter.categoryId) params = params.set('categoryId', filter.categoryId);
@@ -48,12 +48,13 @@ export class FinancialTransactionService {
 
   getAccountTransactions(
     accountId: string,
-    startDate?: string,
-    endDate?: string
+    from?: string,
+    to?: string
   ): Observable<FinancialTransaction[]> {
+    // CAJ-11: days of operation (yyyy-MM-dd), both inclusive
     let params = new HttpParams();
-    if (startDate) params = params.set('startDate', startDate);
-    if (endDate) params = params.set('endDate', endDate);
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
 
     return this.http.get<FinancialTransaction[]>(
       `/api/finances/accounts/${accountId}/transactions`,

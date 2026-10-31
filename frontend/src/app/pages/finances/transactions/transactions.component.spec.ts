@@ -128,36 +128,26 @@ describe('TransactionsComponent', () => {
     expect(component.endDate()).toBe(storeToday());
   });
 
-  it('debe enviar a getTransactions el inicio del día (00:00:00) y fin del día (23:59:59) en formato Instant ISO', () => {
+  it('CAJ-11: filtra por día de operación enviando from y to como días, ambos incluidos', () => {
     component.startDate.set('2026-10-01');
     component.endDate.set('2026-10-08');
     component.loadTransactions();
 
-    // Days of the store (UTC-4), whatever the time zone of the machine running the tests
-    const expectedStart = '2026-10-01T04:00:00.000Z';
-    const expectedEnd = '2026-10-09T03:59:59.999Z';
-
     expect(mockTransactionService.getTransactions).toHaveBeenCalledWith(
-      expect.objectContaining({
-        startDate: expectedStart,
-        endDate: expectedEnd
-      })
+      expect.objectContaining({ from: '2026-10-01', to: '2026-10-08' })
     );
+    const params = mockTransactionService.getTransactions.mock.calls.at(-1)[0];
+    expect(params.startDate).toBeUndefined();
+    expect(params.endDate).toBeUndefined();
   });
 
-  it('debe soportar rango de un solo día abarcando las 24 horas completas', () => {
+  it('CAJ-11: un rango de un solo día manda el mismo día en from y to', () => {
     component.startDate.set('2026-10-08');
     component.endDate.set('2026-10-08');
     component.loadTransactions();
 
-    const expectedStart = '2026-10-08T04:00:00.000Z';
-    const expectedEnd = '2026-10-09T03:59:59.999Z';
-
     expect(mockTransactionService.getTransactions).toHaveBeenCalledWith(
-      expect.objectContaining({
-        startDate: expectedStart,
-        endDate: expectedEnd
-      })
+      expect.objectContaining({ from: '2026-10-08', to: '2026-10-08' })
     );
   });
 

@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { storeToday } from '../../../../shared/utils/store-date';
+import { operationDayLabel, storeToday } from '../../../../shared/utils/store-date';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
@@ -32,6 +32,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
   styleUrls: ['./purchase-detail-modal.component.css']
 })
 export class PurchaseDetailModalComponent {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:30» for a payment that counts for another day than the one it was recorded
+  readonly dayMark = operationDayLabel;
+
   private readonly toast = inject(ToastService);
   private readonly purchaseService = inject(PurchaseService);
 

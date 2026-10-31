@@ -86,6 +86,30 @@ describe('SaleDetailModalComponent', () => {
     expect(component.assignmentProfit(item, { buyPrice: 16 } as any)).toBe(-2);
   });
 
+  it('CAJ-11: el detalle muestra el día de operación de una venta cargada otro día', async () => {
+    saleServiceMock.getSaleById.mockReturnValue(of({ ...mockCompletedSale, createdAt: '2026-11-01T04:20:00Z', operationDate: '2026-10-31' }));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('saleId', 'sale-125');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Día de operación');
+    expect(compiled.textContent).toContain('Día 31/10 · cargada el 01/11 00:20');
+  });
+
+  it('CAJ-11: sin marca cuando la venta es del día en que se cargó', async () => {
+    saleServiceMock.getSaleById.mockReturnValue(of({ ...mockCompletedSale, operationDate: '2026-10-06' }));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('saleId', 'sale-125');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Día de operación');
+  });
+
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
   });

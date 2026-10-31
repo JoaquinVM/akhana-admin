@@ -76,6 +76,19 @@ describe('CashHistoryComponent', () => {
     fixture.detectChanges();
   });
 
+  it('CAJ-11: muestra el día de operación y marca la caja cuyo día no es el de su apertura', () => {
+    component.sessions.set([
+      { ...mockSessions[1], id: 's-146', sessionNumber: 146, openedAt: '2026-10-29T13:10:00Z', operationDate: '2026-10-28' },
+      { ...mockSessions[1], id: 's-149', sessionNumber: 149, openedAt: '2026-10-31T13:10:00Z', operationDate: '2026-10-31' }
+    ]);
+    fixture.detectChanges();
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(rows[0].textContent).toContain('28/10/2026');
+    expect(rows[0].querySelector('.day-mark').textContent).toContain('Día 28/10 · abierta el 29/10');
+    expect(rows[1].textContent).toContain('31/10/2026');
+    expect(rows[1].querySelector('.day-mark')).toBeNull();
+  });
+
   it('debe crearse e inicializar el listado histórico de sesiones', () => {
     expect(component).toBeTruthy();
     expect(mockCashService.getAllSessions).toHaveBeenCalled();

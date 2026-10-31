@@ -48,6 +48,7 @@
         <thead>
           <tr>
             <th style="width: 100px"># Sesión</th>
+            <th style="width: 120px">Día</th>
             <th style="width: 160px">Apertura</th>
             <th style="width: 160px">Cierre</th>
             <th style="width: 120px; text-align: right">Monto inicial</th>
@@ -61,7 +62,7 @@
         <tbody>
           @if (isLoading()) {
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="table-state-container">
                   <div class="spinner-large"></div>
                   <p>Cargando historial de cajas...</p>
@@ -70,7 +71,7 @@
             </tr>
           } @else if (filteredSessions().length === 0) {
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="table-empty">
                   <div class="table-empty-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg">
@@ -93,6 +94,12 @@
                   <span class="session-tag">#{{ session.sessionNumber }}</span>
                   @if (session.historical) {
                     <span class="session-tag" title="Cierre de Caja de la planilla (FIN-11)">Histórico</span>
+                  }
+                </td>
+                <td>
+                  <strong>{{ session.operationDate | storeDay }}</strong>
+                  @if (dayMark(session); as mark) {
+                    <div><span class="day-mark" title="Sus ventas y movimientos cuentan para este día">{{ mark }}</span></div>
                   }
                 </td>
                 <td>

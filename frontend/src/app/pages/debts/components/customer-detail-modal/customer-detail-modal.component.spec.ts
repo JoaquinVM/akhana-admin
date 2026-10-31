@@ -112,6 +112,19 @@ describe('CustomerDetailModalComponent', () => {
     expect(text).not.toContain('a crédito');
   });
 
+  it('CAJ-11: una venta al costo cargada pasada la medianoche se ve en el día de su caja', () => {
+    customerService.getHistory.mockReturnValue(of({
+      ...history,
+      entries: [{ ...history.entries[0], date: '2026-11-01T04:20:00Z', operationDate: '2026-10-31' },
+        { ...collection, operationDate: '2026-10-23' }]
+    }));
+    fixture.componentRef.setInput('refreshKey', 2);
+    fixture.detectChanges();
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('.day-mark')?.textContent).toContain('Día 31/10 · cargada el 01/11 00:20');
+    expect(rows[1].querySelector('.day-mark')).toBeNull();
+  });
+
   it('DEU-07: «Ver venta» emite el id de la venta', () => {
     const opened = vi.fn();
     component.openSale.subscribe(opened);

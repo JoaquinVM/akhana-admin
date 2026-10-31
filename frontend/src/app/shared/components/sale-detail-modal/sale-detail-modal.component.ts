@@ -5,6 +5,7 @@ import { Sale, SaleItem } from '../../../core/cash/models/cash.models';
 import { SaleService } from '../../../core/sale/sale.service';
 import { ProductService } from '../../../core/product/product.service';
 import { Product, isSpecialProduct } from '../../../core/product/models/product.models';
+import { operationDayLabel } from '../../utils/store-date';
 
 export interface PaymentMethodItem {
   label: string;
@@ -30,6 +31,11 @@ export class SaleDetailModalComponent {
   canAssign = input<boolean>(false);
 
   close = output<void>();
+
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:20» when the sale counts for another day than the one it was recorded
+  dayMark(sale: Sale): string | null {
+    return operationDayLabel(sale.operationDate, sale.createdAt);
+  }
   // POS-12: the sale after assigning a line, to refresh the list
   saleUpdated = output<Sale>();
 

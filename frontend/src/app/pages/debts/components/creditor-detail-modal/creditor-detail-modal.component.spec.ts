@@ -77,6 +77,19 @@ describe('CreditorDetailModalComponent', () => {
     expect(component.repaymentAmount()).toBe(150);
   });
 
+  it('CAJ-11: una devolución desde Caja cargada pasada la medianoche se ve en el día de su caja', () => {
+    creditorService.getHistory.mockReturnValue(of({
+      ...history,
+      entries: [{ ...history.entries[0], operationDate: '2026-10-25' },
+        { ...repayment, date: '2026-11-01T04:30:00Z', operationDate: '2026-10-31' }]
+    }));
+    fixture.componentRef.setInput('refreshKey', 2);
+    fixture.detectChanges();
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('.day-mark')).toBeNull();
+    expect(rows[1].querySelector('.day-mark')?.textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
+  });
+
   it('DEU-04: vuelve a cargar cuando cambia la clave de refresco', () => {
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();

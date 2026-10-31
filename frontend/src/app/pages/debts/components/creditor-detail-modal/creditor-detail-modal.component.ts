@@ -7,6 +7,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
+import { operationDayLabel } from '../../../../shared/utils/store-date';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 // DEU-03 and DEU-04: the person's history with the balance after each entry, repayment and its void
@@ -18,6 +19,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
   styleUrls: ['./creditor-detail-modal.component.css']
 })
 export class CreditorDetailModalComponent {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:20» for an entry that counts for another day than the one it was recorded
+  readonly dayMark = operationDayLabel;
+
   private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
 
