@@ -164,6 +164,22 @@ describe('AccountsComponent', () => {
     expect(component.accountTransactions().length).toBe(1);
   });
 
+  it('CAJ-11: los movimientos de la cuenta marcan el de una caja cargado otro día', () => {
+    const base = { type: 'GASTO_MANUAL', amount: 30, description: 'Gasto', status: 'ACTIVO',
+      sourceAccount: { id: 'acc-caja', name: 'Caja', color: '#164312' } } as const;
+    mockTransactionService.getTransactions.mockReturnValue(of([
+      { ...base, id: 'tx-late', transactionDate: '2026-11-01T04:30:00Z', operationDate: '2026-10-31' },
+      { ...base, id: 'tx-same', transactionDate: '2026-10-07T16:00:00Z', operationDate: '2026-10-07' }
+    ] as FinancialTransaction[]));
+
+    component.openMovementsModal(mockAccounts[0]);
+    fixture.detectChanges();
+
+    const marks = (fixture.nativeElement as HTMLElement).querySelectorAll('.day-mark');
+    expect(marks.length).toBe(1);
+    expect(marks[0].textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
+  });
+
   it('debe ejecutar confirmDelete() y recargar la lista de cuentas', () => {
     component.openDeleteModal(mockAccounts[2]);
     expect(component.isDeleteModalOpen()).toBe(true);
