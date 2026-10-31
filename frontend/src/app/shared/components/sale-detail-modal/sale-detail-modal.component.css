@@ -58,6 +58,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* A grid item does not shrink below its content by default: long values would spill over the next column */
+  min-width: 0;
 }
 
 .field-label {
@@ -564,5 +566,7 @@
   background: #fff4dc;
   border-radius: 6px;
   padding: 1px 6px;
-  white-space: nowrap;
+  /* CAJ-11: wraps inside its column instead of covering the next one */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

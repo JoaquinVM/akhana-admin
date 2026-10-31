@@ -81,6 +81,22 @@ describe('FinanceSummaryComponent', () => {
     expect(data?.recentTransactions[0].description).toBe('Venta POS #102');
   });
 
+  it('CAJ-11: «Últimos movimientos» marca el movimiento de una caja cargado otro día', () => {
+    mockSummaryService.getSummary.mockReturnValue(of({
+      ...mockSummaryData,
+      recentTransactions: [
+        { ...mockSummaryData.recentTransactions[0], id: 'tx-late', transactionDate: '2026-10-31T15:23:00Z', operationDate: '2026-10-30' },
+        { ...mockSummaryData.recentTransactions[0], id: 'tx-same', transactionDate: '2026-10-07T16:00:00Z', operationDate: '2026-10-07' }
+      ]
+    }));
+    component.loadSummary();
+    fixture.detectChanges();
+
+    const marks = (fixture.nativeElement as HTMLElement).querySelectorAll('.day-mark');
+    expect(marks.length).toBe(1);
+    expect(marks[0].textContent).toContain('Día 30/10 · cargada el 31/10 11:23');
+  });
+
   it('debe manejar errores de carga del resumen financiero', () => {
     mockSummaryService.getSummary.mockReturnValue(throwError(() => ({ error: { message: 'Fallo de conexión' } })));
 

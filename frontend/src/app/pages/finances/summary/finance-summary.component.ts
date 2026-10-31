@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FinanceSummaryService } from '../../../core/finance/finance-summary.service';
 import { FinancialSummary } from '../../../core/finance/models/finance.models';
+import { operationDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-finance-summary',
@@ -12,6 +13,9 @@ import { FinancialSummary } from '../../../core/finance/models/finance.models';
   styleUrls: ['./finance-summary.component.css']
 })
 export class FinanceSummaryComponent implements OnInit {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:30», as in the movements list
+  readonly dayMark = operationDayLabel;
+
   private readonly summaryService = inject(FinanceSummaryService);
 
   summary = signal<FinancialSummary | null>(null);
