@@ -90,6 +90,14 @@ No depende del período.
 - Deudas: por pagar a proveedores (saldo de los pedidos, COM-08), por devolver a personas (DEU-01) y por cobrar a
   la tienda amiga (DEU-05).
 
+## Día de operación (CAJ-11)
+
+- **Cuando** una venta o un gasto de la caja del 31/10 se cargó pasada la medianoche **entonces** cuenta el 31/10
+  en los indicadores, ventas por día, cómo se cobró, top de productos y proveedores y gastos por categoría. El
+  dashboard no lleva marca. La caja abierta de «Ahora mismo» no cambia.
+- Cobro y top de productos filtran por `sales.operation_date`; lo demás sale de los reportes, que ya usan el día de
+  operación. Prueba en `DashboardRepositoryTest` (contra PostgreSQL) y `DashboardServiceTest`.
+
 ## API
 
 `GET /api/dashboard?from=AAAA-MM-DD&to=AAAA-MM-DD` (permiso `DASHBOARD`; sin fechas, el mes en curso hasta hoy).

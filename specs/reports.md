@@ -218,6 +218,17 @@ transferencias y el consumo.
 Todas con permiso `REPORTS`. `from` y `to` son días de la tienda (`to` incluido); si faltan, el mes en curso
 hasta hoy.
 
+## Día de operación (CAJ-11)
+
+- **Cuando** una venta o un movimiento de la caja del 31/10 se cargó a las 00:20 del 1/11 **entonces** ventas por
+  día, ventas por proveedor, totales y movimientos por categoría y mes lo cuentan el 31/10 (y en octubre). Los
+  reportes y sus Excel no llevan la marca «cargada el».
+- **Cuando** se despliega CAJ-11 **entonces** ningún día cambia, salvo el 28, 29 y 30/10 por la corrección de las
+  cajas #146 a #148 (`cash.md`). Los consumos siguen por su fecha (`consumption_date`).
+- Ventas por día y por proveedor agrupan y filtran por `sales.operation_date`; movimientos y transferencias por
+  `financial_transactions.operation_date`. Pruebas en `SaleRepositoryTest`, `FinancialTransactionRepositoryTest`
+  (contra PostgreSQL), `ReportServiceTest` y `CashOperationDayMigrationIntegrationTest`.
+
 ## Tareas
 
 - [x] Spec validada con las tablas dinámicas (26-10-2026).

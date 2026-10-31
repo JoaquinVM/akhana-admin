@@ -134,6 +134,9 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
   (fecha, pedido `PED-000001`, proveedor, monto) y las devoluciones (fecha, cuenta, monto, comentario), cada uno
   con el saldo después del movimiento. Los anulados se ven marcados, con su motivo, y no cuentan en el saldo.
 - **Cuando** Mami pagó Bs 200,00 y Bs 100,00 y se le devolvieron Bs 150,00 **entonces** su deuda es Bs 150,00.
+- **Cuando** una venta de un producto de Mami (POS-13) o una devolución desde Caja se cargó pasada la medianoche en
+  la caja del 31/10 **entonces** el historial la ordena y la muestra en el 31/10, con la marca «Día 31/10 · cargada
+  el 01/11 00:20»; el saldo no cambia (CAJ-11). Una devolución desde Bisa queda en el día de su registro.
 - Desde el detalle se registra una devolución (DEU-03) y se abre el pedido de cada pago.
 
 ## DEU-05 · Venta al costo a crédito
@@ -204,6 +207,9 @@ abierta, o la cuenta QR), fecha y comentario.
   saldo después de cada uno. Los anulados se ven marcados, con su motivo, y no cuentan.
 - **Cuando** una venta al costo con cliente se pagó toda en el momento **entonces** aparece en su historial como
   «pagada» (total, sin parte a crédito) y no cambia el saldo (P-49, 28-10-2026).
+- **Cuando** una venta al costo a crédito o un cobro en Caja se cargó pasada la medianoche en la caja del 31/10
+  **entonces** el historial lo ordena y lo muestra en el 31/10 con la marca de CAJ-11; el saldo no cambia. Un cobro
+  por QR queda en el día de su registro.
 - Desde el detalle se registra un cobro (DEU-06) y se abre el detalle de cada venta (POS-08).
 
 ## Categorías de sistema
@@ -271,3 +277,4 @@ Cuentas por cobrar (junto con o después de CON-02):
 Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.
 
 - **DEU-01** Registro de personas a las que el negocio puede deber dinero (ej. Mami): `creditors`, con nombre único sin distinguir mayúsculas, teléfono, descripción y baja lógica; no se da de baja con deuda mayor a 0. Hecha el 25-10-2026 (migración `V10__creditors.sql`, índice único `LOWER(name)` sin eliminados). Pantalla Deudas (`/debts`, en el menú Compras, carga diferida), pestaña Personas; Compras lee las personas activas con `PURCHASES`.
+- **CAJ-11** (31-10-2026) Pagos por persona, devoluciones y cobros guardan `operation_date`: desde Caja, el día de la caja abierta (el mismo en la devolución o el cobro y en su movimiento); desde otra cuenta o sin movimiento, el día de su registro. Los historiales de personas y clientes ordenan por día de operación, luego fecha real y alta, y cada entrada trae `operationDate` (la fecha real sigue en `date`); las ventas de Mami y las ventas al costo toman el día de su venta. Pruebas en `CreditorServiceTest`, `CustomerServiceTest`, `creditor-detail-modal.component.spec.ts` y `customer-detail-modal.component.spec.ts`. Detalle en `cash.md`.
