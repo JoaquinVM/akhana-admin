@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 
 /**
@@ -15,6 +17,16 @@ public final class StoreFormat {
     public static final ZoneId STORE_ZONE = ZoneId.of("America/La_Paz");
 
     private StoreFormat() {
+    }
+
+    /** The store day (America/La_Paz) of an instant: the day of operation of what is not tied to a session (CAJ-11). */
+    public static LocalDate storeDay(Instant instant) {
+        return instant.atZone(STORE_ZONE).toLocalDate();
+    }
+
+    /** Today in the store. */
+    public static LocalDate today() {
+        return LocalDate.now(STORE_ZONE);
     }
 
     /** An amount for a message: "Bs 1.234,50", 2 decimals HALF_UP. */

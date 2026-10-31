@@ -107,7 +107,7 @@ public class Purchase {
     private List<PurchaseItem> items = new ArrayList<>();
 
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL)
-    @OrderBy("paymentDate")
+    @OrderBy("operationDate, paymentDate")
     @Builder.Default
     private List<PurchasePayment> payments = new ArrayList<>();
 

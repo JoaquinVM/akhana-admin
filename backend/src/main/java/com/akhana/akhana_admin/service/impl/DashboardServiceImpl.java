@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -73,9 +72,6 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate[] previous = previousRange(start, end);
         SalesByDayReportResponse previousSales = reportService.getSalesByDay(previous[0], previous[1]);
 
-        Instant fromInstant = start.atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
-        Instant toInstant = end.plusDays(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
-
         TransactionsByCategoryReportResponse.Month movements = reportService.getTransactionsByCategory(start, end).totals();
         List<CategoryAmount> expenses = movements.expenses().stream()
             .map(row -> new CategoryAmount(row.categoryId(), row.categoryName(), row.amount().negate()))
@@ -83,7 +79,7 @@ public class DashboardServiceImpl implements DashboardService {
             .sorted(Comparator.comparing(CategoryAmount::amount).reversed())
             .toList();
 
-        List<RankRow> products = productRows(dashboardRepository.findProductLines(fromInstant, toInstant));
+        List<RankRow> products = productRows(dashboardRepository.findProductLines(start, end));
         List<RankRow> suppliers = reportService.getSalesBySupplier(start, end).suppliers().stream()
             .map(supplier -> new RankRow(supplier.supplierId(), supplier.supplierName(),
                 supplier.totals().normalQuantity(), supplier.totals().normalTotal(), supplier.totals().normalProfit()))
@@ -95,7 +91,7 @@ public class DashboardServiceImpl implements DashboardService {
             indicators(previousSales.totals(), consumptionTotal(previous[0], previous[1])),
             dayPoints(sales, start, end),
             dayPoints(previousSales, previous[0], previous[1]),
-            payments(dashboardRepository.sumPayments(fromInstant, toInstant)),
+            payments(dashboardRepository.sumPayments(start, end)),
             top(products, RankRow::sales), top(products, RankRow::profit),
             top(suppliers, RankRow::sales), top(suppliers, RankRow::profit),
             expenses, money(movements.expenseTotal().negate()),

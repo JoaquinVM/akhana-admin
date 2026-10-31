@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -42,6 +43,10 @@ public class PurchasePayment {
 
     @Column(name = "payment_date", nullable = false)
     private Instant paymentDate;
+
+    // CAJ-11: store day it counts for (the day of its movement, or the day it was recorded when a person paid)
+    @Column(name = "operation_date", nullable = false, updatable = false)
+    private LocalDate operationDate;
 
     // The Pedido expense this payment generated (COM-06); null when a person paid (DEU-02)
     @Column(name = "financial_transaction_id")

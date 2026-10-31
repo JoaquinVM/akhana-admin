@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
@@ -20,7 +21,10 @@ public class FinancialTransactionResponse {
     private UUID id;
     private FinancialTransactionType type;
     private BigDecimal amount;
+    // Real date and time it was recorded
     private Instant transactionDate;
+    // CAJ-11: day it counts for (its session's or sale's day, else the day it was recorded)
+    private LocalDate operationDate;
     private String description;
     private String notes;
     private FinancialTransactionStatus status;

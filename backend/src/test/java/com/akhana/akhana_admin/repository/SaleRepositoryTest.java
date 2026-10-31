@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.model.PaymentMethod;
 import com.akhana.akhana_admin.model.Sale;
 import com.akhana.akhana_admin.model.SaleStatus;
 import com.akhana.akhana_admin.model.SaleType;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,7 +32,8 @@ class SaleRepositoryTest {
 
     private static final Instant DAY = Instant.parse("2001-05-10T15:00:00Z");
     private static final Instant FROM = Instant.parse("2001-05-10T00:00:00Z");
-    private static final Instant TO = Instant.parse("2001-05-11T00:00:00Z");
+    private static final LocalDate D10 = LocalDate.of(2001, 5, 10);
+    private static final LocalDate D11 = LocalDate.of(2001, 5, 11);
 
     @Autowired
     private SaleRepository saleRepository;
@@ -47,7 +50,7 @@ class SaleRepositoryTest {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         seller = "it-sales-" + suffix;
         session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', '2001-05-10') RETURNING id", UUID.class);
         customer = jdbc.queryForObject(
                 "INSERT INTO customers (name, created_by) VALUES (?, 'it-repo') RETURNING id", UUID.class, "IT cliente " + suffix);
     }
@@ -78,9 +81,9 @@ class SaleRepositoryTest {
 
         assertEquals(List.of("VOID"), numbers(null, null, SaleStatus.ANULADA));
         assertEquals(List.of("FIRST", "LAST"), numbers(null, null, SaleStatus.COMPLETADA));
-        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller + "-otro", false, PageRequest.of(0, 10)).getTotalElements());
+        assertEquals(0, saleRepository.search(D10, D10, null, null, null, seller + "-otro", false, PageRequest.of(0, 10)).getTotalElements());
 
-        Page<Sale> secondPage = saleRepository.search(FROM, TO, null, null, null, seller, false,
+        Page<Sale> secondPage = saleRepository.search(D10, D10, null, null, null, seller, false,
                 PageRequest.of(1, 2, Sort.by(Sort.Direction.DESC, "createdAt")));
         assertEquals(3, secondPage.getTotalElements());
         assertEquals(2, secondPage.getTotalPages());
@@ -104,7 +107,7 @@ class SaleRepositoryTest {
         insertItem(voided, product, "1", "50.00");
         jdbc.update("UPDATE sales SET status = 'ANULADA', voided_by = 'it-repo', voided_at = now(), void_reason = 'IT' WHERE id = ?", voided);
 
-        List<String> rows = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-12T04:00:00Z"))
+        List<String> rows = saleRepository.sumByDayAndType(D10, D11)
                 .stream()
                 .map(row -> row[0] + " " + row[1] + " " + ((Number) row[2]).longValue() + " " + plain(row[3]) + " " + plain(row[4]) + " " + plain(row[5]))
                 .sorted()
@@ -132,7 +135,7 @@ class SaleRepositoryTest {
                 UUID.class, "ITN-" + UUID.randomUUID().toString().substring(0, 8));
         jdbc.update("UPDATE products SET supplier_id = ? WHERE id = ?", newSupplier, product);
 
-        List<Object[]> lines = saleRepository.findReportLines(Instant.parse("2001-05-01T04:00:00Z"), Instant.parse("2001-06-02T04:00:00Z"));
+        List<Object[]> lines = saleRepository.findReportLines(LocalDate.of(2001, 5, 1), LocalDate.of(2001, 6, 1));
 
         assertEquals(1, lines.size());
         Object[] line = lines.getFirst();
@@ -161,12 +164,12 @@ class SaleRepositoryTest {
                         + "VALUES (?, ?, 'Nuez pelada', 45.00, 130.00, 45.00, 2, 90.00, ?, '1/2 libra', 0.227, 0.454)",
                 sale, product, presentation);
 
-        Object[] day = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        Object[] day = saleRepository.sumByDayAndType(D10, D10)
                 .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
         assertEquals("0.454", plain(day[3]));
         assertEquals("59.02", plain(day[5]));
 
-        Object[] line = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        Object[] line = saleRepository.findReportLines(D10, D10)
                 .stream().filter(row -> sale.equals(row[0])).findFirst().orElseThrow();
         assertEquals("0.454", plain(line[6]));
         assertEquals("59.02", plain(line[8]));
@@ -187,7 +190,7 @@ class SaleRepositoryTest {
         UUID onlyMami = insertSale("F2", "EFECTIVO", "NORMAL", "15.00", "0.00", "0.00", null, DAY);
         insertFreeItem(onlyMami, product, "THIRD_PARTY", "15.00", "15.00", "NULL", mami);
 
-        Object[] day = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        Object[] day = saleRepository.sumByDayAndType(D10, D10)
                 .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
         assertEquals(1, ((Number) day[2]).longValue());
         assertEquals("1", plain(day[3]));
@@ -196,19 +199,19 @@ class SaleRepositoryTest {
         assertEquals("20", plain(day[6]));
         assertEquals("45", plain(day[7]));
 
-        List<String> normalAndFree = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        List<String> normalAndFree = saleRepository.findReportLines(D10, D10)
                 .stream().filter(row -> sale.equals(row[0])).map(row -> row[9] + "/" + row[10]).sorted().toList();
         // P-44: the free flag keeps the free lines out of the general discount
         assertEquals(List.of("false/true", "false/true", "true/false"), normalAndFree);
 
-        assertEquals(List.of(seller + "-F1"), saleRepository.search(FROM, TO, null, null, null, seller, true,
+        assertEquals(List.of(seller + "-F1"), saleRepository.search(D10, D10, null, null, null, seller, true,
                 PageRequest.of(0, 10)).stream().map(s -> s.getSaleNumber()).toList());
         // Once assigned, the line is normal and the sale is no longer pending
         jdbc.update("UPDATE sale_items SET assignment_status = 'ASIGNADO', unit_cost = 12.00, assigned_by = 'it-repo', "
                 + "assigned_at = now() WHERE sale_id = ? AND free_line_type = 'UNIDENTIFIED'", sale);
-        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller, true, PageRequest.of(0, 10))
+        assertEquals(0, saleRepository.search(D10, D10, null, null, null, seller, true, PageRequest.of(0, 10))
                 .getTotalElements());
-        Object[] assigned = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        Object[] assigned = saleRepository.sumByDayAndType(D10, D10)
                 .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
         assertEquals("42", plain(assigned[5]));
         assertEquals("0", plain(assigned[6]));
@@ -228,7 +231,7 @@ class SaleRepositoryTest {
         jdbc.update("UPDATE sale_items SET assignment_status = 'SIN_IDENTIFICAR', assigned_by = 'it-repo', "
                 + "assigned_at = now() WHERE sale_id IN (?, ?) AND free_line_type = 'UNIDENTIFIED'", sale, onlyUnidentified);
 
-        Object[] day = saleRepository.sumByDayAndType(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        Object[] day = saleRepository.sumByDayAndType(D10, D10)
                 .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
         assertEquals(1, ((Number) day[2]).longValue());
         assertEquals("1", plain(day[3]));
@@ -238,10 +241,30 @@ class SaleRepositoryTest {
         assertEquals("0", plain(day[7]));
         assertEquals("45", plain(day[8]));
 
-        List<String> normalAndFree = saleRepository.findReportLines(Instant.parse("2001-05-10T04:00:00Z"), Instant.parse("2001-05-11T04:00:00Z"))
+        List<String> normalAndFree = saleRepository.findReportLines(D10, D10)
                 .stream().filter(row -> sale.equals(row[0])).map(row -> row[9] + "/" + row[10]).sorted().toList();
         assertEquals(List.of("false/true", "true/false"), normalAndFree);
-        assertEquals(0, saleRepository.search(FROM, TO, null, null, null, seller, true, PageRequest.of(0, 10))
+        assertEquals(0, saleRepository.search(D10, D10, null, null, null, seller, true, PageRequest.of(0, 10))
+                .getTotalElements());
+    }
+
+    @Test
+    void countsASaleOnTheDayOfOperationNotTheDayItWasRecorded() {
+        UUID product = insertProduct();
+        // CAJ-11: a sale of the session of 31-10 recorded at 00:20 of 01-11 (04:20 UTC) counts for 31-10
+        LocalDate oct31 = LocalDate.of(2001, 10, 31);
+        LocalDate nov1 = LocalDate.of(2001, 11, 1);
+        UUID late = insertSale("AFTER", "EFECTIVO", "NORMAL", "20.00", "0.00", "0.00", null,
+                Instant.parse("2001-11-01T04:20:00Z"), oct31);
+        insertItem(late, product, "1", "6.00");
+
+        assertEquals(List.of("2001-10-31 NORMAL 20"), saleRepository.sumByDayAndType(oct31, nov1).stream()
+                .map(row -> row[0] + " " + row[1] + " " + plain(row[4])).toList());
+        assertEquals(1, saleRepository.findReportLines(oct31, oct31).size());
+        assertEquals(0, saleRepository.findReportLines(nov1, nov1).size());
+        assertEquals(1, saleRepository.search(oct31, oct31, null, null, null, seller, false, PageRequest.of(0, 10))
+                .getTotalElements());
+        assertEquals(0, saleRepository.search(nov1, nov1, null, null, null, seller, false, PageRequest.of(0, 10))
                 .getTotalElements());
     }
 
@@ -280,20 +303,27 @@ class SaleRepositoryTest {
 
     // Sorted by number so each assertion reads the same whatever the creation order
     private List<String> numbers(PaymentMethod method, SaleType type, SaleStatus status) {
-        return saleRepository.search(FROM, TO, status, type, method, seller, false, PageRequest.of(0, 50)).stream()
+        return saleRepository.search(D10, D10, status, type, method, seller, false, PageRequest.of(0, 50)).stream()
                 .map(sale -> sale.getSaleNumber().substring(seller.length() + 1))
                 .sorted()
                 .toList();
     }
 
+    // Recorded on the store day it counts for, as every record before CAJ-11
     private UUID insertSale(String number, String method, String type, String cash, String qr, String credit,
                             UUID customerId, Instant createdAt) {
+        return insertSale(number, method, type, cash, qr, credit, customerId, createdAt,
+                createdAt.atZone(StoreFormat.STORE_ZONE).toLocalDate());
+    }
+
+    private UUID insertSale(String number, String method, String type, String cash, String qr, String credit,
+                            UUID customerId, Instant createdAt, LocalDate operationDate) {
         String total = new BigDecimal(cash).add(new BigDecimal(qr)).add(new BigDecimal(credit)).toPlainString();
         return jdbc.queryForObject(
                 "INSERT INTO sales (sale_number, cash_session_id, payment_method, sale_type, total_amount, subtotal_amount, "
-                        + "amount_cash, amount_qr, credit_amount, customer_id, created_by, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?::numeric, ?::numeric, ?::numeric, ?::numeric, ?::numeric, ?, ?, ?) RETURNING id",
+                        + "amount_cash, amount_qr, credit_amount, customer_id, created_by, created_at, operation_date) "
+                        + "VALUES (?, ?, ?, ?, ?::numeric, ?::numeric, ?::numeric, ?::numeric, ?::numeric, ?, ?, ?, ?) RETURNING id",
                 UUID.class, seller + "-" + number, session, method, type, total, total, cash, qr, credit, customerId, seller,
-                Timestamp.from(createdAt));
+                Timestamp.from(createdAt), operationDate);
     }
 }

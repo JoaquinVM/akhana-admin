@@ -347,6 +347,14 @@ class MigrationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM purchase_payments WHERE historical_import_id = ? "
             + "AND financial_transaction_id IS NULL", Integer.class, importId)).isEqualTo(2);
 
+        // CAJ-11: every historical record counts for the day of the spreadsheet (its time is set on that day)
+        for (String[] table : new String[][] {{"cash_sessions", "opened_at"}, {"sales", "created_at"},
+                {"financial_transactions", "transaction_date"}, {"purchase_payments", "payment_date"}}) {
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table[0] + " WHERE historical_import_id = ? "
+                + "AND operation_date <> (" + table[1] + " AT TIME ZONE 'America/La_Paz')::date", Integer.class, importId))
+                .as(table[0]).isZero();
+        }
+
         // Read only, and only once
         assertThatThrownBy(() -> saleService.voidSale(normal, new VoidSaleRequest("Prueba"), "it-migration"))
             .hasMessageContaining("histórica");

@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -130,17 +131,22 @@ class FinancialControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/finances/transactions - Debe filtrar por rango de fechas ISO Instant sin error de conversión")
+    @DisplayName("GET /api/finances/transactions - CAJ-11: filtra por días de operación from/to")
     void testGetTransactionsWithDateRange() throws Exception {
         when(financialTransactionService.getTransactions(
-                any(Instant.class), any(Instant.class), isNull(), isNull(), isNull(), isNull(), isNull()
-        )).thenReturn(List.of());
+                eq(LocalDate.of(2026, 10, 1)), eq(LocalDate.of(2026, 10, 7)), isNull(), isNull(), isNull(), isNull(), isNull()
+        )).thenReturn(List.of(FinancialTransactionResponse.builder()
+                .id(UUID.randomUUID())
+                .transactionDate(Instant.parse("2026-11-01T04:30:00Z"))
+                .operationDate(LocalDate.of(2026, 10, 31))
+                .build()));
 
         mockMvc.perform(get("/api/finances/transactions")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
-                        .param("startDate", "2026-10-01T04:00:00.000Z")
-                        .param("endDate", "2026-10-08T03:59:59.999Z"))
-                .andExpect(status().isOk());
+                        .param("from", "2026-10-01")
+                        .param("to", "2026-10-07"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].operationDate").value("2026-10-31"));
     }
 
     @Test

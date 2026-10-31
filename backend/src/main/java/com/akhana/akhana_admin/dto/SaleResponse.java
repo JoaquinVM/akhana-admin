@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.model.SaleType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -40,7 +41,9 @@ public record SaleResponse(
     String customerName,
     BigDecimal creditAmount,
     // FIN-11: migrated from the spreadsheet, without cash session or payments
-    boolean historical
+    boolean historical,
+    // CAJ-11: day it counts for (the day of its session); createdAt is the real time it was recorded
+    LocalDate operationDate
 ) {
     public SaleResponse(
         UUID id,
@@ -79,7 +82,8 @@ public record SaleResponse(
             null,
             null,
             BigDecimal.ZERO,
-            false
+            false,
+            null
         );
     }
 
@@ -128,7 +132,8 @@ public record SaleResponse(
             sale.getCustomer() != null ? sale.getCustomer().getId() : null,
             sale.getCustomer() != null ? sale.getCustomer().getName() : null,
             sale.getCreditAmount(),
-            sale.isHistorical()
+            sale.isHistorical(),
+            sale.getOperationDate()
         );
     }
 }

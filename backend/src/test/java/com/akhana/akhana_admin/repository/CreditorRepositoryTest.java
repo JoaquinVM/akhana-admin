@@ -71,8 +71,8 @@ class CreditorRepositoryTest {
     void paymentNeedsASource() {
         UUID purchase = insertPurchase();
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "INSERT INTO purchase_payments (purchase_id, amount, payment_date, created_by) "
-                        + "VALUES (?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase));
+                "INSERT INTO purchase_payments (operation_date, purchase_id, amount, payment_date, created_by) "
+                        + "VALUES (CURRENT_DATE, ?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase));
     }
 
     @Test
@@ -81,8 +81,8 @@ class CreditorRepositoryTest {
         UUID creditor = insertCreditor("IT Doble " + UUID.randomUUID().toString().substring(0, 8), "ACTIVO");
         UUID purchase = insertPurchase();
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "INSERT INTO purchase_payments (purchase_id, account_id, creditor_id, amount, payment_date, created_by) "
-                        + "VALUES (?, ?, ?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase, anyAccount(), creditor));
+                "INSERT INTO purchase_payments (operation_date, purchase_id, account_id, creditor_id, amount, payment_date, created_by) "
+                        + "VALUES (CURRENT_DATE, ?, ?, ?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase, anyAccount(), creditor));
     }
 
     @Test
@@ -90,8 +90,8 @@ class CreditorRepositoryTest {
     void accountPaymentNeedsItsMovement() {
         UUID purchase = insertPurchase();
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "INSERT INTO purchase_payments (purchase_id, account_id, amount, payment_date, created_by) "
-                        + "VALUES (?, ?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase, anyAccount()));
+                "INSERT INTO purchase_payments (operation_date, purchase_id, account_id, amount, payment_date, created_by) "
+                        + "VALUES (CURRENT_DATE, ?, ?, 10, CURRENT_TIMESTAMP, 'it-repo')", purchase, anyAccount()));
     }
 
     @Test
@@ -126,8 +126,8 @@ class CreditorRepositoryTest {
         UUID mami = insertCreditor("IT Vínculo " + UUID.randomUUID().toString().substring(0, 8), "ACTIVO");
         UUID account = anyAccount();
         UUID repayment = insertRepayment(mami, account, "10.00", "ACTIVO");
-        String insertTx = "INSERT INTO financial_transactions (type, source_account_id, amount, transaction_date, description, "
-                + "creditor_repayment_id, created_by) VALUES ('GASTO_MANUAL', ?, 10.00, CURRENT_TIMESTAMP, 'IT', ?, 'it-repo')";
+        String insertTx = "INSERT INTO financial_transactions (operation_date, type, source_account_id, amount, transaction_date, description, "
+                + "creditor_repayment_id, created_by) VALUES (CURRENT_DATE, 'GASTO_MANUAL', ?, 10.00, CURRENT_TIMESTAMP, 'IT', ?, 'it-repo')";
         jdbc.update(insertTx, account, repayment);
 
         // One expense per repayment
@@ -200,12 +200,12 @@ class CreditorRepositoryTest {
                         + "VALUES (?, ?, ?, ?, 0, 0, 0, 0, 'THIRD_PARTY', ?, 'it-repo') RETURNING id",
                 UUID.class, "ITT-" + suffix, "IT de Mami " + suffix, category, supplier, mami);
         UUID session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 0, 'it-repo') RETURNING id",
+                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES (CURRENT_DATE, 'CERRADA', 0, 'it-repo') RETURNING id",
                 UUID.class);
         for (String status : List.of("COMPLETADA", "ANULADA")) {
             UUID sale = jdbc.queryForObject(
-                    "INSERT INTO sales (sale_number, cash_session_id, payment_method, total_amount, status, created_by) "
-                            + "VALUES (?, ?, 'EFECTIVO', 60, ?, 'it-repo') RETURNING id",
+                    "INSERT INTO sales (operation_date, sale_number, cash_session_id, payment_method, total_amount, status, created_by) "
+                            + "VALUES (CURRENT_DATE, ?, ?, 'EFECTIVO', 60, ?, 'it-repo') RETURNING id",
                     UUID.class, "IT-T-" + status + suffix, session, status);
             jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
                     + "quantity, subtotal, free_line_type, free_name, creditor_id) "
@@ -241,12 +241,12 @@ class CreditorRepositoryTest {
     }
 
     private void insertPersonPayment(UUID purchase, UUID creditor, String amount, String status) {
-        jdbc.update("INSERT INTO purchase_payments (purchase_id, creditor_id, amount, payment_date, status, created_by) "
-                + "VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo')", purchase, creditor, new BigDecimal(amount), status);
+        jdbc.update("INSERT INTO purchase_payments (operation_date, purchase_id, creditor_id, amount, payment_date, status, created_by) "
+                + "VALUES (CURRENT_DATE, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo')", purchase, creditor, new BigDecimal(amount), status);
     }
 
     private UUID insertRepayment(UUID creditor, UUID account, String amount, String status) {
-        return jdbc.queryForObject("INSERT INTO creditor_repayments (creditor_id, account_id, amount, repayment_date, status, created_by) "
-                + "VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo') RETURNING id", UUID.class, creditor, account, new BigDecimal(amount), status);
+        return jdbc.queryForObject("INSERT INTO creditor_repayments (operation_date, creditor_id, account_id, amount, repayment_date, status, created_by) "
+                + "VALUES (CURRENT_DATE, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo') RETURNING id", UUID.class, creditor, account, new BigDecimal(amount), status);
     }
 }

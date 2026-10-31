@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /** Money the business gives back to a person (DEU-03); its expense points to it (creditor_repayment_id). */
@@ -34,6 +35,10 @@ public class CreditorRepayment {
 
     @Column(name = "repayment_date", nullable = false)
     private Instant repaymentDate;
+
+    // CAJ-11: store day it counts for (the day of the session it was paid from, else the day it was recorded)
+    @Column(name = "operation_date", nullable = false, updatable = false)
+    private LocalDate operationDate;
 
     @Column(length = 500)
     private String comment;

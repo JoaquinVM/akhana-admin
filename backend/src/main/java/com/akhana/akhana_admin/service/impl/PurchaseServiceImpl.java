@@ -475,7 +475,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             if (creditor.getStatus() != CreditorStatus.ACTIVO) {
                 throw new IllegalArgumentException("La persona '" + creditor.getName() + "' no está activa.");
             }
-            payment.creditor(creditor).paymentDate(now);
+            // CAJ-11: no movement, so it counts for the day it is recorded
+            payment.creditor(creditor).paymentDate(now).operationDate(StoreFormat.storeDay(now));
         } else {
             FinancialCategory paymentCategory = financialCategoryRepository
                 .findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_PAYMENT)
@@ -485,7 +486,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             String notes = request.notes() != null && !request.notes().isBlank() ? request.notes().trim() : null;
             FinancialTransaction tx = recordExpense(payer, paymentCategory, amount, purchase,
                 "Pago pedido " + purchase.getPurchaseNumber(), notes, username);
-            payment.account(payer.account()).paymentDate(tx.getTransactionDate()).financialTransactionId(tx.getId());
+            payment.account(payer.account()).paymentDate(tx.getTransactionDate()).operationDate(tx.getOperationDate())
+                .financialTransactionId(tx.getId());
         }
 
         purchase.getPayments().add(payment.build());
@@ -914,6 +916,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
+            // CAJ-11: paid from Caja, it counts for the day of the session
+            .operationDate(payer.session() != null ? payer.session().getOperationDate() : StoreFormat.storeDay(now))
             .description(description)
             .notes(notes)
             .status(FinancialTransactionStatus.ACTIVO)

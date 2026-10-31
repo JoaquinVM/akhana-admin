@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.repository;
 
 import com.akhana.akhana_admin.model.FinancialTransaction;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,10 +32,10 @@ class FinancialTransactionRepositoryTest {
 
     @Test
     void testFilterTransactionsWithNullSearch() {
-        Instant now = Instant.now();
+        LocalDate today = LocalDate.now();
         List<FinancialTransaction> result = financialTransactionRepository.filterTransactions(
-                now.minusSeconds(86400 * 30),
-                now,
+                today.minusDays(30),
+                today,
                 null,
                 null,
                 null,
@@ -45,10 +47,10 @@ class FinancialTransactionRepositoryTest {
 
     @Test
     void testFilterTransactionsWithNonNullSearch() {
-        Instant now = Instant.now();
+        LocalDate today = LocalDate.now();
         List<FinancialTransaction> result = financialTransactionRepository.filterTransactions(
-                now.minusSeconds(86400 * 30),
-                now,
+                today.minusDays(30),
+                today,
                 null,
                 null,
                 null,
@@ -69,9 +71,9 @@ class FinancialTransactionRepositoryTest {
                 UUID.class, "IT efectivo " + UUID.randomUUID().toString().substring(0, 8));
         // Closed so it never collides with a real open session; rolled back at the end
         UUID session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', CURRENT_DATE) RETURNING id", UUID.class);
         UUID otherSession = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', CURRENT_DATE) RETURNING id", UUID.class);
 
         insert("GASTO_MANUAL", caja, null, "40.00", "ACTIVO", session);
         insert("GASTO_MANUAL", caja, null, "15.00", "ANULADO", session);
@@ -111,8 +113,8 @@ class FinancialTransactionRepositoryTest {
     @Test
     @Transactional
     void reportSumsGroupActiveMovementsByStoreMonthCategoryAndTransferPair() {
-        Instant from = Instant.parse("2001-08-01T04:00:00Z");
-        Instant to = Instant.parse("2001-09-01T04:00:00Z");
+        LocalDate from = LocalDate.of(2001, 8, 1);
+        LocalDate to = LocalDate.of(2001, 8, 31);
         UUID caja = newAccount("IT caja ");
         UUID efectivo = newAccount("IT efectivo ");
         UUID venta = newCategory("IT Venta ", "INGRESO", null);
@@ -129,7 +131,7 @@ class FinancialTransactionRepositoryTest {
         insertAt("TRANSFERENCIA", caja, efectivo, null, "60.00", "ACTIVO", lastNight);
         insertAt("TRANSFERENCIA", caja, efectivo, null, "15.00", "ACTIVO", lastNight);
         insertAt("TRANSFERENCIA", caja, efectivo, null, "7.00", "ANULADO", lastNight);
-        insertAt("GASTO_MANUAL", caja, null, comida, "40.00", "ACTIVO", to);
+        insertAt("GASTO_MANUAL", caja, null, comida, "40.00", "ACTIVO", Instant.parse("2001-09-01T04:00:00Z"));
 
         List<Object[]> categories = financialTransactionRepository.sumByMonthAndCategory(from, to);
         assertEquals(3, categories.size());
@@ -146,6 +148,30 @@ class FinancialTransactionRepositoryTest {
         assertEquals(0, new BigDecimal("75.00").compareTo((BigDecimal) transfers.getFirst()[5]));
     }
 
+    @Test
+    @Transactional
+    void reportsAndListsCountAMovementOnItsDayOfOperation() {
+        UUID caja = newAccount("IT caja ");
+        UUID comida = newCategory("IT Comida ", "GASTO", null);
+        // CAJ-11: an expense of the session of 31-10 recorded at 00:30 of 01-11 (04:30 UTC) counts for October
+        LocalDate oct31 = LocalDate.of(2001, 10, 31);
+        LocalDate nov1 = LocalDate.of(2001, 11, 1);
+        UUID late = insertAt("GASTO_MANUAL", caja, null, comida, "25.00", "ACTIVO",
+                Instant.parse("2001-11-01T04:30:00Z"), oct31);
+
+        List<Object[]> october = financialTransactionRepository.sumByMonthAndCategory(LocalDate.of(2001, 10, 1), oct31);
+        assertEquals(0, new BigDecimal("25.00").compareTo(sumOf(october, "GASTO", comida)));
+        assertEquals("2001-10", october.stream().filter(row -> comida.equals(row[2])).findFirst().orElseThrow()[0]);
+        assertTrue(financialTransactionRepository.sumByMonthAndCategory(nov1, LocalDate.of(2001, 11, 30)).stream()
+                .noneMatch(row -> comida.equals(row[2])));
+
+        assertEquals(List.of(late), financialTransactionRepository.filterTransactions(oct31, oct31, null, caja, null, null, null)
+                .stream().map(FinancialTransaction::getId).toList());
+        assertTrue(financialTransactionRepository.filterTransactions(nov1, nov1, null, caja, null, null, null).isEmpty());
+        assertEquals(List.of(late), financialTransactionRepository.findByAccountAndDateRange(caja, oct31, oct31)
+                .stream().map(FinancialTransaction::getId).toList());
+    }
+
     private static BigDecimal sumOf(List<Object[]> rows, String direction, UUID category) {
         return rows.stream().filter(row -> direction.equals(row[1]) && category.equals(row[2]))
                 .map(row -> (BigDecimal) row[4]).findFirst().orElseThrow();
@@ -158,11 +184,19 @@ class FinancialTransactionRepositoryTest {
                 deletedAt != null ? java.sql.Timestamp.from(deletedAt) : null);
     }
 
+    // Recorded on the store day it counts for, as every record before CAJ-11
     private void insertAt(String type, UUID source, UUID destination, UUID category, String amount, String status,
                           Instant date) {
-        jdbc.update("INSERT INTO financial_transactions (type, source_account_id, destination_account_id, category_id, amount, "
-                        + "transaction_date, description, status, created_by) VALUES (?, ?, ?, ?, ?, ?, 'IT', ?, 'it-repo')",
-                type, source, destination, category, new BigDecimal(amount), java.sql.Timestamp.from(date), status);
+        insertAt(type, source, destination, category, amount, status, date, date.atZone(StoreFormat.STORE_ZONE).toLocalDate());
+    }
+
+    private UUID insertAt(String type, UUID source, UUID destination, UUID category, String amount, String status,
+                          Instant date, LocalDate operationDate) {
+        return jdbc.queryForObject("INSERT INTO financial_transactions (type, source_account_id, destination_account_id, category_id, amount, "
+                        + "transaction_date, operation_date, description, status, created_by) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, 'IT', ?, 'it-repo') RETURNING id",
+                UUID.class, type, source, destination, category, new BigDecimal(amount), java.sql.Timestamp.from(date),
+                operationDate, status);
     }
 
     private UUID newAccount(String prefix) {
@@ -173,7 +207,8 @@ class FinancialTransactionRepositoryTest {
 
     private void insert(String type, UUID source, UUID destination, String amount, String status, UUID session) {
         jdbc.update("INSERT INTO financial_transactions (type, source_account_id, destination_account_id, amount, transaction_date, "
-                        + "description, status, cash_session_id, created_by) VALUES (?, ?, ?, ?, now(), 'IT', ?, ?, 'it-repo')",
+                        + "operation_date, description, status, cash_session_id, created_by) "
+                        + "VALUES (?, ?, ?, ?, now(), CURRENT_DATE, 'IT', ?, ?, 'it-repo')",
                 type, source, destination, new BigDecimal(amount), status, session);
     }
 }

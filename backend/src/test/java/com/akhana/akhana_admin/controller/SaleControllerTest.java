@@ -104,7 +104,8 @@ class SaleControllerTest {
             null,
             null,
             BigDecimal.ZERO,
-            false
+            false,
+            LocalDate.of(2026, 10, 31)
         );
 
         when(jwtService.isTokenValid(AUTH_TOKEN, "admin")).thenReturn(true);
@@ -175,7 +176,8 @@ class SaleControllerTest {
             null,
             null,
             BigDecimal.ZERO,
-            false
+            false,
+            LocalDate.of(2026, 10, 31)
         );
 
         when(saleService.voidSale(eq(saleId), any(VoidSaleRequest.class), eq("admin"))).thenReturn(voidedResponse);

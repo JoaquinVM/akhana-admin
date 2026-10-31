@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -182,7 +181,7 @@ class ReportServiceTest {
 
         reportService.getSalesByDay(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
 
-        verify(saleRepository).sumByDayAndType(Instant.parse("2026-07-17T04:00:00Z"), Instant.parse("2026-07-18T04:00:00Z"));
+        verify(saleRepository).sumByDayAndType(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
     }
 
     @Test
@@ -361,7 +360,7 @@ class ReportServiceTest {
 
         assertTrue(report.suppliers().isEmpty());
         assertNull(report.totals().normalMargin());
-        verify(saleRepository).findReportLines(Instant.parse("2026-07-17T04:00:00Z"), Instant.parse("2026-07-18T04:00:00Z"));
+        verify(saleRepository).findReportLines(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
         assertThrows(IllegalArgumentException.class, () -> reportService.getSalesBySupplier(AUGUST_31, JULY_1));
     }
 
@@ -471,8 +470,8 @@ class ReportServiceTest {
 
         assertTrue(report.months().isEmpty());
         assertEquals(new BigDecimal("0.00"), report.totals().net());
-        Instant from = Instant.parse("2026-07-17T04:00:00Z");
-        Instant to = Instant.parse("2026-07-18T04:00:00Z");
+        LocalDate from = LocalDate.of(2026, 7, 17);
+        LocalDate to = LocalDate.of(2026, 7, 17);
         verify(financialTransactionRepository).sumByMonthAndCategory(from, to);
         verify(financialTransactionRepository).sumTransfersByMonth(from, to);
         verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
@@ -543,8 +542,7 @@ class ReportServiceTest {
 
         assertTrue(report.months().isEmpty());
         assertEquals(new BigDecimal("0.00"), report.totals().profitAfterConsumptions());
-        verify(saleRepository).sumByDayAndType(Instant.parse("2026-07-17T04:00:00Z"),
-                Instant.parse("2026-07-18T04:00:00Z"));
+        verify(saleRepository).sumByDayAndType(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
         verify(consumptionRepository).sumByMonth(LocalDate.of(2026, 7, 17), LocalDate.of(2026, 7, 17));
         assertThrows(IllegalArgumentException.class, () -> reportService.getTotals(AUGUST_31, JULY_1));
     }

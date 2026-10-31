@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.model.PurchasePaymentRecordStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record PurchasePaymentResponse(
@@ -27,7 +28,9 @@ public record PurchasePaymentResponse(
     Instant voidedAt,
     String voidReason,
     // FIN-11: migrated without a movement (P-43)
-    boolean historical
+    boolean historical,
+    // CAJ-11: day it counts for; paymentDate is the real time it was recorded
+    LocalDate operationDate
 ) {
     public static PurchasePaymentResponse fromEntity(PurchasePayment payment) {
         FinancialAccount account = payment.getAccount();
@@ -48,7 +51,8 @@ public record PurchasePaymentResponse(
             payment.getVoidedBy(),
             payment.getVoidedAt(),
             payment.getVoidReason(),
-            payment.isHistorical()
+            payment.isHistorical(),
+            payment.getOperationDate()
         );
     }
 }

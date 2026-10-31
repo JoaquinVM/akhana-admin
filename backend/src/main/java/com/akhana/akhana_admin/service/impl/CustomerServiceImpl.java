@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -123,34 +124,35 @@ public class CustomerServiceImpl implements CustomerService {
     public CustomerHistoryResponse getHistory(UUID id) {
         Customer customer = findCustomer(id);
 
-        // Credit sales raise the receivable and collections lower it; both by server date (T-18).
+        // Credit sales raise the receivable and collections lower it; by day of operation (CAJ-11), then server date (T-18).
         // A sale paid at once (credit 0, P-49) is listed as paid and keeps the balance
-        record Item(Instant date, Instant createdAt, CustomerHistoryResponse.Entry entry, BigDecimal delta) {}
+        record Item(LocalDate day, Instant date, Instant createdAt, CustomerHistoryResponse.Entry entry, BigDecimal delta) {}
         List<Item> items = new ArrayList<>();
         for (Sale s : saleRepository.findSalesByCustomerId(id)) {
             boolean voided = s.getStatus() == SaleStatus.ANULADA;
-            items.add(new Item(s.getCreatedAt(), s.getCreatedAt(), new CustomerHistoryResponse.Entry(
-                CustomerHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), s.getCreditAmount(),
+            items.add(new Item(s.getOperationDate(), s.getCreatedAt(), s.getCreatedAt(), new CustomerHistoryResponse.Entry(
+                CustomerHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), s.getOperationDate(), s.getCreditAmount(),
                 s.getId(), s.getSaleNumber(), s.getTotalAmount(), null, null, null,
                 voided, s.getVoidedBy(), s.getVoidedAt(), s.getVoidReason(), null),
                 voided ? ZERO : s.getCreditAmount()));
         }
         for (CustomerCollection k : customerCollectionRepository.findByCustomerId(id)) {
             boolean voided = k.getStatus() == CustomerCollectionStatus.ANULADO;
-            items.add(new Item(k.getCollectionDate(), k.getCreatedAt(), new CustomerHistoryResponse.Entry(
-                CustomerHistoryResponse.EntryType.COLLECTION, k.getId(), k.getCollectionDate(), k.getAmount(),
+            items.add(new Item(k.getOperationDate(), k.getCollectionDate(), k.getCreatedAt(), new CustomerHistoryResponse.Entry(
+                CustomerHistoryResponse.EntryType.COLLECTION, k.getId(), k.getCollectionDate(), k.getOperationDate(), k.getAmount(),
                 null, null, null, k.getAccount().getId(), k.getAccount().getName(), k.getComment(),
                 voided, k.getVoidedBy(), k.getVoidedAt(), k.getVoidReason(), null),
                 voided ? ZERO : k.getAmount().negate()));
         }
-        items.sort(Comparator.comparing(Item::date).thenComparing(Item::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
+        items.sort(Comparator.comparing(Item::day).thenComparing(Item::date)
+            .thenComparing(Item::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
 
         BigDecimal balance = ZERO;
         List<CustomerHistoryResponse.Entry> entries = new ArrayList<>();
         for (Item item : items) {
             balance = balance.add(item.delta());
             CustomerHistoryResponse.Entry e = item.entry();
-            entries.add(new CustomerHistoryResponse.Entry(e.type(), e.id(), e.date(), e.amount(), e.saleId(),
+            entries.add(new CustomerHistoryResponse.Entry(e.type(), e.id(), e.date(), e.operationDate(), e.amount(), e.saleId(),
                 e.saleNumber(), e.saleTotal(), e.accountId(), e.accountName(), e.comment(), e.voided(),
                 e.voidedBy(), e.voidedAt(), e.voidReason(), balance));
         }
@@ -185,6 +187,8 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         Instant now = Instant.now();
+        // CAJ-11: into Caja it counts for the day of the session; into QR, for the day it is recorded
+        LocalDate operationDate = session != null ? session.getOperationDate() : StoreFormat.storeDay(now);
         String comment = trimToNull(request.comment());
         // Saved before its income, which points to it
         CustomerCollection collection = customerCollectionRepository.save(CustomerCollection.builder()
@@ -192,6 +196,7 @@ public class CustomerServiceImpl implements CustomerService {
             .account(account)
             .amount(amount)
             .collectionDate(now)
+            .operationDate(operationDate)
             .comment(comment)
             .status(CustomerCollectionStatus.ACTIVO)
             .createdBy(username)
@@ -207,6 +212,7 @@ public class CustomerServiceImpl implements CustomerService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
+            .operationDate(operationDate)
             .description("Cobro a " + customer.getName())
             .notes(comment)
             .status(FinancialTransactionStatus.ACTIVO)

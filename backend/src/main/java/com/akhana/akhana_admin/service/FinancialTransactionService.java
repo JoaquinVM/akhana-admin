@@ -8,15 +8,16 @@ import com.akhana.akhana_admin.dto.VoidFinancialTransactionRequest;
 import com.akhana.akhana_admin.model.FinancialTransactionStatus;
 import com.akhana.akhana_admin.model.FinancialTransactionType;
 
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 public interface FinancialTransactionService {
 
+    /** Movements list of Finanzas by day of operation (CAJ-11), from and to inclusive; current month by default. */
     List<FinancialTransactionResponse> getTransactions(
-            Instant startDate,
-            Instant endDate,
+            LocalDate from,
+            LocalDate to,
             FinancialTransactionType type,
             UUID accountId,
             UUID categoryId,
@@ -26,8 +27,8 @@ public interface FinancialTransactionService {
 
     List<FinancialTransactionResponse> getAccountTransactions(
             UUID accountId,
-            Instant startDate,
-            Instant endDate
+            LocalDate from,
+            LocalDate to
     );
 
     List<FinancialTransactionResponse> getExpensesByCashSession(UUID cashSessionId);

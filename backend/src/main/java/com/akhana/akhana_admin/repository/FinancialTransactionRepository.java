@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -71,55 +71,57 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
            "OR (t.type = com.akhana.akhana_admin.model.FinancialTransactionType.INGRESO_MANUAL AND t.sourceAccount.isCashAccount = true))")
     BigDecimal sumActiveCashInflowsBySessionId(@Param("cashSessionId") UUID cashSessionId);
 
-    // Active incomes and expenses per store month and category (FIN-10): rows of {month 'YYYY-MM', 'INGRESO' or
+    // Active incomes and expenses per month of the day of operation (CAJ-11) and category (FIN-10): rows of {month 'YYYY-MM', 'INGRESO' or
     // 'GASTO', category id, category name, sum}. Sales and manual incomes are incomes; transfers and opening
     // balances are left out because they do not change the consolidated balance
-    @Query(value = "SELECT to_char(t.transaction_date AT TIME ZONE 'America/La_Paz', 'YYYY-MM') AS month, " +
+    @Query(value = "SELECT to_char(t.operation_date, 'YYYY-MM') AS month, " +
                    "CASE WHEN t.type = 'GASTO_MANUAL' THEN 'GASTO' ELSE 'INGRESO' END AS direction, " +
                    "c.id, c.name, SUM(t.amount) " +
                    "FROM financial_transactions t LEFT JOIN financial_categories c ON c.id = t.category_id " +
                    "WHERE t.status = 'ACTIVO' AND t.type IN ('VENTA_INGRESO', 'INGRESO_MANUAL', 'GASTO_MANUAL') " +
-                   "AND t.transaction_date >= :from AND t.transaction_date < :to " +
+                   "AND t.operation_date BETWEEN :from AND :to " +
                    "GROUP BY month, direction, c.id, c.name",
            nativeQuery = true)
-    List<Object[]> sumByMonthAndCategory(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> sumByMonthAndCategory(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    // Active transfers per store month and pair of accounts (FIN-10): rows of {month 'YYYY-MM', source id, source
+    // Active transfers per month of the day of operation (CAJ-11) and pair of accounts (FIN-10): rows of {month 'YYYY-MM', source id, source
     // name, destination id, destination name, sum}
-    @Query(value = "SELECT to_char(t.transaction_date AT TIME ZONE 'America/La_Paz', 'YYYY-MM') AS month, " +
+    @Query(value = "SELECT to_char(t.operation_date, 'YYYY-MM') AS month, " +
                    "s.id AS source_id, s.name AS source_name, d.id AS destination_id, d.name AS destination_name, " +
                    "SUM(t.amount) " +
                    "FROM financial_transactions t JOIN financial_accounts s ON s.id = t.source_account_id " +
                    "JOIN financial_accounts d ON d.id = t.destination_account_id " +
                    "WHERE t.status = 'ACTIVO' AND t.type = 'TRANSFERENCIA' " +
-                   "AND t.transaction_date >= :from AND t.transaction_date < :to " +
+                   "AND t.operation_date BETWEEN :from AND :to " +
                    "GROUP BY month, source_id, source_name, destination_id, destination_name",
            nativeQuery = true)
-    List<Object[]> sumTransfersByMonth(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> sumTransfersByMonth(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     List<FinancialTransaction> findTop10ByOrderByTransactionDateDesc();
 
+    // Movements of an account by day of operation (CAJ-11), from and to inclusive
     @Query("SELECT t FROM FinancialTransaction t " +
            "WHERE (t.sourceAccount.id = :accountId OR t.destinationAccount.id = :accountId) " +
-           "AND t.transactionDate >= :startDate AND t.transactionDate <= :endDate " +
-           "ORDER BY t.transactionDate DESC")
+           "AND t.operationDate BETWEEN :from AND :to " +
+           "ORDER BY t.operationDate DESC, t.transactionDate DESC")
     List<FinancialTransaction> findByAccountAndDateRange(
             @Param("accountId") UUID accountId,
-            @Param("startDate") Instant startDate,
-            @Param("endDate") Instant endDate
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
     );
 
+    // Movements list of Finanzas by day of operation (CAJ-11), from and to inclusive
     @Query("SELECT t FROM FinancialTransaction t " +
-           "WHERE t.transactionDate >= :startDate AND t.transactionDate <= :endDate " +
+           "WHERE t.operationDate BETWEEN :from AND :to " +
            "AND (:type IS NULL OR t.type = :type) " +
            "AND (:accountId IS NULL OR t.sourceAccount.id = :accountId OR t.destinationAccount.id = :accountId) " +
            "AND (:categoryId IS NULL OR t.category.id = :categoryId) " +
            "AND (:status IS NULL OR t.status = :status) " +
            "AND (CAST(:search AS string) IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR (t.notes IS NOT NULL AND LOWER(t.notes) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))) " +
-           "ORDER BY t.transactionDate DESC")
+           "ORDER BY t.operationDate DESC, t.transactionDate DESC")
     List<FinancialTransaction> filterTransactions(
-            @Param("startDate") Instant startDate,
-            @Param("endDate") Instant endDate,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
             @Param("type") FinancialTransactionType type,
             @Param("accountId") UUID accountId,
             @Param("categoryId") UUID categoryId,

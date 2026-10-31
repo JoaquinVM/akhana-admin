@@ -39,8 +39,8 @@ class CustomerRepositoryTest {
     @Transactional
     void salesDefaultToNormalWithoutCredit() {
         UUID session = closedSession();
-        UUID sale = jdbc.queryForObject("INSERT INTO sales (sale_number, cash_session_id, payment_method, total_amount, created_by) "
-                + "VALUES (?, ?, 'EFECTIVO', 20.00, 'it-repo') RETURNING id", UUID.class, "IT-" + UUID.randomUUID(), session);
+        UUID sale = jdbc.queryForObject("INSERT INTO sales (operation_date, sale_number, cash_session_id, payment_method, total_amount, created_by) "
+                + "VALUES (CURRENT_DATE, ?, ?, 'EFECTIVO', 20.00, 'it-repo') RETURNING id", UUID.class, "IT-" + UUID.randomUUID(), session);
         assertEquals("NORMAL", jdbc.queryForObject("SELECT sale_type FROM sales WHERE id = ?", String.class, sale));
         assertEquals(0, BigDecimal.ZERO.compareTo(jdbc.queryForObject("SELECT credit_amount FROM sales WHERE id = ?", BigDecimal.class, sale)));
     }
@@ -102,8 +102,8 @@ class CustomerRepositoryTest {
         UUID neida = insertCustomer("IT Vínculo " + UUID.randomUUID().toString().substring(0, 8), "ACTIVO");
         UUID account = anyAccount();
         UUID collection = insertCollection(neida, account, "10.00", "ACTIVO");
-        String insertTx = "INSERT INTO financial_transactions (type, source_account_id, amount, transaction_date, description, "
-                + "customer_collection_id, created_by) VALUES ('INGRESO_MANUAL', ?, 10.00, CURRENT_TIMESTAMP, 'IT', ?, 'it-repo')";
+        String insertTx = "INSERT INTO financial_transactions (operation_date, type, source_account_id, amount, transaction_date, description, "
+                + "customer_collection_id, created_by) VALUES (CURRENT_DATE, 'INGRESO_MANUAL', ?, 10.00, CURRENT_TIMESTAMP, 'IT', ?, 'it-repo')";
         jdbc.update(insertTx, account, collection);
 
         // One income per collection
@@ -117,7 +117,7 @@ class CustomerRepositoryTest {
     // Closed so it never collides with a real open session; rolled back at the end
     private UUID closedSession() {
         return jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by) VALUES ('CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES (CURRENT_DATE, 'CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
     }
 
     private UUID insertCustomer(String name, String status) {
@@ -126,14 +126,14 @@ class CustomerRepositoryTest {
     }
 
     private UUID insertSale(UUID session, String type, String method, UUID customer, String total, String credit, String status) {
-        return jdbc.queryForObject("INSERT INTO sales (sale_number, cash_session_id, sale_type, payment_method, customer_id, "
-                        + "total_amount, credit_amount, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'it-repo') RETURNING id",
+        return jdbc.queryForObject("INSERT INTO sales (operation_date, sale_number, cash_session_id, sale_type, payment_method, customer_id, "
+                        + "total_amount, credit_amount, status, created_by) VALUES (CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, 'it-repo') RETURNING id",
                 UUID.class, "IT-" + UUID.randomUUID(), session, type, method, customer, new BigDecimal(total),
                 new BigDecimal(credit), status);
     }
 
     private UUID insertCollection(UUID customer, UUID account, String amount, String status) {
-        return jdbc.queryForObject("INSERT INTO customer_collections (customer_id, account_id, amount, collection_date, status, created_by) "
-                + "VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo') RETURNING id", UUID.class, customer, account, new BigDecimal(amount), status);
+        return jdbc.queryForObject("INSERT INTO customer_collections (operation_date, customer_id, account_id, amount, collection_date, status, created_by) "
+                + "VALUES (CURRENT_DATE, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'it-repo') RETURNING id", UUID.class, customer, account, new BigDecimal(amount), status);
     }
 }

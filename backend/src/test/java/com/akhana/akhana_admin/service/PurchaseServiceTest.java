@@ -14,6 +14,7 @@ import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import com.akhana.akhana_admin.service.impl.PurchaseServiceImpl;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -91,8 +92,10 @@ class PurchaseServiceTest {
         mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
         when(creditorRepository.findByIdForUpdate(mami.getId())).thenReturn(Optional.of(mami));
         when(creditorRepository.findAllByIdForUpdate(any())).thenReturn(List.of(mami));
+        // CAJ-11: a session of 31-10 still open after midnight
         openSession = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
-            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO).build();
+            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO)
+            .operationDate(LocalDate.of(2026, 10, 31)).build();
 
         when(supplierRepository.findById(supplier.getId())).thenReturn(Optional.of(supplier));
         when(productRepository.findById(nuts.getId())).thenReturn(Optional.of(nuts));
@@ -456,6 +459,9 @@ class PurchaseServiceTest {
         assertThat(res.payments()).hasSize(1);
         assertThat(res.payments().get(0).accountName()).isEqualTo("Bisa");
         assertThat(res.payments().get(0).financialTransactionId()).isEqualTo(tx.getId());
+        // CAJ-11: not from Caja, so the expense and the payment count for the day they are recorded
+        assertThat(tx.getOperationDate()).isEqualTo(StoreFormat.storeDay(tx.getTransactionDate()));
+        assertThat(res.payments().get(0).operationDate()).isEqualTo(tx.getOperationDate());
     }
 
     @Test
@@ -518,6 +524,10 @@ class PurchaseServiceTest {
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("50.00");
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("450.00");
         assertThat(res.payments().get(0).cashAccount()).isTrue();
+        // CAJ-11: the expense and the payment count for the day of the session; the payment keeps its real time
+        assertThat(captor.getValue().getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(res.payments().get(0).operationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(res.payments().get(0).paymentDate()).isEqualTo(captor.getValue().getTransactionDate());
     }
 
     @Test
@@ -842,6 +852,8 @@ class PurchaseServiceTest {
         assertThat(res.payments().get(0).creditorName()).isEqualTo("Mami");
         assertThat(res.payments().get(0).accountId()).isNull();
         assertThat(res.payments().get(0).financialTransactionId()).isNull();
+        // CAJ-11: without a movement it counts for the day it is recorded
+        assertThat(res.payments().get(0).operationDate()).isEqualTo(StoreFormat.storeDay(res.payments().get(0).paymentDate()));
         verify(financialTransactionRepository, never()).save(any());
         verify(financialAccountRepository, never()).findActiveByIdForUpdate(any());
         verifyNoInteractions(cashSessionRepository);

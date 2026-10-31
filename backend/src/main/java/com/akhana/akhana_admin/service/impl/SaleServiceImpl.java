@@ -315,6 +315,8 @@ public class SaleServiceImpl implements SaleService {
             .description(request.description() != null ? request.description().trim() : null)
             .createdBy(username)
             .createdAt(Instant.now())
+            // CAJ-11: a sale counts for the day of its session, even when recorded after midnight
+            .operationDate(session.getOperationDate())
             .build();
 
         for (SaleItem item : saleItems) {
@@ -529,6 +531,8 @@ public class SaleServiceImpl implements SaleService {
             .category(category)
             .amount(amount)
             .transactionDate(sale.getCreatedAt())
+            // CAJ-11: the income (cash or QR) goes with its sale
+            .operationDate(sale.getOperationDate())
             .description("Venta #" + sale.getSaleNumber() + " (" + paymentLabel + ")")
             .status(FinancialTransactionStatus.ACTIVO)
             .saleId(sale.getId())
@@ -583,8 +587,8 @@ public class SaleServiceImpl implements SaleService {
 
     static final int MAX_PAGE_SIZE = 100;
     // Open bounds of the history when a date is missing: before and after any real sale
-    private static final Instant NO_FROM = Instant.parse("2000-01-01T00:00:00Z");
-    private static final Instant NO_TO = Instant.parse("3000-01-01T00:00:00Z");
+    private static final LocalDate NO_FROM = LocalDate.of(2000, 1, 1);
+    private static final LocalDate NO_TO = LocalDate.of(3000, 1, 1);
 
     @Override
     @Transactional(readOnly = true)
@@ -594,13 +598,11 @@ public class SaleServiceImpl implements SaleService {
         if (from != null && to != null && from.isAfter(to)) {
             throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");
         }
-        // Dates are store days (America/La_Paz); "to" includes the whole day
-        Instant fromInstant = from != null ? from.atStartOfDay(StoreFormat.STORE_ZONE).toInstant() : NO_FROM;
-        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant() : NO_TO;
+        // Dates are days of operation (CAJ-11); "to" includes the whole day
         String seller = createdBy != null && !createdBy.isBlank() ? createdBy.trim() : null;
         PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE),
-            Sort.by(Sort.Direction.DESC, "createdAt"));
-        return saleRepository.search(fromInstant, toInstant, status, saleType, paymentMethod, seller, pendingAssignment,
+            Sort.by(Sort.Direction.DESC, "operationDate").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+        return saleRepository.search(from != null ? from : NO_FROM, to != null ? to : NO_TO, status, saleType, paymentMethod, seller, pendingAssignment,
                 pageRequest)
             .map(SaleResponse::summary);
     }

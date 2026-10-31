@@ -591,7 +591,9 @@ public class MigrationServiceImpl implements MigrationService {
                 .notes(notes)
                 .status(FinancialTransactionStatus.ACTIVO)
                 // A row without a date is rejected below
-                .transactionDate(date != null ? instant(date) : null);
+                .transactionDate(date != null ? instant(date) : null)
+                // CAJ-11: the day of the sheet
+                .operationDate(date);
             if (type.equals("transferencia")) {
                 FinancialAccount destination = account(analysis, row.text("destination"), "la cuenta destino", errors);
                 if (account != null && account == destination) {
@@ -694,6 +696,7 @@ public class MigrationServiceImpl implements MigrationService {
                 .status(CashSessionStatus.CERRADA)
                 .openingAmount(opening)
                 .openedAt(date.atTime(LocalTime.of(9, 0)).atZone(StoreFormat.STORE_ZONE).toInstant())
+                .operationDate(date)
                 .closingAmount(closing)
                 .closingComment(truncate(emptyToNull(row.text("comment")), 500))
                 .closedAt(date.atTime(LocalTime.of(21, 0)).atZone(StoreFormat.STORE_ZONE).toInstant())
@@ -898,6 +901,7 @@ public class MigrationServiceImpl implements MigrationService {
                     .account(payAccount)
                     .amount(paid)
                     .paymentDate(instant(payDate != null ? payDate : purchaseDate))
+                    .operationDate(payDate != null ? payDate : purchaseDate)
                     .status(PurchasePaymentRecordStatus.ACTIVO)
                     .build());
             }
@@ -1059,6 +1063,7 @@ public class MigrationServiceImpl implements MigrationService {
                     + " del " + key.date().format(DAY) + " (planilla)")
                 .createdBy(username)
                 .createdAt(instant(key.date()))
+                .operationDate(key.date())
                 .historicalImportId(importId)
                 .build();
             items.forEach(item -> {

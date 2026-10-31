@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.impl.CustomerServiceImpl;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,7 @@ import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,8 +68,10 @@ class CustomerServiceTest {
             .currentBalance(new BigDecimal("300.00")).isCashAccount(false).isQrAccount(false).build();
         venta = FinancialCategory.builder().id(UUID.randomUUID()).name("Venta").type(FinancialCategoryType.INGRESO)
             .isSalesDefault(true).build();
+        // CAJ-11: a session of 31-10 still open after midnight
         openSession = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
-            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO).build();
+            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO)
+            .operationDate(LocalDate.of(2026, 10, 31)).build();
 
         when(customerRepository.findById(neida.getId())).thenReturn(Optional.of(neida));
         when(customerRepository.findByIdForUpdate(neida.getId())).thenReturn(Optional.of(neida));
@@ -110,16 +114,21 @@ class CustomerServiceTest {
     }
 
     private Sale creditSale(String number, String total, String credit, Instant date) {
+        return creditSale(number, total, credit, date, StoreFormat.storeDay(date));
+    }
+
+    private Sale creditSale(String number, String total, String credit, Instant date, LocalDate operationDate) {
         Sale s = Sale.builder().id(UUID.randomUUID()).saleNumber(number).saleType(SaleType.AL_COSTO).customer(neida)
             .totalAmount(new BigDecimal(total)).creditAmount(new BigDecimal(credit)).paymentMethod(PaymentMethod.CREDITO)
-            .status(SaleStatus.COMPLETADA).createdAt(date).build();
+            .status(SaleStatus.COMPLETADA).createdAt(date).operationDate(operationDate).build();
         creditSales.add(s);
         return s;
     }
 
     private CustomerCollection collection(FinancialAccount account, String amount, Instant date) {
         CustomerCollection k = CustomerCollection.builder().id(UUID.randomUUID()).customer(neida).account(account)
-            .amount(new BigDecimal(amount)).collectionDate(date).createdAt(date).status(CustomerCollectionStatus.ACTIVO).build();
+            .amount(new BigDecimal(amount)).collectionDate(date).operationDate(StoreFormat.storeDay(date)).createdAt(date)
+            .status(CustomerCollectionStatus.ACTIVO).build();
         collections.add(k);
         when(customerCollectionRepository.findById(k.getId())).thenReturn(Optional.of(k));
         return k;
@@ -203,6 +212,9 @@ class CustomerServiceTest {
         assertThat(tx.getDescription()).isEqualTo("Cobro a Tía Neida");
         assertThat(tx.getCustomerCollectionId()).isEqualTo(k.getId());
         assertThat(tx.getCashSessionId()).isEqualTo(openSession.getId());
+        // CAJ-11: into Caja, the collection and its income count for the day of the session
+        assertThat(k.getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(tx.getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("550.00");
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("150.00");
     }
@@ -214,6 +226,8 @@ class CustomerServiceTest {
         customerService.registerCollection(neida.getId(), new CustomerCollectionRequest(qr.getId(), new BigDecimal("30.00"), null), "cajero");
         assertThat(qr.getCurrentBalance()).isEqualByComparingTo("1030.00");
         verify(cashSessionRepository, never()).findByStatusForUpdate(any());
+        // CAJ-11: into QR, without a session, it counts for the day it is recorded
+        assertThat(collections.get(0).getOperationDate()).isEqualTo(StoreFormat.storeDay(collections.get(0).getCollectionDate()));
 
         assertThatThrownBy(() -> customerService.registerCollection(neida.getId(),
                 new CustomerCollectionRequest(efectivo.getId(), new BigDecimal("10.00"), null), "cajero"))
@@ -306,6 +320,23 @@ class CustomerServiceTest {
         assertThat(history.entries().get(0).saleNumber()).isEqualTo("VTA-000100");
         assertThat(history.entries().get(2).accountName()).isEqualTo("Caja");
         assertThat(history.customer().balance()).isEqualByComparingTo("79.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-11: una venta al costo cargada pasada la medianoche se ve en el día de su caja; el saldo no cambia")
+    void historyByDayOfOperation() {
+        // A collection at 23:00 of 31-10 and a credit sale of the session of 31-10 recorded at 00:20 of 01-11
+        collection(qr, "10.00", Instant.parse("2026-11-01T03:00:00Z"));
+        creditSale("VTA-000300", "50.00", "50.00", Instant.parse("2026-11-01T04:20:00Z"), LocalDate.of(2026, 10, 31));
+        creditSale("VTA-000301", "20.00", "20.00", Instant.parse("2026-11-01T14:00:00Z"));
+
+        CustomerHistoryResponse history = customerService.getHistory(neida.getId());
+
+        assertThat(history.entries()).extracting(CustomerHistoryResponse.Entry::operationDate).containsExactly(
+            LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 1));
+        assertThat(history.entries().get(1).saleNumber()).isEqualTo("VTA-000300");
+        assertThat(history.entries().get(1).date()).isEqualTo(Instant.parse("2026-11-01T04:20:00Z"));
+        assertThat(history.customer().balance()).isEqualByComparingTo("60.00");
     }
 
     @Test

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -127,18 +128,18 @@ public class CreditorServiceImpl implements CreditorService {
     public CreditorHistoryResponse getHistory(UUID id) {
         Creditor creditor = findCreditor(id);
 
-        // Payments raise the debt and repayments lower it; both by server date (T-18)
-        record Item(Instant date, Instant createdAt, CreditorHistoryResponse.Entry entry, BigDecimal delta) {}
+        // Payments raise the debt and repayments lower it; by day of operation (CAJ-11), then server date (T-18)
+        record Item(LocalDate day, Instant date, Instant createdAt, CreditorHistoryResponse.Entry entry, BigDecimal delta) {}
         List<Item> items = new ArrayList<>();
         for (PurchasePayment p : purchasePaymentRepository.findByCreditorId(id)) {
             boolean voided = p.getStatus() == PurchasePaymentRecordStatus.ANULADO;
-            items.add(new Item(p.getPaymentDate(), p.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.PAYMENT, p.getId(), p.getPaymentDate(), p.getAmount(),
+            items.add(new Item(p.getOperationDate(), p.getPaymentDate(), p.getCreatedAt(), new CreditorHistoryResponse.Entry(
+                CreditorHistoryResponse.EntryType.PAYMENT, p.getId(), p.getPaymentDate(), p.getOperationDate(), p.getAmount(),
                 p.getPurchase().getId(), p.getPurchase().getPurchaseNumber(), p.getPurchase().getSupplier().getName(),
                 null, null, null, null, null, null, voided, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), null),
                 voided ? ZERO : p.getAmount()));
         }
-        // POS-13: one entry per sale with the person's lines, dated when the sale was made
+        // POS-13: one entry per sale with the person's lines, on the day of the sale (CAJ-11)
         Map<UUID, List<SaleItem>> linesBySale = new LinkedHashMap<>();
         for (SaleItem line : saleItemRepository.findThirdPartyLinesByCreditorId(id)) {
             linesBySale.computeIfAbsent(line.getSale().getId(), s -> new ArrayList<>()).add(line);
@@ -147,28 +148,30 @@ public class CreditorServiceImpl implements CreditorService {
             Sale s = lines.getFirst().getSale();
             BigDecimal amount = lines.stream().map(SaleItem::getSubtotal).reduce(ZERO, BigDecimal::add);
             boolean voided = s.getStatus() == SaleStatus.ANULADA;
-            items.add(new Item(s.getCreatedAt(), s.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), amount, null, null, null,
+            items.add(new Item(s.getOperationDate(), s.getCreatedAt(), s.getCreatedAt(), new CreditorHistoryResponse.Entry(
+                CreditorHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), s.getOperationDate(), amount,
+                null, null, null,
                 s.getId(), s.getSaleNumber(), null, null, null, null, voided, s.getVoidedBy(), s.getVoidedAt(),
                 s.getVoidReason(), null),
                 voided ? ZERO : amount));
         }
         for (CreditorRepayment r : creditorRepaymentRepository.findByCreditorId(id)) {
             boolean voided = r.getStatus() == CreditorRepaymentStatus.ANULADO;
-            items.add(new Item(r.getRepaymentDate(), r.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.REPAYMENT, r.getId(), r.getRepaymentDate(), r.getAmount(),
+            items.add(new Item(r.getOperationDate(), r.getRepaymentDate(), r.getCreatedAt(), new CreditorHistoryResponse.Entry(
+                CreditorHistoryResponse.EntryType.REPAYMENT, r.getId(), r.getRepaymentDate(), r.getOperationDate(), r.getAmount(),
                 null, null, null, null, null, r.getAccount().getId(), r.getAccount().getName(), r.getComment(),
                 r.getConcept(), voided, r.getVoidedBy(), r.getVoidedAt(), r.getVoidReason(), null),
                 voided ? ZERO : r.getAmount().negate()));
         }
-        items.sort(Comparator.comparing(Item::date).thenComparing(Item::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
+        items.sort(Comparator.comparing(Item::day).thenComparing(Item::date)
+            .thenComparing(Item::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
 
         BigDecimal balance = ZERO;
         List<CreditorHistoryResponse.Entry> entries = new ArrayList<>();
         for (Item item : items) {
             balance = balance.add(item.delta());
             CreditorHistoryResponse.Entry e = item.entry();
-            entries.add(new CreditorHistoryResponse.Entry(e.type(), e.id(), e.date(), e.amount(), e.purchaseId(),
+            entries.add(new CreditorHistoryResponse.Entry(e.type(), e.id(), e.date(), e.operationDate(), e.amount(), e.purchaseId(),
                 e.purchaseNumber(), e.supplierName(), e.saleId(), e.saleNumber(), e.accountId(), e.accountName(),
                 e.comment(), e.concept(), e.voided(), e.voidedBy(), e.voidedAt(), e.voidReason(), balance));
         }
@@ -212,6 +215,8 @@ public class CreditorServiceImpl implements CreditorService {
             .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.accountId()));
 
         Instant now = Instant.now();
+        // CAJ-11: from Caja it counts for the day of the session; from another account, for the day it is recorded
+        LocalDate operationDate = session != null ? session.getOperationDate() : StoreFormat.storeDay(now);
         String comment = trimToNull(request.comment());
         // Saved before its expense, which points to it
         CreditorRepayment repayment = creditorRepaymentRepository.save(CreditorRepayment.builder()
@@ -219,6 +224,7 @@ public class CreditorServiceImpl implements CreditorService {
             .account(account)
             .amount(amount)
             .repaymentDate(now)
+            .operationDate(operationDate)
             .comment(comment)
             .concept(concept)
             .status(CreditorRepaymentStatus.ACTIVO)
@@ -235,6 +241,7 @@ public class CreditorServiceImpl implements CreditorService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
+            .operationDate(operationDate)
             .description((thirdParty ? "Pago a tercero a " : "Devolución a ") + creditor.getName())
             .notes(comment)
             .status(FinancialTransactionStatus.ACTIVO)

@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -59,6 +60,10 @@ public class CashSession {
     @Column(name = "opened_at", nullable = false)
     @Builder.Default
     private Instant openedAt = Instant.now();
+
+    // CAJ-11: store day of the session; its sales and movements count for it
+    @Column(name = "operation_date", nullable = false)
+    private LocalDate operationDate;
 
     @Column(name = "closing_amount", precision = 12, scale = 2)
     private BigDecimal closingAmount;

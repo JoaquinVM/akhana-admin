@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -45,6 +46,10 @@ public class FinancialTransaction {
 
     @Column(name = "transaction_date", nullable = false)
     private Instant transactionDate;
+
+    // CAJ-11: store day it counts for (its session's or sale's day, else the day it was recorded)
+    @Column(name = "operation_date", nullable = false, updatable = false)
+    private LocalDate operationDate;
 
     @Column(nullable = false, length = 255)
     private String description;

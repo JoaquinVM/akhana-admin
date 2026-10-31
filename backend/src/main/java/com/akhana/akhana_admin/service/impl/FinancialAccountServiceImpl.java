@@ -83,11 +83,13 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         FinancialAccount savedAccount = financialAccountRepository.save(account);
 
         // The opening balance is a movement (FIN-01)
+        Instant openedAt = Instant.now();
         FinancialTransaction initialTx = FinancialTransaction.builder()
                 .type(FinancialTransactionType.SALDO_INICIAL)
                 .sourceAccount(savedAccount)
                 .amount(initial)
-                .transactionDate(Instant.now())
+                .transactionDate(openedAt)
+                .operationDate(StoreFormat.storeDay(openedAt))
                 .description("Saldo inicial de apertura")
                 .status(FinancialTransactionStatus.ACTIVO)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
@@ -182,6 +184,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
                         .type(FinancialTransactionType.SALDO_INICIAL)
                         .sourceAccount(account)
                         .transactionDate(now)
+                        .operationDate(StoreFormat.storeDay(now))
                         .status(FinancialTransactionStatus.ACTIVO)
                         .createdBy(username)
                         .createdAt(now)

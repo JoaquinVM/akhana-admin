@@ -350,6 +350,37 @@ class SaleServiceTest {
     }
 
     @Test
+    @DisplayName("CAJ-11: una venta registrada pasada la medianoche cuenta para el día de su caja, con sus ingresos en efectivo y QR")
+    void saleAndItsIncomesTakeTheDayOfTheSession() {
+        // The session of 31-10 is still open after midnight: the sale keeps its real time of record
+        activeSession.setOperationDate(LocalDate.of(2026, 10, 31));
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.nextSaleNumber()).thenReturn(1L);
+        when(saleRepository.save(any(Sale.class))).thenAnswer(i -> {
+            Sale s = i.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+
+        SaleResponse res = saleService.registerSale(new SaleDetailRequest(
+            List.of(new SaleItemRequest(product1.getId(), new BigDecimal("2"), BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal("20.00"), new BigDecimal("20.00"),
+            new BigDecimal("20.00"), null), "cajero");
+
+        assertThat(res.operationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(res.createdAt()).isAfter(Instant.parse("2026-10-31T12:00:00Z"));
+        ArgumentCaptor<FinancialTransaction> incomes = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository, times(2)).save(incomes.capture());
+        // The QR income has no session, but it goes with its sale
+        assertThat(incomes.getAllValues()).extracting(FinancialTransaction::getOperationDate)
+            .containsOnly(LocalDate.of(2026, 10, 31));
+        assertThat(incomes.getAllValues()).extracting(FinancialTransaction::getSourceAccount)
+            .containsExactlyInAnyOrder(cashAcc, qrAcc);
+    }
+
+    @Test
     @DisplayName("POS-04: un pago mixto con todo en efectivo o todo en QR se rechaza")
     void shouldRejectMixedPaymentWithOnePart() {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
@@ -1018,7 +1049,7 @@ class SaleServiceTest {
     }
 
     @Test
-    @DisplayName("POS-09: el historial filtra por días de la tienda y limita el tamaño de página")
+    @DisplayName("POS-09, CAJ-11: el historial filtra por día de operación, del más reciente, y limita el tamaño de página")
     void searchSalesUsesStoreDaysAndCapsPageSize() {
         when(saleRepository.search(any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
             .thenReturn(Page.empty());
@@ -1027,11 +1058,12 @@ class SaleServiceTest {
             SaleStatus.COMPLETADA, SaleType.AL_COSTO, PaymentMethod.CREDITO, " operador ", false, -1, 500);
 
         ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
-        // Bolivia is UTC-4: the 1st starts at 04:00 UTC and the 25th ends at 04:00 UTC of the 26th
-        verify(saleRepository).search(eq(Instant.parse("2026-10-01T04:00:00Z")), eq(Instant.parse("2026-10-26T04:00:00Z")),
+        // Days of operation, both inclusive (CAJ-11)
+        verify(saleRepository).search(eq(LocalDate.of(2026, 10, 1)), eq(LocalDate.of(2026, 10, 25)),
             eq(SaleStatus.COMPLETADA), eq(SaleType.AL_COSTO), eq(PaymentMethod.CREDITO), eq("operador"), eq(false), page.capture());
         assertThat(page.getValue().getPageNumber()).isZero();
         assertThat(page.getValue().getPageSize()).isEqualTo(100);
+        assertThat(page.getValue().getSort().toString()).isEqualTo("operationDate: DESC,createdAt: DESC");
     }
 
     @Test

@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -102,6 +103,10 @@ public class Sale {
     @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
+
+    // CAJ-11: store day it counts for (the day of its session); createdAt stays the real time it was recorded
+    @Column(name = "operation_date", nullable = false, updatable = false)
+    private LocalDate operationDate;
 
     @Column(name = "voided_at")
     private Instant voidedAt;

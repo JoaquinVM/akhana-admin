@@ -74,12 +74,15 @@ public class CashSessionServiceImpl implements CashSessionService {
                 StoreFormat.money(proposal.proposedAmount())));
         }
 
+        Instant openedAt = Instant.now();
         CashSession session = CashSession.builder()
             .status(CashSessionStatus.ABIERTA)
             .openingAmount(openingAmount)
             .openingComment(openingComment)
             .openedBy(username)
-            .openedAt(Instant.now())
+            .openedAt(openedAt)
+            // CAJ-11: the store day it was opened
+            .operationDate(StoreFormat.storeDay(openedAt))
             .expectedCash(openingAmount)
             .totalSalesCash(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .totalSalesQr(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
@@ -222,7 +225,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getHistoricalOtherIncome(),
             session.getHistoricalExpenses(),
             session.getHistoricalOtherOutflow(),
-            session.getHistoricalInternalOutflow()
+            session.getHistoricalInternalOutflow(),
+            session.getOperationDate()
         );
     }
 
@@ -326,6 +330,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             .category(category)
             .amount(amount)
             .transactionDate(now)
+            // CAJ-11: opening and closing adjustments count for the day of the session
+            .operationDate(session.getOperationDate())
             .description(description)
             .notes(notes)
             .status(FinancialTransactionStatus.ACTIVO)
@@ -354,7 +360,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getExpectedCash(),
             session.getDifference(),
             salesCount,
-            session.isHistorical()
+            session.isHistorical(),
+            session.getOperationDate()
         );
     }
 }

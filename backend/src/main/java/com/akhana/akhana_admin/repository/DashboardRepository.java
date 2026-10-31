@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,15 +13,15 @@ import java.util.UUID;
 @org.springframework.stereotype.Repository
 public interface DashboardRepository extends Repository<Sale, UUID> {
 
-    // DSH-02: how the active sales of the range were paid, one row of {cash, QR, credit, historical total,
+    // DSH-02: how the active sales of the range (by day of operation, CAJ-11, inclusive) were paid, one row of {cash, QR, credit, historical total,
     // historical sales}. Every sale type counts: it is the money that came in (or is owed) for them, as in the cash
     // session (CAJ). Historical sales (FIN-11) are one per day of the spreadsheet without how they were paid (P-32)
     @Query(value = "SELECT COALESCE(SUM(amount_cash), 0), COALESCE(SUM(amount_qr), 0), COALESCE(SUM(credit_amount), 0), " +
                    "COALESCE(SUM(total_amount) FILTER (WHERE historical_import_id IS NOT NULL), 0), " +
                    "COUNT(*) FILTER (WHERE historical_import_id IS NOT NULL) " +
-                   "FROM sales WHERE status = 'COMPLETADA' AND created_at >= :from AND created_at < :to",
+                   "FROM sales WHERE status = 'COMPLETADA' AND operation_date BETWEEN :from AND :to",
            nativeQuery = true)
-    List<Object[]> sumPayments(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> sumPayments(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     // DSH-03: lines of the active normal sales, rows of {sale id, sale total, product id, product name, quantity
     // (kilos for a presentation, CAT-11), line subtotal, unrounded cost, normal line, free line}, so the general
@@ -31,7 +31,7 @@ public interface DashboardRepository extends Repository<Sale, UUID> {
                    "i.free_line_type IS NOT NULL " +
                    "FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN products p ON p.id = i.product_id " +
                    "WHERE s.status = 'COMPLETADA' AND s.sale_type = 'NORMAL' " +
-                   "AND s.created_at >= :from AND s.created_at < :to",
+                   "AND s.operation_date BETWEEN :from AND :to",
            nativeQuery = true)
-    List<Object[]> findProductLines(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> findProductLines(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

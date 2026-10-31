@@ -27,7 +27,6 @@ import org.mockito.quality.Strictness;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,7 +41,6 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class DashboardServiceTest {
 
-    private static final ZoneId STORE = ZoneId.of("America/La_Paz");
     private static final LocalDate OCT_1 = LocalDate.of(2026, 10, 1);
     private static final LocalDate OCT_30 = LocalDate.of(2026, 10, 30);
     private static final LocalDate SEP_1 = LocalDate.of(2026, 9, 1);
@@ -219,7 +217,8 @@ class DashboardServiceTest {
         when(cashSessionService.findCurrentSession()).thenReturn(Optional.of(new CashSessionSummaryResponse(
                 UUID.randomUUID(), 412L, CashSessionStatus.ABIERTA, new BigDecimal("300.00"), null, "ana",
                 Instant.parse("2026-10-30T12:30:00Z"), null, null, null, null, new BigDecimal("900.00"),
-                new BigDecimal("400.00"), new BigDecimal("1300.00"), new BigDecimal("1200.00"), null, 17, false)));
+                new BigDecimal("400.00"), new BigDecimal("1300.00"), new BigDecimal("1200.00"), null, 17, false,
+                LocalDate.of(2026, 10, 30))));
         when(creditorService.getCreditors(null, null)).thenReturn(List.of(creditor("150.00"), creditor("50.25")));
         when(customerService.getCustomers(null, null)).thenReturn(List.of(customer("104.00")));
 
@@ -255,7 +254,7 @@ class DashboardServiceTest {
     }
 
     private void stubDays(LocalDate from, Object[]... rows) {
-        when(saleRepository.sumByDayAndType(eq(from.atStartOfDay(STORE).toInstant()), any()))
+        when(saleRepository.sumByDayAndType(eq(from), any()))
                 .thenReturn(List.of(rows));
     }
 

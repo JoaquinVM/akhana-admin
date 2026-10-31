@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.impl.CreditorServiceImpl;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,8 +67,10 @@ class CreditorServiceTest {
             .currentBalance(new BigDecimal("500.00")).isCashAccount(true).build();
         pedido = FinancialCategory.builder().id(UUID.randomUUID()).name("Pedido").type(FinancialCategoryType.GASTO)
             .systemKey(FinancialCategorySystemKey.PURCHASE_PAYMENT).build();
+        // CAJ-11: a session of 31-10 still open after midnight
         openSession = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
-            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO).build();
+            .openingAmount(new BigDecimal("100.00")).totalSalesCash(BigDecimal.ZERO)
+            .operationDate(LocalDate.of(2026, 10, 31)).build();
 
         when(creditorRepository.findById(mami.getId())).thenReturn(Optional.of(mami));
         when(creditorRepository.findByIdForUpdate(mami.getId())).thenReturn(Optional.of(mami));
@@ -114,14 +117,16 @@ class CreditorServiceTest {
         Purchase purchase = Purchase.builder().id(UUID.randomUUID()).purchaseNumber("PED-000001").supplier(supplier)
             .purchaseDate(LocalDate.now()).build();
         PurchasePayment p = PurchasePayment.builder().id(UUID.randomUUID()).purchase(purchase).creditor(mami)
-            .amount(new BigDecimal(amount)).paymentDate(date).createdAt(date).status(PurchasePaymentRecordStatus.ACTIVO).build();
+            .amount(new BigDecimal(amount)).paymentDate(date).operationDate(StoreFormat.storeDay(date)).createdAt(date)
+            .status(PurchasePaymentRecordStatus.ACTIVO).build();
         payments.add(p);
         return p;
     }
 
     private CreditorRepayment repayment(FinancialAccount account, String amount, Instant date) {
         CreditorRepayment r = CreditorRepayment.builder().id(UUID.randomUUID()).creditor(mami).account(account)
-            .amount(new BigDecimal(amount)).repaymentDate(date).createdAt(date).status(CreditorRepaymentStatus.ACTIVO).build();
+            .amount(new BigDecimal(amount)).repaymentDate(date).operationDate(StoreFormat.storeDay(date)).createdAt(date)
+            .status(CreditorRepaymentStatus.ACTIVO).build();
         repayments.add(r);
         when(creditorRepaymentRepository.findById(r.getId())).thenReturn(Optional.of(r));
         return r;
@@ -257,9 +262,9 @@ class CreditorServiceTest {
     @DisplayName("POS-13: el historial muestra cada venta con productos de Mami y la anulada no cuenta")
     void history_includesThirdPartySales() {
         Sale sale = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000123").status(SaleStatus.COMPLETADA)
-            .createdAt(Instant.parse("2026-10-20T15:00:00Z")).build();
+            .createdAt(Instant.parse("2026-10-20T15:00:00Z")).operationDate(LocalDate.of(2026, 10, 20)).build();
         Sale voided = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000124").status(SaleStatus.ANULADA)
-            .createdAt(Instant.parse("2026-10-21T15:00:00Z")).build();
+            .createdAt(Instant.parse("2026-10-21T15:00:00Z")).operationDate(LocalDate.of(2026, 10, 21)).build();
         when(saleItemRepository.findThirdPartyLinesByCreditorId(mami.getId())).thenReturn(List.of(
             SaleItem.builder().sale(sale).subtotal(new BigDecimal("40.00")).build(),
             SaleItem.builder().sale(sale).subtotal(new BigDecimal("20.00")).build(),
@@ -275,6 +280,30 @@ class CreditorServiceTest {
         assertThat(first.balanceAfter()).isEqualByComparingTo("60.00");
         assertThat(history.entries().get(1).voided()).isTrue();
         assertThat(history.entries().get(1).balanceAfter()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-11: el historial ordena y fecha por día de operación; una venta de Mami cargada pasada la medianoche va en el día de su caja")
+    void history_byDayOfOperation() {
+        // Sale of the session of 31-10 recorded at 00:20 of 01-11; a payment of Mami recorded at 23:00 of 31-10
+        Sale late = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000200").status(SaleStatus.COMPLETADA)
+            .createdAt(Instant.parse("2026-11-01T04:20:00Z")).operationDate(LocalDate.of(2026, 10, 31)).build();
+        when(saleItemRepository.findThirdPartyLinesByCreditorId(mami.getId())).thenReturn(List.of(
+            SaleItem.builder().sale(late).subtotal(new BigDecimal("30.00")).build()));
+        PurchasePayment p = payment("100.00", Instant.parse("2026-11-01T03:00:00Z"));
+        repayment(bisa, "20.00", Instant.parse("2026-11-01T14:00:00Z"));
+
+        CreditorHistoryResponse history = creditorService.getHistory(mami.getId());
+
+        assertThat(history.entries()).extracting(CreditorHistoryResponse.Entry::type).containsExactly(
+            CreditorHistoryResponse.EntryType.PAYMENT, CreditorHistoryResponse.EntryType.SALE,
+            CreditorHistoryResponse.EntryType.REPAYMENT);
+        assertThat(history.entries()).extracting(CreditorHistoryResponse.Entry::operationDate).containsExactly(
+            LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 1));
+        assertThat(history.entries().get(1).date()).isEqualTo(Instant.parse("2026-11-01T04:20:00Z"));
+        assertThat(p.getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        // Balances do not change
+        assertThat(history.creditor().debt()).isEqualByComparingTo("110.00");
     }
 
     @Test
@@ -313,6 +342,9 @@ class CreditorServiceTest {
         assertThat(tx.getCreditorRepaymentId()).isEqualTo(r.getId());
         assertThat(tx.getPurchaseId()).isNull();
         assertThat(tx.getCashSessionId()).isNull();
+        // CAJ-11: from Bisa, the repayment and its expense count for the day they are recorded
+        assertThat(r.getOperationDate()).isEqualTo(StoreFormat.storeDay(r.getRepaymentDate()));
+        assertThat(tx.getOperationDate()).isEqualTo(r.getOperationDate());
         assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("850.00");
         verifyNoInteractions(cashSessionRepository);
     }
@@ -336,6 +368,9 @@ class CreditorServiceTest {
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
         assertThat(captor.getValue().getCashSessionId()).isEqualTo(openSession.getId());
+        // CAJ-11: from Caja, the repayment and its expense count for the day of the session
+        assertThat(captor.getValue().getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(repayments.get(0).getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("450.00");
         assertThat(openSession.getExpectedCash()).isEqualByComparingTo("50.00");
 

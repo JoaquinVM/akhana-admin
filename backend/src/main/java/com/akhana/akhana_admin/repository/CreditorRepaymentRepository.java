@@ -13,6 +13,6 @@ import java.util.UUID;
 public interface CreditorRepaymentRepository extends JpaRepository<CreditorRepayment, UUID> {
 
     @Query("SELECT r FROM CreditorRepayment r JOIN FETCH r.account WHERE r.creditor.id = :creditorId " +
-           "ORDER BY r.repaymentDate, r.createdAt")
+           "ORDER BY r.operationDate, r.repaymentDate, r.createdAt")
     List<CreditorRepayment> findByCreditorId(@Param("creditorId") UUID creditorId);
 }
