@@ -258,6 +258,13 @@ se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo ha
   Bs 10,00 · Línea quitada: Pasas · Total: Bs 300,00 → Bs 280,00»), y el pedido guarda `updated_by` y
   `updated_at`. El detalle muestra el historial de cambios, del más reciente al más antiguo.
 
+## Día de los pagos (CAJ-11)
+
+- **Cuando** un pago o un envío se paga desde Caja pasada la medianoche en la caja del 31/10 **entonces** su gasto y
+  el pago cuentan para el 31/10 y el detalle del pedido muestra «Día 31/10 · cargada el 01/11 00:30» en lugar de la
+  fecha. Desde otra cuenta o hecho por una persona, el día es el de su registro. La fecha del pedido no cambia.
+  Pruebas en `PurchaseServiceTest` y `purchase-detail-modal.component.spec.ts`; detalle en `cash.md`.
+
 ## Categorías de sistema
 
 Pedido y Transporte son categorías de gasto que el código necesita, como Ventas: la migración les pone

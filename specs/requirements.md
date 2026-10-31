@@ -18,7 +18,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Proveedores y compras | COM-01 a COM-09, COM-11, COM-12 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
-| Caja | CAJ-01 a CAJ-10 | ✅ Completo | — | `cash.md` |
+| Caja | CAJ-01 a CAJ-11 | ✅ Completo | CAJ-11 sin desplegar: cerrar antes las cajas #146 a #148 y después comparar el 28 al 30/10 con la planilla | `cash.md` |
 | POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
@@ -168,6 +168,7 @@ Detalle en `cash.md`.
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") desde el POS como transferencia entre Caja y otra cuenta, con comentario obligatorio; se anula solo mientras su caja esté abierta.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado.
 - **CAJ-10** La apertura propone como monto inicial el cierre anterior (en la primera caja, el saldo de Caja); si se cambia, el comentario es obligatorio y la diferencia con el saldo de Caja se registra como ajuste, que no se anula.
+- **CAJ-11** Cada caja tiene un día de operación, el día de la tienda en que se abrió; sus ventas y todo lo vinculado a ella o a sus ventas cuentan para ese día aunque se carguen pasada la medianoche o la caja se cierre al día siguiente, y la fecha y hora reales se siguen viendo. Historial de ventas (POS-09), reportes (FIN-10), dashboard (DSH-01 a DSH-03), movimientos de Finanzas y historiales de Compras y Deudas usan ese día; la caja inicial propuesta (CAJ-10) y el efectivo esperado (CAJ-03) no cambian. Las cajas #146, #147 y #148 se corrigen una vez al 28, 29 y 30/10.
 
 ### 3.7 Punto de venta · V1
 
@@ -181,7 +182,7 @@ Detalle en `sales.md`.
 - **POS-06** Numeración de venta única y correlativa. En desarrollo los números saltan porque las pruebas consumen las secuencias; en producción no.
 - **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33).
 - **POS-08** Detalle de venta de solo lectura (ítems, descuentos, pagos, auditoría de anulación), reutilizable en POS e historial.
-- **POS-09** Historial de ventas paginado con filtros por fecha, estado, tipo de venta, método de pago y usuario.
+- **POS-09** Historial de ventas paginado con filtros por fecha (día de operación, CAJ-11), estado, tipo de venta, método de pago y usuario.
 - **POS-10** Venta por peso: cantidades decimales en kilos y presentaciones del producto (CAT-11).
 - **POS-11** Línea libre: productos especiales del catálogo, sin inventario, que piden nombre y precio al vender. Sin descuento por unidad, productos rápidos, presentaciones ni venta al costo; el descuento general se reparte solo entre las líneas normales (P-44). Llevan categoría y proveedor reales (P-50).
 - **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, mostrando antes la utilidad que tendrá la línea, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
@@ -332,6 +333,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-49 | ¿Qué cliente propone el cobro de la venta al costo? | «Sin cliente»; al dar crédito se propone el único cliente activo. |
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
+| P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el de su apertura; lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
 
 ## 6. Hoja de ruta
 
@@ -353,6 +355,7 @@ Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
 - [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
+- [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
 - [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.
 - [ ] Reportes, fase 2: comparar dos semanas con las tablas dinámicas (`reports.md`).
 
