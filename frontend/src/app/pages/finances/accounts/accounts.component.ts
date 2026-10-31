@@ -8,6 +8,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { operationDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-accounts',
@@ -23,6 +24,9 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
   styleUrls: ['./accounts.component.css']
 })
 export class AccountsComponent implements OnInit {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:30», as in the movements list
+  readonly dayMark = operationDayLabel;
+
   private readonly toast = inject(ToastService);
   private readonly accountService = inject(FinancialAccountService);
   private readonly transactionService = inject(FinancialTransactionService);

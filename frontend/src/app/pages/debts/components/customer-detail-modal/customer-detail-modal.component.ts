@@ -6,6 +6,7 @@ import { VoidReasonModalComponent } from '../../../purchases/components/void-rea
 import { CustomerService } from '../../../../core/debt/customer.service';
 import { CustomerHistory, CustomerHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
+import { operationDayLabel } from '../../../../shared/utils/store-date';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 // DEU-06 and DEU-07: the customer's history with the receivable after each entry, collection and its void
@@ -17,6 +18,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
   styleUrls: ['./customer-detail-modal.component.css']
 })
 export class CustomerDetailModalComponent {
+  // CAJ-11: «Día 31/10 · cargada el 01/11 00:20» for an entry that counts for another day than the one it was recorded
+  readonly dayMark = operationDayLabel;
+
   private readonly toast = inject(ToastService);
   private readonly customerService = inject(CustomerService);
 

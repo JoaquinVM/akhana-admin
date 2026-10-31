@@ -88,6 +88,11 @@ describe('PurchaseDetailModalComponent', () => {
     expect(component.voidMessage()).toContain('hecho por Mami');
   });
 
+  it('CAJ-11: un pago desde Caja cargado pasada la medianoche se marca con el día de su caja', () => {
+    expect(component.dayMark('2026-10-31', '2026-11-01T04:30:00Z')).toBe('Día 31/10 · cargada el 01/11 00:30');
+    expect(component.dayMark('2026-10-25', '2026-10-25T12:00:00Z')).toBeNull();
+  });
+
   it('COM-05: muestra el error del servidor', () => {
     purchaseService.registerPayment.mockReturnValue(throwError(() => ({ error: { message: 'El pago supera el saldo pendiente del pedido (Bs 300.00).' } })));
     component.paymentSource.set('account:acc-1');

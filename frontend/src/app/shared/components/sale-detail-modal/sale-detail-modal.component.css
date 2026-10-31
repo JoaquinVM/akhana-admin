@@ -58,6 +58,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* A grid item does not shrink below its content by default: long values would spill over the next column */
+  min-width: 0;
 }
 
 .field-label {
@@ -553,4 +555,18 @@
 .assign-error {
   font-size: 0.75rem;
   color: #dc2626;
+}
+
+/* CAJ-11: counts for another day than the one it was recorded */
+.day-mark {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8a5a00;
+  background: #fff4dc;
+  border-radius: 6px;
+  padding: 1px 6px;
+  /* CAJ-11: wraps inside its column instead of covering the next one */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

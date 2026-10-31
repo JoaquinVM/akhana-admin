@@ -76,6 +76,8 @@ export interface FinancialTransaction {
   type: FinancialTransactionType;
   amount: number;
   transactionDate: string;
+  // CAJ-11: day it counts for (yyyy-MM-dd); transactionDate is the real time it was recorded
+  operationDate?: string | null;
   description: string;
   notes?: string;
   status: FinancialTransactionStatus;
@@ -149,9 +151,10 @@ export interface FinancialSummary {
   recentTransactions: FinancialTransaction[];
 }
 
+// CAJ-11: from and to are days of operation (yyyy-MM-dd), both inclusive
 export interface TransactionFilterParams {
-  startDate?: string;
-  endDate?: string;
+  from?: string;
+  to?: string;
   type?: FinancialTransactionType;
   accountId?: string;
   categoryId?: string;

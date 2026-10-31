@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -51,7 +50,7 @@ public class ReportServiceImpl implements ReportService {
         Range range = Range.of(from, to);
 
         Map<LocalDate, Sums> days = new TreeMap<>();
-        for (Object[] row : saleRepository.sumByDayAndType(range.fromInstant(), range.toInstant())) {
+        for (Object[] row : saleRepository.sumByDayAndType(range.from(), range.to())) {
             Sums day = days.computeIfAbsent(LocalDate.parse((String) row[0]), d -> new Sums());
             long sales = ((Number) row[2]).longValue();
             BigDecimal quantity = (BigDecimal) row[3];
@@ -100,7 +99,7 @@ public class ReportServiceImpl implements ReportService {
 
         // Lines grouped by sale, to spread each sale's general discount over its own lines
         Map<Object, List<Object[]>> sales = new LinkedHashMap<>();
-        for (Object[] line : saleRepository.findReportLines(range.fromInstant(), range.toInstant())) {
+        for (Object[] line : saleRepository.findReportLines(range.from(), range.to())) {
             sales.computeIfAbsent(line[0], id -> new ArrayList<>()).add(line);
         }
 
@@ -158,7 +157,7 @@ public class ReportServiceImpl implements ReportService {
         Range range = Range.of(from, to);
 
         Map<String, MovementSums> months = new TreeMap<>();
-        for (Object[] row : financialTransactionRepository.sumByMonthAndCategory(range.fromInstant(), range.toInstant())) {
+        for (Object[] row : financialTransactionRepository.sumByMonthAndCategory(range.from(), range.to())) {
             MovementSums month = months.computeIfAbsent((String) row[0], m -> new MovementSums());
             CategoryKey category = new CategoryKey((UUID) row[2], (String) row[3]);
             // Expenses are shown negative, like the spreadsheet's pivot table
@@ -166,7 +165,7 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal amount = "GASTO".equals(row[1]) ? ((BigDecimal) row[4]).negate() : (BigDecimal) row[4];
             sums.merge(category, amount, BigDecimal::add);
         }
-        for (Object[] row : financialTransactionRepository.sumTransfersByMonth(range.fromInstant(), range.toInstant())) {
+        for (Object[] row : financialTransactionRepository.sumTransfersByMonth(range.from(), range.to())) {
             months.computeIfAbsent((String) row[0], m -> new MovementSums()).transfers.merge(
                 new TransferKey((UUID) row[1], (String) row[2], (UUID) row[3], (String) row[4]),
                 (BigDecimal) row[5], BigDecimal::add);
@@ -326,7 +325,7 @@ public class ReportServiceImpl implements ReportService {
         return value.setScale(3, RoundingMode.HALF_UP);
     }
 
-    /** A store-day range: "to" includes the whole day, like the sales history (POS-09). */
+    /** A range of days of operation (CAJ-11): "to" includes the whole day, like the sales history (POS-09). */
     private record Range(LocalDate from, LocalDate to) {
 
         static Range of(LocalDate from, LocalDate to) {
@@ -339,14 +338,6 @@ public class ReportServiceImpl implements ReportService {
                 throw new IllegalArgumentException("El rango del reporte no puede superar un año.");
             }
             return new Range(start, end);
-        }
-
-        Instant fromInstant() {
-            return from.atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
-        }
-
-        Instant toInstant() {
-            return to.plusDays(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
         }
     }
 

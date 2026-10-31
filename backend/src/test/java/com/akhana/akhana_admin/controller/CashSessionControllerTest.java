@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -80,7 +81,8 @@ class CashSessionControllerTest {
             new BigDecimal("100.00"),
             null,
             0,
-            false
+            false,
+            LocalDate.of(2026, 10, 31)
         );
 
         User mockUser = User.builder()
@@ -171,7 +173,8 @@ class CashSessionControllerTest {
             new BigDecimal("150.00"),
             BigDecimal.ZERO,
             1,
-            false
+            false,
+            LocalDate.of(2026, 10, 31)
         );
 
         when(cashSessionService.closeCurrentSession(any(CloseCashRequest.class), any())).thenReturn(closedSummary);
@@ -231,7 +234,8 @@ class CashSessionControllerTest {
             null,
             null,
             null,
-            null
+            null,
+            LocalDate.of(2026, 10, 31)
         );
 
         when(cashSessionService.getSessionDetail(sessionId)).thenReturn(detailResponse);

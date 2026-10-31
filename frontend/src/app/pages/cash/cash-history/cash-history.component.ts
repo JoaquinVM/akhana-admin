@@ -7,11 +7,13 @@ import {
   CashSessionStatus
 } from '../../../core/cash/models/cash.models';
 import { CashDetailModalComponent } from '../components/cash-detail-modal/cash-detail-modal.component';
+import { StoreDayPipe } from '../../../shared/utils/store-day.pipe';
+import { sessionDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-cash-history',
   standalone: true,
-  imports: [CommonModule, CashDetailModalComponent],
+  imports: [CommonModule, CashDetailModalComponent, StoreDayPipe],
   templateUrl: './cash-history.component.html',
   styleUrls: ['./cash-history.component.css']
 })
@@ -37,6 +39,11 @@ export class CashHistoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSessions();
+  }
+
+  // CAJ-11: «Día 28/10 · abierta el 29/10» when its day is not the day it was opened
+  dayMark(session: CashSessionSummary): string | null {
+    return sessionDayLabel(session.operationDate, session.openedAt);
   }
 
   loadSessions(): void {

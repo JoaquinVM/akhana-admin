@@ -13,6 +13,6 @@ import java.util.UUID;
 public interface CustomerCollectionRepository extends JpaRepository<CustomerCollection, UUID> {
 
     @Query("SELECT k FROM CustomerCollection k JOIN FETCH k.account WHERE k.customer.id = :customerId " +
-           "ORDER BY k.collectionDate, k.createdAt")
+           "ORDER BY k.operationDate, k.collectionDate, k.createdAt")
     List<CustomerCollection> findByCustomerId(@Param("customerId") UUID customerId);
 }

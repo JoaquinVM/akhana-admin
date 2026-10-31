@@ -14,20 +14,27 @@ export function storeMonthStart(now: Date = new Date()): string {
   return storeToday(now).slice(0, 8) + '01';
 }
 
-/** The instant a store day starts (00:00 in Bolivia), as an ISO string; undefined for an invalid day. */
-export function storeDayStartIso(day: string): string | undefined {
-  return toIso(`${day}T00:00:00.000-04:00`);
+/** dd/MM of a store day sent as yyyy-MM-dd. */
+function dayMonth(day: string): string {
+  return `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 }
 
-/** The last millisecond of a store day (23:59:59.999 in Bolivia), as an ISO string. */
-export function storeDayEndIso(day: string): string | undefined {
-  return toIso(`${day}T23:59:59.999-04:00`);
-}
-
-function toIso(value: string): string | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) {
-    return undefined;
+/**
+ * CAJ-11: «Día 31/10 · cargada el 01/11 00:20» for a sale, movement or payment whose day of operation differs from
+ * the store day it was recorded; null when they match (or there is no day).
+ */
+export function operationDayLabel(operationDate: string | null | undefined, recordedAt: string | null | undefined): string | null {
+  if (!operationDate || !recordedAt || storeToday(new Date(recordedAt)) === operationDate) {
+    return null;
   }
-  const date = new Date(value);
-  return isNaN(date.getTime()) ? undefined : date.toISOString();
+  return `Día ${dayMonth(operationDate)} · cargada el ${formatDate(recordedAt, 'dd/MM HH:mm', 'en-US', STORE_TIMEZONE)}`;
+}
+
+/** CAJ-11: «Día 28/10 · abierta el 29/10» for a cash session whose day differs from the day it was opened; else null. */
+export function sessionDayLabel(operationDate: string | null | undefined, openedAt: string | null | undefined): string | null {
+  if (!operationDate || !openedAt) {
+    return null;
+  }
+  const openedDay = storeToday(new Date(openedAt));
+  return openedDay === operationDate ? null : `Día ${dayMonth(operationDate)} · abierta el ${dayMonth(openedDay)}`;
 }

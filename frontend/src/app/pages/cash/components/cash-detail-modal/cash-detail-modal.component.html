@@ -77,6 +77,15 @@
               <span class="audit-k">Fecha y hora:</span>
               <span class="audit-v">{{ cs.openedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
             </div>
+            <div class="audit-row">
+              <span class="audit-k">Día de operación:</span>
+              <span class="audit-v">
+                {{ cs.operationDate | storeDay }}
+                @if (sessionMark(cs); as mark) {
+                  <span class="day-mark">{{ mark }}</span>
+                }
+              </span>
+            </div>
             @if (cs.openingComment) {
               <div class="audit-comment-block">
                 <span class="comment-label">Comentario:</span>
@@ -160,7 +169,13 @@
                   @for (s of cs.sales; track s.id) {
                     <tr>
                       <td><span class="sale-tag">{{ s.saleNumber }}</span></td>
-                      <td>{{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td>
+                        @if (saleMark(s); as mark) {
+                          <span class="day-mark">{{ mark }}</span>
+                        } @else {
+                          {{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                        }
+                      </td>
                       <td>{{ s.createdBy }}</td>
                       <td>
                         <span

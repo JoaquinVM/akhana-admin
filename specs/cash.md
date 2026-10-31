@@ -209,6 +209,72 @@ El sistema SHALL listar el historial cronológico de sesiones de caja y permitir
 - **WHEN** el usuario selecciona una caja del historial
 - **THEN** el sistema muestra información de apertura (usuario, fecha, monto inicial, comentario si existe), ventas asociadas por método de pago (`EFECTIVO` y `QR`), información de cierre (usuario, fecha, monto de cierre, comentario si existe, diferencia) y el desglose de cortes de denominación si fueron utilizados
 
+### Requirement: Día de operación de la caja (CAJ-11)
+El sistema SHALL dar a cada caja un día de operación, el día de la tienda (America/La_Paz) en que se abrió, y SHALL contar para ese día sus ventas y todos los movimientos vinculados a ella o a sus ventas (gastos, pagos de pedidos, ingresos y retiros, ajustes de apertura y cierre, devoluciones y cobros desde Caja, e ingresos en efectivo y QR de sus ventas), aunque se registren pasada la medianoche o la caja se cierre al día siguiente. La fecha y hora reales de carga se guardan y se siguen viendo.
+
+#### Scenario: Apertura
+- **WHEN** se abre una caja a las 09:10 del 31/10 (hora de La Paz)
+- **THEN** su día de operación es 31/10
+
+#### Scenario: Venta pasada la medianoche
+- **WHEN** en esa caja se registra una venta a las 00:20 del 1/11
+- **THEN** la venta cuenta para el 31/10 en el historial de ventas, en ventas por día, en ventas por proveedor, en los totales y en el dashboard; su detalle muestra «Día 31/10 · cargada el 01/11 00:20»
+
+#### Scenario: Movimientos pasada la medianoche
+- **WHEN** en esa caja se registra a las 00:30 del 1/11 un gasto, un pago de pedido, un ingreso o retiro, una devolución o un cobro desde Caja
+- **THEN** el movimiento cuenta para el 31/10 en Finanzas, en movimientos por categoría y mes, en gastos por categoría del dashboard y en Compras y Deudas; su fecha y hora de carga siguen siendo 01/11 00:30
+
+#### Scenario: Cierre al día siguiente
+- **WHEN** esa caja se cierra a las 08:00 del 1/11
+- **THEN** el ajuste por sobrante o faltante (CAJ-09) cuenta para el 31/10 y el cierre guarda la fecha y hora real 01/11 08:00
+
+#### Scenario: Ingreso QR de una venta
+- **WHEN** una venta QR de esa caja genera su ingreso en la cuenta QR (sin caja)
+- **THEN** ese ingreso también cuenta para el 31/10, porque va con su venta
+
+#### Scenario: Ventas de Mami y al costo en Deudas
+- **WHEN** una venta de esa caja es de un producto de Mami (POS-13) o es al costo a crédito (DEU-05)
+- **THEN** en Deudas se ve en el 31/10; los saldos no cambian
+
+#### Scenario: Movimiento que no es de Caja
+- **WHEN** se registra un movimiento que no es de Caja ni de una venta (por ejemplo, un gasto desde Bisa en Finanzas, o un cobro por QR)
+- **THEN** su día es el de su registro, como antes
+
+#### Scenario: Caja inicial propuesta
+- **WHEN** se pide la caja inicial propuesta (CAJ-10)
+- **THEN** sigue siendo el monto de la última caja cerrada según su fecha y hora real de cierre; el efectivo esperado (CAJ-03) tampoco cambia
+
+#### Scenario: Historial y detalle de cajas
+- **WHEN** el historial de cajas muestra una caja
+- **THEN** se ve su día de operación (columna Día) y, si es distinto del día de apertura, «Día 28/10 · abierta el 29/10»; el detalle muestra lo mismo en «Datos de apertura» y en la pestaña Ventas marca las ventas cargadas otro día
+
+#### Scenario: Marcas y filtros
+- **WHEN** una venta o un movimiento tiene un día de operación distinto al de su carga
+- **THEN** el historial de ventas, el detalle de la venta, la lista de movimientos de Finanzas y los historiales de Compras y Deudas muestran «Día dd/mm · cargada el dd/mm hh:mm»; los reportes no llevan marca, y filtrar por fechas el historial de ventas o la lista de Finanzas filtra por día de operación
+
+#### Scenario: Al desplegar
+- **WHEN** se aplica el cambio
+- **THEN** cada caja ya registrada toma como día el de su apertura y cada venta, movimiento, pago de pedido, devolución y cobro el día en que se registró (La Paz), así que fuera de la corrección de las #146 a #148 ningún reporte cambia; las cajas, ventas y movimientos históricos (FIN-11) mantienen el día de la planilla
+
+### Requirement: Corrección única de las cajas #146, #147 y #148 (CAJ-11)
+Las ventas del 28, 29 y 30/10/2026 se cargaron en cajas abiertas otros días (la #148 se abre el 31/10 para cargar el 30/10). Por decisión de Joaquín del 31/10/2026, una migración que corre una sola vez pasa la #146 al 28/10, la #147 al 29/10 y la #148 al 30/10. No existe pantalla, botón ni permiso para cambiar el día de una caja.
+
+#### Scenario: Despliegue en producción
+- **WHEN** se despliega con la #146, la #147 y la #148 ya cerradas
+- **THEN** cada una pasa a su día con todas sus ventas (también las anuladas), todos sus movimientos (también los anulados, los ajustes de apertura y cierre y los ingresos QR de sus ventas) y los pagos de pedidos, devoluciones y cobros de esos movimientos, que en Compras y Deudas se ven en el nuevo día
+
+#### Scenario: Nada más cambia
+- **WHEN** corre la corrección
+- **THEN** no cambian montos, efectivo esperado, monto de cierre, diferencia, cortes, número de caja, usuarios, fechas y horas reales ni saldos
+
+#### Scenario: Bases de desarrollo y pruebas
+- **WHEN** alguna de esas cajas no existe, es histórica, sigue abierta o no se abrió (La Paz) entre el 28/10 y el 2/11/2026
+- **THEN** esa caja no cambia
+
+#### Scenario: Reportes después del despliegue
+- **WHEN** se ven ventas por día del 28, 29 y 30/10
+- **THEN** el 28/10 suma las ventas de la #146, el 29/10 las de la #147 y el 30/10 las de la #148; lo mismo en ventas por proveedor, totales, movimientos por categoría y mes, dashboard e historial de ventas filtrado por día
+
 ### Requirement: Navegación y estado de caja en el menú principal
 El sistema SHALL mantener la opción principal "POS" con una etiqueta reactiva de estado (`Abierta` o `Cerrada`) correspondiente al estado real de la sesión compartida, e integrar la opción "Historial de cajas" dentro del menú desplegable "Ventas".
 
@@ -231,3 +297,4 @@ Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md
 - **T-14** · V1 — Hallazgo: Saldos de cuenta (`current_balance`) y totales de caja se actualizan leyendo y reescribiendo la entidad, sin bloqueo ni `@Version`. Dos ventas o movimientos simultáneos pueden perder una actualización y desalinear el saldo. La apertura de caja verifica "no hay otra abierta" sin bloqueo. Requerimiento: Toda operación de dinero bloquea la cuenta y la caja que toca (`SELECT … FOR UPDATE` o versión optimista con reintento) dentro de su transacción, con prueba concurrente. Hecha el 25-10-2026: bloqueo pesimista (`@Lock(PESSIMISTIC_WRITE)`) en los repositorios. Orden fijo para evitar deadlocks: primero el movimiento (anulación o edición), luego la caja, luego las cuentas ordenadas por id en una sola consulta (`findAllByIdForUpdate`, `findSaleAccountsForUpdate`). Lo aplican ventas, anulación de ventas, cierre de caja, el endpoint heredado de ventas de caja, y alta, edición y anulación de movimientos de finanzas (incluye gastos de caja y transferencias); los movimientos que tocan la cuenta Caja bloquean también la caja abierta. La apertura se apoya en el índice único parcial de caja ABIERTA: si dos aperturas pasan la verificación a la vez, la segunda falla al guardar y responde el mismo «Ya existe una caja abierta». Prueba `MoneyConcurrencyIntegrationTest` contra PostgreSQL: 8 ventas simultáneas (saldo de Caja, totales de caja y números distintos), 8 transferencias cruzadas entre dos cuentas, y 8 aperturas simultáneas (queda una sola); limpia sus datos y se omite si la base ya tiene una caja abierta. Orden unificado el 29-10-2026: movimiento o documento (pedido) → caja → persona o cliente → cuentas por id. Antes las devoluciones a personas y los cobros bloqueaban la persona o el cliente antes que la caja, al revés que las ventas; anular un pedido bloqueaba las personas antes que la caja; y registrar un pedido con envío desde Bisa y primer pago desde Caja bloqueaba Bisa antes que la caja. Ahora `registerPurchase` bloquea primero la caja si alguna cuenta es Caja, luego la persona y luego las dos cuentas juntas; `voidPurchase` bloquea la caja de sus movimientos antes que las personas; devoluciones y cobros bloquean la caja antes que la persona o el cliente, y sus anulaciones leen el movimiento solo para saber su caja y vuelven a leer el registro después de los bloqueos. Pruebas de orden en `CreditorServiceTest` y `PurchaseServiceTest`.
 - **T-15** · V1 — Hallazgo: El efectivo esperado se calcula como inicial + ventas en efectivo − gastos manuales de Caja. Las transferencias desde Caja se vinculan a la caja pero la consulta las excluye, y las transferencias hacia Caja ni se vinculan: el saldo de la cuenta Caja y el efectivo esperado divergen. La fórmula está copiada en cinco lugares (caja, ventas, finanzas ×3). Requerimiento: Un único cálculo de efectivo esperado según CAJ-03, que incluye transferencias desde y hacia Caja (CAJ-08) y pagos de pedidos (COM-06), usado por todos los servicios y cubierto con pruebas. Hecha el 25-10-2026: `ExpectedCashCalculator` (inicial + ventas en efectivo + transferencias hacia Caja − gastos de Caja − transferencias desde Caja, solo movimientos activos de la caja) lo usan caja, ventas y finanzas; el POS muestra el valor del servidor y ya no lo recalcula, y su lista de gastos solo muestra `GASTO_MANUAL`. Las transferencias hacia Caja se vinculan a la caja abierta. Se mantiene el orden de bloqueo de T-14. Pruebas: `ExpectedCashCalculatorTest`, sumas contra PostgreSQL en `FinancialTransactionRepositoryTest` (excluye anulados, otras cuentas y otras cajas) y cierre con transferencias en `CashSessionServiceTest`. Desde el 25-10-2026 los pagos de pedidos y los envíos pagados desde Caja entran como gastos de Caja (COM-06).
 - **T-16** · V1 — Hallazgo: Un gasto o transferencia desde Caja sin caja abierta se registra igual, sin caja. El cliente puede enviar `cashSessionId` de una caja cerrada o de otra cuenta. Editar o anular un gasto de una caja cerrada recalcula el efectivo esperado de esa caja (rompe CAJ-06). Requerimiento: Los movimientos de la cuenta Caja exigen caja abierta y el servidor los vincula a ella; los movimientos de una caja cerrada no se editan ni anulan, se corrigen en la caja actual. Hecha el 25-10-2026: gasto o transferencia desde o hacia Caja sin caja abierta responde «Los movimientos de la cuenta Caja requieren una caja abierta.»; el `cashSessionId` del cliente se ignora (los movimientos fuera de Caja quedan sin caja). La edición ya no cambia la cuenta (T-05), así que un gasto no entra ni sale de Caja al editarse. Editar o anular un movimiento de una caja cerrada responde «No se pueden editar/anular movimientos de una caja cerrada; corríjalos en la caja actual.». Pruebas en `FinancialTransactionServiceTest`.
+- **CAJ-11** Día de operación de la caja. Hecho el 31-10-2026 (trabajo 007 de Foundry, spec versión 2). Migración `V21__cash_operation_day.sql`: columna `operation_date DATE NOT NULL` en `cash_sessions`, `sales`, `financial_transactions`, `purchase_payments`, `creditor_repayments` y `customer_collections`, cargada con `(fecha AT TIME ZONE 'America/La_Paz')::date` de `opened_at`, `created_at`, `transaction_date`, `payment_date`, `repayment_date` y `collection_date` (la misma expresión que usaban los reportes, así que al desplegar nada cambia de día; las históricas están a las 09:00 o 12:00 del día de la planilla), e índices por día en cajas, ventas y movimientos. Cada alta pone el día (sin `@PrePersist`: olvidarlo falla por el `NOT NULL`): la caja, el de su apertura (`StoreFormat.storeDay`); la venta, el de su caja; los ingresos de una venta (efectivo y QR), el de la venta; los movimientos de Caja (gastos, ingresos y retiros, pagos de pedidos y envíos, devoluciones, cobros, ajustes de apertura y cierre), el de la caja abierta bloqueada; el pago de pedido con cuenta, el de su gasto, y el pagado por una persona, el día de su registro; lo que no es de Caja ni de una venta, el día de su registro; las altas de la migración histórica, el día de la planilla. En las entidades el día es `updatable = false` salvo en la caja. Lecturas por día de operación con `LocalDate` inclusivos (`operation_date BETWEEN :from AND :to`): historial de ventas (orden día y hora de carga), ventas por día y por proveedor, movimientos por categoría y mes y transferencias (FIN-10), cobro y top de productos del dashboard, lista de movimientos de Finanzas y de una cuenta (`GET /api/finances/transactions` y `/accounts/{id}/transactions` reciben ahora `from` y `to` como días en vez de `startDate`/`endDate` como instantes), historial de personas y de clientes de Deudas (orden día, hora y alta) y pagos de un pedido. Sin cambio: caja inicial propuesta (último cierre real), efectivo esperado, «últimos movimientos» del resumen de Finanzas, consumos y fecha de los pedidos. Las respuestas de venta, movimiento, pago de pedido, caja (resumen y detalle) y entradas de historial de Deudas traen `operationDate`. Frontend: `operationDayLabel` y `sessionDayLabel` en `shared/utils/store-date.ts`; marca «Día dd/mm · cargada el dd/mm hh:mm» en historial y detalle de ventas, Finanzas, pagos de un pedido y detalle de persona y cliente; columna Día y «Día dd/mm · abierta el dd/mm» en historial y detalle de cajas. Corrección única en `V22__cash_sessions_146_148_day_fix.sql` (#146 → 28/10, #147 → 29/10, #148 → 30/10, solo si existe, no es histórica, está `CERRADA` y se abrió en La Paz entre el 28/10 y el 2/11/2026), con el motivo en el SQL: mueve las ventas de la caja por `cash_session_id`, sus movimientos por `cash_session_id` y los de sus ventas por `sale_id`, y los pagos, devoluciones y cobros de esos movimientos; solo cambia `operation_date`. Pruebas: `CashOperationDayMigrationIntegrationTest` (contra PostgreSQL: vuelve a correr el SQL de V22 y los `UPDATE` de V21 sobre datos sembrados dentro de la transacción de la prueba; mueve las tres cajas cerradas de la ventana con anuladas, ajustes, QR, pagos, devoluciones y cobros, compara todas las demás columnas y los saldos antes y después y las ventas por día; no toca una caja abierta, histórica, abierta el 27/10 23:30 o el 3/11, ni una base sin esas cajas), `SaleRepositoryTest`, `FinancialTransactionRepositoryTest`, `DashboardRepositoryTest`, `MigrationIntegrationTest` (las históricas quedan en el día de la planilla), `CashSessionServiceTest`, `SaleServiceTest`, `FinancialTransactionServiceTest`, `PurchaseServiceTest`, `CreditorServiceTest`, `CustomerServiceTest`, `StoreFormatTest`, `FinancialControllerTest`, y en el frontend `store-date.spec.ts`, `sales-table`, `sale-detail-modal`, `transactions-table`, `transactions.component`, `cash-history`, `cash-detail-modal`, `purchase-detail-modal`, `creditor-detail-modal` y `customer-detail-modal`. Comprobación con una copia de la base local (151 cajas, 108 ventas, 1.568 movimientos): después de V21 ninguna fila de las seis tablas tiene un día distinto del de su registro y las ventas y movimientos por día son idénticos a los de antes.

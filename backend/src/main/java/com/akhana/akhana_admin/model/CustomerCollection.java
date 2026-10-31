@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /** Money a customer pays later for a sale on credit (DEU-06); its income points to it (customer_collection_id). */
@@ -34,6 +35,10 @@ public class CustomerCollection {
 
     @Column(name = "collection_date", nullable = false)
     private Instant collectionDate;
+
+    // CAJ-11: store day it counts for (the day of the session it was collected into, else the day it was recorded)
+    @Column(name = "operation_date", nullable = false, updatable = false)
+    private LocalDate operationDate;
 
     @Column(length = 500)
     private String comment;

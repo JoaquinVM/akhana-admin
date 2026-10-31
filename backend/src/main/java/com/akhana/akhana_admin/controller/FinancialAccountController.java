@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,10 +43,11 @@ public class FinancialAccountController {
     @GetMapping("/{id}/transactions")
     public ResponseEntity<List<FinancialTransactionResponse>> getAccountTransactions(
             @PathVariable UUID id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate
+            // CAJ-11: days of operation, inclusive
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        return ResponseEntity.ok(financialTransactionService.getAccountTransactions(id, startDate, endDate));
+        return ResponseEntity.ok(financialTransactionService.getAccountTransactions(id, from, to));
     }
 
     @PostMapping

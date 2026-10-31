@@ -24,7 +24,13 @@
               <span class="type-badge">Al costo</span>
             }
           </td>
-          <td>{{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            @if (dayMark(s); as mark) {
+              <span class="day-mark" title="Cuenta para el día de su caja">{{ mark }}</span>
+            } @else {
+              {{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}
+            }
+          </td>
           @if (showSession()) {
             <td>{{ s.sessionNumber != null ? 'Sesión #' + s.sessionNumber : (s.historical ? 'Histórico' : '—') }}</td>
           }

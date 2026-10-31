@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.model.CreditorRepaymentConcept;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +19,10 @@ public record CreditorHistoryResponse(CreditorResponse creditor, List<Entry> ent
     public record Entry(
         EntryType type,
         UUID id,
+        // Real date and time it was recorded
         Instant date,
+        // CAJ-11: day it counts for (the day of its session or sale)
+        LocalDate operationDate,
         BigDecimal amount,
         // PAYMENT
         UUID purchaseId,

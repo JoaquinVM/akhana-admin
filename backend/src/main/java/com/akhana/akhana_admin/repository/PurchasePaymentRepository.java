@@ -14,6 +14,6 @@ public interface PurchasePaymentRepository extends JpaRepository<PurchasePayment
 
     // Purchase payments made by a person, with their purchase and supplier, for the history (DEU-04)
     @Query("SELECT p FROM PurchasePayment p JOIN FETCH p.purchase pu JOIN FETCH pu.supplier " +
-           "WHERE p.creditor.id = :creditorId ORDER BY p.paymentDate, p.createdAt")
+           "WHERE p.creditor.id = :creditorId ORDER BY p.operationDate, p.paymentDate, p.createdAt")
     List<PurchasePayment> findByCreditorId(@Param("creditorId") UUID creditorId);
 }

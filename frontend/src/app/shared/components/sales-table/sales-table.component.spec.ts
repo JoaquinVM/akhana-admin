@@ -50,6 +50,15 @@ describe('SalesTableComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[aria-label="Anular venta"]').length).toBe(4);
   });
 
+  it('CAJ-11: marca la venta cargada pasada la medianoche con su día de operación', () => {
+    const late: Sale = { ...base, id: 's-5', saleNumber: 'VTA-000005', createdAt: '2026-11-01T04:20:00Z', operationDate: '2026-10-31' };
+    fixture.componentRef.setInput('sales', [{ ...base, operationDate: '2026-10-20' }, late]);
+    fixture.detectChanges();
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('.day-mark')).toBeNull();
+    expect(rows[1].querySelector('.day-mark').textContent).toContain('Día 31/10 · cargada el 01/11 00:20');
+  });
+
   it('POS-07: no anula una venta anulada ni con motivo de bloqueo', () => {
     const emitted: Sale[] = [];
     component.voidSale.subscribe(s => emitted.push(s));

@@ -61,16 +61,16 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     @Override
     @Transactional(readOnly = true)
     public List<FinancialTransactionResponse> getTransactions(
-            Instant startDate,
-            Instant endDate,
+            LocalDate from,
+            LocalDate to,
             FinancialTransactionType type,
             UUID accountId,
             UUID categoryId,
             FinancialTransactionStatus status,
             String search
     ) {
-        Instant effectiveStart = startDate != null ? startDate : getDefaultStartDate();
-        Instant effectiveEnd = endDate != null ? endDate : getDefaultEndDate();
+        LocalDate effectiveStart = from != null ? from : getDefaultStartDate();
+        LocalDate effectiveEnd = to != null ? to : getDefaultEndDate();
         String effectiveSearch = (search != null && !search.isBlank()) ? search.trim() : null;
 
         return financialTransactionRepository.filterTransactions(
@@ -86,12 +86,12 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
 
     @Override
     @Transactional(readOnly = true)
-    public List<FinancialTransactionResponse> getAccountTransactions(UUID accountId, Instant startDate, Instant endDate) {
+    public List<FinancialTransactionResponse> getAccountTransactions(UUID accountId, LocalDate from, LocalDate to) {
         financialAccountRepository.findByIdAndDeletedAtIsNull(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + accountId));
 
-        Instant effectiveStart = startDate != null ? startDate : getDefaultStartDate();
-        Instant effectiveEnd = endDate != null ? endDate : getDefaultEndDate();
+        LocalDate effectiveStart = from != null ? from : getDefaultStartDate();
+        LocalDate effectiveEnd = to != null ? to : getDefaultEndDate();
 
         return financialTransactionRepository.findByAccountAndDateRange(accountId, effectiveStart, effectiveEnd)
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -137,6 +137,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .cashSessionId(sessionToLink)
                 .amount(amount)
                 .transactionDate(txDate)
+                // CAJ-11: a movement of Caja counts for the day of its session; any other, for the day it is recorded
+                .operationDate(lockedSession.map(CashSession::getOperationDate).orElse(StoreFormat.storeDay(txDate)))
                 .description(request.getDescription().trim())
                 .notes(request.getNotes() != null ? request.getNotes().trim() : null)
                 .status(FinancialTransactionStatus.ACTIVO)
@@ -526,12 +528,12 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .filter(account -> account.getDeletedAt() == null);
     }
 
-    private Instant getDefaultStartDate() {
-        return YearMonth.now(StoreFormat.STORE_ZONE).atDay(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant();
+    private LocalDate getDefaultStartDate() {
+        return YearMonth.now(StoreFormat.STORE_ZONE).atDay(1);
     }
 
-    private Instant getDefaultEndDate() {
-        return LocalDate.now(StoreFormat.STORE_ZONE).atTime(23, 59, 59, 999_999_999).atZone(StoreFormat.STORE_ZONE).toInstant();
+    private LocalDate getDefaultEndDate() {
+        return StoreFormat.today();
     }
 
     private FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {
@@ -570,6 +572,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .type(tx.getType())
                 .amount(tx.getAmount())
                 .transactionDate(tx.getTransactionDate())
+                .operationDate(tx.getOperationDate())
                 .description(tx.getDescription())
                 .notes(tx.getNotes())
                 .status(tx.getStatus())

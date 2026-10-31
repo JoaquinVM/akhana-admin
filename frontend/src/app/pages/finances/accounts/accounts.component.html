@@ -298,7 +298,13 @@
             <tbody>
               @for (tx of accountTransactions(); track tx.id) {
                 <tr [class.row-voided]="tx.status === 'ANULADO'">
-                  <td class="cell-date">{{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td class="cell-date">
+                    @if (dayMark(tx.operationDate, tx.transactionDate); as mark) {
+                      <span class="day-mark" title="Cuenta para el día de su caja">{{ mark }}</span>
+                    } @else {
+                      {{ tx.transactionDate | date:'dd/MM/yyyy HH:mm' }}
+                    }
+                  </td>
                   <td>
                     <span class="tx-badge" [class]="'tx-type-' + tx.type.toLowerCase()">
                       {{ tx.type }}

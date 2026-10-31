@@ -10,6 +10,7 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import com.akhana.akhana_admin.service.impl.CashSessionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -99,6 +101,8 @@ class CashSessionServiceTest {
         assertThat(response.openingAmount()).isEqualByComparingTo("150.00");
         assertThat(response.expectedCash()).isEqualByComparingTo("150.00");
         assertThat(response.openedBy()).isEqualTo("cajero1");
+        // CAJ-11: its day of operation is the store day it was opened
+        assertThat(response.operationDate()).isEqualTo(StoreFormat.storeDay(response.openedAt()));
     }
 
     private CashSession closedSession(String closingAmount) {
@@ -229,6 +233,8 @@ class CashSessionServiceTest {
         assertThat(tx.getType()).isEqualTo(FinancialTransactionType.INGRESO_MANUAL);
         assertThat(tx.getAmount()).isEqualByComparingTo("20.00");
         assertThat(cash.getCurrentBalance()).isEqualByComparingTo("120.00");
+        // CAJ-11: the opening adjustment counts for the day of the new session
+        assertThat(tx.getOperationDate()).isEqualTo(StoreFormat.storeDay(tx.getTransactionDate()));
     }
 
     @Test
@@ -473,8 +479,10 @@ class CashSessionServiceTest {
     }
 
     @Test
-    @DisplayName("CAJ-09: un faltante se registra como gasto de Ajuste en Caja y baja su saldo")
+    @DisplayName("CAJ-09, CAJ-11: un faltante se registra como gasto de Ajuste en Caja, baja su saldo y cuenta para el día de la caja aunque se cierre al día siguiente")
     void closeSession_withShortage_recordsExpenseAdjustment() {
+        // Opened on 31-10 and closed now (the next day or later): the closing keeps its real time
+        activeSession.setOperationDate(LocalDate.of(2026, 10, 31));
         FinancialAccount cash = stubAdjustment(FinancialCategorySystemKey.CASH_SHORTAGE, FinancialCategoryType.GASTO, "100.00");
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -486,6 +494,10 @@ class CashSessionServiceTest {
         FinancialTransaction tx = captureAdjustment();
         assertThat(tx.getType()).isEqualTo(FinancialTransactionType.GASTO_MANUAL);
         assertThat(tx.getAmount()).isEqualByComparingTo("7.00");
+        assertThat(tx.getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(tx.getTransactionDate()).isAfter(Instant.parse("2026-10-31T12:00:00Z"));
+        assertThat(activeSession.getClosedAt()).isAfter(Instant.parse("2026-10-31T12:00:00Z"));
+        assertThat(activeSession.getOperationDate()).isEqualTo(LocalDate.of(2026, 10, 31));
         assertThat(tx.getCategory().getSystemKey()).isEqualTo(FinancialCategorySystemKey.CASH_SHORTAGE);
         assertThat(tx.getDescription()).isEqualTo("Faltante al cierre de caja #1");
         assertThat(cash.getCurrentBalance()).isEqualByComparingTo("93.00");

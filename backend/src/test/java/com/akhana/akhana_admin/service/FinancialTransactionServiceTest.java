@@ -12,6 +12,7 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
 import com.akhana.akhana_admin.service.impl.FinancialTransactionServiceImpl;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -141,9 +143,13 @@ class FinancialTransactionServiceTest {
         assertTrue(ex.getMessage().contains("cuenta Caja"));
     }
 
+    private static final LocalDate SESSION_DAY = LocalDate.of(2026, 10, 31);
+
     private CashSession openSession() {
+        // CAJ-11: a session of an earlier day still open (e.g. after midnight)
         CashSession session = CashSession.builder().id(UUID.randomUUID()).status(CashSessionStatus.ABIERTA)
-                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00")).build();
+                .openingAmount(new BigDecimal("200.00")).totalSalesCash(new BigDecimal("50.00"))
+                .operationDate(SESSION_DAY).build();
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(session));
         return session;
     }
@@ -175,6 +181,9 @@ class FinancialTransactionServiceTest {
         FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
 
         assertEquals(session.getId(), res.getCashSessionId());
+        // CAJ-11: it counts for the day of the session; its real time of record stays
+        assertEquals(SESSION_DAY, res.getOperationDate());
+        assertTrue(res.getTransactionDate().isAfter(Instant.parse("2026-10-31T12:00:00Z")));
         assertEquals(new BigDecimal("450.00"), cajaAccount.getCurrentBalance());
         assertEquals(new BigDecimal("200.00"), session.getExpectedCash());
         verify(financialAccountRepository).save(cajaAccount);
@@ -248,6 +257,7 @@ class FinancialTransactionServiceTest {
 
         assertEquals(session.getId(), res.getCashSessionId());
         assertEquals(new BigDecimal("150.00"), session.getExpectedCash());
+        assertEquals(SESSION_DAY, res.getOperationDate());
     }
 
     @Test
@@ -288,6 +298,8 @@ class FinancialTransactionServiceTest {
         FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
 
         assertNull(res.getCashSessionId());
+        // CAJ-11: not of Caja, so it counts for the day it is recorded
+        assertEquals(StoreFormat.storeDay(res.getTransactionDate()), res.getOperationDate());
         verifyNoInteractions(cashSessionRepository);
     }
 
@@ -981,6 +993,7 @@ class FinancialTransactionServiceTest {
         assertEquals(new BigDecimal("400.00"), cajaAccount.getCurrentBalance());
         assertEquals(new BigDecimal("300.00"), joacoAccount.getCurrentBalance());
         assertEquals(new BigDecimal("150.00"), session.getExpectedCash());
+        assertEquals(SESSION_DAY, res.getOperationDate());
     }
 
     @Test
