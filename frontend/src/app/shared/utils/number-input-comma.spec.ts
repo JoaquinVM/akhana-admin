@@ -1,5 +1,6 @@
 import { provideEnvironmentInitializer } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { appConfig } from '../../app.config';
 import { ToastService } from '../components/toast/toast.service';
 import { installNumberInputComma, USE_POINT_MESSAGE } from './number-input-comma';
 
@@ -82,6 +83,22 @@ describe('installNumberInputComma (NF-07)', () => {
     const typed = typedField('');
     pressComma(input);
     expect(typed.text()).toBe('.');
+  });
+
+  it('sobre un punto solo, que Firefox ya da por inválido, no entra otro', () => {
+    const typed = typedField('.');
+    pressComma(input);
+    expect(typed.text()).toBe('.');
+  });
+
+  it('appConfig instala el escucha en la app', () => {
+    const before = execCommand.mock.calls.length;
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: appConfig.providers });
+    TestBed.inject(ToastService);
+    pressComma(input);
+    // The one from this suite and the one from appConfig: both act on the same key
+    expect(execCommand.mock.calls.length).toBeGreaterThan(before + 1);
   });
 
   it('si el navegador no puede escribir el punto, avisa', () => {

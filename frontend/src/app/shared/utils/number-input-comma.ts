@@ -23,14 +23,13 @@ export function installNumberInputComma(): void {
     if (!input || event.key !== ',' || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
 
     event.preventDefault();
-    const wasValid = !input.validity.badInput;
     // Number fields have no selection API: this is the only way to write at the cursor
     if (!document.execCommand('insertText', false, '.')) {
       toast.error(USE_POINT_MESSAGE);
       return;
     }
-    if (wasValid && input.validity.badInput) {
-      // A lone point is invalid too, but a digit completes it; with a separator already there nothing does
+    if (input.validity.badInput) {
+      // A lone point can be invalid too, but a digit completes it; with a separator already there nothing does
       document.execCommand('insertText', false, '0');
       const secondSeparator = input.validity.badInput;
       document.execCommand('delete');

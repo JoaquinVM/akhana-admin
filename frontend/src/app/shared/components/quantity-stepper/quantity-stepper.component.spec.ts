@@ -78,10 +78,19 @@ describe('QuantityStepperComponent', () => {
       expect(field().value).toBe('2');
     });
 
-    it('con restoreOnBlur, una cantidad válida se queda', async () => {
+    it('con restoreOnBlur, lo que el padre no tomó, como 0.0004, vuelve a su cantidad', async () => {
       fixture.componentRef.setInput('restoreOnBlur', true);
       fixture.detectChanges();
 
+      await leaveWith('0.0004');
+      expect(field().value).toBe('2');
+    });
+
+    it('con restoreOnBlur, la cantidad que el padre tomó se queda', async () => {
+      fixture.componentRef.setInput('restoreOnBlur', true);
+      fixture.componentRef.setInput('quantity', 5);
+      fixture.detectChanges();
+      await fixture.whenStable();
       await leaveWith('5');
       expect(field().value).toBe('5');
     });
