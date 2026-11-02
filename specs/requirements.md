@@ -24,7 +24,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -276,6 +276,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
 - **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
 - **NF-08** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
+- **NF-09** Mientras lo escrito en un campo numérico todavía no es un número, el sistema no reescribe el campo. Un separador al comienzo vale como `0.`: `,50` y `.50` son 0,50.
 
 ## 5. Preguntas
 
