@@ -1,10 +1,13 @@
 package com.akhana.akhana_admin.service;
 
+import com.akhana.akhana_admin.dto.ProductRequest;
 import com.akhana.akhana_admin.dto.ProductResponse;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ProductPhotoStorageException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.ProductPhoto;
+import com.akhana.akhana_admin.model.ProductStatus;
+import com.akhana.akhana_admin.model.SaleUnit;
 import com.akhana.akhana_admin.repository.ProductPhotoRepository;
 import com.akhana.akhana_admin.service.impl.ProductPhotoStorage;
 import org.junit.jupiter.api.AfterEach;
@@ -25,6 +28,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -250,5 +254,52 @@ class ProductPhotoServiceIntegrationTest {
         Files.delete(photosDir.resolve(photoId + "-thumb.jpg"));
 
         assertThatThrownBy(() -> photoService.readThumbnail(productId, photoId)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("Dos «Quitar» a la vez: uno se aplica y el otro recibe conflicto, sin pisar quién la quitó")
+    void simultaneousRemovals_oneWins() throws Exception {
+        UUID photoId = photoService.upload(productId, photo(), null, "ana");
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        List<Future<String>> futures = new ArrayList<>();
+        for (String user : List.of("luis", "marta")) {
+            futures.add(pool.submit(() -> {
+                start.await();
+                photoService.remove(productId, photoId, user);
+                return user;
+            }));
+        }
+        start.countDown();
+
+        List<String> saved = new ArrayList<>();
+        int conflicts = 0;
+        for (Future<String> future : futures) {
+            try {
+                saved.add(future.get());
+            } catch (ExecutionException ex) {
+                assertThat(ex.getCause()).isInstanceOf(DuplicateResourceException.class);
+                conflicts++;
+            }
+        }
+        pool.shutdown();
+
+        assertThat(saved).hasSize(1);
+        assertThat(conflicts).isEqualTo(1);
+        assertThat(photoRepository.findById(photoId).orElseThrow().getDeactivatedBy()).isEqualTo(saved.get(0));
+    }
+
+    @Test
+    @DisplayName("Editar el producto devuelve su foto actual en la respuesta")
+    void updateProduct_returnsPhotoId() throws IOException {
+        UUID photoId = photoService.upload(productId, photo(), null, "ana");
+        ProductRequest request = new ProductRequest("X-" + productId.toString().substring(0, 8), "Editado " + productId,
+            categoryId, supplierId, null, List.of(), new BigDecimal("1.00"), new BigDecimal("3.00"), ProductStatus.ACTIVO,
+            SaleUnit.UNIT, null, null, null);
+
+        ProductResponse updated = productService.updateProduct(productId, request, "ana");
+
+        assertThat(updated.photoId()).isEqualTo(photoId);
+        jdbc.update("DELETE FROM product_price_changes WHERE product_id = ?", productId);
     }
 }

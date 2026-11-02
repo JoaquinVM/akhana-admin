@@ -567,9 +567,8 @@ export class ProductsComponent implements OnInit {
     return this.products().find(p => p.id === id)?.photoId ?? null;
   });
 
-  onPhotoChange(photoId: string | null): void {
-    const id = this.selectedProductId();
-    this.products.update(list => list.map(p => (p.id === id ? { ...p, photoId } : p)));
+  onPhotoChange(change: { productId: string; photoId: string | null }): void {
+    this.products.update(list => list.map(p => (p.id === change.productId ? { ...p, photoId: change.photoId } : p)));
   }
 
   attemptCloseForm(): void {

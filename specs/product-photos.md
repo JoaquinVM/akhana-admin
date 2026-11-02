@@ -2,7 +2,7 @@
 
 Detalle de CAT-12 (sección 3.2 de `specs/requirements.md`); su respaldo, NF-07, está en `specs/deploy.md`. Cada producto
 admite una foto, que después usará Akhana Web. Aquí no se abre nada a internet: cómo llega a la web se decide en un
-trabajo de Akhana Web (P-56).
+trabajo de Akhana Web (P-57).
 
 ## CAT-12 · Subir una foto
 
@@ -87,8 +87,11 @@ Todas con el permiso `PRODUCTS`. Ninguna ruta termina en una extensión de image
 ## Notas de implementación
 
 - **Lectura:** el formato se decide por los primeros bytes, y ancho y alto se leen del encabezado antes de decodificar.
-  JPEG y PNG se decodifican submuestreados hasta unos 3200 px; WebP puede decodificarse entero (unos 200 MB de memoria
-  con 50 megapíxeles), por eso se procesa una imagen a la vez, con 30 s de espera.
+  JPEG y PNG se decodifican submuestreados hasta unos 3200 px; WebP puede decodificarse entero, y orientar la imagen la duplica (se
+  midieron picos de unos 400 MB con 41 megapíxeles), por eso se procesa una imagen a la vez, con 30 s de espera.
+- **Límites antes de decodificar:** en un WebP se mide cada frame, porque el decodificador reserva memoria por lo que declara el
+  frame y no el encabezado; una animación se rechaza. De los metadatos solo se lee el bloque EXIF: el lector general infla
+  sin límite los textos comprimidos de un PNG.
 - **Bibliotecas:** TwelveMonkeys lee WebP y JPEG en CMYK, y `metadata-extractor`, la orientación. `ImageIO.scanForPlugins()`
   corre al arrancar porque dentro del jar de Spring Boot los lectores pueden no registrarse solos.
 - **Limpieza:** dibujar sobre una imagen RGB nueva y escribir el JPEG sin metadatos quita todo el EXIF.
@@ -99,7 +102,14 @@ Todas con el permiso `PRODUCTS`. Ninguna ruta termina en una extensión de image
   y se inserta la nueva con `saveAndFlush`, porque Hibernate ejecuta los inserts primero y chocaría con el índice.
 - **Pantalla:** `<img src>` no envía el token, así que las imágenes se piden con `HttpClient` como blob. La miniatura se
   pide cuando la fila entra en pantalla (`IntersectionObserver`). La foto se guarda sola, sin pasar por «Guardar».
+- **Filtro:** se guía por `photoId`. Un registro cuyo archivo se perdió se ve «Sin foto», pero no entra en el filtro.
 - **nginx:** `location ^~ /api/` evita que la regla de estáticos atrape una ruta de la API terminada en `.jpg`.
+
+## Validación
+
+- **Catálogo (NF-04):** con 822 productos activos de una copia de la base local, el JSON pesa 601.722 bytes (60.480 con gzip) y
+  responde en 40 a 60 ms. Con una foto en cada producto, 629.670 bytes (81.327 con gzip), en el mismo tiempo.
+- El resto de la validación, con el stack de producción, está en `specs/deploy.md`.
 
 ## Fuera de CAT-12
 

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductPhotoService } from '../../../core/product/product-photo.service';
 import { ProductPhotoSectionComponent } from './product-photo-section.component';
@@ -8,7 +8,7 @@ describe('ProductPhotoSectionComponent (CAT-12)', () => {
   let fixture: ComponentFixture<ProductPhotoSectionComponent>;
   let component: ProductPhotoSectionComponent;
   let photoService: { getImage: ReturnType<typeof vi.fn>; upload: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
-  let changes: (string | null)[];
+  let changes: { productId: string; photoId: string | null }[];
 
   const text = () => fixture.nativeElement.textContent as string;
   const select = () => {
@@ -31,7 +31,7 @@ describe('ProductPhotoSectionComponent (CAT-12)', () => {
     fixture = TestBed.createComponent(ProductPhotoSectionComponent);
     component = fixture.componentInstance;
     changes = [];
-    component.photoChange.subscribe((id) => changes.push(id));
+    component.photoChange.subscribe((change) => changes.push(change));
   });
 
   afterEach(() => vi.unstubAllGlobals());
@@ -52,7 +52,7 @@ describe('ProductPhotoSectionComponent (CAT-12)', () => {
     select();
 
     expect(photoService.upload).toHaveBeenCalledWith('prod-1', expect.any(File), null);
-    expect(changes).toEqual(['photo-2']);
+    expect(changes).toEqual([{ productId: 'prod-1', photoId: 'photo-2' }]);
   });
 
   it('con foto la muestra, ofrece cambiarla y manda la foto que veía', () => {
@@ -125,7 +125,7 @@ describe('ProductPhotoSectionComponent (CAT-12)', () => {
     component.confirmRemove();
 
     expect(photoService.remove).toHaveBeenCalledWith('prod-1', 'photo-1');
-    expect(changes).toEqual([null]);
+    expect(changes).toEqual([{ productId: 'prod-1', photoId: null }]);
     expect(component.isConfirmRemoveOpen()).toBe(false);
   });
 
@@ -137,5 +137,38 @@ describe('ProductPhotoSectionComponent (CAT-12)', () => {
 
     expect(text()).toContain('Sin foto');
     expect(text()).toContain('Cambiar foto');
+  });
+
+  it('una subida que termina con otro producto abierto avisa por el suyo y no toca lo que se ve', () => {
+    const response = new Subject<{ photoId: string }>();
+    photoService.upload.mockReturnValue(response);
+    fixture.componentRef.setInput('productId', 'prod-1');
+    fixture.detectChanges();
+    select();
+    expect(component.isBusy()).toBe(true);
+
+    fixture.componentRef.setInput('productId', 'prod-2');
+    fixture.detectChanges();
+    expect(component.isBusy()).toBe(false);
+    component.errorMessage.set('Del producto 2');
+
+    response.next({ photoId: 'photo-9' });
+
+    expect(changes).toEqual([{ productId: 'prod-1', photoId: 'photo-9' }]);
+    expect(component.errorMessage()).toBe('Del producto 2');
+  });
+
+  it('un error tardío de otro producto no se muestra en el abierto', () => {
+    const response = new Subject<{ photoId: string }>();
+    photoService.upload.mockReturnValue(response);
+    fixture.componentRef.setInput('productId', 'prod-1');
+    fixture.detectChanges();
+    select();
+
+    fixture.componentRef.setInput('productId', 'prod-2');
+    fixture.detectChanges();
+    response.error({ status: 400, error: { message: 'Mal' } });
+
+    expect(component.errorMessage()).toBeNull();
   });
 });
