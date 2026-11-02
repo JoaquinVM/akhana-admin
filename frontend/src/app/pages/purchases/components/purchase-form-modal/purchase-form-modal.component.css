@@ -99,6 +99,11 @@
   margin-left: 0.25rem;
 }
 
+/* COM-13: with the extra column, amounts and quantities stay on one line; the product name takes the wrap */
+.lines-table td.text-right {
+  white-space: nowrap;
+}
+
 .new-product-card {
   padding: 1rem;
   border: 1px dashed #cbd5e1;

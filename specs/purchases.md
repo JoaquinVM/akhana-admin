@@ -1,7 +1,7 @@
 # Compras (pedidos)
 
 Detalle del módulo Compras de la V1 (sección 3.3 de `specs/requirements.md`), con los mismos IDs.
-Alcance: COM-01 a COM-09, COM-11 y COM-12. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
+Alcance: COM-01 a COM-09, COM-11 a COM-13. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
 queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
@@ -258,6 +258,26 @@ se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo ha
   Bs 10,00 · Línea quitada: Pasas · Total: Bs 300,00 → Bs 280,00»), y el pedido guarda `updated_by` y
   `updated_at`. El detalle muestra el historial de cambios, del más reciente al más antiguo.
 
+## COM-13 · Precio de venta como referencia
+
+En el formulario de pedido, al registrar y al editar. Es el precio actual del catálogo, de solo lectura: no se envía al
+servidor ni se guarda en el pedido, y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando
+solo con las opciones «Sugerido», «Mantener» y «Otro» de la alerta de costo (COM-03). El detalle y el listado de pedidos
+no lo muestran.
+
+- **Cuando** se busca un producto por unidad (costo Bs 10,00, precio Bs 15,00) **entonces** el resultado muestra, además
+  de lo que ya tenía, «venta Bs 15,00»; por kilo, «costo Bs 40,00/kg» y «venta Bs 60,00/kg».
+- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», a la derecha de «Costo unitario», muestra el
+  precio de una unidad o un kilo sin multiplicar por la cantidad: «Bs 15,00» o «Bs 60,00/kg». Un producto creado desde la
+  línea muestra el precio con que se creó.
+- **Cuando** se cambia el costo de la línea o se elige otro precio en la alerta **entonces** la columna sigue en el precio
+  actual hasta guardar; el otro pedido que se abra después ya muestra el nuevo.
+- **Cuando** se edita un pedido **entonces** cada línea muestra el precio actual del catálogo, que puede ser distinto del
+  que tenía al hacer el pedido; mientras el catálogo no cargó o si el producto fue eliminado, «—», nunca «Bs 0,00».
+- **Cuando** el producto del catálogo tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
+
+Pruebas en `purchase-form-modal.component.spec.ts`.
+
 ## Día de los pagos (CAJ-11)
 
 - **Cuando** un pago o un envío se paga desde Caja pasada la medianoche en la caja del 31/10 **entonces** su gasto y
@@ -309,3 +329,4 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] Frontend: «Editar» en el detalle, formulario en modo edición con motivo y alerta de envío, historial de cambios.
   Pruebas en `purchase-form-modal.component.spec.ts` y `purchase-detail-modal.component.spec.ts`; verificado en el
   navegador con la base local (edición con línea nueva, cantidad, envío rehecho y rechazo por total menor a lo pagado).
+- [x] COM-13: precio de venta en el buscador y en la tabla de `purchase-form-modal`, solo frontend.
