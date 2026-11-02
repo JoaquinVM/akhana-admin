@@ -491,3 +491,8 @@ section.card > .card-title {
     height: 160px;
   }
 }
+
+.no-attention {
+  color: #8a5a00;
+  font-size: 0.8125rem;
+}

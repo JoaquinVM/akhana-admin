@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ConsumptionFormModalComponent } from './consumption-form-modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
+import { CashService } from '../../../../core/cash/cash.service';
+import { storeToday } from '../../../../shared/utils/store-date';
 import { Product } from '../../../../core/product/models/product.models';
 import { Consumption } from '../../../../core/consumption/models/consumption.models';
 
@@ -18,6 +20,7 @@ describe('ConsumptionFormModalComponent', () => {
   let component: ConsumptionFormModalComponent;
   let fixture: ComponentFixture<ConsumptionFormModalComponent>;
   let consumptionService: any;
+  let cashService: any;
 
   const roquin = product({});
   const nuts = product({ id: 'p-2', code: 'NUE-1', name: 'Nueces', saleUnit: 'KILOGRAM', buyPrice: 60, sellPrice: 90 });
@@ -27,9 +30,13 @@ describe('ConsumptionFormModalComponent', () => {
     consumptionService = {
       registerConsumption: vi.fn().mockReturnValue(of({ id: 'con-1' } as Consumption))
     };
+    cashService = { getCurrentSession: vi.fn().mockReturnValue(of(null)) };
     await TestBed.configureTestingModule({
       imports: [ConsumptionFormModalComponent],
-      providers: [{ provide: ConsumptionService, useValue: consumptionService }]
+      providers: [
+        { provide: ConsumptionService, useValue: consumptionService },
+        { provide: CashService, useValue: cashService }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConsumptionFormModalComponent);
@@ -205,5 +212,54 @@ describe('ConsumptionFormModalComponent', () => {
     fixture.detectChanges();
     expect(component.lines().length).toBe(1);
     expect(consumptionService.registerConsumption).not.toHaveBeenCalled();
+  });
+
+  describe('CAJ-12: fecha propuesta', () => {
+    const reopen = () => {
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+    };
+
+    it('sin caja abierta propone hoy', () => {
+      expect(component.consumptionDate()).toBe(storeToday());
+    });
+
+    it('con una caja de un día anterior propone ese día', () => {
+      cashService.getCurrentSession.mockReturnValue(of({ operationDate: '2026-10-28' }));
+      reopen();
+      expect(component.consumptionDate()).toBe('2026-10-28');
+    });
+
+    it('con la caja de hoy propone hoy', () => {
+      cashService.getCurrentSession.mockReturnValue(of({ operationDate: storeToday() }));
+      reopen();
+      expect(component.consumptionDate()).toBe(storeToday());
+    });
+
+    it('si no se puede preguntar por la caja, propone hoy', () => {
+      cashService.getCurrentSession.mockReturnValue(throwError(() => new Error('sin red')));
+      reopen();
+      expect(component.consumptionDate()).toBe(storeToday());
+    });
+
+    it('la fecha propuesta se puede cambiar, y la respuesta tardía no pisa lo que eligió el usuario', () => {
+      const session$ = new Subject<any>();
+      cashService.getCurrentSession.mockReturnValue(session$);
+      reopen();
+
+      component.onDateChange('2026-10-20');
+      session$.next({ operationDate: '2026-10-28' });
+
+      expect(component.consumptionDate()).toBe('2026-10-20');
+    });
+
+    it('al volver a abrir, la propuesta vuelve a mirar la caja', () => {
+      component.onDateChange('2026-10-20');
+      cashService.getCurrentSession.mockReturnValue(of({ operationDate: '2026-10-28' }));
+      reopen();
+      expect(component.consumptionDate()).toBe('2026-10-28');
+    });
   });
 });
