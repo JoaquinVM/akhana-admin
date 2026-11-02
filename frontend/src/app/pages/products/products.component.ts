@@ -334,13 +334,18 @@ export class ProductsComponent implements OnInit {
 
   // CAT-10: on the whole open form, so a scan never writes in another field or saves it, whatever the product is
   private readonly barcodeCapture = effect((onCleanup) => {
-    if (!this.isFormModalOpen() || this.isDiscardConfirmOpen()) return;
+    if (!this.isFormModalOpen()) return;
     const capture = new ScanCapture(this.document, (code) => this.onBarcodeScanned(code));
     capture.install();
     onCleanup(() => capture.uninstall());
   });
 
   private onBarcodeScanned(code: string): void {
+    // The confirmation does not take the focus, so the capture has to stay on while it is open
+    if (this.isDiscardConfirmOpen()) {
+      this.toast.error('Cierra esta ventana para escanear.');
+      return;
+    }
     if (!this.showBarcodes()) {
       this.toast.error('Este producto no admite código de barras.');
       return;

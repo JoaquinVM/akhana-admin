@@ -662,6 +662,19 @@ describe('ProductsComponent', () => {
       expect(mockProductService.updateProduct).not.toHaveBeenCalled();
     });
 
+    it('con «Descartar cambios» abierta, un escaneo no escribe, no agrega y no guarda', () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.isDiscardConfirmOpen.set(true);
+      TestBed.tick();
+
+      const enter = scan(EAN);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
     it('con el formulario cerrado no escucha al lector', () => {
       component.openEditModal({ ...mockProducts[0], barcodes: [] });
       TestBed.tick();
