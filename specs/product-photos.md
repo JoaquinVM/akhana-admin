@@ -64,7 +64,7 @@ trabajo de Akhana Web (P-57).
 - **Cuando** se sirve una foto **entonces** el tipo de contenido lo fija el servidor y se mantiene `nosniff`.
 - **Cuando** se revisa `docker-compose.prod.yml` **entonces** los puertos publicados son los mismos de hoy.
 
-## Modelo de datos (migración `V23__product_photos.sql`)
+## Modelo de datos (migración `V26__product_photos.sql`)
 
 - `product_photos`: `id`, `product_id`, `file_name`, `thumbnail_file_name` (únicos), `active`, auditoría (`created_by`,
   `created_at`, `deactivated_by`, `deactivated_at`). Un índice único parcial en `product_id` donde `active` garantiza una
@@ -89,10 +89,12 @@ Todas con el permiso `PRODUCTS`. Ninguna ruta termina en una extensión de image
 - **Lectura:** el formato se decide por los primeros bytes, y ancho y alto se leen del encabezado antes de decodificar.
   JPEG y PNG se decodifican submuestreados hasta unos 3200 px; WebP puede decodificarse entero, y orientar la imagen la duplica (se
   midieron picos de unos 400 MB con 41 megapíxeles), por eso se procesa una imagen a la vez, con 30 s de espera.
-- **Límites antes de decodificar:** en un WebP se mide cada frame, porque el decodificador reserva memoria por lo que declara el
-  frame y no el encabezado; una animación se rechaza. De los metadatos solo se lee el bloque EXIF: el lector general infla
-  sin límite los textos comprimidos de un PNG.
-- **Bibliotecas:** TwelveMonkeys lee WebP y JPEG en CMYK, y `metadata-extractor`, la orientación. `ImageIO.scanForPlugins()`
+- **Límites antes de decodificar (`ProductPhotoInspector`):** un archivo de 10 MB puede pedir gigabytes u horas. Un WebP debe tener
+  un solo frame, que se mide aparte porque el decodificador reserva memoria por lo que declara el frame y no el encabezado; una
+  animación se rechaza. Un JPEG admite hasta 100 scans. De los metadatos solo se lee la etiqueta de orientación del primer
+  bloque EXIF: un lector general infla los textos comprimidos de un PNG y crea un arreglo por etiqueta.
+- **Bibliotecas:** TwelveMonkeys lee WebP y JPEG en CMYK. `metadata-extractor` queda solo en las pruebas, para comprobar que lo
+  guardado no trae metadatos; leer la orientación con ella agotaba la memoria con un EXIF manipulado. `ImageIO.scanForPlugins()`
   corre al arrancar porque dentro del jar de Spring Boot los lectores pueden no registrarse solos.
 - **Limpieza:** dibujar sobre una imagen RGB nueva y escribir el JPEG sin metadatos quita todo el EXIF.
 - **Archivos:** se llaman `<id>.jpg` y `<id>-thumb.jpg`. Se escriben en `.tmp/` y se publican con un enlace duro, que falla

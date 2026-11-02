@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.service.impl;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.awt.Color;
@@ -198,5 +199,69 @@ final class ProductPhotoFixtures {
         out.write(ByteBuffer.allocate(4).putInt((int) crc.getValue()).array());
         out.write(png, afterHeader, png.length - afterHeader);
         return out.toByteArray();
+    }
+
+    // Many tags pointing to the same bytes, with the orientation at the end: a general reader runs out of memory
+    static byte[] pngWithOverlappingExif(BufferedImage image, int tags, int orientation) throws IOException {
+        int data = 8 + 2 + (tags + 1) * 12 + 4;
+        ByteBuffer tiff = ByteBuffer.allocate(data + 4096);
+        tiff.put((byte) 'M').put((byte) 'M').putShort((short) 42).putInt(8);
+        tiff.putShort((short) (tags + 1));
+        for (int i = 0; i < tags; i++) {
+            tiff.putShort((short) (0x0200 + i)).putShort((short) 5).putInt(512).putInt(data);
+        }
+        tiff.putShort((short) 0x0112).putShort((short) 3).putInt(1).putShort((short) orientation).putShort((short) 0);
+        byte[] png = png(image);
+        ByteBuffer chunk = ByteBuffer.allocate(4 + tiff.capacity());
+        chunk.put("eXIf".getBytes(StandardCharsets.US_ASCII)).put(tiff.array());
+        CRC32 crc = new CRC32();
+        crc.update(chunk.array());
+        int afterHeader = 8 + 25;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(png, 0, afterHeader);
+        out.write(ByteBuffer.allocate(4).putInt(tiff.capacity()).array());
+        out.write(chunk.array());
+        out.write(ByteBuffer.allocate(4).putInt((int) crc.getValue()).array());
+        out.write(png, afterHeader, png.length - afterHeader);
+        return out.toByteArray();
+    }
+
+    // A WebP with several small frames, or several alpha chunks
+    static byte[] webpWithChunks(String... types) {
+        int chunk = 8 + 16;
+        ByteBuffer file = ByteBuffer.allocate(12 + types.length * chunk).order(ByteOrder.LITTLE_ENDIAN);
+        file.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(file.capacity() - 8).put("WEBP".getBytes(StandardCharsets.US_ASCII));
+        for (String type : types) {
+            file.put(type.getBytes(StandardCharsets.US_ASCII)).putInt(16).put(new byte[16]);
+        }
+        return file.array();
+    }
+
+    // A real JPEG with extra scan markers before its end
+    static byte[] jpegWithExtraScans(BufferedImage image, int scans) throws IOException {
+        byte[] jpeg = jpeg(image);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(jpeg, 0, jpeg.length - 2);
+        byte[] scan = {(byte) 0xFF, (byte) 0xDA, 0, 8, 1, 1, 0, 0, 0x3F, 0};
+        for (int i = 0; i < scans; i++) {
+            out.write(scan);
+        }
+        out.write(jpeg, jpeg.length - 2, 2);
+        return out.toByteArray();
+    }
+
+    // A progressive JPEG, as some phones and editors write it
+    static byte[] progressiveJpeg(BufferedImage image) throws IOException {
+        ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+        ImageWriteParam param = writer.getDefaultWriteParam();
+        param.setProgressiveMode(ImageWriteParam.MODE_DEFAULT);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (MemoryCacheImageOutputStream output = new MemoryCacheImageOutputStream(bytes)) {
+            writer.setOutput(output);
+            writer.write(null, new IIOImage(image, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        return bytes.toByteArray();
     }
 }

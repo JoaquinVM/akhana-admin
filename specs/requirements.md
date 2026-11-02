@@ -342,7 +342,6 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
 | P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el elegido al abrirla (CAJ-12); lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
-| P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el de su apertura; lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
 | P-53 | ¿Se hacen las dos semanas en paralelo con las planillas antes de dejarlas? | No; la tienda usa solo el sistema. |
 | P-54 | ¿Cuántas fotos por producto? | Una; las presentaciones comparten la del producto (CAT-11, CAT-12). |
 | P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-07). |
