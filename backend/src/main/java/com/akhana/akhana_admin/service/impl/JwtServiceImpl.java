@@ -14,6 +14,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 @Service
@@ -99,7 +100,9 @@ public class JwtServiceImpl implements JwtService {
             return false;
         }
         Long issuedAtMillis = extractAllClaims(token).get(ISSUED_AT_MILLIS, Long.class);
-        return issuedAtMillis == null || Instant.ofEpochMilli(issuedAtMillis).isBefore(instant);
+        // The token only keeps milliseconds: one issued in the same millisecond as the password change is not older
+        return issuedAtMillis == null
+                || Instant.ofEpochMilli(issuedAtMillis).isBefore(instant.truncatedTo(ChronoUnit.MILLIS));
     }
 
     @Override
