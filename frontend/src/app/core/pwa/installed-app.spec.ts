@@ -143,13 +143,47 @@ describe('service worker (MOV-03, CA-09, CA-11)', () => {
     expect(await intercept('/', 'navigate')).toBe(OFFLINE);
   });
 
+  // Like the real fetch: stays pending until its signal aborts it
+  const hungFetch = (_: unknown, init: { signal: AbortSignal }) => new Promise<Response>((_resolve, reject) => {
+    init.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+  });
+
   it('CA-09: si la petición queda colgada, a los 10 s también', async () => {
     vi.useFakeTimers();
     try {
-      networkFetch.mockReturnValue(new Promise(() => undefined));
+      networkFetch.mockImplementation(hungFetch);
       const response = intercept('/', 'navigate')!;
       await vi.advanceTimersByTimeAsync(10000);
       expect(await response).toBe(OFFLINE);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('CA-02: al vencer los 10 s aborta la petición colgada, no antes', async () => {
+    vi.useFakeTimers();
+    try {
+      networkFetch.mockImplementation(hungFetch);
+      const response = intercept('/', 'navigate')!;
+      const { signal } = networkFetch.mock.calls[0][1];
+      await vi.advanceTimersByTimeAsync(9999);
+      expect(signal.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(signal.aborted).toBe(true);
+      await response;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('CA-03: una respuesta que ya llegó no se corta al pasar los 10 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const page = new Response('index');
+      networkFetch.mockResolvedValue(page);
+      expect(await intercept('/', 'navigate')).toBe(page);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(networkFetch.mock.calls[0][1].signal.aborted).toBe(false);
     } finally {
       vi.useRealTimers();
     }

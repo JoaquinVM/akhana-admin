@@ -38,16 +38,18 @@ self.addEventListener('fetch', event => {
 
 // The page answers at the requested URL, so Reintentar is a plain reload of what was being opened
 async function navigate(request) {
+  // Aborted, not just ignored: while a hung request stayed alive, Reintentar did not open that URL (exact cause unknown)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS);
   try {
-    const response = await Promise.race([fetch(request), timeout()]);
+    const response = await fetch(request, { signal: controller.signal });
     return GATEWAY_ERRORS.includes(response.status) ? await offlinePage(response) : response;
   } catch {
     return offlinePage(Response.error());
+  } finally {
+    // The answer already arrived: the limit must not cut a page that is still coming
+    clearTimeout(timer);
   }
-}
-
-function timeout() {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), NAVIGATION_TIMEOUT_MS));
 }
 
 async function offlinePage(fallback) {
