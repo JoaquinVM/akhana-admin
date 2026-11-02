@@ -2,7 +2,7 @@
   [isOpen]="isOpen()"
   title="Nuevo consumo"
   subtitle="Productos usados o consumidos en la tienda, valorados al costo. No mueve dinero."
-  size="lg"
+  size="xl"
   [closeOnBackdrop]="false"
   [closeOnEscape]="false"
   (close)="onClose()">
@@ -44,8 +44,14 @@
             @for (product of productMatches(); track product.id) {
               <li>
                 <button type="button" class="match-item" (click)="addProduct(product)">
-                  <span class="match-name">{{ product.name }}{{ product.status === 'INACTIVO' ? ' (inactivo)' : '' }}</span>
-                  <span class="match-meta">{{ product.code }}{{ product.supplierName ? ' · ' + product.supplierName : '' }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }} · venta Bs {{ product.sellPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  <span class="match-info">
+                    <span class="match-name">{{ product.name }}{{ product.status === 'INACTIVO' ? ' (inactivo)' : '' }}</span>
+                    <span class="match-meta">{{ product.code }}{{ product.supplierName ? ' · ' + product.supplierName : '' }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  </span>
+                  <span class="match-sell-price">
+                    <span class="match-sell-label">Venta</span>
+                    Bs {{ product.sellPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}
+                  </span>
                 </button>
               </li>
             }
@@ -69,8 +75,8 @@
             <th>Producto</th>
             <th class="text-right">Cantidad</th>
             <th class="text-right">Costo unitario</th>
-            <th class="text-right">Precio de venta</th>
             <th class="text-right">Subtotal</th>
+            <th class="text-right line-sell-price-header">Precio de venta</th>
             <th></th>
           </tr>
         </thead>
@@ -88,14 +94,16 @@
                 <input type="number" class="form-control input-number" [name]="'qty-' + i"
                        [step]="isWeightLine(line) ? 0.001 : 1" min="0"
                        [ngModel]="line.quantity" (ngModelChange)="updateQuantity(i, $event)" />
-                <span class="unit-hint">{{ isWeightLine(line) ? 'kg' : 'u' }}</span>
-                @if (line.presentation) {
-                  <span class="unit-hint">{{ line.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
-                }
+                <span class="unit-hints">
+                  <span class="unit-hint">{{ isWeightLine(line) ? 'kg' : 'u' }}</span>
+                  @if (line.presentation) {
+                    <span class="unit-hint">{{ line.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
+                  }
+                </span>
               </td>
               <td class="text-right">Bs {{ line.product.buyPrice | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}</td>
-              <td class="text-right line-sell-price">Bs {{ (line.presentation ? line.presentation.price : line.product.sellPrice) | number:'1.2-2' }}{{ line.presentation ? ' c/u' : isWeighted(line.product) ? '/kg' : '' }}</td>
               <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
+              <td class="text-right line-sell-price">Bs {{ (line.presentation ? line.presentation.price : line.product.sellPrice) | number:'1.2-2' }}{{ line.presentation ? ' c/u' : isWeighted(line.product) ? '/kg' : '' }}</td>
               <td class="text-right">
                 <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
               </td>

@@ -57,8 +57,9 @@
 
 .match-item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
   width: 100%;
   padding: 0.5rem 0.75rem;
   background: transparent;
@@ -72,9 +73,45 @@
   background: #f1f5f9;
 }
 
+.match-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
 .match-name {
   font-weight: 600;
   color: #1e293b;
+}
+
+/* CON-05: the sell price is only a reference, set apart from the cost */
+.match-sell-price {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.match-sell-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.line-sell-price-header,
+.line-sell-price {
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.line-sell-price {
+  font-weight: 600;
+  color: var(--primary-color);
 }
 
 .match-meta,
@@ -93,6 +130,10 @@
   display: inline-block;
   width: 7rem;
   text-align: right;
+}
+
+.unit-hints {
+  display: block;
 }
 
 .unit-hint {

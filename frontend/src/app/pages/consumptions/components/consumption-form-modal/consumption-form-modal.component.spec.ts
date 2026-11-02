@@ -56,15 +56,26 @@ describe('ConsumptionFormModalComponent', () => {
   });
 
   it('CON-05: el buscador muestra el precio de venta, por kilo si se vende por kilo, también de un inactivo', () => {
-    const metaOf = (search: string): string => {
+    const resultOf = (search: string): { meta: string; sellPrice: string } => {
       component.productSearch.set(search);
       fixture.detectChanges();
-      return fixture.nativeElement.querySelector('.match-meta').textContent.trim();
+      const text = (selector: string): string =>
+        fixture.nativeElement.querySelector(selector).textContent.replace(/\s+/g, ' ').trim();
+      return { meta: text('.match-meta'), sellPrice: text('.match-sell-price') };
     };
 
-    expect(metaOf('roq-1')).toContain('costo Bs 2.73 · venta Bs 4.00');
-    expect(metaOf('nue-1')).toContain('costo Bs 60.00/kg · venta Bs 90.00/kg');
-    expect(metaOf('reg-1')).toContain('venta Bs 4.00');
+    expect(resultOf('roq-1').sellPrice).toBe('Venta Bs 4.00');
+    expect(resultOf('roq-1').meta).toContain('costo Bs 2.73');
+    expect(resultOf('roq-1').meta).not.toContain('Bs 4.00');
+    expect(resultOf('nue-1').sellPrice).toBe('Venta Bs 90.00/kg');
+    expect(resultOf('nue-1').meta).toContain('costo Bs 60.00/kg');
+    expect(resultOf('reg-1').sellPrice).toBe('Venta Bs 4.00');
+  });
+
+  it('CON-05: la columna Precio de venta va después del subtotal', () => {
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('.lines-table th'))
+      .map((el: any) => el.textContent.trim());
+    expect(headers.slice(2, 5)).toEqual(['Costo unitario', 'Subtotal', 'Precio de venta']);
   });
 
   describe('CON-05: columna Precio de venta', () => {
