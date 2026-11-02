@@ -1,5 +1,8 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { openSessionDayLabel } from '../../utils/store-date';
+
+// How often the mark looks at the clock. A repeating check also catches a device that slept through midnight
+const CLOCK_CHECK_MS = 60_000;
 
 // CAJ-12: «Día 28/10 · abierta el 30/10» on an open session that is not today's; nothing on today's
 @Component({
@@ -26,5 +29,13 @@ export class CashDayMarkComponent {
   operationDate = input<string | null | undefined>(null);
   openedAt = input<string | null | undefined>(null);
 
-  readonly label = computed(() => openSessionDayLabel(this.operationDate(), this.openedAt()));
+  private readonly now = signal(new Date());
+
+  // The clock is a signal so the computed does not keep its first answer past midnight
+  readonly label = computed(() => openSessionDayLabel(this.operationDate(), this.openedAt(), this.now()));
+
+  constructor() {
+    const clock = setInterval(() => this.now.set(new Date()), CLOCK_CHECK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(clock));
+  }
 }
