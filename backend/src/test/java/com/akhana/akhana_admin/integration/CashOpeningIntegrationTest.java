@@ -10,10 +10,16 @@ import com.akhana.akhana_admin.service.impl.StoreFormat;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +37,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.reset;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** CAJ-12, CAJ-13 against PostgreSQL. Each test rolls back, except the one that needs a real rollback of the service. */
 @SpringBootTest
+@AutoConfigureMockMvc
 @Transactional
 class CashOpeningIntegrationTest {
 
@@ -43,6 +54,7 @@ class CashOpeningIntegrationTest {
     @Autowired private CashSessionRepository cashSessionRepository;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private EntityManager entityManager;
+    @Autowired private MockMvc mockMvc;
     @MockitoSpyBean private FinancialCategoryRepository financialCategoryRepository;
 
     /** A Tuesday at least a week ago: the session of the Friday before it leaves Saturday and Monday missing. */
@@ -93,6 +105,27 @@ class CashOpeningIntegrationTest {
             + "ORDER BY 1", LocalDate.class, opened.id())).containsExactly(saturday, monday);
         assertThat(jdbc.queryForList("SELECT DISTINCT comment || '|' || marked_by FROM cash_no_attention_days "
             + "WHERE cash_session_id = ?", String.class, opened.id())).containsExactly("Feriado|" + USER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "\"\""})
+    @DisplayName("CAJ-13: un día vacío en los días sin atención responde 400 con su mensaje y no escribe nada")
+    void emptyNoAttentionDayIsABadRequest(String emptyDay) throws Exception {
+        String counts = "SELECT (SELECT COUNT(*) FROM cash_sessions) || '/' || (SELECT COUNT(*) FROM cash_no_attention_days)"
+            + " || '/' || (SELECT COUNT(*) FROM financial_transactions)";
+        String before = jdbc.queryForObject(counts, String.class);
+
+        mockMvc.perform(post("/api/cash-sessions/open")
+                .with(user(USER).authorities(new SimpleGrantedAuthority("POS")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"openingAmount":100.00,"noAttentionDays":[%s,"2026-11-01"],"noAttentionComment":"Feriado"}"""
+                    .formatted(emptyDay)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Hay un día sin atención vacío; vuelve a abrir el formulario."));
+
+        entityManager.flush();
+        assertThat(jdbc.queryForObject(counts, String.class)).isEqualTo(before);
     }
 
     @Test

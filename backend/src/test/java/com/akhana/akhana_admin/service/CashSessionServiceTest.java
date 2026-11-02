@@ -794,6 +794,17 @@ class CashSessionServiceTest {
     }
 
     @Test
+    @DisplayName("CAJ-13: un día vacío en los días sin atención se rechaza antes de leer o escribir nada")
+    void openSession_emptyNoAttentionDay_isRejected() {
+        assertThatThrownBy(() -> cashSessionService.openSession(new OpenCashRequest(new BigDecimal("150.00"),
+                "Carga atrasada", TUE_3, Arrays.asList(null, MON_2), "Feriado"), "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Hay un día sin atención vacío; vuelve a abrir el formulario.");
+
+        verifyNoInteractions(cashSessionRepository, cashNoAttentionDayRepository);
+    }
+
+    @Test
     @DisplayName("CAJ-13: se abre un domingo como cualquier otra caja")
     void openSession_sunday_opens() {
         stubLastSession(lastSession(148, SAT_31));
