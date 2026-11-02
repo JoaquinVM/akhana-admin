@@ -59,4 +59,36 @@ describe('QuantityStepperComponent', () => {
     expect(field().step).toBe('0.001');
     expect(field().classList.contains('qty-input-weight')).toBe(true);
   });
+
+  describe('POS-14: al salir del campo', () => {
+    const leaveWith = async (value: string): Promise<void> => {
+      field().value = value;
+      field().dispatchEvent(new Event('input'));
+      field().dispatchEvent(new Event('blur'));
+      await fixture.whenStable();
+    };
+
+    it('con restoreOnBlur, vacío o en 0 vuelve a la cantidad del padre', async () => {
+      fixture.componentRef.setInput('restoreOnBlur', true);
+      fixture.detectChanges();
+
+      await leaveWith('');
+      expect(field().value).toBe('2');
+      await leaveWith('0');
+      expect(field().value).toBe('2');
+    });
+
+    it('con restoreOnBlur, una cantidad válida se queda', async () => {
+      fixture.componentRef.setInput('restoreOnBlur', true);
+      fixture.detectChanges();
+
+      await leaveWith('5');
+      expect(field().value).toBe('5');
+    });
+
+    it('sin restoreOnBlur, como en pedidos, el campo queda como se escribió', async () => {
+      await leaveWith('');
+      expect(field().value).toBe('');
+    });
+  });
 });

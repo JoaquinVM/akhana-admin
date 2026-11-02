@@ -21,8 +21,16 @@ export class QuantityStepperComponent {
   // By weight: kilos with up to 3 decimals
   readonly weight = input<boolean>(false);
   readonly decrementDisabled = input<boolean>(false);
+  // POS-14: on leaving the field empty or in 0, it shows the parent's quantity again
+  readonly restoreOnBlur = input<boolean>(false);
 
   readonly increment = output<void>();
   readonly decrement = output<void>();
   readonly quantityChange = output<number>();
+
+  onBlur(field: HTMLInputElement): void {
+    if (this.restoreOnBlur() && !(Number(field.value) > 0)) {
+      field.value = String(this.quantity());
+    }
+  }
 }

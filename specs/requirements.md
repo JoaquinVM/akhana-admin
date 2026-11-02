@@ -19,12 +19,12 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
-| POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
+| POS y ventas | POS-01 a POS-14 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -191,6 +191,7 @@ Detalle en `sales.md`.
 - **POS-11** Línea libre: productos especiales del catálogo, sin inventario, que piden nombre y precio al vender. Sin descuento por unidad, productos rápidos, presentaciones ni venta al costo; el descuento general se reparte solo entre las líneas normales (P-44). Llevan categoría y proveedor reales (P-50).
 - **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, mostrando antes la utilidad que tendrá la línea, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
 - **POS-13** Venta de productos de terceros (hoy, de Mami): producto especial con su dueña (DEU-01); el costo de la línea es igual al precio y cada venta suma a la deuda con ella, que se le paga con «Pago a tercero» (DEU-03). Los reportes la muestran aparte, fuera de las ventas y la utilidad de la tienda.
+- **POS-14** En el POS, vaciar la cantidad de una línea o escribir 0 no la quita; al salir del campo vuelve a la última cantidad válida. La línea se quita con el − al llegar a 0 o con su X.
 
 ### 3.8 Dinero (finanzas) · V1
 
@@ -272,6 +273,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo. Medido en local: la venta responde en 20–50 ms y el catálogo activo (590 KB, 60 KB comprimido desde la cuarta revisión) en 35–70 ms.
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
+- **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
 
 ## 5. Preguntas
 

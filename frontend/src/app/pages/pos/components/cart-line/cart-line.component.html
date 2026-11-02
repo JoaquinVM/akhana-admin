@@ -17,6 +17,7 @@
   <app-quantity-stepper
     [quantity]="item().quantity"
     [weight]="weightLine()"
+    [restoreOnBlur]="true"
     (increment)="increment.emit()"
     (decrement)="decrement.emit()"
     (quantityChange)="quantityChange.emit($event)" />

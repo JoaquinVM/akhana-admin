@@ -160,6 +160,38 @@ El sistema SHALL permitir en `/pos/sale` vender en kilos los productos con `sale
 
 ---
 
+### Requirement: Escribir la cantidad no quita la línea (POS-14)
+El sistema SHALL mantener la línea mientras se escribe su cantidad. La línea se quita solo con el − al llegar a 0 o con su X.
+
+#### Scenario: Cantidad vacía o en 0
+- **WHEN** se vacía la cantidad de una línea o se escribe 0
+- **THEN** la línea sigue ahí, con el subtotal y el total de su última cantidad válida
+- **AND** al salir del campo vuelve a mostrar esa cantidad, sin mensaje
+
+#### Scenario: Menos de un kilo
+- **WHEN** se selecciona la cantidad de un producto a Bs 60/kg y se escribe 0.5 o 0,5
+- **THEN** la línea sigue en cada tecla y queda en 0,5 kg, subtotal Bs 30,00
+
+#### Scenario: Cobrar con el campo vacío
+- **WHEN** se aprieta «Cobrar» con la cantidad vacía o en 0
+- **THEN** se cobra con la última cantidad válida, que es la que se ve en el campo
+
+### Requirement: Decimales con punto en los campos numéricos (NF-07)
+El sistema SHALL tomar el punto como único separador decimal en todo `input type="number"`, con un solo escucha global (`shared/utils/number-input-comma.ts`), sin configurar cada campo.
+
+#### Scenario: Tecla coma
+- **WHEN** se escribe 2,125 en un campo numérico
+- **THEN** el campo muestra 2.125 y vale 2,125
+- **AND** en un campo de texto la coma sigue siendo una coma
+
+#### Scenario: Segundo separador
+- **WHEN** ya hay un separador en el campo y se aprieta la coma
+- **THEN** no se agrega otro
+
+#### Scenario: Pegar
+- **WHEN** se pega un número con coma
+- **THEN** no entra, el campo no cambia y aparece «Usa punto para los decimales»
+
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
 El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
 

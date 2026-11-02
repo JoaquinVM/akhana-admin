@@ -18,7 +18,8 @@
     [class.qty-input-weight]="weight()"
     [title]="weight() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
     [ngModel]="quantity()"
-    (ngModelChange)="quantityChange.emit($event)" />
+    (ngModelChange)="quantityChange.emit($event)"
+    (blur)="onBlur($any($event.target))" />
   <button
     type="button"
     class="qty-btn"
