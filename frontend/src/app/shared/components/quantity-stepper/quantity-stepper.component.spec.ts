@@ -1,5 +1,14 @@
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { QuantityStepperComponent } from './quantity-stepper.component';
+
+@Component({
+  imports: [QuantityStepperComponent],
+  template: `<app-quantity-stepper [quantity]="quantity()" [restoreOnBlur]="true" (quantityChange)="quantity.set($event)" />`
+})
+class StepperHost {
+  readonly quantity = signal(1);
+}
 
 describe('QuantityStepperComponent', () => {
   let fixture: ComponentFixture<QuantityStepperComponent>;
@@ -93,6 +102,23 @@ describe('QuantityStepperComponent', () => {
       await fixture.whenStable();
       await leaveWith('5');
       expect(field().value).toBe('5');
+    });
+
+    it('con restoreOnBlur, lo recién escrito no vuelve a la cantidad anterior si se sale antes de renderizar', async () => {
+      const host = TestBed.createComponent(StepperHost);
+      host.detectChanges();
+      await host.whenStable();
+      const hostField: HTMLInputElement = host.nativeElement.querySelector('.qty-input');
+
+      // In the same task: the parent has the new quantity, but the stepper's input still has the old one
+      hostField.value = '4';
+      hostField.dispatchEvent(new Event('input'));
+      hostField.dispatchEvent(new Event('blur'));
+      host.detectChanges();
+      await host.whenStable();
+
+      expect(host.componentInstance.quantity()).toBe(4);
+      expect(hostField.value).toBe('4');
     });
 
     it('sin restoreOnBlur, como en pedidos, el campo queda como se escribió', async () => {
