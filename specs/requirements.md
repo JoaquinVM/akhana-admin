@@ -131,7 +131,7 @@ Detalle en `purchases.md`.
 - **COM-11** Un pedido registrado (no anulado ni histórico) se edita en cualquier estado de entrega o pago, con motivo obligatorio: cabecera, entrega, envío y líneas (agregar lo que llegó sin pedirse, cambiar cantidad o costo, quitar lo que faltó con baja lógica), con producto nuevo y precio sugerido como en COM-03 (P-51).
 - **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
 - **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
-- **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo de envío y monto pagado no muestran las flechitas del navegador.
+- **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 

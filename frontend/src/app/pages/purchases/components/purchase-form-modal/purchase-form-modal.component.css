@@ -132,8 +132,12 @@
   text-align: right;
 }
 
+/* COM-14: next to the quantity, with a fixed width so u and kg keep the controls aligned between rows */
 .unit-hint {
-  display: block;
+  display: inline-block;
+  width: 1.25rem;
+  margin-left: 0.25rem;
+  text-align: left;
 }
 
 /* COM-13: with the extra column, amounts and quantities stay on one line; the product name takes the wrap */
@@ -150,7 +154,7 @@ app-quantity-stepper {
   vertical-align: middle;
 }
 
-/* COM-14: no browser spinners in the shipping cost and the amount paid */
+/* COM-14: no browser spinners in the unit cost, the shipping cost and the amount paid */
 .no-spinner {
   -moz-appearance: textfield;
   appearance: textfield;

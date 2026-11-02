@@ -510,7 +510,7 @@ describe('PurchaseFormModalComponent', () => {
       ]);
     });
 
-    it('cantidad, envío y monto pagado no muestran flechitas; el costo unitario las conserva', () => {
+    it('cantidad, costo unitario, envío y monto pagado no muestran flechitas; la unidad va junto a la cantidad', () => {
       component.addProduct(tea);
       component.initialPaymentSource.set('account:acc-1');
       fixture.detectChanges();
@@ -519,7 +519,8 @@ describe('PurchaseFormModalComponent', () => {
       expect(el.querySelector('#purchase-shipping')!.classList).toContain('no-spinner');
       expect(el.querySelector('#purchase-initial-amount')!.classList).toContain('no-spinner');
       expect(el.querySelector('app-quantity-stepper .qty-input')).not.toBeNull();
-      expect(el.querySelector('.lines-table input.input-number')!.classList).not.toContain('no-spinner');
+      expect(el.querySelector('.lines-table input.input-number')!.classList).toContain('no-spinner');
+      expect(steppers()[0].nextElementSibling!.classList).toContain('unit-hint');
     });
   });
 
