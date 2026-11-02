@@ -489,6 +489,18 @@ describe('PurchaseFormModalComponent', () => {
       expect(component.lines()).toEqual([]);
     });
 
+    it('Enter en el campo de cantidad, dentro del control, no envía el pedido', () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      fixture.detectChanges();
+      const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+      steppers()[0].querySelector('.qty-input')!.dispatchEvent(enter);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+    });
+
     it('la petición sigue teniendo la misma forma', () => {
       component.supplierId.set('sup-1');
       component.addProduct(tea);
