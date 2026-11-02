@@ -85,6 +85,7 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 
 - **Cuando** el navegador pide una ruta de la app (`/pos`, `/caja`) o recarga la página en ella
 - **Entonces** nginx devuelve `index.html` (rutas de Angular) y los archivos con hash se cachean; `index.html` no.
+  Tampoco se cachean `sw.js`, `manifest.webmanifest` ni `icons/` de la app instalada (`mobile.md`).
 
 - **Cuando** el navegador llama a `/api/...`
 - **Entonces** nginx lo pasa al backend en la misma URL (sin CORS), con `X-Forwarded-For` y `X-Forwarded-Proto`, y

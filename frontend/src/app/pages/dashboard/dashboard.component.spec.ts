@@ -6,6 +6,7 @@ import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardIndicators } from '../../core/dashboard/models/dashboard.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { homeRedirect } from '../../app.routes';
+import { INSTALLED_APP } from '../../core/pwa/installed-app';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -204,5 +205,91 @@ describe('DashboardComponent', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('DashboardComponent instalado (MOV-02)', () => {
+  const today = storeToday();
+  const now = {
+    cash: { open: false }, accounts: [{ id: 'a1', name: 'Caja', color: null, balance: 1500 }],
+    totalBalance: 1500, payables: 320, creditorsDebt: 200.25, receivables: 104
+  };
+  const zero = { sales: 0, cost: 0, profit: 0, margin: null, tickets: 0, averageTicket: null, atCostSales: 0, atCostTotal: 0, consumptionTotal: 0 };
+  const dashboard = {
+    from: today, to: today, previousFrom: today, previousTo: today, current: zero, previous: zero, days: [], previousDays: [],
+    payments: { cash: 0, qr: 0, credit: 0, historicalTotal: 0, historicalSales: 0 },
+    topProductsBySales: [], topProductsByProfit: [], topSuppliersBySales: [], topSuppliersByProfit: [],
+    expenses: [], expenseTotal: 0, now, noAttentionDays: []
+  } as unknown as Dashboard;
+
+  function create(installed: boolean) {
+    const getDashboard = vi.fn().mockReturnValue(of(dashboard));
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        { provide: DashboardService, useValue: { getDashboard } },
+        { provide: INSTALLED_APP, useValue: installed }
+      ]
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    return { fixture, getDashboard, element: fixture.nativeElement as HTMLElement };
+  }
+
+  const titles = (element: HTMLElement) => Array.from(element.querySelectorAll('h2')).map(h => h.textContent?.trim());
+  const follows = (first: Element, second: Element) =>
+    (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it('CA-04: abre en Hoy y «Ahora mismo» va antes de los filtros y los indicadores', () => {
+    const { fixture, getDashboard, element } = create(true);
+    expect(getDashboard).toHaveBeenCalledWith({ from: today, to: today });
+    expect(fixture.componentInstance.period()).toBe('TODAY');
+    const nowBlock = element.querySelector('section.now')!;
+    expect(nowBlock.querySelector('h2')?.textContent).toContain('Ahora mismo');
+    expect(follows(nowBlock, element.querySelector('.filters')!)).toBe(true);
+    expect(follows(nowBlock, element.querySelector('.kpis')!)).toBe(true);
+    expect(nowBlock.querySelector('#cash-title')).toBeTruthy();
+    expect(nowBlock.querySelector('#balances-title')).toBeTruthy();
+  });
+
+  it('CA-04: caja y saldos se muestran una sola vez', () => {
+    const { element } = create(true);
+    expect(titles(element).filter(t => t === 'Caja actual')).toHaveLength(1);
+    expect(titles(element).filter(t => t === 'Saldos y deudas')).toHaveLength(1);
+  });
+
+  it('CA-05: en el navegador abre en Mes, sin «Ahora mismo» y con el orden de siempre', () => {
+    const { fixture, getDashboard, element } = create(false);
+    expect(getDashboard).toHaveBeenCalledWith({ from: `${today.slice(0, 7)}-01`, to: today });
+    expect(fixture.componentInstance.period()).toBe('MONTH');
+    expect(element.querySelector('section.now')).toBeNull();
+    expect(titles(element)).toEqual(['Ventas por día', 'Cómo se cobró', 'Caja actual', 'Top productos',
+      'Top proveedores', 'Gastos por categoría', 'Saldos y deudas']);
+  });
+
+  it('CA-06: dentro de la app, Semana y Mes piden el mismo período que en el navegador', () => {
+    const { fixture, getDashboard, element } = create(true);
+    const button = (label: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('.filter-pill'))
+      .find(b => b.textContent?.trim() === label)!;
+    button('Semana').click();
+    fixture.detectChanges();
+    expect(getDashboard).toHaveBeenLastCalledWith(periodRange('WEEK', today));
+    button('Mes').click();
+    fixture.detectChanges();
+    expect(getDashboard).toHaveBeenLastCalledWith(periodRange('MONTH', today));
+  });
+
+  it('MOV-02: al volver de segundo plano recarga el período elegido, solo en la app', () => {
+    const installed = create(true);
+    installed.getDashboard.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(installed.getDashboard).toHaveBeenCalledWith({ from: today, to: today });
+    installed.fixture.destroy();
+
+    TestBed.resetTestingModule();
+    const browser = create(false);
+    browser.getDashboard.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(browser.getDashboard).not.toHaveBeenCalled();
   });
 });
