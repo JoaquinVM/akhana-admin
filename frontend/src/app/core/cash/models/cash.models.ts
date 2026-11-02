@@ -17,11 +17,25 @@ export interface CashCutItem {
 export interface CashOpeningProposal {
   proposedAmount: number;
   previousSessionNumber: number | null;
+  // CAJ-12: today in the store (from the server) and the first day that can be chosen (null without sessions)
+  today: string;
+  minDay: string | null;
+  lastSessionNumber: number | null;
+  lastSessionDay: string | null;
+  // The number of the last session when it is today's and already closed
+  todayClosedSessionNumber: number | null;
+  // CAJ-13: days up to yesterday without a session or mark; those before the chosen day must be confirmed
+  unresolvedDays: string[];
 }
 
 export interface OpenCashRequest {
   openingAmount: number;
   openingComment?: string | null;
+  // CAJ-12: the day of the session, yyyy-MM-dd
+  operationDate?: string | null;
+  // CAJ-13: the missing days the user saw and confirmed without attention
+  noAttentionDays?: string[] | null;
+  noAttentionComment?: string | null;
 }
 
 export interface CloseCashRequest {
@@ -116,6 +130,23 @@ export interface CashSessionSummary {
   historical?: boolean;
   // CAJ-11: day its sales and movements count for (yyyy-MM-dd); openedAt is the real time it was opened
   operationDate?: string | null;
+  // CAJ-14: whether the history offers to reopen it
+  reopenable?: boolean;
+}
+
+// CAJ-14: a reopening with what the undone closing had
+export interface CashSessionReopening {
+  id: string;
+  reason: string;
+  reopenedBy: string;
+  reopenedAt: string;
+  closingAmount: number;
+  closingComment?: string | null;
+  closedBy?: string | null;
+  closedAt: string;
+  expectedCash: number;
+  difference?: number | null;
+  cuts: CashCutItem[];
 }
 
 export interface CashSessionDetail extends CashSessionSummary {
@@ -126,6 +157,8 @@ export interface CashSessionDetail extends CashSessionSummary {
   historicalExpenses?: number | null;
   historicalOtherOutflow?: number | null;
   historicalInternalOutflow?: number | null;
+  // CAJ-14: oldest first
+  reopenings?: CashSessionReopening[];
 }
 
 export const BOLIVIAN_DENOMINATIONS: readonly number[] = [

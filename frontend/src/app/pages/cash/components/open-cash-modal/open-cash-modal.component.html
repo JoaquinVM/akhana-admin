@@ -7,6 +7,61 @@
   (close)="onCancel()">
   
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-form">
+    @if (serverError(); as error) {
+      <p class="form-alert" role="alert">{{ error }}</p>
+    }
+
+    @if (noDayMessage(); as message) {
+      <p class="form-alert" role="alert">{{ message }}</p>
+    }
+
+    <div class="form-group">
+      <label for="operationDate" class="form-label">Día de la caja</label>
+      <input
+        id="operationDate"
+        type="date"
+        formControlName="operationDate"
+        class="form-control"
+        [attr.min]="proposal()?.minDay ?? null"
+        [attr.max]="proposal()?.today ?? null"
+        [class.is-invalid]="!dayInRange()" />
+      @if (!dayInRange() && hasDayToChoose()) {
+        <span class="error-feedback">Elige un día después de la última caja y hasta hoy.</span>
+      }
+      <span class="form-hint">Sus ventas y movimientos cuentan para este día. Después de abrir no se puede cambiar.</span>
+    </div>
+
+    @if (missingDayLabels().length > 0) {
+      <div class="missing-days" role="group" aria-labelledby="missingDaysTitle">
+        <p id="missingDaysTitle" class="missing-days-title">Quedan días atrás sin caja:</p>
+        <ul class="missing-days-list">
+          @for (label of missingDayLabels(); track label) {
+            <li>{{ label }}</li>
+          }
+        </ul>
+        <label class="missing-days-confirm">
+          <input id="noAttentionConfirmed" type="checkbox" formControlName="noAttentionConfirmed" />
+          <span>¿No hubo atención esos días?</span>
+        </label>
+        <div class="form-group">
+          <label for="noAttentionComment" class="form-label">
+            <span>Comentario de los días sin atención <span class="required-mark">*</span></span>
+          </label>
+          <textarea
+            id="noAttentionComment"
+            formControlName="noAttentionComment"
+            rows="2"
+            class="form-control"
+            placeholder="Ej: Feriado, la tienda no abrió..."
+            [class.is-invalid]="form.get('noAttentionComment')?.invalid && form.get('noAttentionComment')?.touched"></textarea>
+          @if (form.get('noAttentionComment')?.invalid && form.get('noAttentionComment')?.touched) {
+            <span class="error-feedback">Confirmar los días sin atención pide un comentario.</span>
+          }
+        </div>
+        <span class="form-hint">Si los confirmas, quedan marcados y no se podrá abrir una caja de esos días. Si hubo atención, elige uno de ellos arriba.</span>
+      </div>
+    }
+
     <div class="form-group">
       <label for="openingAmount" class="form-label">
         <span>Monto inicial en efectivo (Bs) <span class="required-mark">*</span></span>
@@ -47,7 +102,7 @@
 
     <div class="form-group">
       <label for="openingComment" class="form-label">
-        @if (amountChanged()) {
+        @if (commentRequired()) {
           <span>Comentario de apertura <span class="required-mark">*</span></span>
         } @else {
           Comentario de apertura (Opcional)
@@ -60,8 +115,8 @@
         class="form-control"
         placeholder="Ej: Inicio de turno con billetes de corte bajo para sencillo..."
         [class.is-invalid]="form.get('openingComment')?.invalid && form.get('openingComment')?.touched"></textarea>
-      @if (amountChanged() && form.get('openingComment')?.invalid && form.get('openingComment')?.touched) {
-        <span class="error-feedback">El monto es distinto al cierre anterior: indica el motivo.</span>
+      @if (commentRequired() && form.get('openingComment')?.invalid && form.get('openingComment')?.touched) {
+        <span class="error-feedback">{{ commentError() }}</span>
       }
       <span class="form-hint">Máximo 500 caracteres.</span>
     </div>
@@ -77,7 +132,7 @@
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="form.invalid || isLoading()">
+        [disabled]="!canSubmit()">
         @if (isLoading()) {
           <span class="btn-spinner"></span> Abriendo caja...
         } @else {

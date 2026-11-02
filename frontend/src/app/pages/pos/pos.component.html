@@ -11,6 +11,9 @@
         <h1 class="page-title">Punto de venta</h1>
         @if (cashService.currentSession()) {
           <span class="status-badge badge-active">Caja abierta</span>
+          <app-cash-day-mark
+            [operationDate]="cashService.currentSession()?.operationDate"
+            [openedAt]="cashService.currentSession()?.openedAt" />
         } @else {
           <span class="status-badge badge-closed">Caja cerrada</span>
         }
@@ -94,6 +97,7 @@
   <app-open-cash-modal
     [isOpen]="isOpenModalVisible()"
     [isLoading]="isActionLoading()"
+    [serverError]="openError()"
     (close)="closeOpenModal()"
     (confirmed)="handleConfirmOpen($event)" />
 
