@@ -1,0 +1,47 @@
+<app-modal
+  [isOpen]="isOpen()"
+  title="Reabrir caja"
+  [subtitle]="'Sesión #' + (session()?.sessionNumber || '—')"
+  size="md"
+  [closeOnBackdrop]="false"
+  (close)="onCancel()">
+
+  <form (ngSubmit)="onSubmit()" class="reopen-form">
+    @if (serverError(); as error) {
+      <p class="form-alert" role="alert">{{ error }}</p>
+    }
+
+    <p class="reopen-effect">
+      La caja vuelve a estar abierta, con su mismo número, día, ventas y movimientos, y se vuelve a ver en el POS.
+      Al cerrarla de nuevo se cuenta la gaveta otra vez.
+    </p>
+    @if (adjustmentKind(); as kind) {
+      <p class="reopen-effect reopen-effect-money">
+        Se anula el ajuste por {{ kind }} de Bs {{ adjustmentAmount() | number:'1.2-2' }} y el saldo de Caja vuelve a lo que era antes del cierre.
+      </p>
+    } @else {
+      <p class="reopen-effect">El cierre no tuvo diferencia: ningún saldo cambia.</p>
+    }
+
+    <div class="form-group">
+      <label for="reopenReason" class="form-label">Motivo <span class="required-mark">*</span></label>
+      <textarea
+        id="reopenReason"
+        name="reason"
+        rows="3"
+        maxlength="500"
+        class="form-control"
+        placeholder="Ej: Se cerró por error, faltó cargar ventas..."
+        [ngModel]="reason()"
+        (ngModelChange)="reason.set($event)"></textarea>
+      <span class="form-hint">Queda registrado quién reabrió, cuándo y por qué, junto con lo que tenía el cierre.</span>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isLoading()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="!canSubmit()">
+        {{ isLoading() ? 'Reabriendo...' : 'Reabrir caja' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

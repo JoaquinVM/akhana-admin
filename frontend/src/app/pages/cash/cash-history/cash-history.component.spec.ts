@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CashHistoryComponent } from './cash-history.component';
 import { CashService } from '../../../core/cash/cash.service';
 import { CashSessionSummary, CashSessionDetail } from '../../../core/cash/models/cash.models';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { By } from '@angular/platform-browser';
 
@@ -147,5 +147,58 @@ describe('CashHistoryComponent', () => {
     component.closeDetail();
     expect(component.isDetailModalVisible()).toBe(false);
     expect(component.selectedDetail()).toBeNull();
+  });
+
+  describe('CAJ-14: reabrir', () => {
+    const reopenButtons = () => (Array.from(fixture.nativeElement.querySelectorAll('.reopen-action')) as HTMLButtonElement[]);
+
+    it('solo tiene la acción la caja que el servidor marca', () => {
+      component.sessions.set([
+        { ...mockSessions[1], id: 'last', sessionNumber: 9, reopenable: true },
+        { ...mockSessions[1], id: 'older', sessionNumber: 8, reopenable: false },
+        { ...mockSessions[1], id: 'imported', sessionNumber: 7, historical: true }
+      ]);
+      fixture.detectChanges();
+
+      expect(reopenButtons().length).toBe(1);
+      expect(reopenButtons()[0].closest('tr')?.textContent).toContain('#9');
+      expect(reopenButtons()[0].textContent).toContain('Reabrir');
+    });
+
+    it('sin caja que reabrir no hay acción', () => {
+      component.sessions.set([{ ...mockSessions[0], reopenable: false }]);
+      fixture.detectChanges();
+
+      expect(reopenButtons().length).toBe(0);
+    });
+
+    it('al reabrir envía el motivo, recarga la lista y cierra el modal', () => {
+      const session = { ...mockSessions[1], reopenable: true };
+      mockCashService.reopenSession = vi.fn().mockReturnValue(of({ ...session, status: 'ABIERTA' }));
+      mockCashService.getAllSessions.mockClear();
+
+      component.openReopen(session);
+      expect(component.reopenTarget()).toEqual(session);
+      component.confirmReopen('Cerrada por error');
+
+      expect(mockCashService.reopenSession).toHaveBeenCalledWith(session.id, 'Cerrada por error');
+      expect(mockCashService.getAllSessions).toHaveBeenCalledTimes(1);
+      expect(component.reopenTarget()).toBeNull();
+      expect(component.isReopening()).toBe(false);
+    });
+
+    it('si el servidor rechaza, el mensaje queda en el modal y nada se recarga', () => {
+      const session = { ...mockSessions[1], reopenable: true };
+      mockCashService.reopenSession = vi.fn().mockReturnValue(
+        throwError(() => ({ error: { message: 'Solo se puede reabrir la última caja.' } })));
+      mockCashService.getAllSessions.mockClear();
+
+      component.openReopen(session);
+      component.confirmReopen('Motivo');
+
+      expect(component.reopenError()).toBe('Solo se puede reabrir la última caja.');
+      expect(component.reopenTarget()).toEqual(session);
+      expect(mockCashService.getAllSessions).not.toHaveBeenCalled();
+    });
   });
 });

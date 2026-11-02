@@ -255,3 +255,23 @@
   padding: 1px 6px;
   white-space: nowrap;
 }
+
+.reopenings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.reopening {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.reopening-cuts .audit-v {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
