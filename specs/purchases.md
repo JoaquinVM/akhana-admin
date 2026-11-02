@@ -271,7 +271,7 @@ no lo muestran.
 - **Cuando** se agrega una línea **entonces** la columna «Precio de venta», después de «Subtotal», separada con una línea
   y resaltada, muestra el precio de una unidad o un kilo sin multiplicar por la cantidad: «Bs 15,00» o «Bs 60,00/kg». Un
   producto creado desde la línea muestra el precio con que se creó. La unidad va debajo de la cantidad, para que las
-  casillas queden alineadas.
+  casillas de esa columna queden alineadas entre filas.
 - **Cuando** se cambia el costo de la línea o se elige otro precio en la alerta **entonces** la columna sigue en el precio
   actual hasta guardar; el otro pedido que se abra después ya muestra el nuevo.
 - **Cuando** se edita un pedido **entonces** cada línea muestra el precio actual del catálogo, que puede ser distinto del

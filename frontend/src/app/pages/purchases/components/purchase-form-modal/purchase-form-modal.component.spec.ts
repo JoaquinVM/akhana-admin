@@ -246,6 +246,7 @@ describe('PurchaseFormModalComponent', () => {
       expect(resultOf('te-1').meta).not.toContain('Bs 15.00');
       expect(resultOf('nue-1').sellPrice).toBe('Venta Bs 60.00/kg');
       expect(resultOf('nue-1').meta).toContain('costo Bs 40.00/kg');
+      expect(resultOf('nue-1').meta).not.toContain('Bs 60.00');
     });
 
     it('la columna muestra el precio de una unidad o un kilo, sin multiplicar por la cantidad', () => {
