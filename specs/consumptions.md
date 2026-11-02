@@ -175,12 +175,15 @@ Solo en el formulario «Nuevo consumo». El precio no se edita, no se envía al 
 «Total al costo». El selector de presentaciones, que se comparte con el POS, sigue mostrando el costo. El listado y el
 detalle de un consumo no lo muestran.
 
-- **Cuando** se busca un producto por unidad (Roquin, costo Bs 2,73, precio Bs 4,00) **entonces** el resultado muestra,
-  además de lo que ya tenía, «venta Bs 4,00»; también si el producto está inactivo.
-- **Cuando** se busca un producto por kilo (costo Bs 60,00, precio Bs 90,00) **entonces** muestra «costo Bs 60,00/kg» y
-  «venta Bs 90,00/kg».
-- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», a la derecha de «Costo unitario», muestra el
-  precio de una unidad sin multiplicar por la cantidad: «Bs 4,00» por unidad y «Bs 90,00/kg» con «Otro peso».
+- **Cuando** se abre el formulario **entonces** usa la ventana ancha (`size="xl"`, como el de pedidos).
+- **Cuando** se busca un producto por unidad (Roquin, costo Bs 2,73, precio Bs 4,00) **entonces** el resultado sigue
+  mostrando a la izquierda lo que ya tenía y, aparte a la derecha y resaltado, «Venta» con «Bs 4,00»; también si el
+  producto está inactivo.
+- **Cuando** se busca un producto por kilo (costo Bs 60,00, precio Bs 90,00) **entonces** muestra «costo Bs 60,00/kg» a
+  la izquierda y «Bs 90,00/kg» a la derecha.
+- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», después de «Subtotal», separada con una línea
+  y resaltada, muestra el precio de una unidad sin multiplicar por la cantidad: «Bs 4,00» por unidad y «Bs 90,00/kg» con
+  «Otro peso».
 - **Cuando** la línea es una presentación **entonces** muestra «Bs X c/u» con el precio de venta de esa presentación, el
   que cobra el POS: su precio fijo, o peso × precio por kilo. «Costo unitario» sigue por kilo.
 - **Cuando** el producto tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
