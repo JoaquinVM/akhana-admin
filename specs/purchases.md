@@ -265,11 +265,13 @@ servidor ni se guarda en el pedido, y no cambia el costo, el total ni el precio 
 solo con las opciones «Sugerido», «Mantener» y «Otro» de la alerta de costo (COM-03). El detalle y el listado de pedidos
 no lo muestran.
 
-- **Cuando** se busca un producto por unidad (costo Bs 10,00, precio Bs 15,00) **entonces** el resultado muestra, además
-  de lo que ya tenía, «venta Bs 15,00»; por kilo, «costo Bs 40,00/kg» y «venta Bs 60,00/kg».
-- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», a la derecha de «Costo unitario», muestra el
-  precio de una unidad o un kilo sin multiplicar por la cantidad: «Bs 15,00» o «Bs 60,00/kg». Un producto creado desde la
-  línea muestra el precio con que se creó.
+- **Cuando** se busca un producto por unidad (costo Bs 10,00, precio Bs 15,00) **entonces** el resultado sigue mostrando
+  a la izquierda lo que ya tenía y, aparte a la derecha y resaltado, «Venta» con «Bs 15,00»; por kilo, «costo Bs 40,00/kg»
+  a la izquierda y «Bs 60,00/kg» a la derecha. A 720 px o menos, el precio va debajo del texto.
+- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», después de «Subtotal», separada con una línea
+  y resaltada, muestra el precio de una unidad o un kilo sin multiplicar por la cantidad: «Bs 15,00» o «Bs 60,00/kg». Un
+  producto creado desde la línea muestra el precio con que se creó. La unidad va debajo de la cantidad, para que las
+  casillas queden alineadas.
 - **Cuando** se cambia el costo de la línea o se elige otro precio en la alerta **entonces** la columna sigue en el precio
   actual hasta guardar; el otro pedido que se abra después ya muestra el nuevo.
 - **Cuando** se edita un pedido **entonces** cada línea muestra el precio actual del catálogo, que puede ser distinto del
