@@ -20,11 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -199,7 +201,8 @@ class CashReopenIntegrationTest {
         assertThat(first.closingAmount()).isEqualByComparingTo("105.00");
         assertThat(first.closingComment()).isEqualTo("Cierre 105.00");
         assertThat(first.closedBy()).isEqualTo("ana");
-        assertThat(first.closedAt()).isEqualTo(closed.closedAt());
+        // The database keeps microseconds; on Linux the clock has nanoseconds
+        assertThat(first.closedAt()).isCloseTo(closed.closedAt(), within(1, ChronoUnit.MILLIS));
         assertThat(first.difference()).isEqualByComparingTo("-5.00");
         assertThat(first.expectedCash()).isEqualByComparingTo("110.00");
         assertThat(first.cuts()).extracting(c -> c.denomination().intValue()).containsExactly(100, 5);
