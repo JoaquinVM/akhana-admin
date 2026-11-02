@@ -47,4 +47,39 @@ describe('CashDetailModalComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('abierta el');
   });
+
+  it('CAJ-14: muestra cada reapertura con quién, motivo y lo que tenía el cierre, también si son varias', () => {
+    fixture.componentRef.setInput('session', {
+      ...session,
+      reopenings: [
+        { id: 'r-1', reason: 'Faltaron ventas', reopenedBy: 'luis', reopenedAt: '2026-10-30T13:00:00Z', closingAmount: 105,
+          closingComment: 'Faltan 5', closedBy: 'ana', closedAt: '2026-10-30T12:00:00Z', expectedCash: 110, difference: -5,
+          cuts: [{ denomination: 100, cashQuantity: 1, reserveQuantity: 0, subtotal: 100 }] },
+        { id: 'r-2', reason: 'Otra vez', reopenedBy: 'eva', reopenedAt: '2026-10-30T15:00:00Z', closingAmount: 120,
+          closingComment: null, closedBy: 'ana', closedAt: '2026-10-30T14:00:00Z', expectedCash: 120, difference: 0, cuts: [] }
+      ]
+    });
+    fixture.detectChanges();
+
+    const blocks = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.reopening')).map(el => el.textContent ?? '');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Reaperturas (2)');
+    expect(blocks.length).toBe(2);
+    expect(blocks[0]).toContain('luis');
+    expect(blocks[0]).toContain('Faltaron ventas');
+    expect(blocks[0]).toContain('ana');
+    expect(blocks[0]).toContain('105.00');
+    expect(blocks[0]).toContain('110.00');
+    expect(blocks[0]).toContain('-5.00');
+    expect(blocks[0]).toContain('Faltan 5');
+    expect(blocks[0]).toContain('Bs 100.00 × 1');
+    expect(blocks[1]).toContain('Otra vez');
+    expect(blocks[1]).toContain('eva');
+  });
+
+  it('CAJ-14: sin reaperturas no hay bloque', () => {
+    fixture.componentRef.setInput('session', session);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Reaperturas');
+  });
 });

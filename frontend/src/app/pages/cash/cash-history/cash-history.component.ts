@@ -7,18 +7,21 @@ import {
   CashSessionStatus
 } from '../../../core/cash/models/cash.models';
 import { CashDetailModalComponent } from '../components/cash-detail-modal/cash-detail-modal.component';
+import { ReopenCashModalComponent } from '../components/reopen-cash-modal/reopen-cash-modal.component';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 import { StoreDayPipe } from '../../../shared/utils/store-day.pipe';
 import { sessionDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-cash-history',
   standalone: true,
-  imports: [CommonModule, CashDetailModalComponent, StoreDayPipe],
+  imports: [CommonModule, CashDetailModalComponent, ReopenCashModalComponent, StoreDayPipe],
   templateUrl: './cash-history.component.html',
   styleUrls: ['./cash-history.component.css']
 })
 export class CashHistoryComponent implements OnInit {
   private readonly cashService = inject(CashService);
+  private readonly toast = inject(ToastService);
 
   sessions = signal<CashSessionSummary[]>([]);
   isLoading = signal<boolean>(false);
@@ -27,6 +30,11 @@ export class CashHistoryComponent implements OnInit {
   selectedDetail = signal<CashSessionDetail | null>(null);
   isDetailModalVisible = signal<boolean>(false);
   isDetailLoading = signal<boolean>(false);
+
+  // CAJ-14
+  reopenTarget = signal<CashSessionSummary | null>(null);
+  isReopening = signal<boolean>(false);
+  reopenError = signal<string | null>(null);
 
   filteredSessions = computed(() => {
     const list = this.sessions();
@@ -74,6 +82,36 @@ export class CashHistoryComponent implements OnInit {
       },
       error: () => {
         this.isDetailLoading.set(false);
+      }
+    });
+  }
+
+  openReopen(session: CashSessionSummary): void {
+    this.reopenError.set(null);
+    this.reopenTarget.set(session);
+  }
+
+  closeReopen(): void {
+    this.reopenTarget.set(null);
+  }
+
+  confirmReopen(reason: string): void {
+    const session = this.reopenTarget();
+    if (!session || this.isReopening()) {
+      return;
+    }
+    this.isReopening.set(true);
+    this.reopenError.set(null);
+    this.cashService.reopenSession(session.id, reason).subscribe({
+      next: (reopened) => {
+        this.isReopening.set(false);
+        this.reopenTarget.set(null);
+        this.toast.success(`Caja #${reopened.sessionNumber} reabierta. Ya se ve en el POS.`);
+        this.loadSessions();
+      },
+      error: (err) => {
+        this.isReopening.set(false);
+        this.reopenError.set(err.error?.message || 'Error al reabrir la caja.');
       }
     });
   }

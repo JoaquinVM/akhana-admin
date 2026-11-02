@@ -122,4 +122,24 @@ describe('CashService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([mockSession]);
   });
+
+  it('CAJ-14: reabrir envía el motivo y deja la caja como actual, para que el POS y el menú cambien', () => {
+    service.reopenSession('session-1', 'Cerrada por error').subscribe((session) => {
+      expect(session.id).toBe('session-1');
+    });
+
+    const req = httpTesting.expectOne('/api/cash-sessions/session-1/reopen');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ reason: 'Cerrada por error' });
+    req.flush(mockSession);
+    expect(service.currentSession()?.id).toBe('session-1');
+  });
+
+  it('CAJ-14: si reabrir falla, la caja actual no cambia', () => {
+    service.reopenSession('session-1', 'Motivo').subscribe({ error: () => undefined });
+
+    httpTesting.expectOne('/api/cash-sessions/session-1/reopen')
+      .flush({ message: 'Solo se puede reabrir la última caja.' }, { status: 400, statusText: 'Bad Request' });
+    expect(service.currentSession()).toBeNull();
+  });
 });

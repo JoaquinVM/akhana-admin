@@ -126,6 +126,57 @@
         </div>
       </div>
 
+      <!-- CAJ-14: what each undone closing had -->
+      @if (cs.reopenings?.length) {
+        <section class="reopenings" aria-labelledby="reopenings-title">
+          <h5 id="reopenings-title" class="box-title">Reaperturas ({{ cs.reopenings!.length }})</h5>
+          @for (reopening of cs.reopenings; track reopening.id) {
+            <div class="audit-box reopening">
+              <div class="audit-row">
+                <span class="audit-k">Reabrió:</span>
+                <span class="audit-v"><strong>{{ reopening.reopenedBy }}</strong> · {{ reopening.reopenedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+              </div>
+              <div class="audit-comment-block">
+                <span class="comment-label">Motivo:</span>
+                <p class="comment-text">"{{ reopening.reason }}"</p>
+              </div>
+              <div class="audit-row">
+                <span class="audit-k">Cierre deshecho:</span>
+                <span class="audit-v"><strong>{{ reopening.closedBy || '—' }}</strong> · {{ reopening.closedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+              </div>
+              <div class="audit-row">
+                <span class="audit-k">Monto contado:</span>
+                <span class="audit-v">Bs {{ reopening.closingAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="audit-row">
+                <span class="audit-k">Efectivo esperado:</span>
+                <span class="audit-v">Bs {{ reopening.expectedCash | number:'1.2-2' }}</span>
+              </div>
+              <div class="audit-row">
+                <span class="audit-k">Diferencia:</span>
+                <span class="audit-v">{{ (reopening.difference ?? 0) >= 0 ? '+' : '' }}Bs {{ (reopening.difference ?? 0) | number:'1.2-2' }}</span>
+              </div>
+              @if (reopening.closingComment) {
+                <div class="audit-comment-block">
+                  <span class="comment-label">Comentario del cierre:</span>
+                  <p class="comment-text">"{{ reopening.closingComment }}"</p>
+                </div>
+              }
+              @if (reopening.cuts.length > 0) {
+                <div class="audit-row reopening-cuts">
+                  <span class="audit-k">Cortes:</span>
+                  <span class="audit-v">
+                    @for (cut of reopening.cuts; track cut.denomination) {
+                      <span class="qty-badge">Bs {{ cut.denomination | number:'1.2-2' }} × {{ cut.cashQuantity + cut.reserveQuantity }}</span>
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+
       <!-- Detail tabs: sales and cuts -->
       <div class="tabs-nav">
         <button

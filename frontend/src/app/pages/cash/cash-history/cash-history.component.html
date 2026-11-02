@@ -56,7 +56,7 @@
             <th style="width: 120px; text-align: right">Monto de cierre</th>
             <th style="width: 120px; text-align: right">Diferencia</th>
             <th style="width: 100px; text-align: center">Estado</th>
-            <th style="width: 90px; text-align: right">Acción</th>
+            <th style="width: 130px; text-align: right">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -165,6 +165,14 @@
                         <polyline points="12 6 12 12 16 14" />
                       </svg>
                     </button>
+                    @if (session.reopenable) {
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm reopen-action"
+                        (click)="openReopen(session)">
+                        Reabrir
+                      </button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -180,4 +188,12 @@
     [isOpen]="isDetailModalVisible()"
     [session]="selectedDetail()"
     (close)="closeDetail()" />
+
+  <app-reopen-cash-modal
+    [isOpen]="reopenTarget() !== null"
+    [session]="reopenTarget()"
+    [isLoading]="isReopening()"
+    [serverError]="reopenError()"
+    (close)="closeReopen()"
+    (confirmed)="confirmReopen($event)" />
 </div>

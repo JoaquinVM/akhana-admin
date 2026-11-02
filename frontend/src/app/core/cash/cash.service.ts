@@ -53,6 +53,13 @@ export class CashService {
     );
   }
 
+  // CAJ-14: the session is open again, so the POS and the menu badge change at once
+  reopenSession(id: string, reason: string): Observable<CashSessionSummary> {
+    return this.http.post<CashSessionSummary>(`${this.apiUrl}/${id}/reopen`, { reason }).pipe(
+      tap((session) => this.currentSession.set(session))
+    );
+  }
+
   getAllSessions(): Observable<CashSessionSummary[]> {
     return this.http.get<CashSessionSummary[]>(this.apiUrl);
   }

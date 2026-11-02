@@ -93,4 +93,20 @@ describe('CashExpensesComponent', () => {
     component.openVoidModal(expense);
     expect(component.voidTarget()).toBeNull();
   });
+
+  it('CAJ-14: el faltante anulado al reabrir queda visible, tachado, y no se puede anular', () => {
+    const shortage = { ...expense, id: 'tx-adj', description: 'Faltante al cierre de caja #150', notes: null, status: 'ANULADO',
+      voidReason: 'Reapertura de caja #150: Error', category: { id: 'cat-2', name: 'Ajuste', type: 'GASTO', color: '#000' } };
+    fixture.componentRef.setInput('expenses', [shortage]);
+    fixture.detectChanges();
+
+    const row = fixture.debugElement.query(By.css('tbody tr'));
+    expect(row.nativeElement.textContent).toContain('Faltante al cierre de caja #150');
+    expect(row.nativeElement.textContent).toContain('Anulado');
+    expect(row.nativeElement.classList).toContain('row-voided');
+    expect(row.query(By.css('.expense-amount-val')).nativeElement.classList).toContain('line-through');
+    expect(row.query(By.css('.btn-delete')).nativeElement.disabled).toBe(true);
+    component.openVoidModal(shortage);
+    expect(component.voidTarget()).toBeNull();
+  });
 });
