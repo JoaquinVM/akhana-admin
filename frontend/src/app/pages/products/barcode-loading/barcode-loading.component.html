@@ -17,21 +17,23 @@
   </header>
 
   @if (isLoading()) {
-    <p class="state-text">Cargando...</p>
+    <div class="state-card">Cargando...</div>
   } @else if (loadError(); as message) {
-    <p class="error-text" role="alert">{{ message }}</p>
+    <div class="alert alert-danger" role="alert">{{ message }}</div>
   } @else if (pending().length === 0) {
-    <p class="state-text">No quedan productos por revisar.</p>
+    <div class="state-card">No quedan productos por revisar.</div>
   } @else {
     <div class="loading-grid">
       <section class="pending-list" aria-label="Productos sin código">
-        <input
-          type="text"
-          class="form-control"
-          placeholder="Buscar por nombre o código..."
-          aria-label="Buscar en la lista"
-          [value]="searchTerm()"
-          (input)="searchTerm.set($any($event.target).value)" />
+        <div class="pending-search">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre o código..."
+            aria-label="Buscar en la lista"
+            [value]="searchTerm()"
+            (input)="searchTerm.set($any($event.target).value)" />
+        </div>
         <ul>
           @for (product of visible(); track product.id) {
             <li>
@@ -45,7 +47,7 @@
               </button>
             </li>
           } @empty {
-            <li class="state-text">Sin resultados.</li>
+            <li class="pending-empty">Sin resultados.</li>
           }
         </ul>
       </section>
@@ -62,20 +64,22 @@
             <dd>Bs {{ product.sellPrice | number:'1.2-2' }}</dd>
           </dl>
 
-          <label class="form-label" for="loadBarcode">Código de barras</label>
-          <input
-            id="loadBarcode"
-            type="text"
-            inputmode="numeric"
-            maxlength="13"
-            class="form-control"
-            autocomplete="off"
-            placeholder="Escanea o escribe el código"
-            [value]="barcode()"
-            (input)="barcode.set($any($event.target).value)" />
+          <div class="form-group">
+            <label class="form-label" for="loadBarcode">Código de barras</label>
+            <input
+              id="loadBarcode"
+              type="text"
+              inputmode="numeric"
+              maxlength="13"
+              class="form-control barcode-input"
+              autocomplete="off"
+              placeholder="Escanea o escribe el código"
+              [value]="barcode()"
+              (input)="barcode.set($any($event.target).value)" />
+          </div>
 
           @if (error(); as message) {
-            <p class="error-text" role="alert">{{ message }}</p>
+            <div class="alert alert-danger" role="alert">{{ message }}</div>
           }
 
           <div class="selected-actions">
