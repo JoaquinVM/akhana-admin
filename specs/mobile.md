@@ -44,9 +44,11 @@ caja no cambia. En un Android, el Chrome normal comparte el worker una vez regis
 - **Cuando** el servidor responde 502, 503 o 504, o no responde en 10 s **entonces** muestra la misma página.
 - **Cuando** el Dashboard vuelve de segundo plano y no llega al servidor (sin conexión, 502, 503, 504 o sin respuesta en
   10 s) **entonces** recarga la página para mostrar lo mismo. Si ya se salió del Dashboard, no recarga nada.
-- **Cuando** en la app instalada el Dashboard no llega al servidor al entrar o al elegir un período, o solo falla la API
-  con el resto arriba **entonces** dice el mismo texto en su mensaje de error, sin botón **Reintentar**.
-- **Cuando** se toca **Reintentar** con la conexión de vuelta **entonces** abre la pantalla que se estaba pidiendo.
+- **Cuando** en la app instalada el Dashboard no llega al servidor o no recibe respuesta en 10 s al entrar, al elegir un
+  período o al cambiar el rango, o solo falla la API con el resto arriba **entonces** dice el mismo texto en su mensaje de
+  error, sin botón **Reintentar**. En el navegador sigue sin ese límite de tiempo.
+- **Cuando** se toca **Reintentar** con la conexión de vuelta **entonces** abre la pantalla que se estaba pidiendo, también
+  después de una apertura colgada: a los 10 s el worker aborta esa petición. El límite no corta una respuesta que ya llegó.
 - **Cuando** se pide cualquier otra cosa (`/api`, bundles, otros orígenes) **entonces** el worker no interviene.
 - **Cuando** se publica una versión nueva **entonces** la app la usa al abrirse: el worker guarda solo `offline.html` y
   su ícono, nunca pantallas ni datos del negocio. Al cambiar esos dos archivos hay que subir `CACHE_NAME` en `sw.js`.
@@ -59,7 +61,7 @@ Límites conocidos:
   navegador. No se recargan solas para no perder lo que se esté escribiendo, como una venta en el POS. Al entrar al POS
   sin conexión dice «Caja cerrada» aunque la caja esté abierta, igual que en el navegador.
 - Una app retomada de segundo plano sigue con la versión que tenía hasta que se cierre o el sistema la cierre: la versión
-  nueva llega al abrirla de nuevo.
+  nueva llega al abrirla de nuevo o al tocar **Actualizar** en el aviso de NF-10, si una pantalla ya no carga.
 - En iPhone el sistema puede borrar la caché de una app que no se usa; entonces vuelve el error del navegador hasta la
   siguiente apertura con conexión.
 
@@ -71,6 +73,22 @@ Instalar no cambia nada de esto: los permisos son los de cada rol (USR-05, P-33)
   responde 403.
 - **Cuando** vence el token **entonces** vuelve al login con el mensaje de sesión terminada, como en el navegador.
 - En iPhone la app instalada no comparte sesión con Safari: pide su propio inicio de sesión.
+
+## NF-10 · Una pantalla que no carga
+
+Vale en la app y en el navegador. Después de publicar, una app o pestaña abierta busca archivos que ya no existen, y las
+pantallas con carga diferida no pueden abrir.
+
+- **Cuando** una pantalla con carga diferida no se puede cargar, por una versión nueva o por la conexión **entonces**
+  avisa «No se pudo abrir esta pantalla. Puede haber una versión nueva o un problema de conexión.» con el botón
+  **Actualizar**, y la persona sigue en la pantalla en que estaba, con lo que haya escrito. Nunca recarga sola.
+- **Cuando** se toca **Actualizar** **entonces** recarga y abre la pantalla pedida. Sin conexión, la app instalada muestra
+  su página sin conexión y el navegador su propio error.
+- **Cuando** se cierra el aviso o se entra a otra pantalla **entonces** el aviso se va.
+- **Cuando** la navegación falla por otra causa **entonces** no sale este aviso.
+
+El error se reconoce por el texto que da cada navegador (`screen-load-notice.service.ts`). Una app con la versión anterior
+a este aviso aún tiene el problema una vez, al publicarse la versión que lo trae.
 
 ## Validación
 
