@@ -192,6 +192,27 @@ El sistema SHALL tomar el punto como único separador decimal en todo `input typ
 - **WHEN** se pega un número con coma
 - **THEN** no entra, el campo no cambia y aparece «Usa punto para los decimales»
 
+### Requirement: Un separador al comienzo no cambia el monto (NF-09)
+El sistema SHALL dejar sin reescribir un `input type="number"` con el foco mientras su texto no es un número, y tampoco cuando lo escrito es el número que ya muestra, con un solo escucha global (`shared/utils/number-input-guard.ts`), sin configurar cada campo.
+
+#### Scenario: Separador al comienzo
+- **WHEN** sobre un valor seleccionado se escribe ,50 o .50 en el recibido, el efectivo de un pago mixto, el crédito, los descuentos o el costo de un pedido
+- **THEN** vale 0,50 y no el tope ni 50
+- **AND** ,5 en la cantidad de un consumo o de un pedido por kilo vale 0,5 y ,25 en el peso de una presentación vale 0,25
+
+#### Scenario: Corte de caja
+- **WHEN** se escribe ,5 en una cantidad de billetes o monedas
+- **THEN** cuenta 0, como cuenta 2 con 2.5
+
+#### Scenario: Texto que no llega a ser un número
+- **WHEN** se sale de un campo con solo un separador o, en Firefox, con 2,.50
+- **THEN** vale lo que vale ese campo vacío
+
+#### Scenario: Botones y topes
+- **WHEN** con un separador escrito se usa Exacto, crédito total, el − o el +
+- **THEN** el campo muestra lo que escribe el botón
+- **AND** un monto completo sobre el tope sigue quedando en el tope
+
 ### Requirement: Navegación desacoplada entre POS y registro de ventas
 El sistema SHALL mantener el POS principal como centro de control de caja y transacciones, disponiendo de un botón «Registrar venta» en la cabecera de transacciones que navega hacia la pantalla dedicada `/pos/sale`.
 
