@@ -249,4 +249,36 @@ class ProductPhotoProcessorTest {
         assertThat(image.getHeight()).isEqualTo(400);
         assertThat(colorAt(image, 0.25, 0.25)).isEqualTo('B');
     }
+
+    @Test
+    @DisplayName("Un EXIF con miles de etiquetas sobre los mismos bytes solo se recorre, y su orientación se aplica")
+    void overlappingExifDoesNotAllocate() throws IOException {
+        byte[] content = pngWithOverlappingExif(quadrants(400, 200), 60_000, 6);
+        assertThat((long) content.length).isLessThan(ProductPhotoProcessor.MAX_FILE_BYTES);
+
+        BufferedImage image = read(processor.process(content).image());
+
+        assertThat(image.getWidth()).isEqualTo(200);
+        assertThat(colorAt(image, 0.25, 0.25)).isEqualTo('B');
+    }
+
+    @Test
+    @DisplayName("Rechaza un WebP con más de un frame o más de un canal alfa")
+    void rejectsWebpWithSeveralImages() {
+        assertInvalid(webpWithChunks("VP8L", "VP8L"));
+        assertInvalid(webpWithChunks("VP8 ", "VP8L"));
+        assertInvalid(webpWithChunks("ALPH", "ALPH", "VP8 "));
+        assertInvalid(webpWithChunks("ANMF", "VP8 "));
+    }
+
+    @Test
+    @DisplayName("Rechaza un JPEG con demasiados scans y acepta uno progresivo normal")
+    void limitsJpegScans() throws IOException {
+        assertInvalid(jpegWithExtraScans(quadrants(64, 64), ProductPhotoInspector.MAX_JPEG_SCANS + 1));
+
+        BufferedImage image = read(processor.process(progressiveJpeg(quadrants(400, 200))).image());
+
+        assertThat(image.getWidth()).isEqualTo(400);
+        assertThat(colorAt(image, 0.25, 0.25)).isEqualTo('R');
+    }
 }

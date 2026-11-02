@@ -466,3 +466,6 @@ real en el VPS.
 - Segunda corrida, tras la revisión: un WebP de encabezado chico y frame de 16383×16383 dio «La foto tiene demasiados píxeles.», y
   un PNG de 4 MB con un texto que se infla a 4 GB se guardó sin `OutOfMemoryError` ni reinicios. `--check` terminó con código 1
   con `sort -R` y `comm` fallando a propósito, y con una foto apartada del remoto.
+- Tercera corrida, por nginx y con el jar final: un EXIF de 9,5 MB con etiquetas solapadas en PNG, WebP y JPEG se guardó en menos de
+  0,2 s; un WebP de 10 MB con 312.500 frames se rechazó en 0,14 s; sin `OutOfMemoryError` ni reinicios, y el catálogo siguió
+  respondiendo en 12 ms. Flyway quedó en 26 sobre `main` con las migraciones de caja.
