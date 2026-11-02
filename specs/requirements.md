@@ -24,7 +24,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06, NF-07 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -275,7 +275,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
 - **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
-- **NF-07** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
+- **NF-08** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
 
 ## 5. Preguntas
 
@@ -344,7 +344,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el elegido al abrirla (CAJ-12); lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
 | P-53 | ¿Se hacen las dos semanas en paralelo con las planillas antes de dejarlas? | No; la tienda usa solo el sistema. |
 | P-54 | ¿Cuántas fotos por producto? | Una; las presentaciones comparten la del producto (CAT-11, CAT-12). |
-| P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-07). |
+| P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-08). |
 | P-56 | ¿Se conserva el original de la foto? | No: hasta 1600 px y una miniatura, sin metadatos. |
 | P-57 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
 

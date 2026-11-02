@@ -1,6 +1,6 @@
 # Foto de productos
 
-Detalle de CAT-12 (sección 3.2 de `specs/requirements.md`); su respaldo, NF-07, está en `specs/deploy.md`. Cada producto
+Detalle de CAT-12 (sección 3.2 de `specs/requirements.md`); su respaldo, NF-08, está en `specs/deploy.md`. Cada producto
 admite una foto, que después usará Akhana Web. Aquí no se abre nada a internet: cómo llega a la web se decide en un
 trabajo de Akhana Web (P-57).
 
@@ -88,10 +88,11 @@ Todas con el permiso `PRODUCTS`. Ninguna ruta termina en una extensión de image
 
 - **Lectura:** el formato se decide por los primeros bytes, y ancho y alto se leen del encabezado antes de decodificar.
   JPEG y PNG se decodifican submuestreados hasta unos 3200 px; WebP puede decodificarse entero, y orientar la imagen la duplica (se
-  midieron picos de unos 400 MB con 41 megapíxeles), por eso se procesa una imagen a la vez, con 30 s de espera.
+  midieron picos de unos 400 MB con 41 megapíxeles), por eso se procesa una imagen a la vez, con 30 s de espera y hasta 2 subidas esperando: cada una retiene una conexión a la
+  base, que el POS comparte, y la siguiente se rechaza enseguida con el mensaje de guardado.
 - **Límites antes de decodificar (`ProductPhotoInspector`):** un archivo de 10 MB puede pedir gigabytes u horas. Un WebP debe tener
   un solo frame, que se mide aparte porque el decodificador reserva memoria por lo que declara el frame y no el encabezado; una
-  animación se rechaza. Un JPEG admite hasta 100 scans. De los metadatos solo se lee la etiqueta de orientación del primer
+  animación se rechaza. Un JPEG admite hasta 100 scans, contados como los recorre el decodificador y solo hasta el fin de la imagen. De los metadatos solo se lee la etiqueta de orientación del primer
   bloque EXIF: un lector general infla los textos comprimidos de un PNG y crea un arreglo por etiqueta.
 - **Bibliotecas:** TwelveMonkeys lee WebP y JPEG en CMYK. `metadata-extractor` queda solo en las pruebas, para comprobar que lo
   guardado no trae metadatos; leer la orientación con ella agotaba la memoria con un EXIF manipulado. `ImageIO.scanForPlugins()`
@@ -123,6 +124,6 @@ aceptar HEIC.
 
 - [x] Migración, modelo, procesador, almacenamiento, servicio y rutas, con pruebas contra PostgreSQL.
 - [x] Sección «Foto», miniaturas y filtro «Sin foto» en Productos, con pruebas Vitest.
-- [x] Respaldo, restauración, nginx y compose (`specs/deploy.md`, NF-07).
+- [x] Respaldo, restauración, nginx y compose (`specs/deploy.md`, NF-08).
 - [ ] Probar una foto real del celular con GPS y dejarlo anotado aquí.
 - [ ] Antes de publicar: revisar que el bucket de B2 no tenga una regla de ciclo de vida que expire archivos.
