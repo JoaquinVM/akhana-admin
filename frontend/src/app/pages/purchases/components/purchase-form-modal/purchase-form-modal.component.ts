@@ -230,6 +230,8 @@ export class PurchaseFormModalComponent {
   }
 
   private loadProducts(): void {
+    // COM-13: the modal stays mounted between openings; the last catalog must not pass for the current prices
+    this.products.set([]);
     this.productService.getProducts().subscribe({
       // POS-11: special products are not purchased
       next: products => {

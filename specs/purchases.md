@@ -274,6 +274,8 @@ no lo muestran.
   actual hasta guardar; el otro pedido que se abra después ya muestra el nuevo.
 - **Cuando** se edita un pedido **entonces** cada línea muestra el precio actual del catálogo, que puede ser distinto del
   que tenía al hacer el pedido; mientras el catálogo no cargó o si el producto fue eliminado, «—», nunca «Bs 0,00».
+- **Cuando** se vuelve a abrir el formulario **entonces** no se usa el catálogo de la apertura anterior: hasta que llega
+  el nuevo, las líneas muestran «—» y el buscador no da resultados.
 - **Cuando** el producto del catálogo tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
 
 Pruebas en `purchase-form-modal.component.spec.ts`.

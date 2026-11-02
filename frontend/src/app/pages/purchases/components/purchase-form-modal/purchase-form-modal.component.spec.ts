@@ -278,6 +278,8 @@ describe('PurchaseFormModalComponent', () => {
       component.onCostChange(0, 12.3);
       expect(sellPrices()).toEqual(['Bs 15.00']);
       component.onUpdateCostToggle(0, true);
+      expect(component.chosenSellPrice(component.lines()[0])).toBe(19);
+      expect(sellPrices()).toEqual(['Bs 15.00']);
       component.updateLine(0, { priceChoice: 'CUSTOM', customPrice: 25 });
       expect(sellPrices()).toEqual(['Bs 15.00']);
       expect(fixture.nativeElement.querySelector('.price-title').textContent).toContain('actual Bs 15.00');
@@ -315,7 +317,6 @@ describe('PurchaseFormModalComponent', () => {
       } as unknown as Purchase;
       const catalog = new Subject<Product[]>();
       productService.getProducts.mockReturnValue(catalog);
-      component.products.set([]);
       fixture.componentRef.setInput('isOpen', false);
       fixture.detectChanges();
       fixture.componentRef.setInput('purchase', editable);
@@ -324,6 +325,50 @@ describe('PurchaseFormModalComponent', () => {
 
       catalog.next([tea, nuts]);
       expect(sellPrices()).toEqual(['Bs 15.00', '—']);
+      expect(component.buildUpdateRequest().items.map(i => i.newSellPrice)).toEqual([null, null]);
+    });
+
+    describe('al volver a abrir el formulario', () => {
+      const reopen = (catalog: Subject<Product[]>): void => {
+        productService.getProducts.mockReturnValue(catalog);
+        fixture.componentRef.setInput('isOpen', false);
+        fixture.detectChanges();
+        fixture.componentRef.setInput('isOpen', true);
+        fixture.detectChanges();
+      };
+
+      it('no muestra el catálogo anterior en el buscador mientras carga, y luego el precio nuevo', () => {
+        const catalog = new Subject<Product[]>();
+        reopen(catalog);
+        component.productSearch.set('te-1');
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.match-meta')).toBeNull();
+
+        catalog.next([{ ...tea, sellPrice: 19 }]);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.match-meta').textContent).toContain('venta Bs 19.00');
+      });
+
+      it('una línea muestra — si el catálogo no carga, junto al error', () => {
+        const catalog = new Subject<Product[]>();
+        reopen(catalog);
+        component.lines.set([{ product: tea, quantity: 1, unitCost: 10, updateCost: false, priceChoice: 'SUGGESTED', customPrice: null, suggestion: null }]);
+        expect(sellPrices()).toEqual(['—']);
+
+        catalog.error(new Error('sin conexión'));
+        expect(sellPrices()).toEqual(['—']);
+        expect(component.formError()).toBe('No se pudo cargar el catálogo de productos.');
+      });
+    });
+
+    it('el buscador conserva código y proveedor, y la columna va entre el costo y el subtotal', () => {
+      component.productSearch.set('te-1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.match-meta').textContent.trim())
+        .toBe('TE-1 · Granel · costo Bs 10.00 · venta Bs 15.00');
+      const headers = Array.from(fixture.nativeElement.querySelectorAll('.lines-table th'))
+        .map((th: any) => th.textContent.trim());
+      expect(headers.slice(2, 5)).toEqual(['Costo unitario (Bs)', 'Precio de venta', 'Subtotal']);
     });
   });
 
