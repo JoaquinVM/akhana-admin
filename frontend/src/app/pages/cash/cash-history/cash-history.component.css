@@ -101,6 +101,7 @@
   background: rgba(46, 91, 39, 0.08);
   padding: 0.2rem 0.45rem;
   border-radius: var(--radius-sm);
+  display: inline-block;
 }
 
 .user-date-cell {
@@ -268,5 +269,11 @@
   background: #fff4dc;
   border-radius: 6px;
   padding: 1px 6px;
-  white-space: nowrap;
+}
+
+/* CAJ-14: ten columns and the Reabrir action must fit in the page's 1280px, so the cells are tighter than the default */
+.table thead th,
+.table tbody td {
+  padding-left: 0.625rem;
+  padding-right: 0.625rem;
 }
