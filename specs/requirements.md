@@ -18,7 +18,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-13 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
-| Caja | CAJ-01 a CAJ-11 | ✅ Completo | CAJ-11 sin desplegar: cerrar antes las cajas #146 a #148 y después comparar el 28 al 30/10 con la planilla | `cash.md` |
+| Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
 | POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
@@ -163,12 +163,15 @@ Detalle en `cash.md`.
 - **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros. Los ajustes de apertura y cierre no cuentan. Una salida de Caja que supera el esperado se avisa sin bloquear.
 - **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", que si se carga debe sumar el monto contado.
 - **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
-- **CAJ-06** Una caja cerrada es inmutable: no se reabre ni recibe movimientos.
+- **CAJ-06** Una caja cerrada es inmutable: no recibe movimientos y no se reabre, salvo la última con motivo (CAJ-14).
 - **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") desde el POS como transferencia entre Caja y otra cuenta, con comentario obligatorio; se anula solo mientras su caja esté abierta.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado.
 - **CAJ-10** La apertura propone como monto inicial el cierre anterior (en la primera caja, el saldo de Caja); si se cambia, el comentario es obligatorio y la diferencia con el saldo de Caja se registra como ajuste, que no se anula.
-- **CAJ-11** Cada caja tiene un día de operación, el día de la tienda en que se abrió; sus ventas y todo lo vinculado a ella o a sus ventas cuentan para ese día aunque se carguen pasada la medianoche o la caja se cierre al día siguiente, y la fecha y hora reales se siguen viendo. Historial de ventas (POS-09), reportes (FIN-10), dashboard (DSH-01 a DSH-03), movimientos de Finanzas y historiales de Compras y Deudas usan ese día; la caja inicial propuesta (CAJ-10) y el efectivo esperado (CAJ-03) no cambian. Las cajas #146, #147 y #148 se corrigen una vez al 28, 29 y 30/10.
+- **CAJ-11** Cada caja tiene un día de operación, el elegido al abrirla (CAJ-12); sus ventas y todo lo vinculado a ella o a sus ventas cuentan para ese día aunque se carguen pasada la medianoche o la caja se cierre al día siguiente, y la fecha y hora reales se siguen viendo. Historial de ventas (POS-09), reportes (FIN-10), dashboard (DSH-01 a DSH-03), movimientos de Finanzas y historiales de Compras y Deudas usan ese día; la caja inicial propuesta (CAJ-10) y el efectivo esperado (CAJ-03) no cambian. Las cajas #146, #147 y #148 se corrigen una vez al 28, 29 y 30/10.
+- **CAJ-12** Al abrir una caja se elige su día de operación: hoy por defecto, o un día anterior con comentario. Nunca un día futuro, ni uno igual o anterior al de la última caja. No hay límite de días atrás. El día no cambia después de abrir.
+- **CAJ-13** Las cajas van en secuencia. No se abre el día D si queda atrás un día que no es domingo sin caja y sin la marca «sin atención». Quien abre la caja confirma esa marca con un comentario.
+- **CAJ-14** La última caja cerrada se puede reabrir con motivo, mientras no se haya abierto otra después: se anula el ajuste de su cierre y queda registrado lo que el cierre tenía. Es la única excepción a CAJ-06.
 
 ### 3.7 Punto de venta · V1
 
@@ -250,7 +253,7 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 | T-10 | Las cuentas Bisa y Efectivo no se siembran con saldo en el esquema; el saldo al corte se carga desde la app (FIN-01). | V1 | `finance.md` |
 | T-11 | Cantidades decimales (3 decimales) en ventas, compras y consumos. | V1 | `sales.md` |
 | T-13 | Cada endpoint exige el permiso de su pantalla, con prueba que recorre todos los endpoints. | V1 | `users.md` |
-| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (movimiento o documento → caja → persona o cliente → cuentas por id), con prueba concurrente. | V1 | `cash.md` |
+| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (bloqueo de apertura, solo al abrir o reabrir caja → movimiento o documento → caja → persona o cliente → cuentas por id), con prueba concurrente. | V1 | `cash.md` |
 | T-15 | Un único cálculo de efectivo esperado (CAJ-03) usado por todos los servicios. | V1 | `cash.md` |
 | T-16 | Los movimientos de la cuenta Caja exigen caja abierta y se vinculan a ella; los de una caja cerrada no se editan ni anulan. | V1 | `cash.md` |
 | T-17 | La venta falla si falta su cuenta o su categoría (RG-05). | V1 | `sales.md` |
@@ -333,7 +336,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-49 | ¿Qué cliente propone el cobro de la venta al costo? | «Sin cliente»; al dar crédito se propone el único cliente activo. |
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
-| P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el de su apertura; lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
+| P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el elegido al abrirla (CAJ-12); lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
 | P-53 | ¿Se hacen las dos semanas en paralelo con las planillas antes de dejarlas? | No; la tienda usa solo el sistema. |
 
 ## 6. Hoja de ruta

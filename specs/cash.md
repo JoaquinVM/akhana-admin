@@ -15,7 +15,7 @@ El sistema SHALL permitir únicamente una sesión de caja con estado `ABIERTA` d
 
 #### Scenario: Aperturas simultáneas (T-06, T-14)
 - **WHEN** dos usuarios abren caja al mismo tiempo y no había ninguna abierta
-- **THEN** solo una apertura se registra (índice único parcial de caja `ABIERTA` en la base) y la otra recibe el mismo mensaje de caja ya abierta
+- **THEN** solo una apertura se registra (bloqueo de apertura e índice único parcial de caja `ABIERTA` en la base) y la otra recibe el mismo mensaje de caja ya abierta. La base tampoco permite dos cajas con el mismo día (CAJ-12)
 
 ### Requirement: Apertura de caja con monto inicial y comentario opcional
 El sistema SHALL registrar la apertura de una nueva sesión de caja requiriendo obligatoriamente un monto inicial mayor o igual a cero y permitiendo opcionalmente un comentario de apertura.
@@ -102,7 +102,7 @@ El sistema SHALL permitir el cierre de la sesión de caja activa requiriendo obl
 
 #### Scenario: Inmutabilidad de caja cerrada
 - **WHEN** una caja pasa a estado `CERRADA`
-- **THEN** el sistema no permite reabrir la sesión ni asociarle nuevas transacciones bajo ninguna circunstancia
+- **THEN** el sistema no permite asociarle nuevas transacciones ni reabrirla, con una sola excepción: la última caja cerrada se puede reabrir con motivo mientras no se haya abierto otra después (CAJ-14)
 
 ### Requirement: Conteo opcional mediante cortes de denominaciones
 El sistema SHALL permitir calcular el monto de cierre a través de una matriz de cortes de billetes y monedas bolivianas (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10), desglosando cantidades en "Caja" y "Reserva".
@@ -195,8 +195,8 @@ El sistema SHALL registrar al cerrar la caja la diferencia (monto de cierre − 
 - **THEN** no se crea ningún ajuste
 
 #### Scenario: Ajuste inmutable
-- **WHEN** se intenta editar o anular el ajuste desde Finanzas
-- **THEN** se rechaza porque pertenece a una caja cerrada (CAJ-06)
+- **WHEN** se intenta editar o anular el ajuste desde Finanzas o desde el POS
+- **THEN** se rechaza (CAJ-06, «Los ajustes de caja se generan al abrir o cerrar la caja y no se pueden editar ni anular.»); el ajuste de cierre solo se anula al reabrir su caja (CAJ-14), y el de apertura nunca
 
 ### Requirement: Historial y consulta detallada en pantalla "Cajas"
 El sistema SHALL listar el historial cronológico de sesiones de caja y permitir consultar el detalle integral de cada sesión seleccionada.
@@ -210,10 +210,10 @@ El sistema SHALL listar el historial cronológico de sesiones de caja y permitir
 - **THEN** el sistema muestra información de apertura (usuario, fecha, monto inicial, comentario si existe), ventas asociadas por método de pago (`EFECTIVO` y `QR`), información de cierre (usuario, fecha, monto de cierre, comentario si existe, diferencia) y el desglose de cortes de denominación si fueron utilizados
 
 ### Requirement: Día de operación de la caja (CAJ-11)
-El sistema SHALL dar a cada caja un día de operación, el día de la tienda (America/La_Paz) en que se abrió, y SHALL contar para ese día sus ventas y todos los movimientos vinculados a ella o a sus ventas (gastos, pagos de pedidos, ingresos y retiros, ajustes de apertura y cierre, devoluciones y cobros desde Caja, e ingresos en efectivo y QR de sus ventas), aunque se registren pasada la medianoche o la caja se cierre al día siguiente. La fecha y hora reales de carga se guardan y se siguen viendo.
+El sistema SHALL dar a cada caja un día de operación, el elegido al abrirla (CAJ-12; hoy en la tienda, America/La_Paz, por defecto), y SHALL contar para ese día sus ventas y todos los movimientos vinculados a ella o a sus ventas (gastos, pagos de pedidos, ingresos y retiros, ajustes de apertura y cierre, devoluciones y cobros desde Caja, e ingresos en efectivo y QR de sus ventas), aunque se registren pasada la medianoche o la caja se cierre al día siguiente. La fecha y hora reales de carga se guardan y se siguen viendo.
 
 #### Scenario: Apertura
-- **WHEN** se abre una caja a las 09:10 del 31/10 (hora de La Paz)
+- **WHEN** se abre una caja a las 09:10 del 31/10 (hora de La Paz) con el día propuesto
 - **THEN** su día de operación es 31/10
 
 #### Scenario: Venta pasada la medianoche
@@ -256,6 +256,165 @@ El sistema SHALL dar a cada caja un día de operación, el día de la tienda (Am
 - **WHEN** se aplica el cambio
 - **THEN** cada caja ya registrada toma como día el de su apertura y cada venta, movimiento, pago de pedido, devolución y cobro el día en que se registró (La Paz), así que fuera de la corrección de las #146 a #148 ningún reporte cambia; las cajas, ventas y movimientos históricos (FIN-11) mantienen el día de la planilla
 
+### Requirement: Elegir el día al abrir la caja (CAJ-12)
+El sistema SHALL pedir el día de operación al abrir una caja: hoy por defecto, o un día anterior con comentario. Nunca un día futuro, ni uno igual o anterior al de la última caja, también si es histórica. No hay límite de días atrás y el día no cambia después de abrir.
+
+#### Scenario: Formulario de apertura
+- **WHEN** se abre el formulario de apertura
+- **THEN** el día propuesto es hoy (hora de La Paz) y se pueden elegir solo días posteriores al de la última caja y hasta hoy
+
+#### Scenario: Apertura con el día de hoy
+- **WHEN** se abre con el día de hoy
+- **THEN** no hace falta comentario por el día, y todo funciona como antes
+
+#### Scenario: Día anterior sin comentario
+- **WHEN** se elige un día anterior a hoy sin comentario
+- **THEN** se rechaza con «Elegir un día anterior pide un comentario.»
+
+#### Scenario: Un solo comentario
+- **WHEN** la apertura pide comentario por el día y también por cambiar el monto (CAJ-10)
+- **THEN** basta un solo comentario
+
+#### Scenario: Día futuro
+- **WHEN** se pide un día futuro, aunque sea llamando directo a la API
+- **THEN** se rechaza con «El día de la caja no puede ser futuro.»
+
+#### Scenario: Día igual o anterior al de la última caja
+- **WHEN** se pide un día igual o anterior al de la última caja, también si es histórica
+- **THEN** se rechaza con «El día debe ser posterior al de la última caja (#148, 30/10).»
+
+#### Scenario: La caja de hoy ya está cerrada
+- **WHEN** la última caja ya es de hoy y está cerrada
+- **THEN** no se puede abrir otra hoy, y la pantalla lo explica con «La caja de hoy (#N) ya se cerró. Si fue por error, puedes reabrirla desde el Historial de cajas.», sin enlace, porque el POS no lleva accesos al historial
+
+#### Scenario: Aperturas simultáneas
+- **WHEN** dos personas abren caja al mismo tiempo, con el mismo día o con días distintos
+- **THEN** solo una lo logra. La base no permite dos cajas abiertas ni dos cajas con el mismo día
+
+#### Scenario: El día no cambia
+- **WHEN** una caja está abierta o cerrada
+- **THEN** no hay forma de cambiar su día, ni en la pantalla, ni en la API, ni en la entidad
+
+#### Scenario: Caja de un día anterior
+- **WHEN** una caja se abre con un día anterior
+- **THEN** su apertura guarda la fecha y hora reales y quién la abrió, y todo lo suyo cuenta para ese día (CAJ-11)
+
+#### Scenario: Marca de la caja abierta
+- **WHEN** la caja abierta no es de hoy, sea porque se abrió con un día anterior o porque sigue abierta o se reabrió en un día posterior al suyo
+- **THEN** el POS, «Registrar venta» y «Caja actual» del dashboard muestran «Día 28/10 · abierta el 30/10», también si se abrió ese mismo día («Día 02/11 · abierta el 02/11»). Si es de hoy, no se muestra marca
+
+#### Scenario: Cierre de una caja de un día pasado
+- **WHEN** se cierra una caja de un día pasado
+- **THEN** se cuenta la gaveta como en cualquier cierre, y el ajuste (CAJ-09) y la caja inicial propuesta para la siguiente (CAJ-10) funcionan igual
+
+#### Scenario: Al desplegar
+- **WHEN** se aplica el cambio en una base sin días repetidos
+- **THEN** el índice de un día por caja es completo. En una base con días repetidos (desarrollo) deja fuera las cajas hasta el último número repetido y avisa con un `WARNING`, sin mover ningún dato
+
+### Requirement: Secuencia de cajas y días sin atención (CAJ-13)
+El sistema SHALL mantener las cajas en secuencia: no se abre el día D si queda atrás un día que no es domingo sin caja y sin la marca «sin atención». Quien abre la caja confirma esa marca con un comentario propio.
+
+Ejemplo: la última caja es del viernes 30/10 y hoy es martes 3/11. Faltan el sábado 31/10 y el lunes 2/11; el domingo 1/11 no cuenta.
+
+#### Scenario: Siguiente día
+- **WHEN** se elige el 31/10
+- **THEN** la caja se abre sin preguntar nada sobre otros días, porque no queda ningún día atrás sin resolver
+
+#### Scenario: Días que faltan
+- **WHEN** se elige el 3/11
+- **THEN** la pantalla lista «sábado 31/10» y «lunes 2/11» y pregunta «¿No hubo atención esos días?». Para seguir hay que confirmar y escribir un comentario
+
+#### Scenario: Confirmación
+- **WHEN** se confirma
+- **THEN** esos días quedan marcados «sin atención», con el comentario, quién y cuándo, y la caja se abre. La marca y la apertura se guardan juntas: si la apertura falla, no queda ninguna marca
+
+#### Scenario: Sin confirmar
+- **WHEN** no se confirma
+- **THEN** no se abre la caja ni se marca nada, y se puede elegir otro día. Una confirmación no vale para otros días: si cambia el día elegido, hay que volver a confirmar
+
+#### Scenario: API sin confirmar
+- **WHEN** se llama a la API para abrir el 3/11 sin confirmar, o confirmando otros días
+- **THEN** se rechaza con «Falta resolver: 31/10, 2/11.»; confirmar días que ya no faltan se rechaza con «Esos días ya no faltan; vuelve a abrir el formulario.»
+
+#### Scenario: Confirmar sin comentario
+- **WHEN** se confirman los días sin comentario
+- **THEN** se rechaza con «Confirmar los días sin atención pide un comentario.» Es un campo aparte del comentario de apertura: con un día anterior, un monto cambiado y días que faltan se piden dos comentarios
+
+#### Scenario: Domingos
+- **WHEN** el día que falta es domingo
+- **THEN** no se pregunta por él ni se marca. Un domingo elegido se abre como cualquier otra caja, y el día que no sea domingo que falte antes se resuelve igual; si un domingo tuvo caja o no la tuvo, el lunes siguiente se abre igual
+
+#### Scenario: Día marcado
+- **WHEN** un día ya está marcado «sin atención»
+- **THEN** no se puede abrir una caja de ese día ni quitar la marca
+
+#### Scenario: Bases sin cajas del sistema
+- **WHEN** no hay ninguna caja que no sea histórica (bases de desarrollo)
+- **THEN** la regla no pide días atrás
+
+#### Scenario: Al desplegar
+- **WHEN** se despliega
+- **THEN** no se marca nada solo. La regla mira desde la última caja hacia adelante; hoy, desde la #148 (30/10)
+
+### Requirement: Reabrir la última caja (CAJ-14)
+El sistema SHALL permitir reabrir con motivo la última caja cerrada, mientras no se haya abierto otra después, anulando el ajuste de su cierre y guardando lo que el cierre tenía. Es la única excepción a la inmutabilidad de una caja cerrada (CAJ-06).
+
+#### Scenario: Quién tiene la acción
+- **WHEN** se ve el historial de cajas y no hay caja abierta
+- **THEN** la caja cerrada más reciente que no es histórica tiene la acción «Reabrir». Ninguna otra la tiene
+
+#### Scenario: Sin motivo
+- **WHEN** se reabre sin motivo
+- **THEN** se rechaza con «El motivo es obligatorio.»
+
+#### Scenario: Reapertura
+- **WHEN** se reabre con motivo
+- **THEN** la caja vuelve a `ABIERTA` con su mismo número, día, monto inicial, ventas y movimientos, y se vuelve a ver en el POS. Puede hacerlo quien tenga acceso al Historial de cajas; no hay permiso nuevo
+
+#### Scenario: Cierre con sobrante o faltante
+- **WHEN** el cierre había registrado un sobrante o faltante (CAJ-09)
+- **THEN** ese ajuste queda anulado y el saldo de Caja vuelve a lo que era antes del cierre, aunque sea negativo. El ajuste de apertura (CAJ-10) no se toca. Un faltante anulado queda visible, tachado, en la pestaña de gastos del POS
+
+#### Scenario: Cierre sin diferencia
+- **WHEN** el cierre no tuvo diferencia
+- **THEN** ningún saldo cambia
+
+#### Scenario: Ajuste que no calza
+- **WHEN** el ajuste de cierre no calza con la diferencia de la caja (no existe, hay más de uno, o su monto o tipo no coinciden)
+- **THEN** se rechaza con «El ajuste del cierre de la caja #N no coincide con su diferencia; no se puede reabrir.», sin cambiar nada
+
+#### Scenario: Registro
+- **WHEN** se reabre
+- **THEN** queda registrado quién, cuándo y el motivo, junto con lo que tenía el cierre: monto, cortes, efectivo esperado, diferencia, comentario, fecha y hora, y quién cerró. El detalle de la caja lo muestra, también si se reabrió varias veces
+
+#### Scenario: Caja reabierta
+- **WHEN** la caja está reabierta
+- **THEN** funciona como cualquier caja abierta: se registran ventas y movimientos, que cuentan para su día, y se pueden anular los suyos según las reglas de siempre
+
+#### Scenario: Volver a cerrar
+- **WHEN** se vuelve a cerrar
+- **THEN** se cuenta la gaveta de nuevo, se calculan el efectivo esperado y la diferencia con todo lo que tenga la caja, y se registra un ajuste nuevo si hay diferencia. La fecha y hora de cierre son las nuevas, y solo se ven los cortes nuevos
+
+#### Scenario: La caja siguiente
+- **WHEN** después se abre la caja siguiente
+- **THEN** la caja inicial propuesta es el cierre nuevo
+
+#### Scenario: Caja posterior
+- **WHEN** ya se abrió una caja posterior, aunque esté cerrada
+- **THEN** se rechaza reabrir con «Solo se puede reabrir la última caja.»
+
+#### Scenario: Caja abierta o histórica
+- **WHEN** hay una caja abierta o la caja es histórica
+- **THEN** se rechaza, también llamando directo a la API, con «Ya hay una caja abierta; ciérrala antes de reabrir otra.» o «Una caja histórica no se reabre.»
+
+#### Scenario: Reaperturas simultáneas
+- **WHEN** dos personas reabren a la vez, o una reabre mientras otra abre una caja nueva
+- **THEN** solo una lo logra y nunca quedan dos cajas abiertas
+
+#### Scenario: Reportes
+- **WHEN** se pide un reporte de un día con una caja reabierta
+- **THEN** no cuenta el ajuste anulado, y sí todo lo demás de la caja
+
 ### Requirement: Corrección única de las cajas #146, #147 y #148 (CAJ-11)
 Las ventas del 28, 29 y 30/10/2026 se cargaron en cajas abiertas otros días (la #148 se abre el 31/10 para cargar el 30/10). Por decisión de Joaquín del 31/10/2026, una migración que corre una sola vez pasa la #146 al 28/10, la #147 al 29/10 y la #148 al 30/10. No existe pantalla, botón ni permiso para cambiar el día de una caja.
 
@@ -294,7 +453,9 @@ Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") como transferencia entre Caja y otra cuenta (ej. Efectivo), con comentario. Hecho el 26-10-2026: pestaña «Ingresos / Retiros» del POS (`pages/pos/components/cash-transfers`), permiso `POS`. `POST /api/finances/transactions/cash-transfer` recibe sentido (`INGRESO` o `RETIRO`), la otra cuenta, monto y comentario obligatorio; el servidor arma la `TRANSFERENCIA` (descripción «Retiro de caja a X» o «Ingreso a caja desde X», el comentario va en notas), la vincula a la caja abierta y recalcula el efectivo esperado (T-15, T-16). Un retiro mayor al saldo de la cuenta Caja se rechaza. Se anula desde el POS con motivo (`/cash-transfer/{id}/void`) solo si es una transferencia de la caja abierta. `GET /cash-transfer/accounts` lista las cuentas activas distintas de Caja. Cada cuenta de la respuesta de movimientos trae `cashAccount` para distinguir ingreso de retiro.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado. Hecho el 26-10-2026 (migración `V13__cash_close_adjustment.sql`): categorías de sistema «Ajuste» de ingreso (`CASH_SURPLUS`) y de gasto (`CASH_SHORTAGE`), reutilizando las que ya se llamen así. En la misma transacción del cierre, si la diferencia (contado − esperado) no es 0, se crea un `INGRESO_MANUAL` (sobrante) o `GASTO_MANUAL` (faltante) en Caja por el valor absoluto, con descripción «Sobrante/Faltante al cierre de caja #N», el comentario de cierre en notas y vinculado a la caja cerrada, así que no se edita ni anula (CAJ-06); el saldo de Caja sube o baja ese monto. Bloqueo caja → cuenta (T-14). Con cuadre exacto no se crea nada. El efectivo esperado guardado de la caja cerrada no cambia. El saldo de Caja coincide con lo contado siempre que al abrir coincidiera con el monto inicial (desde el 29-10-2026 lo asegura el ajuste de apertura de CAJ-10). El modal de cierre avisa que la diferencia se registrará como ajuste. Pruebas en `CashSessionServiceTest`.
 - **CAJ-10** La apertura propone como monto inicial el cierre anterior; si se cambia, pide comentario. Hecho el 26-10-2026: `GET /api/cash-sessions/opening-proposal` (permiso POS) devuelve el monto de cierre y el número de la última caja cerrada (por fecha de cierre), o el saldo de la cuenta Caja sin número si no hay ninguna (FIN-01). Al abrir, si existe caja anterior y el monto inicial difiere de su cierre, el comentario de apertura es obligatorio (no vale solo espacios); el servidor lo rechaza con «El monto inicial es distinto al cierre de la caja anterior (Bs X). Indique el motivo en el comentario de apertura.». La primera caja del sistema no exige comentario. El modal de apertura carga la propuesta, la muestra como valor inicial con el número de la caja anterior y marca el comentario como obligatorio en cuanto el monto cambia. Pruebas en `CashSessionServiceTest`, `CashSessionControllerTest` y `cash.service.spec.ts`. Ajuste de apertura, hecho el 29-10-2026 (revisión de flujos antes de producción): cambiar el monto propuesto dejaba el saldo de Caja distinto de lo que había en la gaveta para siempre (cerrar contando 500, abrir con 450 y cuadrar el cierre siguiente dejaba Caja 50 por encima). Ahora la primera caja también exige comentario si el monto difiere del saldo de Caja («El monto inicial es distinto al saldo de la cuenta Caja (Bs X)…»), y al abrir se compara el monto inicial con el saldo de Caja (bloqueado después de guardar la caja): la diferencia se registra como `INGRESO_MANUAL` o `GASTO_MANUAL` «Ajuste» (`CASH_SURPLUS`/`CASH_SHORTAGE`) en Caja, «Diferencia al abrir la caja #N», con el comentario de apertura en notas y vinculado a la caja nueva. Las sumas del efectivo esperado (`sumActiveCashOutflowsBySessionId`, `sumActiveCashInflowsBySessionId`) excluyen las categorías Ajuste, así el esperado de la caja nueva arranca en el monto inicial; los movimientos Ajuste no se editan ni anulan desde Finanzas ni desde el POS («Los ajustes de caja se generan al abrir o cerrar la caja…»). El modal de apertura muestra la propuesta también en la primera caja y avisa que la diferencia irá a Caja como ajuste. Aviso de efectivo (CAJ-03): `app-cash-limit-warning` (en `shared/components`) avisa sin bloquear cuando una salida de Caja supera el efectivo esperado de la caja abierta; está en el gasto de caja, el retiro, el gasto y la transferencia de Finanzas, el pago de un pedido y la devolución a una persona. El modal de gasto de caja salió de `pos.component.html` a `pages/pos/components/cash-expense-modal` y ya no propone ninguna categoría (antes proponía la primera, «Ajuste»). Pruebas en `CashSessionServiceTest`, `FinancialTransactionServiceTest`, `cash-expense-modal.component.spec.ts` y `cash-limit-warning.component.spec.ts`.
-- **T-14** · V1 — Hallazgo: Saldos de cuenta (`current_balance`) y totales de caja se actualizan leyendo y reescribiendo la entidad, sin bloqueo ni `@Version`. Dos ventas o movimientos simultáneos pueden perder una actualización y desalinear el saldo. La apertura de caja verifica "no hay otra abierta" sin bloqueo. Requerimiento: Toda operación de dinero bloquea la cuenta y la caja que toca (`SELECT … FOR UPDATE` o versión optimista con reintento) dentro de su transacción, con prueba concurrente. Hecha el 25-10-2026: bloqueo pesimista (`@Lock(PESSIMISTIC_WRITE)`) en los repositorios. Orden fijo para evitar deadlocks: primero el movimiento (anulación o edición), luego la caja, luego las cuentas ordenadas por id en una sola consulta (`findAllByIdForUpdate`, `findSaleAccountsForUpdate`). Lo aplican ventas, anulación de ventas, cierre de caja, el endpoint heredado de ventas de caja, y alta, edición y anulación de movimientos de finanzas (incluye gastos de caja y transferencias); los movimientos que tocan la cuenta Caja bloquean también la caja abierta. La apertura se apoya en el índice único parcial de caja ABIERTA: si dos aperturas pasan la verificación a la vez, la segunda falla al guardar y responde el mismo «Ya existe una caja abierta». Prueba `MoneyConcurrencyIntegrationTest` contra PostgreSQL: 8 ventas simultáneas (saldo de Caja, totales de caja y números distintos), 8 transferencias cruzadas entre dos cuentas, y 8 aperturas simultáneas (queda una sola); limpia sus datos y se omite si la base ya tiene una caja abierta. Orden unificado el 29-10-2026: movimiento o documento (pedido) → caja → persona o cliente → cuentas por id. Antes las devoluciones a personas y los cobros bloqueaban la persona o el cliente antes que la caja, al revés que las ventas; anular un pedido bloqueaba las personas antes que la caja; y registrar un pedido con envío desde Bisa y primer pago desde Caja bloqueaba Bisa antes que la caja. Ahora `registerPurchase` bloquea primero la caja si alguna cuenta es Caja, luego la persona y luego las dos cuentas juntas; `voidPurchase` bloquea la caja de sus movimientos antes que las personas; devoluciones y cobros bloquean la caja antes que la persona o el cliente, y sus anulaciones leen el movimiento solo para saber su caja y vuelven a leer el registro después de los bloqueos. Pruebas de orden en `CreditorServiceTest` y `PurchaseServiceTest`.
+- **T-14** · V1 — Hallazgo: Saldos de cuenta (`current_balance`) y totales de caja se actualizan leyendo y reescribiendo la entidad, sin bloqueo ni `@Version`. Dos ventas o movimientos simultáneos pueden perder una actualización y desalinear el saldo. La apertura de caja verifica "no hay otra abierta" sin bloqueo. Requerimiento: Toda operación de dinero bloquea la cuenta y la caja que toca (`SELECT … FOR UPDATE` o versión optimista con reintento) dentro de su transacción, con prueba concurrente. Hecha el 25-10-2026: bloqueo pesimista (`@Lock(PESSIMISTIC_WRITE)`) en los repositorios. Orden fijo para evitar deadlocks: primero el movimiento (anulación o edición), luego la caja, luego las cuentas ordenadas por id en una sola consulta (`findAllByIdForUpdate`, `findSaleAccountsForUpdate`). Lo aplican ventas, anulación de ventas, cierre de caja, el endpoint heredado de ventas de caja, y alta, edición y anulación de movimientos de finanzas (incluye gastos de caja y transferencias); los movimientos que tocan la cuenta Caja bloquean también la caja abierta. La apertura se apoya en el índice único parcial de caja ABIERTA: si dos aperturas pasan la verificación a la vez, la segunda falla al guardar y responde el mismo «Ya existe una caja abierta». Prueba `MoneyConcurrencyIntegrationTest` contra PostgreSQL: 8 ventas simultáneas (saldo de Caja, totales de caja y números distintos), 8 transferencias cruzadas entre dos cuentas, y 8 aperturas simultáneas (queda una sola); limpia sus datos y se omite si la base ya tiene una caja abierta. Orden unificado el 29-10-2026: movimiento o documento (pedido) → caja → persona o cliente → cuentas por id; desde CAJ-12 abrir y reabrir toman antes el bloqueo de apertura, y nadie más lo toma. Antes las devoluciones a personas y los cobros bloqueaban la persona o el cliente antes que la caja, al revés que las ventas; anular un pedido bloqueaba las personas antes que la caja; y registrar un pedido con envío desde Bisa y primer pago desde Caja bloqueaba Bisa antes que la caja. Ahora `registerPurchase` bloquea primero la caja si alguna cuenta es Caja, luego la persona y luego las dos cuentas juntas; `voidPurchase` bloquea la caja de sus movimientos antes que las personas; devoluciones y cobros bloquean la caja antes que la persona o el cliente, y sus anulaciones leen el movimiento solo para saber su caja y vuelven a leer el registro después de los bloqueos. Pruebas de orden en `CreditorServiceTest` y `PurchaseServiceTest`.
 - **T-15** · V1 — Hallazgo: El efectivo esperado se calcula como inicial + ventas en efectivo − gastos manuales de Caja. Las transferencias desde Caja se vinculan a la caja pero la consulta las excluye, y las transferencias hacia Caja ni se vinculan: el saldo de la cuenta Caja y el efectivo esperado divergen. La fórmula está copiada en cinco lugares (caja, ventas, finanzas ×3). Requerimiento: Un único cálculo de efectivo esperado según CAJ-03, que incluye transferencias desde y hacia Caja (CAJ-08) y pagos de pedidos (COM-06), usado por todos los servicios y cubierto con pruebas. Hecha el 25-10-2026: `ExpectedCashCalculator` (inicial + ventas en efectivo + transferencias hacia Caja − gastos de Caja − transferencias desde Caja, solo movimientos activos de la caja) lo usan caja, ventas y finanzas; el POS muestra el valor del servidor y ya no lo recalcula, y su lista de gastos solo muestra `GASTO_MANUAL`. Las transferencias hacia Caja se vinculan a la caja abierta. Se mantiene el orden de bloqueo de T-14. Pruebas: `ExpectedCashCalculatorTest`, sumas contra PostgreSQL en `FinancialTransactionRepositoryTest` (excluye anulados, otras cuentas y otras cajas) y cierre con transferencias en `CashSessionServiceTest`. Desde el 25-10-2026 los pagos de pedidos y los envíos pagados desde Caja entran como gastos de Caja (COM-06).
 - **T-16** · V1 — Hallazgo: Un gasto o transferencia desde Caja sin caja abierta se registra igual, sin caja. El cliente puede enviar `cashSessionId` de una caja cerrada o de otra cuenta. Editar o anular un gasto de una caja cerrada recalcula el efectivo esperado de esa caja (rompe CAJ-06). Requerimiento: Los movimientos de la cuenta Caja exigen caja abierta y el servidor los vincula a ella; los movimientos de una caja cerrada no se editan ni anulan, se corrigen en la caja actual. Hecha el 25-10-2026: gasto o transferencia desde o hacia Caja sin caja abierta responde «Los movimientos de la cuenta Caja requieren una caja abierta.»; el `cashSessionId` del cliente se ignora (los movimientos fuera de Caja quedan sin caja). La edición ya no cambia la cuenta (T-05), así que un gasto no entra ni sale de Caja al editarse. Editar o anular un movimiento de una caja cerrada responde «No se pueden editar/anular movimientos de una caja cerrada; corríjalos en la caja actual.». Pruebas en `FinancialTransactionServiceTest`.
-- **CAJ-11** Día de operación de la caja. Hecho el 31-10-2026 (trabajo 007 de Foundry, spec versión 2). Migración `V21__cash_operation_day.sql`: columna `operation_date DATE NOT NULL` en `cash_sessions`, `sales`, `financial_transactions`, `purchase_payments`, `creditor_repayments` y `customer_collections`, cargada con `(fecha AT TIME ZONE 'America/La_Paz')::date` de `opened_at`, `created_at`, `transaction_date`, `payment_date`, `repayment_date` y `collection_date` (la misma expresión que usaban los reportes, así que al desplegar nada cambia de día; las históricas están a las 09:00 o 12:00 del día de la planilla), e índices por día en cajas, ventas y movimientos. Cada alta pone el día (sin `@PrePersist`: olvidarlo falla por el `NOT NULL`): la caja, el de su apertura (`StoreFormat.storeDay`); la venta, el de su caja; los ingresos de una venta (efectivo y QR), el de la venta; los movimientos de Caja (gastos, ingresos y retiros, pagos de pedidos y envíos, devoluciones, cobros, ajustes de apertura y cierre), el de la caja abierta bloqueada; el pago de pedido con cuenta, el de su gasto, y el pagado por una persona, el día de su registro; lo que no es de Caja ni de una venta, el día de su registro; las altas de la migración histórica, el día de la planilla. En las entidades el día es `updatable = false` salvo en la caja. Lecturas por día de operación con `LocalDate` inclusivos (`operation_date BETWEEN :from AND :to`): historial de ventas (orden día y hora de carga), ventas por día y por proveedor, movimientos por categoría y mes y transferencias (FIN-10), cobro y top de productos del dashboard, lista de movimientos de Finanzas y de una cuenta (`GET /api/finances/transactions` y `/accounts/{id}/transactions` reciben ahora `from` y `to` como días en vez de `startDate`/`endDate` como instantes), historial de personas y de clientes de Deudas (orden día, hora y alta) y pagos de un pedido. Sin cambio: caja inicial propuesta (último cierre real), efectivo esperado, «últimos movimientos» del resumen de Finanzas, consumos y fecha de los pedidos. Las respuestas de venta, movimiento, pago de pedido, caja (resumen y detalle) y entradas de historial de Deudas traen `operationDate`. Frontend: `operationDayLabel` y `sessionDayLabel` en `shared/utils/store-date.ts`; marca «Día dd/mm · cargada el dd/mm hh:mm» en historial y detalle de ventas, Finanzas, pagos de un pedido y detalle de persona y cliente; columna Día y «Día dd/mm · abierta el dd/mm» en historial y detalle de cajas. Corrección única en `V22__cash_sessions_146_148_day_fix.sql` (#146 → 28/10, #147 → 29/10, #148 → 30/10, solo si existe, no es histórica, está `CERRADA` y se abrió en La Paz entre el 28/10 y el 2/11/2026), con el motivo en el SQL: mueve las ventas de la caja por `cash_session_id`, sus movimientos por `cash_session_id` y los de sus ventas por `sale_id`, y los pagos, devoluciones y cobros de esos movimientos; solo cambia `operation_date`. Pruebas: `CashOperationDayMigrationIntegrationTest` (contra PostgreSQL: vuelve a correr el SQL de V22 y los `UPDATE` de V21 sobre datos sembrados dentro de la transacción de la prueba; mueve las tres cajas cerradas de la ventana con anuladas, ajustes, QR, pagos, devoluciones y cobros, compara todas las demás columnas y los saldos antes y después y las ventas por día; no toca una caja abierta, histórica, abierta el 27/10 23:30 o el 3/11, ni una base sin esas cajas), `SaleRepositoryTest`, `FinancialTransactionRepositoryTest`, `DashboardRepositoryTest`, `MigrationIntegrationTest` (las históricas quedan en el día de la planilla), `CashSessionServiceTest`, `SaleServiceTest`, `FinancialTransactionServiceTest`, `PurchaseServiceTest`, `CreditorServiceTest`, `CustomerServiceTest`, `StoreFormatTest`, `FinancialControllerTest`, y en el frontend `store-date.spec.ts`, `sales-table`, `sale-detail-modal`, `transactions-table`, `transactions.component`, `cash-history`, `cash-detail-modal`, `purchase-detail-modal`, `creditor-detail-modal` y `customer-detail-modal`. Comprobación con una copia de la base local (151 cajas, 108 ventas, 1.568 movimientos): después de V21 ninguna fila de las seis tablas tiene un día distinto del de su registro y las ventas y movimientos por día son idénticos a los de antes.
+- **CAJ-11** Día de operación de la caja. Hecho el 31-10-2026 (trabajo 007 de Foundry, spec versión 2). Migración `V21__cash_operation_day.sql`: columna `operation_date DATE NOT NULL` en `cash_sessions`, `sales`, `financial_transactions`, `purchase_payments`, `creditor_repayments` y `customer_collections`, cargada con `(fecha AT TIME ZONE 'America/La_Paz')::date` de `opened_at`, `created_at`, `transaction_date`, `payment_date`, `repayment_date` y `collection_date` (la misma expresión que usaban los reportes, así que al desplegar nada cambia de día; las históricas están a las 09:00 o 12:00 del día de la planilla), e índices por día en cajas, ventas y movimientos. Cada alta pone el día (sin `@PrePersist`: olvidarlo falla por el `NOT NULL`): la caja, el de su apertura (`StoreFormat.storeDay`); la venta, el de su caja; los ingresos de una venta (efectivo y QR), el de la venta; los movimientos de Caja (gastos, ingresos y retiros, pagos de pedidos y envíos, devoluciones, cobros, ajustes de apertura y cierre), el de la caja abierta bloqueada; el pago de pedido con cuenta, el de su gasto, y el pagado por una persona, el día de su registro; lo que no es de Caja ni de una venta, el día de su registro; las altas de la migración histórica, el día de la planilla. En las entidades el día es `updatable = false` salvo en la caja. Lecturas por día de operación con `LocalDate` inclusivos (`operation_date BETWEEN :from AND :to`): historial de ventas (orden día y hora de carga), ventas por día y por proveedor, movimientos por categoría y mes y transferencias (FIN-10), cobro y top de productos del dashboard, lista de movimientos de Finanzas y de una cuenta (`GET /api/finances/transactions` y `/accounts/{id}/transactions` reciben ahora `from` y `to` como días en vez de `startDate`/`endDate` como instantes), historial de personas y de clientes de Deudas (orden día, hora y alta) y pagos de un pedido. Sin cambio: caja inicial propuesta (último cierre real), efectivo esperado, «últimos movimientos» del resumen de Finanzas, consumos y fecha de los pedidos. Las respuestas de venta, movimiento, pago de pedido, caja (resumen y detalle) y entradas de historial de Deudas traen `operationDate`. Frontend: `operationDayLabel` y `sessionDayLabel` en `shared/utils/store-date.ts`; marca «Día dd/mm · cargada el dd/mm hh:mm» en historial y detalle de ventas, Finanzas, pagos de un pedido y detalle de persona y cliente; columna Día y «Día dd/mm · abierta el dd/mm» en historial y detalle de cajas. Desde CAJ-12 el día de la caja es el elegido al abrir y también es `updatable = false` en la entidad. Corrección única en `V22__cash_sessions_146_148_day_fix.sql` (#146 → 28/10, #147 → 29/10, #148 → 30/10, solo si existe, no es histórica, está `CERRADA` y se abrió en La Paz entre el 28/10 y el 2/11/2026), con el motivo en el SQL: mueve las ventas de la caja por `cash_session_id`, sus movimientos por `cash_session_id` y los de sus ventas por `sale_id`, y los pagos, devoluciones y cobros de esos movimientos; solo cambia `operation_date`. Pruebas: `CashOperationDayMigrationIntegrationTest` (contra PostgreSQL: vuelve a correr el SQL de V22 y los `UPDATE` de V21 sobre datos sembrados dentro de la transacción de la prueba; mueve las tres cajas cerradas de la ventana con anuladas, ajustes, QR, pagos, devoluciones y cobros, compara todas las demás columnas y los saldos antes y después y las ventas por día; no toca una caja abierta, histórica, abierta el 27/10 23:30 o el 3/11, ni una base sin esas cajas), `SaleRepositoryTest`, `FinancialTransactionRepositoryTest`, `DashboardRepositoryTest`, `MigrationIntegrationTest` (las históricas quedan en el día de la planilla), `CashSessionServiceTest`, `SaleServiceTest`, `FinancialTransactionServiceTest`, `PurchaseServiceTest`, `CreditorServiceTest`, `CustomerServiceTest`, `StoreFormatTest`, `FinancialControllerTest`, y en el frontend `store-date.spec.ts`, `sales-table`, `sale-detail-modal`, `transactions-table`, `transactions.component`, `cash-history`, `cash-detail-modal`, `purchase-detail-modal`, `creditor-detail-modal` y `customer-detail-modal`. Comprobación con una copia de la base local (151 cajas, 108 ventas, 1.568 movimientos): después de V21 ninguna fila de las seis tablas tiene un día distinto del de su registro y las ventas y movimientos por día son idénticos a los de antes.
+- **CAJ-12 y CAJ-13** Elegir el día y secuencia. Hecho el 2-11-2026 (trabajo 008 de Foundry, spec versión 2). `V23__cash_one_session_per_day.sql`: índice único `uq_cash_sessions_operation_date`, completo si no hay días repetidos y parcial (`WHERE session_number > último repetido`, con `WARNING`, sin mover datos) si los hay; después de desplegar, `SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_cash_sessions_operation_date'` no debe contener `WHERE`. `V24__cash_no_attention_days.sql`: `cash_no_attention_days` (día único, comentario, caja que lo confirmó, quién y cuándo; `CHECK` que rechaza domingos). `POST /api/cash-sessions/open` recibe `operationDate` (nulo es hoy, para una pestaña anterior al despliegue), `noAttentionDays` y `noAttentionComment`. El servidor exige que `noAttentionDays` sea exactamente lo que calcula: así nadie marca un día que no vio. `GET /api/cash-sessions/opening-proposal` suma `today`, `minDay`, `lastSessionNumber`, `lastSessionDay`, `todayClosedSessionNumber` y `unresolvedDays`; la pantalla no conoce la regla del domingo. La regla pura está en `CashDaySequence`. `openSession` toma primero un advisory lock de transacción (`CashSessionRepository.lockCashOpening`, como `HistoricalImportRepository.lockImport`), que también toma la reapertura: el índice de caja abierta no alcanza para una carrera entre abrir y reabrir; los índices únicos quedan como última defensa. Mensajes de los días con `StoreFormat.dayMonth` (`d/MM`, como la spec); las marcas siguen en `dd/MM`. Frontend: campo de día y días que faltan en `open-cash-modal`, que también muestra el rechazo del servidor (el banner del POS queda detrás del modal); `openSessionDayLabel`, `weekdayDayLabel` y `shortDayLabel` en `store-date.ts`; marca reutilizable `shared/components/cash-day-mark` en POS, «Registrar venta» y dashboard. Pruebas: `CashDaySequenceTest`, `CashSessionServiceTest`, `CashSessionControllerTest`, `StoreFormatTest`, `CashOpeningIntegrationTest` y `CashOneSessionPerDayMigrationIntegrationTest` (contra PostgreSQL), `MoneyConcurrencyIntegrationTest`, `SerializationLockIntegrationTest`, y en el frontend `store-date.spec.ts`, `open-cash-modal`, `cash-day-mark`, `pos.component` y `register-sale`.
+- **CAJ-14** Reabrir la última caja. Hecho el 2-11-2026 (trabajo 008 de Foundry). `V25__cash_session_reopenings.sql`: `cash_session_reopenings` (una fila por reapertura, nunca se actualiza) y `cash_denomination_cuts.reopening_id`: los cortes del cierre deshecho no se borran, quedan atados a su reapertura y la colección `CashSession.cuts` los filtra con `@SQLRestriction`. `POST /api/cash-sessions/{id}/reopen`, permiso `CASH_HISTORY`. `reopenable` de la lista de cajas lo calcula el servidor. Orden de bloqueos: apertura → ajuste → caja → cuenta (T-14). El ajuste de cierre se identifica por su descripción exacta, armada en un solo método al crear y al buscar (la descripción de un ajuste no se edita); antes de tocar saldos se verifica que haya exactamente uno, con el monto y el tipo de la diferencia, y sin diferencia ninguno. La reversión no valida saldo: Caja vuelve a lo que era, aunque sea negativo. `voidTransaction` y `voidCashExpense` siguen rechazando los ajustes: solo este camino anula el de cierre. El efectivo esperado, los reportes y `getOpeningProposal` no cambian: ya excluyen los ajustes o los anulados, y ordenan por cierre real. Frontend: `reopen-cash-modal`, acción «Reabrir» en el historial, bloque «Reaperturas» en `cash-detail-modal`. Pruebas: `CashSessionServiceTest` (rechazos, orden de bloqueos con `InOrder`, saldos, datos que no calzan), `CashReopenIntegrationTest` (contra PostgreSQL: ciclo completo, reabrir dos veces, cortes, reportes, caja siguiente, negativo), `MoneyConcurrencyIntegrationTest` (reaperturas simultáneas, contra una apertura, contra abrir y cerrar otra caja), `FinancialTransactionServiceTest`, `EndpointAuthorizationTest` (T-13) y en el frontend `cash.service.spec.ts`, `reopen-cash-modal`, `cash-history`, `cash-detail-modal` y `cash-expenses`.
