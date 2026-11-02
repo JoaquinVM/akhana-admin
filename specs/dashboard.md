@@ -16,7 +16,8 @@ Reportes siempre muestran los mismos números para el mismo rango.
 - **Cuando** un operador llama a `GET /api/dashboard` **entonces** recibe 403 y la pantalla no aparece en su menú.
 - **Cuando** un administrador inicia sesión o entra a `/` **entonces** llega al Dashboard; **cuando** es un
   operador, llega al POS como hasta ahora.
-- **Cuando** se abre **entonces** el período es el mes en curso, del 1 a hoy.
+- **Cuando** se abre **entonces** el período es el mes en curso, del 1 a hoy. En la app instalada abre en Hoy, con
+  «Ahora mismo» primero (MOV-02, `mobile.md`).
 - **Cuando** la fecha desde es posterior a la fecha hasta, o el rango pasa de 366 días, **entonces** los mismos
   mensajes que Reportes.
 - Responsive: en la PC de caja las tarjetas van de a 4 y los bloques de a 2; en el celular, tarjetas de a 2 y

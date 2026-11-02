@@ -6,6 +6,17 @@
     </div>
   </header>
 
+  <!-- MOV-02: in the installed app, what is happening now comes first; the period below does not change it -->
+  @if (installed && dashboard(); as d) {
+    <section class="now" aria-labelledby="now-title">
+      <h2 id="now-title" class="now-title">Ahora mismo</h2>
+      <div class="grid-2">
+        <ng-container *ngTemplateOutlet="cashCard; context: { $implicit: d }" />
+        <ng-container *ngTemplateOutlet="balancesCard; context: { $implicit: d }" />
+      </div>
+    </section>
+  }
+
   <div class="filters">
     <div class="filter-pill-group" role="group" aria-label="Período">
       @for (p of periods; track p.value) {
@@ -170,21 +181,9 @@
         }
       </section>
 
-      <section class="card" aria-labelledby="cash-title">
-        <h2 id="cash-title" class="card-title">Caja actual</h2>
-        @if (d.now.cash.open) {
-          <p class="status status-open">Abierta · caja N.º {{ d.now.cash.sessionNumber }}</p>
-          <app-cash-day-mark [operationDate]="d.now.cash.operationDate" [openedAt]="d.now.cash.openedAt" />
-          <ul class="value-list">
-            <li>Abrió<span class="value">{{ d.now.cash.openedBy }} · {{ d.now.cash.openedAt | date:'dd/MM HH:mm':'-0400' }}</span></li>
-            <li>Caja inicial<span class="value">Bs {{ d.now.cash.openingAmount | number:'1.2-2' }}</span></li>
-            <li>Ventas ({{ d.now.cash.salesCount }})<span class="value">Bs {{ d.now.cash.totalSales | number:'1.2-2' }}</span></li>
-            <li><strong>Efectivo esperado</strong><span class="value"><strong>Bs {{ d.now.cash.expectedCash | number:'1.2-2' }}</strong></span></li>
-          </ul>
-        } @else {
-          <p class="status status-closed">Cerrada</p>
-        }
-      </section>
+      @if (!installed) {
+        <ng-container *ngTemplateOutlet="cashCard; context: { $implicit: d }" />
+      }
     </div>
 
     <div class="grid-2">
@@ -225,21 +224,9 @@
         <p class="aside-line">Sin transferencias entre cuentas.</p>
       </section>
 
-      <section class="card" aria-labelledby="balances-title">
-        <h2 id="balances-title" class="card-title">Saldos y deudas</h2>
-        <ul class="value-list">
-          @for (a of d.now.accounts; track a.id) {
-            <li><span class="swatch" [style.background]="a.color || '#94a3b8'"></span>{{ a.name }}
-              <span class="value">Bs {{ a.balance | number:'1.2-2' }}</span></li>
-          }
-          <li class="total"><strong>Total</strong><span class="value"><strong>Bs {{ d.now.totalBalance | number:'1.2-2' }}</strong></span></li>
-        </ul>
-        <ul class="value-list debts">
-          <li>Por pagar a proveedores<span class="value">Bs {{ d.now.payables | number:'1.2-2' }}</span></li>
-          <li>Por devolver a personas<span class="value">Bs {{ d.now.creditorsDebt | number:'1.2-2' }}</span></li>
-          <li>Por cobrar<span class="value">Bs {{ d.now.receivables | number:'1.2-2' }}</span></li>
-        </ul>
-      </section>
+      @if (!installed) {
+        <ng-container *ngTemplateOutlet="balancesCard; context: { $implicit: d }" />
+      }
     </div>
   }
 </div>
@@ -278,4 +265,40 @@
       }
     </ol>
   }
+</ng-template>
+
+<ng-template #cashCard let-d>
+  <section class="card" aria-labelledby="cash-title">
+    <h2 id="cash-title" class="card-title">Caja actual</h2>
+    @if (d.now.cash.open) {
+      <p class="status status-open">Abierta · caja N.º {{ d.now.cash.sessionNumber }}</p>
+      <app-cash-day-mark [operationDate]="d.now.cash.operationDate" [openedAt]="d.now.cash.openedAt" />
+      <ul class="value-list">
+        <li>Abrió<span class="value">{{ d.now.cash.openedBy }} · {{ d.now.cash.openedAt | date:'dd/MM HH:mm':'-0400' }}</span></li>
+        <li>Caja inicial<span class="value">Bs {{ d.now.cash.openingAmount | number:'1.2-2' }}</span></li>
+        <li>Ventas ({{ d.now.cash.salesCount }})<span class="value">Bs {{ d.now.cash.totalSales | number:'1.2-2' }}</span></li>
+        <li><strong>Efectivo esperado</strong><span class="value"><strong>Bs {{ d.now.cash.expectedCash | number:'1.2-2' }}</strong></span></li>
+      </ul>
+    } @else {
+      <p class="status status-closed">Cerrada</p>
+    }
+  </section>
+</ng-template>
+
+<ng-template #balancesCard let-d>
+  <section class="card" aria-labelledby="balances-title">
+    <h2 id="balances-title" class="card-title">Saldos y deudas</h2>
+    <ul class="value-list">
+      @for (a of d.now.accounts; track a.id) {
+        <li><span class="swatch" [style.background]="a.color || '#94a3b8'"></span>{{ a.name }}
+          <span class="value">Bs {{ a.balance | number:'1.2-2' }}</span></li>
+      }
+      <li class="total"><strong>Total</strong><span class="value"><strong>Bs {{ d.now.totalBalance | number:'1.2-2' }}</strong></span></li>
+    </ul>
+    <ul class="value-list debts">
+      <li>Por pagar a proveedores<span class="value">Bs {{ d.now.payables | number:'1.2-2' }}</span></li>
+      <li>Por devolver a personas<span class="value">Bs {{ d.now.creditorsDebt | number:'1.2-2' }}</span></li>
+      <li>Por cobrar<span class="value">Bs {{ d.now.receivables | number:'1.2-2' }}</span></li>
+    </ul>
+  </section>
 </ng-template>

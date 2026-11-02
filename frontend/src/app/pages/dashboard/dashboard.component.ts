@@ -1,9 +1,10 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardRankRow } from '../../core/dashboard/models/dashboard.models';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
+import { INSTALLED_APP } from '../../core/pwa/installed-app';
 
 export type DashboardPeriod = 'TODAY' | 'WEEK' | 'MONTH' | 'RANGE';
 export type RankBy = 'sales' | 'profit';
@@ -57,6 +58,8 @@ export function changePercent(current: number | null, previous: number | null): 
 })
 export class DashboardComponent implements OnInit {
   private readonly dashboardService = inject(DashboardService);
+  private readonly document = inject(DOCUMENT);
+  readonly installed = inject(INSTALLED_APP);
 
   readonly periods: { value: DashboardPeriod; label: string }[] = [
     { value: 'TODAY', label: 'Hoy' },
@@ -141,7 +144,15 @@ export class DashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.selectPeriod('MONTH');
+    this.selectPeriod(this.installed ? 'TODAY' : 'MONTH');
+  }
+
+  // MOV-02: a phone resumes the app without opening it again, and it must not keep showing an old «Ahora mismo»
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (this.installed && this.document.visibilityState === 'visible' && this.period() !== 'RANGE') {
+      this.selectPeriod(this.period());
+    }
   }
 
   selectPeriod(period: DashboardPeriod): void {
