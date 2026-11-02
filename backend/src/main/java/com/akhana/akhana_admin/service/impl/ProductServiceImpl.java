@@ -11,6 +11,7 @@ import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
+import com.akhana.akhana_admin.service.ProductBarcodeService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductPresentationService presentationService;
     private final ProductPriceChangeRepository priceChangeRepository;
     private final CreditorRepository creditorRepository;
+    private final ProductBarcodeService barcodeService;
 
     static final String SELL_PRICE_REQUIRED = "El precio de venta debe ser mayor a 0.";
     static final String OWNER_REQUIRED = "Elija la dueña del producto de tercero.";
@@ -166,6 +168,7 @@ public class ProductServiceImpl implements ProductService {
 
         Product saved = productRepository.save(product);
         recordPriceChange(saved, null, null, product.getCreatedBy(), product.getCreatedAt());
+        barcodeService.applyBarcodes(saved, request.barcodes(), currentUsername);
         // Presentations need the saved product (CAT-11)
         if (specialType != null) {
             return ProductResponse.fromEntity(saved, List.of());
@@ -255,6 +258,8 @@ public class ProductServiceImpl implements ProductService {
             recordPriceChange(product, previousBuyPrice, previousSellPrice, product.getUpdatedBy(), product.getUpdatedAt());
         }
 
+        barcodeService.applyBarcodes(product, request.barcodes(), currentUsername);
+
         List<String> warnings = new ArrayList<>(special ? List.of() : costWarnings(buyPrice));
         if (!special) {
             warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
@@ -298,6 +303,7 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(ProductStatus.ELIMINADO);
         product.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         product.setDeletedAt(Instant.now());
+        barcodeService.deactivateAll(product, currentUsername);
 
         productRepository.save(product);
     }
