@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardRankRow } from '../../core/dashboard/models/dashboard.models';
+import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
 
 export type DashboardPeriod = 'TODAY' | 'WEEK' | 'MONTH' | 'RANGE';
 export type RankBy = 'sales' | 'profit';
@@ -50,7 +51,7 @@ export function changePercent(current: number | null, previous: number | null): 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CashDayMarkComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -91,6 +92,10 @@ export class DashboardComponent implements OnInit {
     const p = this.dashboard()?.payments;
     return p ? p.cash + p.qr + p.credit : 0;
   });
+
+  // CAJ-13: comment of each day without attention, so the table tells it from a day without sales
+  readonly noAttentionComments = computed(() =>
+    new Map((this.dashboard()?.noAttentionDays ?? []).map(day => [day.date, day.comment])));
 
   readonly expenseMax = computed(() => Math.max(0, ...(this.dashboard()?.expenses ?? []).map(e => e.amount)));
 

@@ -16,7 +16,7 @@
       <div class="form-group">
         <label class="form-label" for="consumption-date">Fecha</label>
         <input id="consumption-date" type="date" class="form-control" name="consumptionDate" [max]="maxDate"
-               [ngModel]="consumptionDate()" (ngModelChange)="consumptionDate.set($event)" />
+               [ngModel]="consumptionDate()" (ngModelChange)="onDateChange($event)" />
         <span class="form-hint">Puede ser anterior, no futura.</span>
       </div>
       <div class="form-group">

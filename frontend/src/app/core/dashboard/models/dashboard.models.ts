@@ -18,6 +18,12 @@ export interface DashboardDayPoint {
   profit: number;
 }
 
+// CAJ-13: a day of the period confirmed without attention
+export interface DashboardNoAttentionDay {
+  date: string;
+  comment: string;
+}
+
 export interface DashboardPayments {
   cash: number;
   qr: number;
@@ -50,6 +56,8 @@ export interface DashboardCashNow {
   totalSales: number | null;
   salesCount: number;
   expectedCash: number | null;
+  // CAJ-12: its day of operation
+  operationDate?: string | null;
 }
 
 export interface DashboardAccountBalance {
@@ -85,6 +93,7 @@ export interface Dashboard {
   expenses: DashboardCategoryAmount[];
   expenseTotal: number;
   now: DashboardNow;
+  noAttentionDays: DashboardNoAttentionDay[];
 }
 
 export interface DashboardRange {

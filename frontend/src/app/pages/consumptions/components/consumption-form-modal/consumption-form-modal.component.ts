@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
+import { CashService } from '../../../../core/cash/cash.service';
 import { Product, ProductPresentation, activePresentations } from '../../../../core/product/models/product.models';
 import { Consumption, ConsumptionRequest } from '../../../../core/consumption/models/consumption.models';
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
@@ -31,6 +32,7 @@ export interface ConsumptionLineDraft {
 export class ConsumptionFormModalComponent {
   private readonly toast = inject(ToastService);
   private readonly consumptionService = inject(ConsumptionService);
+  private readonly cashService = inject(CashService);
 
   isOpen = input<boolean>(false);
   // Catalog without deleted products: an inactive product can be consumed
@@ -42,6 +44,8 @@ export class ConsumptionFormModalComponent {
   readonly maxDate = todayIso();
 
   consumptionDate = signal<string>(todayIso());
+  // CAJ-12: the date the user chose is not replaced by the day of the open session
+  private dateChanged = false;
   consumedFor = signal<string>('');
   comment = signal<string>('');
   lines = signal<ConsumptionLineDraft[]>([]);
@@ -66,7 +70,26 @@ export class ConsumptionFormModalComponent {
     });
   }
 
+  onDateChange(date: string): void {
+    this.dateChanged = true;
+    this.consumptionDate.set(date);
+  }
+
+  // CAJ-12: with a session of a previous day open, the consumption proposes that day; else today, also if asking fails
+  private proposeDayOfOpenSession(): void {
+    this.cashService.getCurrentSession().subscribe({
+      next: (session) => {
+        const day = session?.operationDate;
+        if (day && day < todayIso() && this.isOpen() && !this.dateChanged) {
+          this.consumptionDate.set(day);
+        }
+      },
+      error: () => undefined
+    });
+  }
+
   private reset(): void {
+    this.dateChanged = false;
     this.consumptionDate.set(todayIso());
     this.consumedFor.set('');
     this.comment.set('');
@@ -75,6 +98,7 @@ export class ConsumptionFormModalComponent {
     this.pickerProduct.set(null);
     this.formError.set(null);
     this.isSubmitting.set(false);
+    this.proposeDayOfOpenSession();
   }
 
   isWeighted(product: Product): boolean {

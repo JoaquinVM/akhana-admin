@@ -47,7 +47,8 @@ describe('DashboardComponent', () => {
       accounts: [{ id: 'a1', name: 'Caja', color: '#16a34a', balance: 1500 },
         { id: 'a2', name: 'Bisa', color: '#2563eb', balance: 3500 }],
       totalBalance: 5000, payables: 320, creditorsDebt: 200.25, receivables: 104
-    }
+    },
+    noAttentionDays: []
   };
 
   beforeEach(async () => {
@@ -154,5 +155,33 @@ describe('DashboardComponent', () => {
     });
     expect(runInInjectionContext(injectorWith(true), () => homeRedirect())).toBe('dashboard');
     expect(runInInjectionContext(injectorWith(false), () => homeRedirect())).toBe('pos');
+  });
+
+  it('CAJ-13: en Ver tabla, un día marcado dice «Sin atención» con su comentario, distinto de un día sin ventas', () => {
+    const date = dashboard.days[0].date;
+    dashboardService.getDashboard.mockReturnValue(of({ ...dashboard, noAttentionDays: [{ date, comment: 'Feriado' }] }));
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('.table-view tbody tr')) as HTMLElement[];
+    expect(rows[0].textContent).toContain('Sin atención');
+    expect(rows[0].textContent).toContain('Feriado');
+    expect(rows.slice(1).some(row => row.textContent?.includes('Sin atención'))).toBe(false);
+  });
+
+  it('CAJ-12: la caja actual de un día anterior lleva la marca; la de hoy no', () => {
+    const withCash = (operationDate: string) => ({
+      ...dashboard,
+      now: { ...dashboard.now, cash: { ...dashboard.now.cash, openedAt: '2026-10-30T13:00:00Z', operationDate } }
+    });
+    dashboardService.getDashboard.mockReturnValue(of(withCash('2026-10-28')));
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-cash-day-mark').textContent).toContain('Día 28/10 · abierta el 30/10');
+
+    dashboardService.getDashboard.mockReturnValue(of(withCash(storeToday())));
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.cash-day-mark')).toBeNull();
   });
 });

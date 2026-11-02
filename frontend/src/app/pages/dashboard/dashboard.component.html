@@ -125,8 +125,15 @@
             <thead><tr><th>Día</th><th class="num">Ventas</th><th class="num">Utilidad</th></tr></thead>
             <tbody>
               @for (day of d.days; track day.date) {
-                <tr><td>{{ dayLabel(day.date) }}</td><td class="num">{{ day.sales | number:'1.2-2' }}</td>
-                  <td class="num">{{ day.profit | number:'1.2-2' }}</td></tr>
+                <tr>
+                  <td>{{ dayLabel(day.date) }}</td>
+                  @if (noAttentionComments().get(day.date); as comment) {
+                    <td colspan="2" class="no-attention"><strong>Sin atención</strong> · {{ comment }}</td>
+                  } @else {
+                    <td class="num">{{ day.sales | number:'1.2-2' }}</td>
+                    <td class="num">{{ day.profit | number:'1.2-2' }}</td>
+                  }
+                </tr>
               }
             </tbody>
           </table>
@@ -167,6 +174,7 @@
         <h2 id="cash-title" class="card-title">Caja actual</h2>
         @if (d.now.cash.open) {
           <p class="status status-open">Abierta · caja N.º {{ d.now.cash.sessionNumber }}</p>
+          <app-cash-day-mark [operationDate]="d.now.cash.operationDate" [openedAt]="d.now.cash.openedAt" />
           <ul class="value-list">
             <li>Abrió<span class="value">{{ d.now.cash.openedBy }} · {{ d.now.cash.openedAt | date:'dd/MM HH:mm':'-0400' }}</span></li>
             <li>Caja inicial<span class="value">Bs {{ d.now.cash.openingAmount | number:'1.2-2' }}</span></li>
