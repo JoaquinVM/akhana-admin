@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Daily PostgreSQL backup (NF-01, specs/deploy.md): dump, verify, upload encrypted off the VPS, prune, report.
+# Daily backup (NF-01, NF-07, specs/deploy.md): dump, verify, upload encrypted off the VPS, prune, copy the
+# product photos, report.
 # Usage: backup.sh [--tag pre-deploy|pre-restore] [--local-only]
 #   --local-only skips the upload (pre-deploy copies, whose remote copy is tomorrow's daily one).
 set -Eeuo pipefail
@@ -50,11 +51,21 @@ if $upload; then
     log "Subiendo a $BACKUP_REMOTE"
     $RCLONE copy "$file" "$BACKUP_REMOTE"
     log "Borrando del remoto los respaldos de más de $BACKUP_KEEP_REMOTE_DAYS días"
-    $RCLONE delete --min-age "${BACKUP_KEEP_REMOTE_DAYS}d" "$BACKUP_REMOTE"
+    # Only the dumps: delete is recursive and would also take the product photos (NF-07)
+    $RCLONE delete --min-age "${BACKUP_KEEP_REMOTE_DAYS}d" --max-depth 1 --include '/akhana-*.dump' "$BACKUP_REMOTE"
 fi
 
 log "Borrando los respaldos locales de más de $BACKUP_KEEP_LOCAL_DAYS días"
 find "$BACKUP_DIR" -name 'akhana-*.dump' -mtime +"$BACKUP_KEEP_LOCAL_DAYS" -delete
+
+# Last, so a failure here leaves the database already off the VPS and still alerts (NF-07).
+# A saved photo never changes, so --immutable makes a changed file an error instead of replacing the copy.
+if $upload; then
+    photos_source=$(photos_dir)
+    photos_target=$(photos_remote)
+    log "Copiando las fotos nuevas a $photos_target"
+    $RCLONE copy "$photos_source" "$photos_target" --exclude '/.tmp/**' --immutable
+fi
 
 log "Respaldo terminado: $(basename "$file")"
 [[ -z $tag ]] && ping_check "${HEALTHCHECK_BACKUP_URL:-}" "" "$(tail -c 9000 "$run_log")"

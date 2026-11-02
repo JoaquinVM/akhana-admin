@@ -41,6 +41,7 @@ VPS · tailscale serve :443 ──► 127.0.0.1:8081
                     ├─ web: nginx — Angular compilado + /api ──► api:8080
                     ├─ api: Spring Boot (Java 21)
                     └─ db: PostgreSQL 17 (volumen, sin puerto publicado)
+                    api guarda las fotos de productos en el volumen product_photos (NF-07)
 ```
 
 Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `web` publica en `127.0.0.1:8081`.
@@ -235,6 +236,16 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
   `pre-deploy` de ese despliegue (`restore.sh --replace /var/backups/akhana/akhana-<fecha>-pre-deploy.dump`).
   Sin GitHub, en el VPS: `deploy.sh --ref v1.0.0`.
 
+- **Cuando** se vuelve a un tag anterior a NF-07
+- **Entonces** su `backup.sh` borra del remoto, como hacía antes, todo lo que tenga más de 60 días, **incluidas las fotos
+  de esa edad**. Al volver a una versión con NF-07, la copia diaria las sube otra vez desde el volumen, así que solo se
+  pierden si además se pierde el volumen en ese intervalo. Riesgo aceptado por el dueño: evitarlo exigía un remoto
+  cifrado aparte, con claves nuevas.
+
+- **Cuando** un despliegue falla y restaura la base
+- **Entonces** las fotos no se tocan. Las subidas después de ese respaldo quedan como archivos sin usar, y hay que volver a
+  asociarlas subiéndolas de nuevo.
+
 ### Instalación (una vez, en el VPS)
 
 - **Cuando** `main` ya tiene `ci.yml` y `deploy-watch.sh`, y en el VPS se corre como root
@@ -294,6 +305,31 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
   1. Con datos cargados en el VPS, `backup.sh` sube un respaldo y `restore.sh --check latest` coincide en todo.
   2. En la Mac, sin acceso al VPS, se baja ese respaldo con `rclone` y las claves del gestor, se restaura en el
      Postgres local, el backend arranca contra él y los reportes del mes muestran los mismos totales que producción.
+
+## NF-07 · Fotos de productos
+
+Las fotos viven en el volumen `product_photos`, montado en `api` (`PRODUCT_PHOTOS_DIR=/data/product-photos`); detalle en
+`product-photos.md`. No requieren cambios en el `.env` ni en rclone: la copia va en `${BACKUP_REMOTE}product-photos/`, cifrada
+por el mismo remoto.
+
+- **Cuando** corre `deploy/backup.sh` sin `--local-only`
+- **Entonces** primero sube la base y borra los respaldos viejos, y al final copia solo las fotos nuevas con `rclone copy
+  --immutable`: un archivo guardado no cambia, así que uno distinto es un error y no reemplaza la copia.
+
+- **Cuando** falla la copia de fotos
+- **Entonces** la base ya quedó subida, el script termina con error y healthchecks.io avisa.
+
+- **Cuando** se aplica la limpieza de 60 días
+- **Entonces** toca solo los `akhana-*.dump` de la raíz del remoto (`--max-depth 1 --include`).
+
+- **Cuando** corre `restore.sh --check`
+- **Entonces** además de la base, lista las fotos registradas en el respaldo, comprueba que estén todas en el remoto y baja y
+  descifra 5 al azar para compararlas con las del volumen. Si falta una o no coincide, falla y avisa. Un respaldo anterior a
+  la tabla no tiene fotos que comprobar.
+
+- **Cuando** se pierde el VPS
+- **Entonces**, después de restaurar la base, `deploy/restore.sh --photos` crea el volumen si falta, trae todas las fotos del
+  remoto y deja como dueño al usuario de `api` (10001).
 
 ## Tareas
 
