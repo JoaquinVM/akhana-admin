@@ -33,7 +33,8 @@
       autocomplete="off"
       [value]="typed()"
       (input)="typed.set($any($event.target).value)"
-      (keydown.enter)="addTyped($event)" />
+      (keydown.enter)="addTyped($event)"
+      (blur)="addTyped()" />
     <button type="button" class="btn btn-outline" [disabled]="!canAdd()" (click)="addTyped()">Agregar</button>
   </div>
 </div>

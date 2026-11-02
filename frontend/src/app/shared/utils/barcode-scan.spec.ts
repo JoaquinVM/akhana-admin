@@ -79,6 +79,21 @@ describe('ScanCapture (POS-15)', () => {
     button.remove();
   });
 
+  it('el keyup del Enter de un escaneo tampoco llega a los campos', () => {
+    const released = vi.fn();
+    input.addEventListener('keyup', released);
+
+    scan(input);
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(released).not.toHaveBeenCalled();
+
+    // The next Enter of a person, whole
+    now += 500;
+    press(input, 'Enter');
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(released).toHaveBeenCalledTimes(1);
+  });
+
   it('tres escaneos seguidos son tres lecturas', () => {
     scan(input);
     now += 300;
@@ -198,21 +213,43 @@ describe('ScanCapture (POS-15)', () => {
     text.remove();
   });
 
-  it('en un campo de fecha los dígitos pasan, y el Enter de un escaneo se detiene', () => {
+  it('en un campo de fecha los dígitos pasan, y un escaneo devuelve la fecha y detiene su Enter', () => {
     const date = document.createElement('input');
     date.type = 'date';
+    date.value = '2026-11-02';
     document.body.appendChild(date);
     date.focus();
+    const onInput = vi.fn();
+    date.addEventListener('input', onInput);
 
     const digit = press(date, '2');
     now += 10;
     expect(digit.defaultPrevented).toBe(false);
+    // What the browser does with the digits of a date field
+    date.value = '2024-07-07';
     type(date, '123456', 10);
     const enter = press(date, 'Enter');
 
     expect(enter.defaultPrevented).toBe(true);
+    expect(date.value).toBe('2026-11-02');
+    expect(onInput).toHaveBeenCalled();
     expect(scans).toEqual([]);
     expect(execCommand).not.toHaveBeenCalled();
+    date.remove();
+  });
+
+  it('en un campo de fecha, escribir a mano no devuelve nada', () => {
+    const date = document.createElement('input');
+    date.type = 'date';
+    date.value = '2026-11-02';
+    document.body.appendChild(date);
+    date.focus();
+
+    press(date, '2');
+    date.value = '2024-11-02';
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
+
+    expect(date.value).toBe('2024-11-02');
     date.remove();
   });
 

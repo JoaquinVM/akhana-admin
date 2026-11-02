@@ -621,6 +621,8 @@ describe('ProductsComponent', () => {
 
       expect(component.isDiscardConfirmOpen()).toBe(false);
       expect(component.isFormModalOpen()).toBe(false);
+    });
+  });
 
   describe('códigos de barras (CAT-10)', () => {
     const EAN = '7791234567898';

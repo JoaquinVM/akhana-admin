@@ -5,6 +5,7 @@ import { Sale, SaleItem } from '../../../core/cash/models/cash.models';
 import { SaleService } from '../../../core/sale/sale.service';
 import { ProductService } from '../../../core/product/product.service';
 import { Product, isSpecialProduct } from '../../../core/product/models/product.models';
+import { canonicalBarcode } from '../../utils/barcode';
 import { operationDayLabel } from '../../utils/store-date';
 
 export interface PaymentMethodItem {
@@ -53,7 +54,8 @@ export class SaleDetailModalComponent {
     const term = this.assignSearch().toLowerCase().trim();
     if (!term) return [];
     return this.assignableProducts()
-      .filter((p) => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
+      .filter((p) => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term)
+        || p.barcodes?.includes(canonicalBarcode(term)))
       .slice(0, 6);
   });
 
