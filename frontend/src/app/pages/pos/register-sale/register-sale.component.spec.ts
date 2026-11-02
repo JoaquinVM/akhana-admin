@@ -216,6 +216,25 @@ describe('RegisterSaleComponent', () => {
       expect(component.subtotalGross()).toBe(total);
     });
 
+    it('escribir 12 deja la línea en 12', () => {
+      component.addToCart(mockProduct1);
+      component.updateQuantity(mockProduct1.id, 1);
+      component.updateQuantity(mockProduct1.id, 12);
+      expect(component.cartItems()[0].quantity).toBe(12);
+    });
+
+    it('cobrar con la cantidad vacía usa la última cantidad válida', () => {
+      component.addToCart(mockProduct1);
+      component.updateQuantity(mockProduct1.id, 3);
+      const total = component.subtotalGross();
+      component.updateQuantity(mockProduct1.id, null as unknown as number);
+
+      component.openCheckoutModal();
+
+      expect(component.cartItems()[0].quantity).toBe(3);
+      expect(component.subtotalGross()).toBe(total);
+    });
+
     it('el − al llegar a 0 sigue quitando la línea', () => {
       component.addToCart(mockProduct1);
       component.decrementQuantity(mockProduct1.id);

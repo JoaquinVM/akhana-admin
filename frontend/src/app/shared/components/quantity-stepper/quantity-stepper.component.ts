@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { afterNextRender, Component, inject, Injector, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 // Step of a line by weight: 100 g
@@ -17,6 +17,8 @@ export const WEIGHT_STEP_KG = 0.1;
   styleUrls: ['./quantity-stepper.component.css']
 })
 export class QuantityStepperComponent {
+  private readonly injector = inject(Injector);
+
   readonly quantity = input.required<number>();
   // By weight: kilos with up to 3 decimals
   readonly weight = input<boolean>(false);
@@ -29,8 +31,12 @@ export class QuantityStepperComponent {
   readonly quantityChange = output<number>();
 
   onBlur(field: HTMLInputElement): void {
-    if (this.restoreOnBlur() && field.value !== String(this.quantity())) {
-      field.value = String(this.quantity());
-    }
+    if (!this.restoreOnBlur()) return;
+    // After the next render: what was just typed has to reach quantity() first
+    afterNextRender(() => {
+      if (field !== field.ownerDocument.activeElement && field.value !== String(this.quantity())) {
+        field.value = String(this.quantity());
+      }
+    }, { injector: this.injector });
   }
 }
