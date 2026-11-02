@@ -112,7 +112,7 @@ class SaleItemRepositoryTest {
                 UUID.class, "IT-" + suffix, "IT producto " + suffix, category, supplier);
         // Closed so it never collides with a real open session; rolled back at the end
         UUID session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES (CURRENT_DATE, 'CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES ('2001-07-04', 'CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
         UUID sale = jdbc.queryForObject(
                 "INSERT INTO sales (operation_date, sale_number, cash_session_id, payment_method, total_amount, created_by) "
                         + "VALUES (CURRENT_DATE, ?, ?, 'EFECTIVO', 20.00, 'it-repo') RETURNING id",

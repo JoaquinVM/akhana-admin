@@ -200,7 +200,7 @@ class CreditorRepositoryTest {
                         + "VALUES (?, ?, ?, ?, 0, 0, 0, 0, 'THIRD_PARTY', ?, 'it-repo') RETURNING id",
                 UUID.class, "ITT-" + suffix, "IT de Mami " + suffix, category, supplier, mami);
         UUID session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES (CURRENT_DATE, 'CERRADA', 0, 'it-repo') RETURNING id",
+                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES ('2001-07-03', 'CERRADA', 0, 'it-repo') RETURNING id",
                 UUID.class);
         for (String status : List.of("COMPLETADA", "ANULADA")) {
             UUID sale = jdbc.queryForObject(

@@ -62,6 +62,8 @@ class CashOperationDayMigrationIntegrationTest {
     @BeforeEach
     void setUp() {
         tag = "it-day-" + UUID.randomUUID().toString().substring(0, 8);
+        // These migrations ran before the one-session-per-day index (V23), and they repeat days on the way (rolled back)
+        jdbc.execute("DROP INDEX uq_cash_sessions_operation_date");
         jdbc.update("UPDATE cash_sessions SET session_number = session_number + 1000000000 "
             + "WHERE session_number IN (146, 147, 148)");
         // Only one open session is allowed; a real one is closed for the test (rolled back)

@@ -117,7 +117,7 @@ class CustomerRepositoryTest {
     // Closed so it never collides with a real open session; rolled back at the end
     private UUID closedSession() {
         return jdbc.queryForObject(
-                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES (CURRENT_DATE, 'CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (operation_date, status, opening_amount, opened_by) VALUES ('2001-07-05', 'CERRADA', 100, 'it-repo') RETURNING id", UUID.class);
     }
 
     private UUID insertCustomer(String name, String status) {
