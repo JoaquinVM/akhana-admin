@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# Restore of a PostgreSQL backup (NF-01, specs/deploy.md).
-#   restore.sh --check [latest|<file>]   restores into a temporary database, compares it with the live one
-#                                        and drops it; never touches the real database (weekly timer).
+# Restore of a PostgreSQL backup and of the product photos (NF-01, NF-07, specs/deploy.md).
+#   restore.sh --check [latest|<file>]   restores into a temporary database, compares it with the live one,
+#                                        checks its photos against the remote and drops it; never touches the
+#                                        real database (weekly timer).
 #   restore.sh --replace <file|latest> [--yes]   replaces the real database (asks to type RESTAURAR; --yes
 #                                        skips it, used by deploy.sh to roll back a failed version).
+#   restore.sh --photos                  brings every photo from the remote to the volume (the VPS was lost).
 # <file> is a local path or a file name in BACKUP_REMOTE; "latest" is the newest file in BACKUP_REMOTE.
 set -Eeuo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 CHECK_DB=akhana_restore_check
+PHOTO_SAMPLE_SIZE=5
+API_UID=10001
 mode=${1:-}
 source_arg=${2:-latest}
 confirm=${3:-}
-[[ $mode == --check || $mode == --replace ]] || { sed -n '2,6p' "$0"; exit 2; }
+[[ $mode == --check || $mode == --replace || $mode == --photos ]] || { sed -n '2,8p' "$0"; exit 2; }
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/akhana-restore.XXXXXX")
 run_log=$work_dir/run.log
@@ -64,6 +68,42 @@ UNION ALL SELECT 'Pedidos', count(*)::text FROM purchases
 UNION ALL SELECT 'Cajas', count(*)::text FROM cash_sessions
 UNION ALL SELECT 'Última venta', coalesce(max(created_at)::text, '-') FROM sales"
 
+# Writes the photo files registered in a database; a backup from before the photos has none
+list_photo_files() {
+    local db=$1 target=$2
+    : > "$target"
+    if [[ $(psql_db "$db" -c "SELECT to_regclass('public.product_photos') IS NOT NULL") == t ]]; then
+        psql_db "$db" -c "SELECT file_name FROM product_photos UNION SELECT thumbnail_file_name FROM product_photos" | sort > "$target"
+    fi
+}
+
+# Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-07)
+check_photos() {
+    local expected=$1 remote dir stored=$work_dir/photos_stored shuffled=$work_dir/photos_shuffled missing name
+    if [[ ! -s $expected ]]; then
+        log "Fotos: el respaldo no registra ninguna"
+        return 0
+    fi
+    remote=$(photos_remote)
+    dir=$(photos_dir)
+    $RCLONE lsf --files-only "$remote" | sort > "$stored"
+    missing=$(comm -23 "$expected" "$stored")
+    if [[ -n $missing ]]; then
+        log "Fotos que faltan en $remote:"
+        echo "$missing"
+        return 1
+    fi
+    sort -R "$expected" > "$shuffled"
+    while read -r name; do
+        $RCLONE copyto "$remote$name" "$work_dir/photo-sample/$name"
+        if ! cmp -s "$work_dir/photo-sample/$name" "$dir/$name"; then
+            log "La foto $name del remoto no coincide con la del volumen"
+            return 1
+        fi
+    done < <(head -n "$PHOTO_SAMPLE_SIZE" "$shuffled")
+    log "Fotos: las $(wc -l < "$expected" | tr -d ' ') del respaldo están en el remoto y la muestra coincide"
+}
+
 check() {
     local file
     file=$(fetch_backup)
@@ -73,6 +113,7 @@ check() {
 
     psql_db "$CHECK_DB" -F '|' -c "$SUMMARY_SQL" > "$work_dir/restored"
     psql_db "$DB_NAME" -F '|' -c "$SUMMARY_SQL" > "$work_dir/live"
+    list_photo_files "$CHECK_DB" "$work_dir/photos_expected"
     psql_db postgres -c "DROP DATABASE $CHECK_DB WITH (FORCE)"
 
     # The backup is older than the live database: its counts may be lower, never higher, and the schema is the same
@@ -88,6 +129,8 @@ check() {
         [[ -n $mark && $label != "Versión de Flyway" ]] && ok=false
         printf '%-18s %22s %22s%s\n' "$label" "$restored" "$live" "$mark"
     done 3< "$work_dir/restored" 4< "$work_dir/live"
+
+    check_photos "$work_dir/photos_expected" || ok=false
 
     if ! $ok; then
         log "La restauración no coincide con la base viva"
@@ -117,4 +160,26 @@ replace() {
     log "Base restaurada. Revisar el login y los reportes del último día."
 }
 
-if [[ $mode == --check ]]; then check; else replace; fi
+# The volume keeps the labels of Compose, so the stack adopts it as its own
+photos() {
+    local dir
+    if [[ -z ${PHOTOS_DIR:-} ]]; then
+        docker volume create \
+            --label com.docker.compose.project="$COMPOSE_PROJECT" \
+            --label com.docker.compose.volume=product_photos \
+            "${COMPOSE_PROJECT}_product_photos" > /dev/null
+    fi
+    dir=$(photos_dir)
+    log "Trayendo las fotos de $(photos_remote) a $dir"
+    $RCLONE copy "$(photos_remote)" "$dir" --immutable
+    if [[ -z ${PHOTOS_DIR:-} ]]; then
+        chown -R "$API_UID:$API_UID" "$dir"
+    fi
+    log "Fotos recuperadas: $(find "$dir" -type f | wc -l | tr -d ' ') archivos"
+}
+
+case $mode in
+    --check) check ;;
+    --replace) replace ;;
+    --photos) photos ;;
+esac

@@ -14,7 +14,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
-| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
+| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11, CAT-12 | ✅ Completo | CAT-12 sin desplegar: probar con una foto real con GPS y revisar la regla de ciclo de vida del bucket de B2 | `product-import.md`, `product-presentations.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
@@ -110,6 +110,7 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **CAT-07** · V1 — El operador puede crear productos y cambiar su costo y su precio de venta, desde el catálogo o al aceptar el precio sugerido en una compra (COM-03). Todo cambio de costo o precio queda registrado con quién y cuándo. Falta una pantalla que muestre ese historial.
 - **CAT-08** · V1 — Productos vendidos por peso (frutos secos y Granel, P-31): cada producto indica si se vende por unidad o por kilo; por kilo, el precio es Bs por kilo y la cantidad son kilos con hasta 3 decimales en ventas, compras y consumos. Un producto por unidad solo acepta cantidades enteras.
 - **CAT-11** · V1 — Presentaciones de productos por peso: hasta 6 por producto, con nombre, peso fijo y precio fijo opcional (sin él, peso × precio por kilo). El costo siempre es peso × costo por kilo. El POS y Consumos ofrecen las presentaciones y «Otro peso»; los reportes suman kilos. Detalle en `product-presentations.md`.
+- **CAT-12** · V1 — Cada producto admite una foto, que quien tiene acceso a Productos sube, cambia o quita. Se guarda reducida y sin metadatos; cambiarla o quitarla conserva el archivo anterior (RG-01). El listado filtra los productos sin foto. Detalle en `product-photos.md`.
 - **CAT-05** · V2 — Cada producto indica si controla stock (sí/no), para admitir servicios o ítems sin inventario.
 - **CAT-09** · V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33).
 - **CAT-10** · V2 — Código de barras por producto y lectura con lector en el POS; impresión de ticket (P-11).
@@ -274,6 +275,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
 - **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
+- **NF-07** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
 
 ## 5. Preguntas
 
@@ -340,6 +342,11 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
 | P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el elegido al abrirla (CAJ-12); lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
+| P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el de su apertura; lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
+| P-53 | ¿Cuántas fotos por producto? | Una; las presentaciones comparten la del producto (CAT-11, CAT-12). |
+| P-54 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-07). |
+| P-55 | ¿Se conserva el original de la foto? | No: hasta 1600 px y una miniatura, sin metadatos. |
+| P-56 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
 | P-53 | ¿Se hacen las dos semanas en paralelo con las planillas antes de dejarlas? | No; la tienda usa solo el sistema. |
 
 ## 6. Hoja de ruta

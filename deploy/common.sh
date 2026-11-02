@@ -23,6 +23,20 @@ BACKUP_DIR=${BACKUP_DIR:-/var/backups/akhana}
 BACKUP_KEEP_LOCAL_DAYS=${BACKUP_KEEP_LOCAL_DAYS:-7}
 BACKUP_KEEP_REMOTE_DAYS=${BACKUP_KEEP_REMOTE_DAYS:-60}
 
+# Copy of the product photos off the VPS (NF-07), in a folder that the 60-day cleanup of the dumps does not reach
+photos_remote() {
+    echo "${BACKUP_REMOTE:?BACKUP_REMOTE no está definido}product-photos/"
+}
+
+# Files of the product photos: the Docker volume, or PHOTOS_DIR in local tests
+photos_dir() {
+    if [[ -n ${PHOTOS_DIR:-} ]]; then
+        echo "$PHOTOS_DIR"
+    else
+        docker volume inspect --format '{{ .Mountpoint }}' "${COMPOSE_PROJECT}_product_photos"
+    fi
+}
+
 compose() {
     docker compose -p "$COMPOSE_PROJECT" -f "$DEPLOY_DIR/docker-compose.prod.yml" --env-file "$ENV_FILE" "$@"
 }
