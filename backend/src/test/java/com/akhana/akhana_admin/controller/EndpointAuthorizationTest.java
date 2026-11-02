@@ -87,6 +87,8 @@ class EndpointAuthorizationTest {
             {"openingAmount":100.00}""";
     private static final String CLOSE_CASH = """
             {"closingAmount":100.00}""";
+    private static final String REOPEN_CASH = """
+            {"reason":"Cerrada por error"}""";
     private static final String NAME_COLOR = """
             {"name":"Snacks","color":"#ffffff"}""";
     private static final String PRODUCT = """
@@ -202,6 +204,8 @@ class EndpointAuthorizationTest {
                 both(post, "/api/cash-sessions/current/close", CLOSE_CASH),
                 both(get, "/api/cash-sessions", null),
                 both(get, "/api/cash-sessions/" + ID, null),
+                // CAJ-14: whoever has the cash history can reopen, the operator too
+                both(post, "/api/cash-sessions/" + ID + "/reopen", REOPEN_CASH),
                 // Ventas: registrar, anular (POS) e historial
                 both(post, "/api/sales", SALE),
                 both(get, "/api/sales", null),

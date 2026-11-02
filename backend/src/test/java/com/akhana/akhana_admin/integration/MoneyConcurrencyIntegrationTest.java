@@ -1,13 +1,18 @@
 package com.akhana.akhana_admin.integration;
 
+import com.akhana.akhana_admin.dto.CashOpeningProposalResponse;
+import com.akhana.akhana_admin.dto.CashSessionSummaryResponse;
+import com.akhana.akhana_admin.dto.CloseCashRequest;
 import com.akhana.akhana_admin.dto.FinancialTransactionRequest;
 import com.akhana.akhana_admin.dto.OpenCashRequest;
+import com.akhana.akhana_admin.dto.ReopenCashRequest;
 import com.akhana.akhana_admin.dto.SaleDetailRequest;
 import com.akhana.akhana_admin.dto.SaleItemRequest;
 import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.model.FinancialTransactionType;
 import com.akhana.akhana_admin.model.PaymentMethod;
+import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import com.akhana.akhana_admin.service.FinancialTransactionService;
 import com.akhana.akhana_admin.service.SaleService;
@@ -18,8 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -57,6 +64,12 @@ class MoneyConcurrencyIntegrationTest {
     private FinancialTransactionService financialTransactionService;
 
     @Autowired
+    private CashSessionRepository cashSessionRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @Autowired
     private JdbcTemplate jdbc;
 
     private BigDecimal cashAccountBalanceBefore;
@@ -73,10 +86,13 @@ class MoneyConcurrencyIntegrationTest {
 
     @AfterEach
     void cleanUp() {
+        String ownSessions = "(SELECT id FROM cash_sessions WHERE opened_by = ?)";
+        jdbc.update("DELETE FROM cash_no_attention_days WHERE cash_session_id IN " + ownSessions, USER);
+        jdbc.update("DELETE FROM cash_denomination_cuts WHERE cash_session_id IN " + ownSessions, USER);
+        jdbc.update("DELETE FROM cash_session_reopenings WHERE cash_session_id IN " + ownSessions, USER);
         jdbc.update("DELETE FROM financial_transactions WHERE created_by = ?", USER);
         jdbc.update("DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE created_by = ?)", USER);
         jdbc.update("DELETE FROM sales WHERE created_by = ?", USER);
-        jdbc.update("DELETE FROM cash_denomination_cuts WHERE cash_session_id IN (SELECT id FROM cash_sessions WHERE opened_by = ?)", USER);
         jdbc.update("DELETE FROM cash_sessions WHERE opened_by = ?", USER);
         jdbc.update("DELETE FROM products WHERE created_by = ?", USER);
         jdbc.update("DELETE FROM categories WHERE created_by = ?", USER);
@@ -93,7 +109,7 @@ class MoneyConcurrencyIntegrationTest {
         UUID productId = createProduct(new BigDecimal("10.00"));
         // Opened with the proposed amount (the Caja balance), so no opening adjustment is recorded (CAJ-10)
         BigDecimal opening = cashSessionService.getOpeningProposal().proposedAmount();
-        cashSessionService.openSession(new OpenCashRequest(opening, null), USER);
+        cashSessionService.openSession(openingOn(firstFreeDay(), opening), USER);
 
         List<Outcome<SaleResponse>> outcomes = runConcurrently(THREADS, i -> () -> saleService.registerSale(
             new SaleDetailRequest(List.of(new SaleItemRequest(productId, new BigDecimal("1"), null)), null, PaymentMethod.EFECTIVO,
@@ -138,8 +154,8 @@ class MoneyConcurrencyIntegrationTest {
     @Test
     @DisplayName("Aperturas simultáneas de caja: solo una queda abierta y las demás se rechazan")
     void concurrentOpenings_leaveOnlyOneOpenSession() throws Exception {
-        List<Outcome<Object>> outcomes = runConcurrently(THREADS, i -> () ->
-            cashSessionService.openSession(new OpenCashRequest(new BigDecimal("50.00"), "Apertura " + i), USER));
+        OpenCashRequest request = openingOn(firstFreeDay(), new BigDecimal("50.00"));
+        List<Outcome<Object>> outcomes = runConcurrently(THREADS, i -> () -> cashSessionService.openSession(request, USER));
 
         assertThat(outcomes.stream().filter(o -> o.error() == null)).hasSize(1);
         assertThat(outcomes.stream().filter(o -> o.error() != null))
@@ -147,6 +163,137 @@ class MoneyConcurrencyIntegrationTest {
             .allSatisfy(o -> assertThat(o.error()).isInstanceOf(DuplicateResourceException.class));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE status = 'ABIERTA'", Integer.class))
             .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CAJ-12: dos aperturas simultáneas con días distintos: solo una lo logra")
+    void concurrentOpeningsOfDifferentDays_leaveOnlyOne() throws Exception {
+        LocalDate first = dayWithRoomForAnother();
+        OpenCashRequest earlier = openingOn(first, new BigDecimal("50.00"));
+        LocalDate laterDay = first.plusDays(1);
+        // Opening the later day alone leaves the earlier one missing, unless it is a Sunday
+        List<LocalDate> missing = cashSessionService.getOpeningProposal().unresolvedDays().stream()
+            .filter(day -> day.isBefore(laterDay)).toList();
+        OpenCashRequest later = new OpenCashRequest(new BigDecimal("50.00"), "Prueba concurrente", laterDay, missing, "Sin atención");
+
+        List<Outcome<Object>> outcomes = runConcurrently(2, i -> () ->
+            cashSessionService.openSession(i == 0 ? earlier : later, USER));
+
+        assertThat(outcomes.stream().filter(o -> o.error() == null)).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE opened_by = ?", Integer.class, USER)).isEqualTo(1);
+        assertThat(openSessions()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: reaperturas simultáneas de una caja: solo una lo logra y el saldo de Caja se revierte una vez")
+    void concurrentReopenings_revertOnce() throws Exception {
+        CashSessionSummaryResponse session = openAndCloseWithShortage(firstFreeDay());
+        BigDecimal afterClosing = cashAccountBalance();
+
+        List<Outcome<CashSessionSummaryResponse>> outcomes = runConcurrently(THREADS, i -> () ->
+            cashSessionService.reopenSession(session.id(), new ReopenCashRequest("Reapertura " + i), USER));
+
+        assertThat(outcomes.stream().filter(o -> o.error() == null)).hasSize(1);
+        assertThat(outcomes.stream().filter(o -> o.error() != null))
+            .hasSize(THREADS - 1)
+            .allSatisfy(o -> assertThat(o.error()).isInstanceOf(IllegalStateException.class)
+                .hasMessage("Ya hay una caja abierta; ciérrala antes de reabrir otra."));
+        assertThat(openSessions()).isEqualTo(1);
+        assertThat(cashAccountBalance()).isEqualByComparingTo(afterClosing.add(new BigDecimal("7.00")));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM cash_session_reopenings WHERE cash_session_id = ?", Integer.class, session.id()))
+            .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: una reabre mientras otra abre una caja nueva: solo una lo logra y nunca quedan dos abiertas")
+    void reopeningAgainstOpening_onlyOneWins() throws Exception {
+        LocalDate first = dayWithRoomForAnother();
+        CashSessionSummaryResponse session = openAndCloseWithShortage(first);
+        OpenCashRequest next = openingOn(first.plusDays(1), cashSessionService.getOpeningProposal().proposedAmount());
+
+        List<Outcome<Object>> outcomes = runConcurrently(2, i -> () -> i == 0
+            ? cashSessionService.reopenSession(session.id(), new ReopenCashRequest("Reapertura"), USER)
+            : cashSessionService.openSession(next, USER));
+
+        assertThat(outcomes.stream().filter(o -> o.error() == null)).hasSize(1);
+        assertThat(openSessions()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: reabrir mientras otra abre y cierra una caja nueva: la reapertura espera y ve que ya no es la última")
+    void reopeningAgainstOpenAndClose_waitsAndIsRejected() throws Exception {
+        LocalDate first = dayWithRoomForAnother();
+        CashSessionSummaryResponse session = openAndCloseWithShortage(first);
+        BigDecimal proposed = cashSessionService.getOpeningProposal().proposedAmount();
+        OpenCashRequest next = openingOn(first.plusDays(1), proposed);
+
+        CountDownLatch locked = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> opener = pool.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                cashSessionRepository.lockCashOpening();
+                locked.countDown();
+                sleep();
+                cashSessionService.openSession(next, USER);
+                cashSessionService.closeCurrentSession(new CloseCashRequest(proposed, null, List.of()), USER);
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<Throwable> reopener = pool.submit(() -> {
+                try {
+                    cashSessionService.reopenSession(session.id(), new ReopenCashRequest("Reapertura"), USER);
+                    return null;
+                } catch (RuntimeException e) {
+                    return e;
+                }
+            });
+
+            opener.get(20, TimeUnit.SECONDS);
+            assertThat(reopener.get(20, TimeUnit.SECONDS)).isInstanceOf(IllegalStateException.class)
+                .hasMessage("Solo se puede reabrir la última caja.");
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(openSessions()).isZero();
+        assertThat(jdbc.queryForObject("SELECT status FROM cash_sessions WHERE id = ?", String.class, session.id())).isEqualTo("CERRADA");
+    }
+
+    private static void sleep() {
+        try {
+            Thread.sleep(600);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private int openSessions() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE status = 'ABIERTA'", Integer.class);
+    }
+
+    // The first day after the last session never leaves a day missing, and it is what any database allows
+    private LocalDate firstFreeDay() {
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+        LocalDate day = proposal.minDay() != null ? proposal.minDay() : proposal.today();
+        assumeFalse(day.isAfter(proposal.today()), "La base ya tiene la caja de hoy: se omite la prueba concurrente");
+        return day;
+    }
+
+    // Two days are needed: a session on this one and a later one right after it
+    private LocalDate dayWithRoomForAnother() {
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+        LocalDate day = proposal.minDay() != null ? proposal.minDay() : proposal.today().minusDays(3);
+        assumeFalse(day.plusDays(1).isAfter(proposal.today()), "La base no deja dos días libres: se omite la prueba concurrente");
+        return day;
+    }
+
+    private static OpenCashRequest openingOn(LocalDate day, BigDecimal amount) {
+        return new OpenCashRequest(amount, "Prueba concurrente", day, null, null);
+    }
+
+    private CashSessionSummaryResponse openAndCloseWithShortage(LocalDate day) {
+        cashSessionService.openSession(openingOn(day, new BigDecimal("100.00")), USER);
+        return cashSessionService.closeCurrentSession(
+            new CloseCashRequest(new BigDecimal("93.00"), "Cierre con faltante", List.of()), USER);
     }
 
     private record Outcome<T>(T value, Throwable error) {}

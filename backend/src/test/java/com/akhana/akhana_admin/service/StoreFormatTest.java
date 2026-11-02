@@ -13,6 +13,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StoreFormatTest {
 
     @Test
+    @DisplayName("CAJ-12: el día en un mensaje va sin cero a la izquierda y el mes con dos dígitos")
+    void dayMonth() {
+        assertThat(StoreFormat.dayMonth(LocalDate.of(2026, 11, 2))).isEqualTo("2/11");
+        assertThat(StoreFormat.dayMonth(LocalDate.of(2026, 10, 30))).isEqualTo("30/10");
+        assertThat(StoreFormat.dayMonth(LocalDate.of(2026, 3, 9))).isEqualTo("9/03");
+    }
+
+    @Test
     @DisplayName("Los montos de los mensajes se leen como en la pantalla: Bs 1.234,50, 2 decimales HALF_UP")
     void money() {
         assertThat(StoreFormat.money(new BigDecimal("1234.5"))).isEqualTo("Bs 1.234,50");

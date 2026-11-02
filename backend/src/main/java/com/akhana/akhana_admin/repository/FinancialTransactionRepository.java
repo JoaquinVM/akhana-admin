@@ -35,6 +35,16 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findByCashSessionIdOrderByTransactionDateDesc(UUID cashSessionId);
 
+    // CAJ-14: the active closing adjustments of a session. The description tells them from the opening adjustment,
+    // which has the same category and session (CAJ-09, CAJ-10); adjustments cannot be edited, so it never changes
+    @Query("SELECT t FROM FinancialTransaction t JOIN t.category c " +
+           "WHERE t.cashSessionId = :cashSessionId AND t.description IN :descriptions " +
+           "AND t.status = com.akhana.akhana_admin.model.FinancialTransactionStatus.ACTIVO " +
+           "AND c.systemKey IN (com.akhana.akhana_admin.model.FinancialCategorySystemKey.CASH_SURPLUS, " +
+           "com.akhana.akhana_admin.model.FinancialCategorySystemKey.CASH_SHORTAGE)")
+    List<FinancialTransaction> findActiveClosingAdjustments(@Param("cashSessionId") UUID cashSessionId,
+                                                            @Param("descriptions") List<String> descriptions);
+
     Optional<FinancialTransaction> findFirstBySourceAccountIdAndType(UUID accountId, FinancialTransactionType type);
 
     // Any movement of the system other than the opening balance, active or voided (FIN-01); historical movements

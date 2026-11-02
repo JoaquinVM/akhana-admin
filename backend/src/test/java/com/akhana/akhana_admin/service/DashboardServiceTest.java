@@ -9,6 +9,8 @@ import com.akhana.akhana_admin.dto.FinancialAccountResponse;
 import com.akhana.akhana_admin.dto.FinancialSummaryResponse;
 import com.akhana.akhana_admin.dto.PayablesResponse;
 import com.akhana.akhana_admin.model.CashSessionStatus;
+import com.akhana.akhana_admin.model.CashNoAttentionDay;
+import com.akhana.akhana_admin.repository.CashNoAttentionDayRepository;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.DashboardRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
@@ -56,6 +58,7 @@ class DashboardServiceTest {
     @Mock private PurchaseService purchaseService;
     @Mock private CreditorService creditorService;
     @Mock private CustomerService customerService;
+    @Mock private CashNoAttentionDayRepository cashNoAttentionDayRepository;
 
     private DashboardServiceImpl dashboardService;
 
@@ -64,7 +67,8 @@ class DashboardServiceTest {
         ReportServiceImpl reportService = new ReportServiceImpl(saleRepository, financialTransactionRepository,
                 consumptionRepository);
         dashboardService = new DashboardServiceImpl(reportService, dashboardRepository, consumptionRepository,
-                cashSessionService, financialSummaryService, purchaseService, creditorService, customerService);
+                cashSessionService, financialSummaryService, purchaseService, creditorService, customerService,
+                cashNoAttentionDayRepository);
         when(dashboardRepository.sumPayments(any(), any())).thenReturn(List.<Object[]>of(
                 new Object[] {new BigDecimal("1200.00"), new BigDecimal("800.50"), new BigDecimal("104.00"),
                         new BigDecimal("2745"), 1L}));
@@ -218,7 +222,7 @@ class DashboardServiceTest {
                 UUID.randomUUID(), 412L, CashSessionStatus.ABIERTA, new BigDecimal("300.00"), null, "ana",
                 Instant.parse("2026-10-30T12:30:00Z"), null, null, null, null, new BigDecimal("900.00"),
                 new BigDecimal("400.00"), new BigDecimal("1300.00"), new BigDecimal("1200.00"), null, 17, false,
-                LocalDate.of(2026, 10, 30))));
+                LocalDate.of(2026, 10, 30), false)));
         when(creditorService.getCreditors(null, null)).thenReturn(List.of(creditor("150.00"), creditor("50.25")));
         when(customerService.getCustomers(null, null)).thenReturn(List.of(customer("104.00")));
 
@@ -228,12 +232,27 @@ class DashboardServiceTest {
         assertEquals(412L, now.cash().sessionNumber());
         assertEquals(new BigDecimal("1200.00"), now.cash().expectedCash());
         assertEquals(17, now.cash().salesCount());
+        // CAJ-12: the screen marks a session of a previous day with it
+        assertEquals(LocalDate.of(2026, 10, 30), now.cash().operationDate());
         assertEquals("Caja", now.accounts().getFirst().name());
         assertEquals(new BigDecimal("1500.00"), now.accounts().getFirst().balance());
         assertEquals(new BigDecimal("5000.00"), now.totalBalance());
         assertEquals(new BigDecimal("320.00"), now.payables());
         assertEquals(new BigDecimal("200.25"), now.creditorsDebt());
         assertEquals(new BigDecimal("104.00"), now.receivables());
+    }
+
+    @Test
+    @DisplayName("CAJ-13: trae los días sin atención del período con su comentario; el día sigue en la lista con 0")
+    void noAttentionDays() {
+        LocalDate marked = LocalDate.of(2026, 10, 12);
+        when(cashNoAttentionDayRepository.findByNoAttentionDateBetweenOrderByNoAttentionDateAsc(OCT_1, OCT_30))
+                .thenReturn(List.of(CashNoAttentionDay.builder().noAttentionDate(marked).comment("Feriado").build()));
+
+        DashboardResponse dashboard = dashboardService.getDashboard(OCT_1, OCT_30);
+
+        assertEquals(List.of(new DashboardResponse.NoAttentionDay(marked, "Feriado")), dashboard.noAttentionDays());
+        assertEquals(1, dashboard.days().stream().filter(day -> day.date().equals(marked)).count());
     }
 
     @Test

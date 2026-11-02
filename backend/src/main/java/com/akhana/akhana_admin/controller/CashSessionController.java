@@ -70,6 +70,17 @@ public class CashSessionController {
         return ResponseEntity.ok(response);
     }
 
+    // CAJ-14: whoever can see the history can reopen; the missing reason is rejected by the service too (RG-03)
+    @PreAuthorize("hasAuthority('CASH_HISTORY')")
+    @PostMapping("/{id}/reopen")
+    public ResponseEntity<CashSessionSummaryResponse> reopenSession(
+            @PathVariable UUID id,
+            @Valid @RequestBody(required = false) ReopenCashRequest request,
+            Authentication authentication) {
+        String username = extractUsername(authentication);
+        return ResponseEntity.ok(cashSessionService.reopenSession(id, request, username));
+    }
+
     private String extractUsername(Authentication authentication) {
         if (authentication == null) {
             return "admin";

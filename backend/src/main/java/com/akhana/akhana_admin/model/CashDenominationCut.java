@@ -37,4 +37,8 @@ public class CashDenominationCut {
     @Column(nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal subtotal = BigDecimal.ZERO;
+
+    // CAJ-14: the reopening that undid the closing of this count; null while it is the count of the session
+    @Column(name = "reopening_id")
+    private UUID reopeningId;
 }
