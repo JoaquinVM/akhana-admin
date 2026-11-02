@@ -92,7 +92,8 @@ Todas con el permiso `PRODUCTS`. Ninguna ruta termina en una extensión de image
   base, que el POS comparte, y la siguiente se rechaza enseguida con el mensaje de guardado.
 - **Límites antes de decodificar (`ProductPhotoInspector`):** un archivo de 10 MB puede pedir gigabytes u horas. Un WebP debe tener
   un solo frame, que se mide aparte porque el decodificador reserva memoria por lo que declara el frame y no el encabezado; una
-  animación se rechaza. Un JPEG admite hasta 100 scans, contados como los recorre el decodificador y solo hasta el fin de la imagen. De los metadatos solo se lee la etiqueta de orientación del primer
+  animación se rechaza. Un JPEG admite hasta 100 scans, contados como los recorre el decodificador y solo hasta el fin de la imagen, y se rechazan los marcadores reservados. Decodificar
+  no tiene un tope de tiempo: 100 scans de 49 megapíxeles tardan unos 8 s en la Mac. De los metadatos solo se lee la etiqueta de orientación del primer
   bloque EXIF: un lector general infla los textos comprimidos de un PNG y crea un arreglo por etiqueta.
 - **Bibliotecas:** TwelveMonkeys lee WebP y JPEG en CMYK. `metadata-extractor` queda solo en las pruebas, para comprobar que lo
   guardado no trae metadatos; leer la orientación con ella agotaba la memoria con un EXIF manipulado. `ImageIO.scanForPlugins()`

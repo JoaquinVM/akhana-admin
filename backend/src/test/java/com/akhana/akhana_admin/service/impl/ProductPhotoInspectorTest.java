@@ -89,6 +89,13 @@ class ProductPhotoInspectorTest {
     }
 
     @Test
+    @DisplayName("Rechaza un marcador reservado, que podría esconder scans")
+    void reservedMarkersAreRejected() throws IOException {
+        assertRejected(join(SOI, new byte[]{(byte) 0xFF, 0x02, 0, 12}, SCAN, EOI));
+        assertRejected(join(SOI, SCAN, new byte[]{(byte) 0xFF, (byte) 0xBF, 0, 2}, EOI));
+    }
+
+    @Test
     @DisplayName("Lo que viene después de la imagen, como el video de una foto en movimiento, no cuenta")
     void dataAfterTheEndIsIgnored() throws IOException {
         byte[] jpeg = join(SOI, SCAN, EOI, repeat(SCAN, 500));

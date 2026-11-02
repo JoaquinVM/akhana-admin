@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -289,28 +290,44 @@ class ProductPhotoProcessorTest {
     }
 
     @Test
-    @DisplayName("Con dos subidas ya esperando, la siguiente se rechaza enseguida y no retiene una conexión")
-    void limitsWaitingUploads() throws Exception {
+    @DisplayName("Con tres subidas admitidas, la siguiente se rechaza enseguida, aunque lleguen todas a la vez")
+    void limitsUploadsInProcess() throws Exception {
         byte[] content = jpeg(quadrants(40, 40));
         processor.permit.acquire();
-        ExecutorService pool = Executors.newFixedThreadPool(ProductPhotoProcessor.MAX_WAITING_UPLOADS);
+        int arrivals = 12;
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(arrivals);
         try {
-            List<Future<?>> waiting = new ArrayList<>();
-            for (int i = 0; i < ProductPhotoProcessor.MAX_WAITING_UPLOADS; i++) {
-                waiting.add(pool.submit(() -> processor.process(content)));
+            List<Future<Boolean>> uploads = new ArrayList<>();
+            for (int i = 0; i < arrivals; i++) {
+                uploads.add(pool.submit(() -> {
+                    start.await();
+                    try {
+                        processor.process(content);
+                        return true;
+                    } catch (ProductPhotoStorageException ex) {
+                        assertThat(ex).hasMessage(ProductPhotoService.SAVE_FAILED);
+                        return false;
+                    }
+                }));
             }
-            while (processor.permit.getQueueLength() < ProductPhotoProcessor.MAX_WAITING_UPLOADS) {
+            start.countDown();
+            while (processor.permit.getQueueLength() < ProductPhotoProcessor.MAX_UPLOADS_IN_PROCESS) {
                 Thread.onSpinWait();
             }
-
-            assertThatThrownBy(() -> processor.process(content))
-                .isInstanceOf(ProductPhotoStorageException.class)
-                .hasMessage(ProductPhotoService.SAVE_FAILED);
+            long done = 0;
+            while (done < arrivals - ProductPhotoProcessor.MAX_UPLOADS_IN_PROCESS) {
+                done = uploads.stream().filter(Future::isDone).count();
+                Thread.onSpinWait();
+            }
+            assertThat(processor.permit.getQueueLength()).isEqualTo(ProductPhotoProcessor.MAX_UPLOADS_IN_PROCESS);
 
             processor.permit.release();
-            for (Future<?> upload : waiting) {
-                assertThat(upload.get(30, TimeUnit.SECONDS)).isNotNull();
+            int saved = 0;
+            for (Future<Boolean> upload : uploads) {
+                saved += upload.get(30, TimeUnit.SECONDS) ? 1 : 0;
             }
+            assertThat(saved).isEqualTo(ProductPhotoProcessor.MAX_UPLOADS_IN_PROCESS);
         } finally {
             pool.shutdownNow();
         }
