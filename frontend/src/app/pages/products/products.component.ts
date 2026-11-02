@@ -30,7 +30,7 @@ import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-
 import { ProductBarcodesSectionComponent } from './product-barcodes-section/product-barcodes-section.component';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
-import { canonicalBarcode } from '../../shared/utils/barcode';
+import { canonicalBarcode, looksLikeBarcode } from '../../shared/utils/barcode';
 import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -350,6 +350,10 @@ export class ProductsComponent implements OnInit {
       this.toast.error('Este producto no admite código de barras.');
       return;
     }
+    if (!looksLikeBarcode(code)) {
+      this.toast.error('El código de barras no es válido.');
+      return;
+    }
     const barcode = canonicalBarcode(code);
     if (!this.barcodes().includes(barcode)) {
       this.barcodes.update((list) => [...list, barcode]);
@@ -400,6 +404,7 @@ export class ProductsComponent implements OnInit {
       this.productForm.patchValue({ buyPrice: 0, sellPrice: 0, saleUnit: 'UNIT' }, { emitEvent: false });
       sell?.setValidators([Validators.required, Validators.min(0)]);
       this.presentations.set([]);
+      this.barcodes.set([]);
     } else {
       sell?.setValidators([Validators.required, Validators.min(0.01)]);
     }

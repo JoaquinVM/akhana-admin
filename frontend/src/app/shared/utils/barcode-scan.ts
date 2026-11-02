@@ -1,25 +1,30 @@
 // Starting values, to confirm with the real reader: the most time between two keys of a scan, Enter included
 export const SCAN_MAX_KEY_GAP_MS = 60;
-// With 6 and 7 digits a short code still counts as a scan and warns, instead of falling into a field
-export const SCAN_MIN_DIGITS = 6;
+// Short enough that a label with a short code still warns instead of falling into a field; a person does not chain this
+// many keys and Enter under the gap
+export const SCAN_MIN_CHARS = 4;
 
 const NOT_REPLAYABLE_TYPES = new Set(['date', 'time', 'month', 'week', 'datetime-local']);
 const NOT_TYPED_IN_TYPES = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image']);
+const MODIFIER_KEYS = new Set(['Shift', 'CapsLock', 'Control', 'Alt', 'AltGraph', 'Meta']);
+
+type PassThroughField = HTMLInputElement | HTMLSelectElement;
 
 /**
- * POS-15: tells a USB reader, which types like a keyboard, from a person. Digits are held back at the capture phase of
- * the window, before NF-07 and any field see them: a fast burst that ends in Enter is a scan and never reaches a field,
- * a form or a button; anything else is written back at the cursor, at most one gap late.
+ * POS-15: tells a USB reader, which types like a keyboard, from a person. Printable keys are held back at the capture
+ * phase of the window, before NF-07 and any field see them: a fast burst that ends in Enter is a scan, with letters or
+ * not, and never reaches a field, a form or a button; anything else is written back at the cursor, at most one gap late.
  */
 export class ScanCapture {
   private held = '';
   private lastKeyAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  // A date field cannot be written back: its digits go through, and a scan puts back the value it had
-  private passThrough: { input: HTMLInputElement; value: string } | null = null;
+  // Date fields and selects cannot be written back: their keys go through, and a scan puts back the value they had
+  private passThrough: { field: PassThroughField; value: string } | null = null;
   private swallowEnterUntil = -1;
   // Fields can act on the release of Enter too, so each stopped Enter also stops its keyup
   private enterUpsToStop = 0;
+  private writingBack = false;
 
   constructor(
     private readonly document: Document,
@@ -44,14 +49,15 @@ export class ScanCapture {
   }
 
   private readonly onKeydown = (event: KeyboardEvent): void => {
+    if (this.writingBack || MODIFIER_KEYS.has(event.key)) return;
     const plain = !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing;
-    if (plain && !event.repeat && /^[0-9]$/.test(event.key)) {
-      this.onDigit(event);
+    if (plain && !event.repeat && event.key.length === 1 && !this.activatesFocused(event)) {
+      this.onPrintable(event);
       return;
     }
     if (event.key === 'Enter' && this.isScanEnd(event)) {
       const code = this.passThrough ? '' : this.held;
-      this.restoreDate();
+      this.restorePassThrough();
       this.blockEnter(event);
       this.clear();
       this.swallowEnterUntil = event.timeStamp + SCAN_MAX_KEY_GAP_MS;
@@ -77,12 +83,12 @@ export class ScanCapture {
     }
   };
 
-  private onDigit(event: KeyboardEvent): void {
+  private onPrintable(event: KeyboardEvent): void {
     if (this.held && event.timeStamp - this.lastKeyAt > SCAN_MAX_KEY_GAP_MS) {
       this.release();
     }
     if (!this.held) {
-      this.passThrough = this.focusedDateField();
+      this.passThrough = this.focusedPassThroughField();
     }
     if (!this.passThrough) {
       this.block(event);
@@ -93,8 +99,13 @@ export class ScanCapture {
     this.timer = setTimeout(this.release, SCAN_MAX_KEY_GAP_MS);
   }
 
+  // A lone space on a button or a checkbox presses it: it cannot be held and written back
+  private activatesFocused(event: KeyboardEvent): boolean {
+    return event.key === ' ' && !this.held && !this.focusedTextField();
+  }
+
   private isScanEnd(event: KeyboardEvent): boolean {
-    return this.held.length >= SCAN_MIN_DIGITS && event.timeStamp - this.lastKeyAt <= SCAN_MAX_KEY_GAP_MS;
+    return this.held.length >= SCAN_MIN_CHARS && event.timeStamp - this.lastKeyAt <= SCAN_MAX_KEY_GAP_MS;
   }
 
   private blockEnter(event: KeyboardEvent): void {
@@ -108,9 +119,9 @@ export class ScanCapture {
   }
 
   private readonly release = (): void => {
-    const digits = this.passThrough ? '' : this.held;
+    const text = this.passThrough ? '' : this.held;
     this.clear();
-    if (digits) this.writeBack(digits);
+    if (text) this.writeBack(text);
   };
 
   private clear(): void {
@@ -122,30 +133,59 @@ export class ScanCapture {
     }
   }
 
-  private focusedDateField(): { input: HTMLInputElement; value: string } | null {
+  private focusedPassThroughField(): { field: PassThroughField; value: string } | null {
     const active = this.document.activeElement;
-    return active instanceof HTMLInputElement && NOT_REPLAYABLE_TYPES.has(active.type)
-      ? { input: active, value: active.value }
-      : null;
+    const passes = active instanceof HTMLSelectElement
+      || (active instanceof HTMLInputElement && NOT_REPLAYABLE_TYPES.has(active.type));
+    return passes ? { field: active as PassThroughField, value: (active as PassThroughField).value } : null;
   }
 
-  private restoreDate(): void {
+  private restorePassThrough(): void {
     if (!this.passThrough) return;
-    const { input, value } = this.passThrough;
-    input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const { field, value } = this.passThrough;
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  private writeBack(digits: string): void {
+  private focusedTextField(): HTMLInputElement | HTMLTextAreaElement | null {
     const active = this.document.activeElement;
     const typedIn = active instanceof HTMLTextAreaElement
       || (active instanceof HTMLInputElement && !NOT_TYPED_IN_TYPES.has(active.type));
-    const editable = typedIn && !(active as HTMLInputElement).readOnly && !(active as HTMLInputElement).disabled;
-    if (!editable) return;
-    // Number fields have no selection API: this is the only way to write at the cursor, and it fires the input event
-    if (!this.document.execCommand('insertText', false, digits)) {
-      active.value += digits;
-      active.dispatchEvent(new Event('input', { bubbles: true }));
+    if (!typedIn) return null;
+    const field = active as HTMLInputElement | HTMLTextAreaElement;
+    return field.readOnly || field.disabled ? null : field;
+  }
+
+  private writeBack(text: string): void {
+    const field = this.focusedTextField();
+    if (!field) return;
+    for (const run of text.match(/[0-9]+|[^0-9]/g) ?? []) {
+      if (/^[0-9]/.test(run)) {
+        this.insert(field, run);
+      } else {
+        this.writeKey(field, run);
+      }
     }
+  }
+
+  // Others can act on the key, as NF-07 does with the comma, so it goes through them first
+  private writeKey(field: HTMLInputElement | HTMLTextAreaElement, key: string): void {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    this.writingBack = true;
+    field.dispatchEvent(event);
+    this.writingBack = false;
+    if (!event.defaultPrevented) {
+      this.insert(field, key);
+    }
+  }
+
+  private insert(field: HTMLInputElement | HTMLTextAreaElement, text: string): void {
+    // Number fields have no selection API: this is the only way to write at the cursor, and it fires the input event
+    if (this.document.execCommand('insertText', false, text)) return;
+    // A number field refuses what would not be a number, like a second point: it stays refused
+    if ((field as HTMLInputElement).type === 'number' && !/^[0-9]+$/.test(text)) return;
+    field.value += text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }

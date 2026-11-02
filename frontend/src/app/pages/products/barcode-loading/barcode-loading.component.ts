@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { BarcodePendingProduct } from '../../../core/product/models/product.models';
 import { ProductService } from '../../../core/product/product.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
-import { canonicalBarcode } from '../../../shared/utils/barcode';
+import { canonicalBarcode, looksLikeBarcode } from '../../../shared/utils/barcode';
 import { ScanCapture } from '../../../shared/utils/barcode-scan';
 import { searchProducts } from '../../../shared/utils/product-search';
 
@@ -39,7 +39,7 @@ export class BarcodeLoadingComponent implements OnInit {
   readonly canSave = computed(() => !!this.selected() && this.barcode().trim().length > 0 && !this.isSaving());
 
   ngOnInit(): void {
-    const capture = new ScanCapture(this.document, (code) => this.barcode.set(canonicalBarcode(code)));
+    const capture = new ScanCapture(this.document, (code) => this.onScan(code));
     capture.install();
     this.destroyRef.onDestroy(() => capture.uninstall());
 
@@ -54,6 +54,16 @@ export class BarcodeLoadingComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  private onScan(code: string): void {
+    if (!looksLikeBarcode(code)) {
+      this.barcode.set('');
+      this.error.set('El código de barras no es válido.');
+      return;
+    }
+    this.error.set(null);
+    this.barcode.set(canonicalBarcode(code));
   }
 
   select(product: BarcodePendingProduct): void {

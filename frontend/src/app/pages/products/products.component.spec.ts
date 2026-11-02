@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { ToastService } from '../../shared/components/toast/toast.service';
 import { ProductsComponent } from './products.component';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
@@ -662,7 +663,30 @@ describe('ProductsComponent', () => {
       expect(mockProductService.updateProduct).not.toHaveBeenCalled();
     });
 
-    it('con «Descartar cambios» abierta, un escaneo no escribe, no agrega y no guarda', () => {
+    it('una etiqueta con letras avisa, no se agrega y no guarda', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan('A1B2C3');
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('El código de barras no es válido.');
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('al elegir un tipo especial, los códigos de la lista se quitan', () => {
+      component.openCreateModal();
+      component.barcodes.set([EAN]);
+
+      component.productForm.patchValue({ specialType: 'UNIDENTIFIED' });
+
+      expect(component.barcodes()).toEqual([]);
+    });
+
+    it('con «Descartar cambios» abierta, un escaneo avisa, no escribe, no agrega y no guarda', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
       component.openEditModal({ ...mockProducts[0], barcodes: [] });
       TestBed.tick();
       component.isDiscardConfirmOpen.set(true);
@@ -672,6 +696,7 @@ describe('ProductsComponent', () => {
 
       expect(enter.defaultPrevented).toBe(true);
       expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('Cierra esta ventana para escanear.');
       expect(mockProductService.updateProduct).not.toHaveBeenCalled();
     });
 

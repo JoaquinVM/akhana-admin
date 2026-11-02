@@ -78,6 +78,13 @@ describe('BarcodeLoadingComponent (CAT-10)', () => {
     expect(service.addBarcode).not.toHaveBeenCalled();
   });
 
+  it('una etiqueta con letras avisa y no llena el código', () => {
+    scan('A1B2C3');
+
+    expect(component.barcode()).toBe('');
+    expect(fixture.nativeElement.textContent).toContain('El código de barras no es válido.');
+  });
+
   it('Guardar y seguir guarda y pasa al siguiente', () => {
     scan(EAN);
 

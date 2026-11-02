@@ -76,12 +76,14 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
 
 ## Notas de implementación
 
-- **Reconocer el escaneo:** `shared/utils/barcode-scan.ts` retiene los dígitos en la fase de captura de `window`, antes que
-  NF-07 y los campos. Hasta 60 ms entre teclas, al menos 6 dígitos y Enter son un escaneo. Lo demás se repone en el cursor,
-  con hasta 60 ms de retraso. Un campo de fecha no se puede reponer: sus dígitos pasan, y un escaneo le devuelve el valor que tenía. Cada Enter detenido detiene también su `keyup`, porque hay campos que actúan al soltarlo.
-  Los 60 ms son un valor inicial, por confirmar con el lector real.
-- **Lector:** tiene que funcionar como teclado USB y terminar cada lectura con Enter. Un código con letras (Code 128) no se
-  retiene; esas simbologías se apagan con el manual del lector.
+- **Reconocer el escaneo:** `shared/utils/barcode-scan.ts` retiene las teclas imprimibles en la fase de captura de
+  `window`, antes que NF-07 y los campos. Hasta 60 ms entre teclas, al menos 4 caracteres y Enter son un escaneo, tenga letras
+  o no. Lo demás se repone en el cursor, así que lo que se teclea en estas pantallas aparece hasta 60 ms tarde. Cada tecla
+  que no es dígito pasa antes por quien la atienda, como NF-07 con la coma. Un campo de fecha o una lista no se pueden
+  reponer: sus teclas pasan, y un escaneo les devuelve el valor que tenían. Un espacio sobre un botón o una casilla pasa, para
+  que los pulse. Cada Enter detenido detiene también su `keyup`, porque hay campos que actúan al soltarlo. Los 60 ms son un
+  valor inicial, por confirmar con el lector real.
+- **Lector:** tiene que funcionar como teclado USB y terminar cada lectura con Enter.
 - **Ventana abierta:** se detecta con `[aria-modal="true"]`, que tienen todas las ventanas de la app.
 - **Catálogo cargado:** un código movido o un producto inactivado en otra PC sigue resolviendo como antes hasta recargar el catálogo, y eso pasa al volver a entrar a la venta.
 - **Fuera de la venta y de Productos:** en Compras y Consumos el lector escribe como un teclado.

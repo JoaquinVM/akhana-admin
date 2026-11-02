@@ -146,12 +146,12 @@ describe('ScanCapture (POS-15)', () => {
     expect(execCommand.mock.calls.map((call) => call[2])).toEqual(['42']);
   });
 
-  it('pocos dígitos seguidos de Enter son tipeo: se escriben y el Enter pasa', () => {
-    type(input, '12345', 10);
+  it('pocos caracteres seguidos de Enter son tipeo: se escriben y el Enter pasa', () => {
+    type(input, '123', 10);
     const enter = press(input, 'Enter');
 
     expect(scans).toEqual([]);
-    expect(execCommand).toHaveBeenCalledWith('insertText', false, '12345');
+    expect(execCommand).toHaveBeenCalledWith('insertText', false, '123');
     expect(enter.defaultPrevented).toBe(false);
   });
 
@@ -167,11 +167,100 @@ describe('ScanCapture (POS-15)', () => {
 
   it('otra tecla escribe primero lo retenido y después pasa, para conservar el orden', () => {
     press(input, '2');
-    const comma = press(input, ',');
+    const backspace = press(input, 'Backspace');
 
     expect(execCommand).toHaveBeenCalledWith('insertText', false, '2');
-    expect(comma.defaultPrevented).toBe(false);
-    expect(received.map((event) => event.key)).toContain(',');
+    expect(backspace.defaultPrevented).toBe(false);
+    expect(received.map((event) => event.key)).toContain('Backspace');
+  });
+
+  it('una etiqueta con letras también es un escaneo: nada llega al campo ni al formulario', () => {
+    const enter = scan(input, 'A1B2C3');
+
+    expect(scans).toEqual(['A1B2C3']);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(received).toEqual([]);
+    expect(execCommand).not.toHaveBeenCalled();
+  });
+
+  it('una mayúscula con Shift no corta la lectura', () => {
+    type(input, 'A', 5);
+    press(input, 'Shift');
+    type(input, 'B12', 5);
+    press(input, 'Enter');
+
+    expect(scans).toEqual(['AB12']);
+  });
+
+  it('una etiqueta de pocos caracteres también es un escaneo', () => {
+    scan(input, '1234');
+
+    expect(scans).toEqual(['1234']);
+  });
+
+  it('una letra a mano se escribe, y la app la ve antes de escribirla', () => {
+    const text = document.createElement('input');
+    document.body.appendChild(text);
+    text.focus();
+    text.addEventListener('keydown', listener);
+
+    type(text, 'te', SCAN_MAX_KEY_GAP_MS + 40);
+
+    expect(execCommand.mock.calls.map((call) => call[2])).toEqual(['t', 'e']);
+    expect(received.map((event) => event.key)).toEqual(['t', 't', 'e', 'e']);
+    text.remove();
+  });
+
+  it('la coma a mano pasa primero por quien la atiende, como NF-07, y no se escribe tal cual', () => {
+    const nf07 = (event: Event) => {
+      if ((event as KeyboardEvent).key === ',') event.preventDefault();
+    };
+    document.addEventListener('keydown', nf07, true);
+
+    type(input, '2,5', SCAN_MAX_KEY_GAP_MS + 40);
+
+    expect(execCommand.mock.calls.map((call) => call[2])).toEqual(['2', '5']);
+    document.removeEventListener('keydown', nf07, true);
+  });
+
+  it('un separador que el campo numérico rechaza no se agrega al valor', () => {
+    execCommand.mockReturnValue(false);
+    input.value = '1.5';
+
+    press(input, '.');
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
+
+    expect(input.value).toBe('1.5');
+  });
+
+  it('un espacio sobre un botón o una casilla pasa, para que los pulse', () => {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    document.body.appendChild(checkbox);
+    checkbox.focus();
+
+    expect(press(checkbox, ' ').defaultPrevented).toBe(false);
+    checkbox.remove();
+  });
+
+  it('en una lista las teclas pasan, y un escaneo le devuelve su valor y detiene su Enter', () => {
+    const select = document.createElement('select');
+    select.innerHTML = '<option value="UNIT">Unidad</option><option value="KILOGRAM">Kilo</option>';
+    document.body.appendChild(select);
+    select.focus();
+    const onChange = vi.fn();
+    select.addEventListener('change', onChange);
+
+    expect(press(select, 'K').defaultPrevented).toBe(false);
+    now += 5;
+    select.value = 'KILOGRAM';
+    type(select, '1234', 5);
+    const enter = press(select, 'Enter');
+
+    expect(enter.defaultPrevented).toBe(true);
+    expect(select.value).toBe('UNIT');
+    expect(onChange).toHaveBeenCalled();
+    select.remove();
   });
 
   it('un clic escribe lo retenido antes de que cambie el foco', () => {
