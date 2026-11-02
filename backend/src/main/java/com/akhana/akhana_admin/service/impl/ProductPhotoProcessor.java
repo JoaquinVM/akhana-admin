@@ -2,9 +2,12 @@ package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.exception.ProductPhotoStorageException;
 import com.akhana.akhana_admin.service.ProductPhotoService;
-import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.jpeg.JpegMetadataReader;
+import com.drew.imaging.webp.WebpMetadataReader;
+import com.drew.lang.ByteArrayReader;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.ExifReader;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.IIOImage;
@@ -24,9 +27,12 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
@@ -51,13 +57,16 @@ public class ProductPhotoProcessor {
     private static final float THUMBNAIL_QUALITY = 0.8f;
     private static final double SHRINK_STEP = 0.85;
     private static final int PERMIT_WAIT_SECONDS = 30;
+    private static final int RIFF_HEADER_BYTES = 12;
+    private static final int CHUNK_HEADER_BYTES = 8;
+    private static final int PNG_CRC_BYTES = 4;
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
     private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
     private static final byte[] RIFF_MAGIC = "RIFF".getBytes(StandardCharsets.US_ASCII);
     private static final byte[] WEBP_MAGIC = "WEBP".getBytes(StandardCharsets.US_ASCII);
 
-    // One image at a time: a 50 megapixel WebP is decoded whole, about 200 MB of heap
+    // One image at a time: a 50 megapixel WebP is decoded whole, about 400 MB of heap with its copy
     private final Semaphore permit = new Semaphore(1);
 
     public ProductPhotoProcessor() {
@@ -74,7 +83,7 @@ public class ProductPhotoProcessor {
         acquirePermit();
         try {
             BufferedImage decoded = decode(content, format);
-            BufferedImage oriented = orientOnWhite(decoded, readOrientation(content));
+            BufferedImage oriented = orientOnWhite(decoded, readOrientation(content, format));
             BufferedImage image = fit(oriented, MAX_IMAGE_SIDE);
             return new ProcessedPhoto(encodeWithinLimit(image),
                 encode(fit(image, MAX_THUMBNAIL_SIDE), THUMBNAIL_QUALITY));
@@ -116,9 +125,12 @@ public class ProductPhotoProcessor {
     }
 
     private static BufferedImage decode(byte[] content, String format) {
+        if ("webp".equals(format)) {
+            checkWebpFrames(content);
+        }
         Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName(format);
         if (!readers.hasNext()) {
-            throw new IllegalStateException("No image reader for " + format);
+            throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);
         }
         ImageReader reader = readers.next();
         try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream(new ByteArrayInputStream(content))) {
@@ -155,10 +167,60 @@ public class ProductPhotoProcessor {
             || ProductPhotoService.INVALID_FILE.equals(ex.getMessage());
     }
 
-    private static int readOrientation(byte[] content) {
+    // The WebP decoder reserves memory for the size its frame declares, not the one in the file header, so each frame
+    // is checked on its own. An animation is not a photo.
+    private static void checkWebpFrames(byte[] content) {
+        boolean hasFrame = false;
+        ByteBuffer file = ByteBuffer.wrap(content).order(ByteOrder.LITTLE_ENDIAN);
+        int offset = RIFF_HEADER_BYTES;
+        while (offset + CHUNK_HEADER_BYTES <= content.length) {
+            String type = new String(content, offset, 4, StandardCharsets.US_ASCII);
+            long size = Integer.toUnsignedLong(file.getInt(offset + 4));
+            int payload = offset + CHUNK_HEADER_BYTES;
+            if (type.equals("ANMF")) {
+                throw new IllegalArgumentException(ProductPhotoService.INVALID_FILE);
+            }
+            if (type.equals("VP8 ") || type.equals("VP8L")) {
+                hasFrame = true;
+                if (webpFramePixels(file, type, payload) > MAX_PIXELS) {
+                    throw new IllegalArgumentException(ProductPhotoService.TOO_MANY_PIXELS);
+                }
+            }
+            long next = payload + size + (size & 1);
+            if (next > content.length) {
+                break;
+            }
+            offset = (int) next;
+        }
+        if (!hasFrame) {
+            throw new IllegalArgumentException(ProductPhotoService.INVALID_FILE);
+        }
+    }
+
+    private static long webpFramePixels(ByteBuffer file, String type, int payload) {
+        if (type.equals("VP8 ")) {
+            // Frame tag (3 bytes), start code (3), then width and height in 14 bits each
+            if (payload + 10 > file.capacity()) {
+                throw new IllegalArgumentException(ProductPhotoService.INVALID_FILE);
+            }
+            long width = file.getShort(payload + 6) & 0x3FFF;
+            long height = file.getShort(payload + 8) & 0x3FFF;
+            return width * height;
+        }
+        // Signature (1 byte), then width - 1 and height - 1 in 14 bits each
+        if (payload + 5 > file.capacity()) {
+            throw new IllegalArgumentException(ProductPhotoService.INVALID_FILE);
+        }
+        int bits = file.getInt(payload + 1);
+        long width = (bits & 0x3FFF) + 1L;
+        long height = ((bits >>> 14) & 0x3FFF) + 1L;
+        return width * height;
+    }
+
+    // Only the EXIF block: the general metadata reader inflates the text chunks of a PNG with no limit
+    private static int readOrientation(byte[] content, String format) {
         try {
-            Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(content));
-            ExifIFD0Directory exif = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            ExifIFD0Directory exif = readExif(content, format).getFirstDirectoryOfType(ExifIFD0Directory.class);
             if (exif != null && exif.containsTag(ExifIFD0Directory.TAG_ORIENTATION)) {
                 return exif.getInt(ExifIFD0Directory.TAG_ORIENTATION);
             }
@@ -166,6 +228,34 @@ public class ProductPhotoProcessor {
             // Unreadable metadata is not a damaged photo: it is used as it comes
         }
         return 1;
+    }
+
+    private static Metadata readExif(byte[] content, String format) throws Exception {
+        return switch (format) {
+            case "jpeg" -> JpegMetadataReader.readMetadata(new ByteArrayInputStream(content), List.of(new ExifReader()));
+            case "webp" -> WebpMetadataReader.readMetadata(new ByteArrayInputStream(content));
+            default -> readPngExif(content);
+        };
+    }
+
+    private static Metadata readPngExif(byte[] content) {
+        Metadata metadata = new Metadata();
+        ByteBuffer file = ByteBuffer.wrap(content);
+        int offset = PNG_MAGIC.length;
+        while (offset + CHUNK_HEADER_BYTES <= content.length) {
+            long size = Integer.toUnsignedLong(file.getInt(offset));
+            String type = new String(content, offset + 4, 4, StandardCharsets.US_ASCII);
+            int payload = offset + CHUNK_HEADER_BYTES;
+            if (payload + size > content.length) {
+                break;
+            }
+            if (type.equals("eXIf")) {
+                new ExifReader().extract(new ByteArrayReader(Arrays.copyOfRange(content, payload, payload + (int) size)), metadata);
+                break;
+            }
+            offset = payload + (int) size + PNG_CRC_BYTES;
+        }
+        return metadata;
     }
 
     // White shows through transparency (PNG, WebP) and every color space ends up in RGB

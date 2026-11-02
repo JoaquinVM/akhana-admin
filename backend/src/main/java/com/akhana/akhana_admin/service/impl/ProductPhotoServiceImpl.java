@@ -132,7 +132,7 @@ public class ProductPhotoServiceImpl implements ProductPhotoService {
 
     // A stale screen gets a conflict; the unique index covers the saves that are truly simultaneous
     private ProductPhoto findExpected(UUID productId, UUID expectedPhotoId) {
-        ProductPhoto current = photoRepository.findByProductIdAndActiveTrue(productId).orElse(null);
+        ProductPhoto current = photoRepository.findActiveForUpdate(productId).orElse(null);
         UUID currentId = current != null ? current.getId() : null;
         if (!Objects.equals(currentId, expectedPhotoId)) {
             throw new DuplicateResourceException(CONFLICT);

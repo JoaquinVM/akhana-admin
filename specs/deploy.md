@@ -463,3 +463,6 @@ real en el VPS.
   foto y aceptó otra; el respaldo siguiente y `--check` pasaron con 10 fotos.
 - `--immutable` también compara la fecha: una foto copiada al volumen sin conservarla da error en la copia, sin perder nada.
   `restore.sh --photos` la conserva.
+- Segunda corrida, tras la revisión: un WebP de encabezado chico y frame de 16383×16383 dio «La foto tiene demasiados píxeles.», y
+  un PNG de 4 MB con un texto que se infla a 4 GB se guardó sin `OutOfMemoryError` ni reinicios. `--check` terminó con código 1
+  con `sort -R` y `comm` fallando a propósito, y con una foto apartada del remoto.

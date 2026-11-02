@@ -23,7 +23,8 @@ export class ProductPhotoSectionComponent {
   // Null while the product is being created
   productId = input<string | null>(null);
   photoId = input<string | null | undefined>(null);
-  photoChange = output<string | null>();
+  // Says which product it was, because the form may be showing another one when an upload ends
+  photoChange = output<{ productId: string; photoId: string | null }>();
 
   imageUrl = signal<string | null>(null);
   imageFailed = signal<boolean>(false);
@@ -31,11 +32,21 @@ export class ProductPhotoSectionComponent {
   errorMessage = signal<string | null>(null);
   isConfirmRemoveOpen = signal<boolean>(false);
   private request: Subscription | null = null;
+  private shownProductId: string | null = null;
 
+  // The section outlives the modal, so opening or closing the form starts it clean
   private readonly load = effect(() => {
     const productId = this.productId();
     const photoId = this.photoId();
-    untracked(() => this.clearImage());
+    untracked(() => {
+      this.clearImage();
+      if (productId !== this.shownProductId) {
+        this.shownProductId = productId;
+        this.isBusy.set(false);
+        this.errorMessage.set(null);
+        this.isConfirmRemoveOpen.set(false);
+      }
+    });
     if (!productId || !photoId) {
       return;
     }
@@ -66,12 +77,13 @@ export class ProductPhotoSectionComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          this.isBusy.set(false);
-          this.photoChange.emit(response.photoId);
+          this.endIfShown(productId);
+          this.photoChange.emit({ productId, photoId: response.photoId });
         },
         error: (err: HttpErrorResponse) => {
-          this.isBusy.set(false);
-          this.errorMessage.set(this.messageOf(err));
+          if (this.endIfShown(productId)) {
+            this.errorMessage.set(this.messageOf(err));
+          }
         }
       });
   }
@@ -88,16 +100,27 @@ export class ProductPhotoSectionComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.isBusy.set(false);
-          this.isConfirmRemoveOpen.set(false);
-          this.photoChange.emit(null);
+          if (this.endIfShown(productId)) {
+            this.isConfirmRemoveOpen.set(false);
+          }
+          this.photoChange.emit({ productId, photoId: null });
         },
         error: (err: HttpErrorResponse) => {
-          this.isBusy.set(false);
-          this.isConfirmRemoveOpen.set(false);
-          this.errorMessage.set(this.messageOf(err));
+          if (this.endIfShown(productId)) {
+            this.isConfirmRemoveOpen.set(false);
+            this.errorMessage.set(this.messageOf(err));
+          }
         }
       });
+  }
+
+  // A request that ends after the form moved on must not touch what the form shows now
+  private endIfShown(productId: string): boolean {
+    if (productId !== this.productId()) {
+      return false;
+    }
+    this.isBusy.set(false);
+    return true;
   }
 
   // nginx rejects what is over its own limit before the backend can answer

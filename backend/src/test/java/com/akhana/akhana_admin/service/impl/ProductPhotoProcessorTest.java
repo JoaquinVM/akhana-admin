@@ -213,4 +213,40 @@ class ProductPhotoProcessorTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(ProductPhotoService.TOO_MANY_PIXELS);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"VP8 ", "VP8L"})
+    @DisplayName("Un WebP con encabezado chico y un frame enorme no burla el límite de píxeles")
+    void rejectsWebpWithLargeFrame(String frameType) {
+        assertThatThrownBy(() -> processor.process(webpWithLargeFrame(frameType, 16383, 16383)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage(ProductPhotoService.TOO_MANY_PIXELS);
+    }
+
+    @Test
+    @DisplayName("Rechaza un WebP sin frames")
+    void rejectsWebpWithoutFrames() {
+        assertInvalid("RIFF\4\0\0\0WEBP".getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    @Test
+    @DisplayName("Un PNG con texto comprimido enorme se procesa sin inflarlo")
+    void doesNotInflatePngText() throws IOException {
+        byte[] bomb = pngWithTextBomb(2L * 1024 * 1024 * 1024);
+        assertThat((long) bomb.length).isLessThan(ProductPhotoProcessor.MAX_FILE_BYTES);
+
+        BufferedImage image = read(processor.process(bomb).image());
+
+        assertThat(image.getWidth()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("Aplica la orientación EXIF de un PNG")
+    void appliesPngOrientation() throws IOException {
+        BufferedImage image = read(processor.process(pngWithOrientation(quadrants(400, 200), 6)).image());
+
+        assertThat(image.getWidth()).isEqualTo(200);
+        assertThat(image.getHeight()).isEqualTo(400);
+        assertThat(colorAt(image, 0.25, 0.25)).isEqualTo('B');
+    }
 }

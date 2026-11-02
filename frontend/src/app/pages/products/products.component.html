@@ -600,8 +600,8 @@
 
       <!-- Photo of the product (CAT-12); it saves on its own, without the form's button -->
       <app-product-photo-section
-        [productId]="isEditing() ? selectedProductId() : null"
-        [photoId]="isEditing() ? selectedProductPhotoId() : null"
+        [productId]="isFormModalOpen() && isEditing() ? selectedProductId() : null"
+        [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
         (photoChange)="onPhotoChange($event)" />
 
       <!-- Presentations of the product by kilo (CAT-11) -->

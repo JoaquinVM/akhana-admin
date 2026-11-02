@@ -9,6 +9,8 @@ import { Category } from '../../core/category/models/category.models';
 import { Supplier } from '../../core/supplier/models/supplier.models';
 import { Tag } from '../../core/tag/models/tag.models';
 import { ProductPhotoService } from '../../core/product/product-photo.service';
+import { By } from '@angular/platform-browser';
+import { ProductPhotoSectionComponent } from './product-photo-section/product-photo-section.component';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -574,17 +576,44 @@ describe('ProductsComponent', () => {
       expect(fixture.nativeElement.querySelector('app-product-photo-section').textContent).toContain('Agregar foto');
 
       mockProductService.getProducts.mockClear();
-      component.onPhotoChange('photo-9');
+      component.onPhotoChange({ productId: 'prod-2', photoId: 'photo-9' });
 
       expect(component.products()[1].photoId).toBe('photo-9');
       expect(component.selectedProductPhotoId()).toBe('photo-9');
       expect(mockProductService.getProducts).not.toHaveBeenCalled();
     });
 
+    it('una subida que termina con otro producto abierto actualiza el suyo, no el abierto', () => {
+      component.products.set(withPhoto());
+      component.openEditModal(component.products()[0]);
+
+      component.onPhotoChange({ productId: 'prod-2', photoId: 'photo-9' });
+
+      expect(component.products()[0].photoId).toBe('photo-1');
+      expect(component.products()[1].photoId).toBe('photo-9');
+    });
+
+    it('al cerrar y volver a abrir el formulario la sección empieza limpia', () => {
+      component.products.set(withPhoto());
+      component.openEditModal(component.products()[0]);
+      fixture.detectChanges();
+      const section = fixture.debugElement.query(By.directive(ProductPhotoSectionComponent)).componentInstance as ProductPhotoSectionComponent;
+      section.isConfirmRemoveOpen.set(true);
+      section.errorMessage.set('Otro error');
+
+      component.closeFormModal();
+      fixture.detectChanges();
+      component.openEditModal(component.products()[0]);
+      fixture.detectChanges();
+
+      expect(section.isConfirmRemoveOpen()).toBe(false);
+      expect(section.errorMessage()).toBeNull();
+    });
+
     it('cambiar la foto no cuenta como cambio sin guardar del formulario', () => {
       component.products.set(withPhoto());
       component.openEditModal(component.products()[1]);
-      component.onPhotoChange('photo-9');
+      component.onPhotoChange({ productId: 'prod-2', photoId: 'photo-9' });
 
       component.attemptCloseForm();
 

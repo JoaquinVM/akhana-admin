@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.ErrorResponse;
 import com.akhana.akhana_admin.service.ProductImportService;
 import com.akhana.akhana_admin.service.ProductPhotoService;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     static final String UNREADABLE_REQUEST = "Los datos enviados no son válidos; revise el formulario e intente de nuevo.";
@@ -84,6 +86,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProductPhotoStorageException.class)
     public ResponseEntity<ErrorResponse> handleProductPhotoStorage(ProductPhotoStorageException ex) {
+        log.error("Could not save a product photo", ex);
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ErrorResponse.internalError(ex.getMessage()));

@@ -70,38 +70,48 @@ UNION ALL SELECT 'Última venta', coalesce(max(created_at)::text, '-') FROM sale
 
 # Writes the photo files registered in a database; a backup from before the photos has none
 list_photo_files() {
-    local db=$1 target=$2
+    local db=$1 target=$2 has_table
     : > "$target"
-    if [[ $(psql_db "$db" -c "SELECT to_regclass('public.product_photos') IS NOT NULL") == t ]]; then
+    has_table=$(psql_db "$db" -c "SELECT to_regclass('public.product_photos') IS NOT NULL")
+    if [[ $has_table == t ]]; then
         psql_db "$db" -c "SELECT file_name FROM product_photos UNION SELECT thumbnail_file_name FROM product_photos" | sort > "$target"
     fi
 }
 
-# Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-07)
+# Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-07).
+# It runs on the left of ||, where set -e does not apply, so each step checks its own result.
 check_photos() {
     local expected=$1 remote dir stored=$work_dir/photos_stored shuffled=$work_dir/photos_shuffled missing name
+    local total wanted compared=0
     if [[ ! -s $expected ]]; then
         log "Fotos: el respaldo no registra ninguna"
         return 0
     fi
-    remote=$(photos_remote)
-    dir=$(photos_dir)
-    $RCLONE lsf --files-only "$remote" | sort > "$stored"
-    missing=$(comm -23 "$expected" "$stored")
+    remote=$(photos_remote) || return 1
+    dir=$(photos_dir) || return 1
+    $RCLONE lsf --files-only "$remote" | sort > "$stored" || return 1
+    missing=$(comm -23 "$expected" "$stored") || return 1
     if [[ -n $missing ]]; then
         log "Fotos que faltan en $remote:"
         echo "$missing"
         return 1
     fi
-    sort -R "$expected" > "$shuffled"
+    sort -R "$expected" > "$shuffled" || return 1
     while read -r name; do
-        $RCLONE copyto "$remote$name" "$work_dir/photo-sample/$name"
+        $RCLONE copyto "$remote$name" "$work_dir/photo-sample/$name" < /dev/null || return 1
         if ! cmp -s "$work_dir/photo-sample/$name" "$dir/$name"; then
             log "La foto $name del remoto no coincide con la del volumen"
             return 1
         fi
+        compared=$((compared + 1))
     done < <(head -n "$PHOTO_SAMPLE_SIZE" "$shuffled")
-    log "Fotos: las $(wc -l < "$expected" | tr -d ' ') del respaldo están en el remoto y la muestra coincide"
+    total=$(wc -l < "$expected" | tr -d ' ') || return 1
+    wanted=$((total < PHOTO_SAMPLE_SIZE ? total : PHOTO_SAMPLE_SIZE))
+    if ((compared != wanted)); then
+        log "Fotos: se compararon $compared de las $wanted de la muestra"
+        return 1
+    fi
+    log "Fotos: las $total del respaldo están en el remoto y coinciden las $compared de la muestra"
 }
 
 check() {
