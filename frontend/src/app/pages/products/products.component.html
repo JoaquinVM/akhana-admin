@@ -62,6 +62,14 @@
         (click)="setStatusFilter('ELIMINADO')">
         Eliminados
       </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="onlyWithoutPhoto()"
+        [attr.aria-pressed]="onlyWithoutPhoto()"
+        (click)="onlyWithoutPhoto.set(!onlyWithoutPhoto())">
+        Sin foto
+      </button>
     </div>
 
     <!-- Product search and counter (right) -->
@@ -125,6 +133,7 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" style="width: 72px">Foto</th>
             <th scope="col" style="width: 100px">Código</th>
             <th scope="col" style="min-width: 160px">Nombre</th>
             <th scope="col" style="width: 135px">Categoría</th>
@@ -139,7 +148,7 @@
         <tbody>
           @if (isLoading()) {
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="table-state-container">
                   <div class="spinner-large"></div>
                   <p>Cargando catálogo de productos...</p>
@@ -148,7 +157,7 @@
             </tr>
           } @else if (filteredProducts().length === 0) {
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="table-empty">
                   <div class="table-empty-icon"><app-icon name="inbox" /></div>
                   <h4 class="table-empty-title">No se encontraron productos</h4>
@@ -167,6 +176,9 @@
           } @else {
             @for (product of visibleProducts(); track product.id) {
               <tr [attr.data-id]="product.id">
+                <td>
+                  <app-product-photo-thumb [productId]="product.id" [photoId]="product.photoId" />
+                </td>
                 <td>
                   <span class="product-code">{{ product.code }}</span>
                 </td>
@@ -585,6 +597,12 @@
       </div>
 
       }
+
+      <!-- Photo of the product (CAT-12); it saves on its own, without the form's button -->
+      <app-product-photo-section
+        [productId]="isEditing() ? selectedProductId() : null"
+        [photoId]="isEditing() ? selectedProductPhotoId() : null"
+        (photoChange)="onPhotoChange($event)" />
 
       <!-- Presentations of the product by kilo (CAT-11) -->
       @if (isKilogramForm() && !isSpecialForm()) {

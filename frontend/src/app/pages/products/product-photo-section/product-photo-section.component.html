@@ -1,0 +1,59 @@
+<div class="form-group photo-section">
+  <span class="form-label">Foto</span>
+
+  @if (!productId()) {
+    <span class="text-muted-sm">Guarda el producto para agregar la foto.</span>
+  } @else {
+    @if (errorMessage()) {
+      <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
+    }
+
+    <div class="photo-section-body">
+      <div class="photo-preview">
+        @if (imageUrl(); as src) {
+          <img [src]="src" alt="Foto del producto" />
+        } @else if (!photoId() || imageFailed()) {
+          <span class="text-muted-sm">Sin foto</span>
+        } @else {
+          <div class="spinner-small"></div>
+        }
+      </div>
+
+      <div class="photo-actions">
+        <label class="btn btn-outline btn-sm" [class.disabled]="isBusy()">
+          {{ photoId() ? 'Cambiar foto' : 'Agregar foto' }}
+          <input
+            type="file"
+            class="photo-file-input"
+            accept="image/jpeg,image/png,image/webp"
+            [disabled]="isBusy()"
+            (change)="onFileSelected($event)" />
+        </label>
+        @if (photoId()) {
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            [disabled]="isBusy()"
+            (click)="isConfirmRemoveOpen.set(true)">
+            Quitar foto
+          </button>
+        }
+        @if (isBusy()) {
+          <span class="text-muted-sm" role="status">Guardando la foto...</span>
+        }
+      </div>
+    </div>
+
+    <app-confirm-modal
+      [isOpen]="isConfirmRemoveOpen()"
+      title="Quitar foto"
+      message="El producto quedará sin foto. ¿Deseas continuar?"
+      confirmText="Quitar foto"
+      cancelText="Cancelar"
+      variant="danger"
+      [isLoading]="isBusy()"
+      (confirm)="confirmRemove()"
+      (cancel)="isConfirmRemoveOpen.set(false)">
+    </app-confirm-modal>
+  }
+</div>

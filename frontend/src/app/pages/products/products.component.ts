@@ -24,6 +24,8 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
+import { ProductPhotoSectionComponent } from './product-photo-section/product-photo-section.component';
+import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-thumb.component';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
 import { searchProducts } from '../../shared/utils/product-search';
@@ -57,7 +59,9 @@ export const PRODUCTS_PAGE_SIZE = 100;
     ConfirmModalComponent,
     AuditModalComponent,
     ModalComponent,
-    ProductImportModalComponent
+    ProductImportModalComponent,
+    ProductPhotoSectionComponent,
+    ProductPhotoThumbComponent
   ],
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.css']
@@ -83,6 +87,8 @@ export class ProductsComponent implements OnInit {
 
   searchTerm = signal<string>('');
   selectedStatusFilter = signal<ProductStatusFilter>('ACTIVE_INACTIVE');
+  // CAT-12: combined with the status filter and the search
+  onlyWithoutPhoto = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -186,6 +192,10 @@ export class ProductsComponent implements OnInit {
       list = list.filter(p => p.status === 'INACTIVO');
     } else if (statusFilter === 'ELIMINADO') {
       list = list.filter(p => p.status === 'ELIMINADO');
+    }
+
+    if (this.onlyWithoutPhoto()) {
+      list = list.filter(p => !p.photoId);
     }
 
     // A search orders by relevance; without one, by name A-Z
@@ -549,6 +559,17 @@ export class ProductsComponent implements OnInit {
     this.productForm.reset(initialData);
     this.formVersion.update(v => v + 1);
     this.isFormModalOpen.set(true);
+  }
+
+  // CAT-12: the photo of the product open in the form
+  selectedProductPhotoId = computed<string | null>(() => {
+    const id = this.selectedProductId();
+    return this.products().find(p => p.id === id)?.photoId ?? null;
+  });
+
+  onPhotoChange(photoId: string | null): void {
+    const id = this.selectedProductId();
+    this.products.update(list => list.map(p => (p.id === id ? { ...p, photoId } : p)));
   }
 
   attemptCloseForm(): void {
