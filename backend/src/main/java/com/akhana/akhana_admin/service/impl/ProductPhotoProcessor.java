@@ -28,6 +28,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // CAT-12: turns an uploaded file into a clean JPEG and its thumbnail. Drawing onto a new RGB image and writing it
 // with no metadata is what removes the location and every other EXIF field.
@@ -48,7 +49,8 @@ public class ProductPhotoProcessor {
     private static final float THUMBNAIL_QUALITY = 0.8f;
     private static final double SHRINK_STEP = 0.85;
     private static final int PERMIT_WAIT_SECONDS = 30;
-    static final int MAX_WAITING_UPLOADS = 2;
+    // One being processed and two waiting. Each one holds a database connection (open-in-view), which the POS shares
+    static final int MAX_UPLOADS_IN_PROCESS = 3;
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
     private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
@@ -57,6 +59,7 @@ public class ProductPhotoProcessor {
 
     // One image at a time: a 50 megapixel WebP is decoded whole, about 400 MB of heap with its copy
     final Semaphore permit = new Semaphore(1);
+    private final AtomicInteger admitted = new AtomicInteger();
 
     public ProductPhotoProcessor() {
         // Inside the Spring Boot jar the plugins may not register by themselves
@@ -69,6 +72,18 @@ public class ProductPhotoProcessor {
         }
         String format = detectFormat(content)
             .orElseThrow(() -> new IllegalArgumentException(ProductPhotoService.INVALID_FILE));
+        if (admitted.incrementAndGet() > MAX_UPLOADS_IN_PROCESS) {
+            admitted.decrementAndGet();
+            throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);
+        }
+        try {
+            return processOneAtATime(content, format);
+        } finally {
+            admitted.decrementAndGet();
+        }
+    }
+
+    private ProcessedPhoto processOneAtATime(byte[] content, String format) {
         acquirePermit();
         try {
             BufferedImage decoded = decode(content, format);
@@ -84,10 +99,6 @@ public class ProductPhotoProcessor {
     }
 
     private void acquirePermit() {
-        // Each upload that waits holds a database connection (open-in-view), which the POS shares
-        if (permit.getQueueLength() >= MAX_WAITING_UPLOADS) {
-            throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);
-        }
         try {
             if (!permit.tryAcquire(PERMIT_WAIT_SECONDS, TimeUnit.SECONDS)) {
                 throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);

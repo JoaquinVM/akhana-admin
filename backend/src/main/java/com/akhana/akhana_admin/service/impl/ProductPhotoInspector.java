@@ -21,6 +21,8 @@ final class ProductPhotoInspector {
     private static final int START_OF_SCAN = 0xDA;
     private static final int START_OF_IMAGE = 0xD8;
     private static final int TEMPORARY_MARKER = 0x01;
+    private static final int FIRST_RESERVED_MARKER = 0x02;
+    private static final int LAST_RESERVED_MARKER = 0xBF;
     private static final int END_OF_IMAGE = 0xD9;
     private static final int ORIENTATION_TAG = 0x0112;
     private static final int SHORT_TYPE = 3;
@@ -94,6 +96,11 @@ final class ProductPhotoInspector {
             int marker = content[offset + 1] & 0xFF;
             if (marker == END_OF_IMAGE) {
                 return;
+            }
+            // Reserved markers: the walk would skip them by their length, but the decoder can discard them and find a
+            // scan hidden inside
+            if (marker >= FIRST_RESERVED_MARKER && marker <= LAST_RESERVED_MARKER) {
+                throw invalid();
             }
             if (marker == START_OF_SCAN && ++scans > MAX_JPEG_SCANS) {
                 throw invalid();
