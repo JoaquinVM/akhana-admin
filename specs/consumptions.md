@@ -1,7 +1,7 @@
 # Consumos y ventas al costo
 
 Detalle del módulo Consumos de la V1 (sección 3.5 de `specs/requirements.md`), con los mismos IDs.
-Alcance: CON-01 a CON-04, más la venta al costo a crédito a la tienda amiga (DEU-05), que se construye junto con
+Alcance: CON-01 a CON-05, más la venta al costo a crédito a la tienda amiga (DEU-05), que se construye junto con
 la venta al costo (CON-02). Los clientes, los cobros y los saldos por cobrar (DEU-05 a DEU-07) están en
 `specs/debts.md`; aquí solo se repite lo que toca a la venta.
 
@@ -169,6 +169,22 @@ Se construyen con los reportes (FIN-10); aquí solo se fija qué separan.
   genera una salida de stock del tipo correspondiente (INV-02), y su anulación un reingreso. Como la V1 ya guarda
   producto y cantidad por línea, no hay que recapturar nada.
 
+## CON-05 · Precio de venta como referencia
+
+Solo en el formulario «Nuevo consumo». El precio no se edita, no se envía al servidor y no cambia el subtotal ni el
+«Total al costo». El selector de presentaciones, que se comparte con el POS, sigue mostrando el costo. El listado y el
+detalle de un consumo no lo muestran.
+
+- **Cuando** se busca un producto por unidad (Roquin, costo Bs 2,73, precio Bs 4,00) **entonces** el resultado muestra,
+  además de lo que ya tenía, «venta Bs 4,00»; también si el producto está inactivo.
+- **Cuando** se busca un producto por kilo (costo Bs 60,00, precio Bs 90,00) **entonces** muestra «costo Bs 60,00/kg» y
+  «venta Bs 90,00/kg».
+- **Cuando** se agrega una línea **entonces** la columna «Precio de venta», a la derecha de «Costo unitario», muestra el
+  precio de una unidad sin multiplicar por la cantidad: «Bs 4,00» por unidad y «Bs 90,00/kg» con «Otro peso».
+- **Cuando** la línea es una presentación **entonces** muestra «Bs X c/u» con el precio de venta de esa presentación, el
+  que cobra el POS: su precio fijo, o peso × precio por kilo. «Costo unitario» sigue por kilo.
+- **Cuando** el producto tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
+
 ## API
 
 | Método | Ruta | Uso |
@@ -194,6 +210,8 @@ Consumos (se puede construir ya):
   `ConsumptionRepositoryTest` (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: `core/consumption`, `pages/consumptions` (listado, formulario con buscador de productos y
   presentaciones por peso, detalle, anulación), menú POS → Consumos.
+- [x] CON-05: precio de venta en el buscador y en la tabla de `consumption-form-modal`, solo frontend. Pruebas en
+  `consumption-form-modal.component.spec.ts`.
 
 Hecho el 25-10-2026: migración `V11__consumptions.sql` (estados `REGISTRADO` y `ANULADO`; «Para quién» en
 `consumed_for`). El texto del listado busca en número, para quién, comentario y nombre de producto de las líneas.

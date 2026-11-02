@@ -17,7 +17,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11, COM-12 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
-| Consumos y ventas al costo | CON-01 a CON-03 | ✅ Completo | — | `consumptions.md` |
+| Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-11 | ✅ Completo | CAJ-11 sin desplegar: cerrar antes las cajas #146 a #148 y después comparar el 28 al 30/10 con la planilla | `cash.md` |
 | POS y ventas | POS-01 a POS-13 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
@@ -153,6 +153,7 @@ Detalle en `consumptions.md`.
 - **CON-02** Venta al costo desde el POS: precio igual al costo, utilidad cero, sin descuentos ni productos con costo 0, con comentario opcional. Es para cualquiera (P-39), se paga en el momento o queda a crédito (DEU-05) y propone «Sin cliente» (P-49). Regalos y roturas son ventas al costo.
 - **CON-03** Los reportes muestran por separado ventas normales, ventas al costo y consumos.
 - **CON-04** · V2 — Consumos y ventas al costo generan salidas de stock.
+- **CON-05** · V1 — Al registrar un consumo se ve el precio de venta de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda y no cambia el valor del consumo, que sigue siendo al costo (CON-01, P-27, P-35).
 
 ### 3.6 Caja · V1
 

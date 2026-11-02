@@ -55,6 +55,69 @@ describe('ConsumptionFormModalComponent', () => {
     expect(metas[1]).toContain('ROQ-2 · costo');
   });
 
+  it('CON-05: el buscador muestra el precio de venta, por kilo si se vende por kilo, también de un inactivo', () => {
+    const metaOf = (search: string): string => {
+      component.productSearch.set(search);
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('.match-meta').textContent.trim();
+    };
+
+    expect(metaOf('roq-1')).toContain('costo Bs 2.73 · venta Bs 4.00');
+    expect(metaOf('nue-1')).toContain('costo Bs 60.00/kg · venta Bs 90.00/kg');
+    expect(metaOf('reg-1')).toContain('venta Bs 4.00');
+  });
+
+  describe('CON-05: columna Precio de venta', () => {
+    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
+    const nut = product({ id: 'p-4', code: 'FSE-NUE', name: 'Nuez pelada', saleUnit: 'KILOGRAM', buyPrice: 130,
+      sellPrice: 210, presentations: [halfPound] });
+
+    const sellPrices = (): string[] => {
+      fixture.detectChanges();
+      return Array.from(fixture.nativeElement.querySelectorAll('.line-sell-price'))
+        .map((el: any) => el.textContent.trim());
+    };
+
+    it('muestra el precio de una unidad, sin multiplicar por la cantidad', () => {
+      component.addProduct(roquin);
+      expect(sellPrices()).toEqual(['Bs 4.00']);
+      component.updateQuantity(0, 2);
+      expect(sellPrices()).toEqual(['Bs 4.00']);
+    });
+
+    it('muestra el precio por kilo con «Otro peso»', () => {
+      component.addProduct(nuts);
+      expect(sellPrices()).toEqual(['Bs 90.00/kg']);
+    });
+
+    it('muestra el precio de la presentación, y el costo sigue por kilo', () => {
+      component.addProduct(nut);
+      component.onPresentationPicked(halfPound);
+      expect(sellPrices()).toEqual(['Bs 45.00 c/u']);
+      expect(fixture.nativeElement.querySelector('.lines-table tbody').textContent).toContain('Bs 130.00/kg');
+    });
+
+    it('la fila vacía ocupa todo el ancho de la tabla', () => {
+      fixture.detectChanges();
+      const columns = fixture.nativeElement.querySelectorAll('.lines-table th').length;
+      expect(fixture.nativeElement.querySelector('.empty-lines').getAttribute('colspan')).toBe(String(columns));
+    });
+
+    it('no cambia lo que se envía ni el valor del consumo', () => {
+      component.addProduct(roquin);
+      component.updateQuantity(0, 2);
+      component.addProduct(nut);
+      component.onPresentationPicked(halfPound);
+
+      expect(component.lineSubtotal(component.lines()[0])).toBe(5.46);
+      expect(component.total()).toBe(34.97);
+      expect(component.buildRequest().items).toEqual([
+        { productId: 'p-1', quantity: 2 },
+        { productId: 'p-4', quantity: 1, presentationId: 'pres-half' }
+      ]);
+    });
+  });
+
   it('CON-01: el mismo producto suma cantidad y el total va al costo', () => {
     component.addProduct(roquin);
     component.addProduct(roquin);
