@@ -193,6 +193,29 @@ describe('RegisterSaleComponent', () => {
       expect(component.cartItems()[0].quantity).toBe(3);
     });
 
+    it('0.5 tecla por tecla deja la línea en medio kilo', () => {
+      const byKilo: Product = { ...mockProduct1, id: 'prod-kg', code: 'G001', sellPrice: 60, saleUnit: 'KILOGRAM' };
+      component.addToCart(byKilo);
+
+      for (const typed of [0, null, 0.5]) {
+        component.updateQuantity(byKilo.id, typed as number);
+        expect(component.cartItems().length).toBe(1);
+      }
+
+      expect(component.cartItems()[0].quantity).toBe(0.5);
+      expect(component.cartItems()[0].subtotal).toBe(30);
+    });
+
+    it('con la cantidad vacía, el total sigue siendo el de la última cantidad válida', () => {
+      component.addToCart(mockProduct1);
+      component.updateQuantity(mockProduct1.id, 3);
+      const total = component.subtotalGross();
+
+      component.updateQuantity(mockProduct1.id, null as unknown as number);
+
+      expect(component.subtotalGross()).toBe(total);
+    });
+
     it('el − al llegar a 0 sigue quitando la línea', () => {
       component.addToCart(mockProduct1);
       component.decrementQuantity(mockProduct1.id);
