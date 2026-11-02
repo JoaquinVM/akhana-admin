@@ -4,6 +4,9 @@ import com.akhana.akhana_admin.dto.*;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
+import com.akhana.akhana_admin.repository.CashDenominationCutRepository;
+import com.akhana.akhana_admin.repository.CashNoAttentionDayRepository;
+import com.akhana.akhana_admin.repository.CashSessionReopeningRepository;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
@@ -19,10 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -41,6 +46,9 @@ public class CashSessionServiceImpl implements CashSessionService {
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final EntityManager entityManager;
+    private final CashNoAttentionDayRepository cashNoAttentionDayRepository;
+    private final CashSessionReopeningRepository cashSessionReopeningRepository;
+    private final CashDenominationCutRepository cashDenominationCutRepository;
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
@@ -50,6 +58,20 @@ public class CashSessionServiceImpl implements CashSessionService {
     static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrija el conteo o deje los cortes vacíos.";
     static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.";
     static final String CUT_DENOMINATION_REPEATED = "El corte de %s está repetido.";
+    static final String FUTURE_DAY = "El día de la caja no puede ser futuro.";
+    static final String DAY_NOT_AFTER_LAST = "El día debe ser posterior al de la última caja (#%d, %s).";
+    static final String DAY_TAKEN = "Ya existe una caja de ese día.";
+    static final String PAST_DAY_COMMENT_REQUIRED = "Elegir un día anterior pide un comentario.";
+    static final String MISSING_DAYS = "Falta resolver: %s.";
+    static final String DAYS_NOT_MISSING = "Esos días ya no faltan; vuelve a abrir el formulario.";
+    static final String NO_ATTENTION_COMMENT_REQUIRED = "Confirmar los días sin atención pide un comentario.";
+    static final String REOPEN_REASON_REQUIRED = "El motivo es obligatorio.";
+    static final String REOPEN_ONLY_LAST = "Solo se puede reabrir la última caja.";
+    static final String REOPEN_WITH_OPEN_SESSION = "Ya hay una caja abierta; ciérrala antes de reabrir otra.";
+    static final String REOPEN_HISTORICAL = "Una caja histórica no se reabre.";
+    static final String REOPEN_ADJUSTMENT_MISMATCH = "El ajuste del cierre de la caja #%d no coincide con su diferencia; no se puede reabrir.";
+    private static final int VOID_REASON_MAX = 500;
+    private static final String ONE_SESSION_PER_DAY_INDEX = "uq_cash_sessions_operation_date";
     // CAJ-04: the bills and coins of the count
     static final List<BigDecimal> DENOMINATIONS = Stream.of("200", "100", "50", "20", "10", "5", "2", "1", "0.50", "0.20", "0.10")
         .map(value -> new BigDecimal(value).setScale(2, RoundingMode.HALF_UP))
@@ -57,63 +79,255 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
+        // CAJ-12, CAJ-13: nothing read below about the sessions can change until this transaction ends (T-14)
+        cashSessionRepository.lockCashOpening();
         if (cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)) {
             throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
         }
 
-        BigDecimal openingAmount = request.openingAmount().setScale(2, RoundingMode.HALF_UP);
-        String openingComment = request.openingComment() != null && !request.openingComment().isBlank()
-            ? request.openingComment().trim() : null;
-
-        // CAJ-10: an opening amount that differs from the proposal (the previous closing, or the Caja balance for
-        // the first session) must be explained
-        CashOpeningProposalResponse proposal = getOpeningProposal();
-        if (openingAmount.compareTo(proposal.proposedAmount()) != 0 && openingComment == null) {
-            throw new IllegalArgumentException(String.format(
-                proposal.previousSessionNumber() != null ? OPENING_COMMENT_REQUIRED : FIRST_OPENING_COMMENT_REQUIRED,
-                StoreFormat.money(proposal.proposedAmount())));
+        Instant openedAt = Instant.now();
+        LocalDate today = StoreFormat.storeDay(openedAt);
+        LocalDate day = request.operationDate() != null ? request.operationDate() : today;
+        if (day.isAfter(today)) {
+            throw new IllegalArgumentException(FUTURE_DAY);
+        }
+        // A day marked without attention is also rejected here: every mark is before the session that confirmed it
+        Optional<CashSession> last = cashSessionRepository.findFirstByOrderByOperationDateDescSessionNumberDesc();
+        if (last.isPresent() && !day.isAfter(last.get().getOperationDate())) {
+            throw new IllegalArgumentException(String.format(DAY_NOT_AFTER_LAST,
+                last.get().getSessionNumber(), StoreFormat.dayMonth(last.get().getOperationDate())));
         }
 
-        Instant openedAt = Instant.now();
+        List<LocalDate> missingDays = requireConfirmedMissingDays(last, day, request.noAttentionDays());
+        String noAttentionComment = trimToNull(request.noAttentionComment());
+        if (!missingDays.isEmpty() && noAttentionComment == null) {
+            throw new IllegalArgumentException(NO_ATTENTION_COMMENT_REQUIRED);
+        }
+
+        BigDecimal openingAmount = request.openingAmount().setScale(2, RoundingMode.HALF_UP);
+        String openingComment = trimToNull(request.openingComment());
+        if (day.isBefore(today) && openingComment == null) {
+            throw new IllegalArgumentException(PAST_DAY_COMMENT_REQUIRED);
+        }
+
+        // CAJ-10: an opening amount that differs from the proposal (the previous closing, or the Caja balance for
+        // the first session) must be explained. The same comment explains a previous day
+        AmountProposal proposal = amountProposal();
+        if (openingAmount.compareTo(proposal.amount()) != 0 && openingComment == null) {
+            throw new IllegalArgumentException(String.format(
+                proposal.sessionNumber() != null ? OPENING_COMMENT_REQUIRED : FIRST_OPENING_COMMENT_REQUIRED,
+                StoreFormat.money(proposal.amount())));
+        }
+
         CashSession session = CashSession.builder()
             .status(CashSessionStatus.ABIERTA)
             .openingAmount(openingAmount)
             .openingComment(openingComment)
             .openedBy(username)
             .openedAt(openedAt)
-            // CAJ-11: the store day it was opened
-            .operationDate(StoreFormat.storeDay(openedAt))
+            // CAJ-11, CAJ-12: the chosen day; openedAt keeps the real date and time
+            .operationDate(day)
             .expectedCash(openingAmount)
             .totalSalesCash(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .totalSalesQr(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .totalSales(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .build();
 
-        // A concurrent opening passes the check above; the partial unique index on ABIERTA rejects it here
+        // The lock above already orders the openings; the unique indexes are the last defense of the database
         CashSession saved;
         try {
             saved = cashSessionRepository.saveAndFlush(session);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
+            throw new DuplicateResourceException(isDayTaken(e) ? DAY_TAKEN : ALREADY_OPEN_MESSAGE);
         }
         // The session number comes from the database
         entityManager.refresh(saved);
+        // CAJ-13: same transaction as the opening, so a failed opening leaves no mark
+        cashNoAttentionDayRepository.saveAll(missingDays.stream()
+            .map(date -> CashNoAttentionDay.builder()
+                .noAttentionDate(date)
+                .comment(noAttentionComment)
+                .cashSessionId(saved.getId())
+                .markedBy(username)
+                .markedAt(openedAt)
+                .build())
+            .toList());
         recordOpeningAdjustment(saved, username);
         return mapToSummary(saved, 0);
+    }
+
+    // CAJ-13: the rule looks from the last session on and asks nothing while no session was opened in the system. The
+    // client must send exactly the missing days, so nobody marks a day they did not see
+    private List<LocalDate> requireConfirmedMissingDays(Optional<CashSession> last, LocalDate day, List<LocalDate> confirmed) {
+        List<LocalDate> missing = missingDays(last, day);
+        List<LocalDate> sent = confirmed == null ? List.of() : confirmed.stream().distinct().sorted().toList();
+        if (!sent.equals(missing)) {
+            throw new IllegalArgumentException(missing.isEmpty() ? DAYS_NOT_MISSING : String.format(MISSING_DAYS,
+                missing.stream().map(StoreFormat::dayMonth).collect(Collectors.joining(", "))));
+        }
+        return missing;
+    }
+
+    private List<LocalDate> missingDays(Optional<CashSession> last, LocalDate day) {
+        if (last.isEmpty() || !cashSessionRepository.existsByHistoricalImportIdIsNull()) {
+            return List.of();
+        }
+        LocalDate lastDay = last.get().getOperationDate();
+        Set<LocalDate> marked = day.isAfter(lastDay)
+            ? cashNoAttentionDayRepository.findByNoAttentionDateBetweenOrderByNoAttentionDateAsc(lastDay, day).stream()
+                .map(CashNoAttentionDay::getNoAttentionDate)
+                .collect(Collectors.toSet())
+            : Set.of();
+        return CashDaySequence.missingDays(lastDay, day, marked);
+    }
+
+    private static boolean isDayTaken(DataIntegrityViolationException e) {
+        String cause = e.getMostSpecificCause().getMessage();
+        return cause != null && cause.contains(ONE_SESSION_PER_DAY_INDEX);
+    }
+
+    private static String trimToNull(String text) {
+        return text != null && !text.isBlank() ? text.trim() : null;
     }
 
     @Override
     @Transactional(readOnly = true)
     public CashOpeningProposalResponse getOpeningProposal() {
+        AmountProposal amount = amountProposal();
+        LocalDate today = StoreFormat.today();
+        Optional<CashSession> last = cashSessionRepository.findFirstByOrderByOperationDateDescSessionNumberDesc();
+        return new CashOpeningProposalResponse(
+            amount.amount(),
+            amount.sessionNumber(),
+            today,
+            last.map(session -> session.getOperationDate().plusDays(1)).orElse(null),
+            last.map(CashSession::getSessionNumber).orElse(null),
+            last.map(CashSession::getOperationDate).orElse(null),
+            last.filter(session -> !session.isHistorical() && session.getStatus() == CashSessionStatus.CERRADA
+                    && session.getOperationDate().equals(today))
+                .map(CashSession::getSessionNumber)
+                .orElse(null),
+            missingDays(last, today));
+    }
+
+    private record AmountProposal(BigDecimal amount, Long sessionNumber) {
+    }
+
+    private AmountProposal amountProposal() {
         return cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA)
-            .map(previous -> new CashOpeningProposalResponse(
+            .map(previous -> new AmountProposal(
                 previous.getClosingAmount().setScale(2, RoundingMode.HALF_UP), previous.getSessionNumber()))
             // First session: the balance of Caja, which holds its cutover balance (FIN-01)
-            .orElseGet(() -> new CashOpeningProposalResponse(
+            .orElseGet(() -> new AmountProposal(
                 financialAccountRepository.findByIsCashAccountTrue()
                     .map(cash -> cash.getCurrentBalance().setScale(2, RoundingMode.HALF_UP))
                     .orElse(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)),
                 null));
+    }
+
+    // CAJ-14: back to ABIERTA with its number, day, opening amount, sales and movements. The closing adjustment is
+    // voided and Caja goes back to what it was before the closing, even below zero (it only returns to that balance).
+    // Lock order T-14: opening lock, adjustment, session, account.
+    @Override
+    public CashSessionSummaryResponse reopenSession(UUID id, ReopenCashRequest request, String username) {
+        String reason = request != null ? trimToNull(request.reason()) : null;
+        if (reason == null) {
+            throw new IllegalArgumentException(REOPEN_REASON_REQUIRED);
+        }
+        cashSessionRepository.lockCashOpening();
+        CashSession found = cashSessionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Sesión de caja no encontrada con ID: " + id));
+        if (found.isHistorical()) {
+            throw new IllegalStateException(REOPEN_HISTORICAL);
+        }
+        if (cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)) {
+            throw new IllegalStateException(REOPEN_WITH_OPEN_SESSION);
+        }
+        boolean isLast = cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc()
+            .filter(last -> last.getId().equals(id))
+            .isPresent();
+        if (!isLast) {
+            throw new IllegalStateException(REOPEN_ONLY_LAST);
+        }
+
+        Optional<FinancialTransaction> adjustment = lockClosingAdjustment(found);
+        CashSession session = cashSessionRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Sesión de caja no encontrada con ID: " + id));
+
+        Instant now = Instant.now();
+        CashSessionReopening reopening = cashSessionReopeningRepository.saveAndFlush(CashSessionReopening.builder()
+            .cashSessionId(id)
+            .reason(reason)
+            .reopenedBy(username)
+            .reopenedAt(now)
+            .closingAmount(session.getClosingAmount())
+            .closingComment(session.getClosingComment())
+            .closedBy(session.getClosedBy())
+            .closedAt(session.getClosedAt())
+            .expectedCash(session.getExpectedCash())
+            .difference(session.getDifference())
+            .voidedAdjustmentId(adjustment.map(FinancialTransaction::getId).orElse(null))
+            .build());
+
+        adjustment.ifPresent(closing -> voidClosingAdjustment(closing, session, reason, username, now));
+        cashDenominationCutRepository.moveToReopening(id, reopening.getId());
+
+        session.setStatus(CashSessionStatus.ABIERTA);
+        session.setClosingAmount(null);
+        session.setClosingComment(null);
+        session.setClosedBy(null);
+        session.setClosedAt(null);
+        session.setDifference(null);
+        expectedCashCalculator.refresh(session);
+
+        // The lock already orders this with openings; the index of the open session is the last defense
+        CashSession reopened;
+        try {
+            reopened = cashSessionRepository.saveAndFlush(session);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateResourceException(REOPEN_WITH_OPEN_SESSION);
+        }
+        return mapToSummary(reopened, saleRepository.countByCashSessionId(id));
+    }
+
+    // D3: with a difference there must be exactly one active closing adjustment, of that amount and direction; without
+    // one, none. Checked before touching any balance: if they disagree, nothing changes
+    private Optional<FinancialTransaction> lockClosingAdjustment(CashSession session) {
+        Long number = session.getSessionNumber();
+        List<FinancialTransaction> adjustments = financialTransactionRepository.findActiveClosingAdjustments(session.getId(),
+            List.of(closingAdjustmentDescription(true, number), closingAdjustmentDescription(false, number)));
+        BigDecimal difference = session.getDifference();
+        if (difference == null || difference.signum() == 0) {
+            if (!adjustments.isEmpty()) {
+                throw new IllegalStateException(String.format(REOPEN_ADJUSTMENT_MISMATCH, number));
+            }
+            return Optional.empty();
+        }
+        boolean surplus = difference.signum() > 0;
+        if (adjustments.size() != 1
+                || adjustments.getFirst().getAmount().compareTo(difference.abs()) != 0
+                || adjustments.getFirst().getType() != (surplus ? FinancialTransactionType.INGRESO_MANUAL : FinancialTransactionType.GASTO_MANUAL)
+                || !adjustments.getFirst().getDescription().equals(closingAdjustmentDescription(surplus, number))) {
+            throw new IllegalStateException(String.format(REOPEN_ADJUSTMENT_MISMATCH, number));
+        }
+        return financialTransactionRepository.findByIdForUpdate(adjustments.getFirst().getId());
+    }
+
+    private void voidClosingAdjustment(FinancialTransaction adjustment, CashSession session, String reason,
+                                       String username, Instant now) {
+        FinancialAccount cashAccount = lockCashAccount();
+        // A surplus went in and a shortage went out: taking the signed difference away undoes either one
+        cashAccount.setCurrentBalance(cashAccount.getCurrentBalance().subtract(session.getDifference())
+            .setScale(2, RoundingMode.HALF_UP));
+        financialAccountRepository.save(cashAccount);
+
+        // The whole reason stays in the reopening
+        String voidReason = "Reapertura de caja #" + session.getSessionNumber() + ": " + reason;
+        adjustment.setStatus(FinancialTransactionStatus.ANULADO);
+        adjustment.setVoidedAt(now);
+        adjustment.setVoidedBy(username);
+        adjustment.setVoidReason(voidReason.length() > VOID_REASON_MAX ? voidReason.substring(0, VOID_REASON_MAX) : voidReason);
+        financialTransactionRepository.save(adjustment);
     }
 
     @Override
@@ -166,10 +380,16 @@ public class CashSessionServiceImpl implements CashSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<CashSessionSummaryResponse> getAllSessions() {
+        // CAJ-14: the last session that is not historical, when it is closed and no other is open
+        UUID reopenableId = cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)
+            ? null
+            : cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc()
+                .map(CashSession::getId)
+                .orElse(null);
         return cashSessionRepository.findAllByOrderByOpenedAtDesc().stream()
             .map(session -> {
                 long count = saleRepository.countByCashSessionId(session.getId());
-                return mapToSummary(session, count);
+                return mapToSummary(session, count, session.getId().equals(reopenableId));
             })
             .collect(Collectors.toList());
     }
@@ -188,12 +408,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
         List<CashCutDto> cutDtos = session.getCuts() != null
             ? session.getCuts().stream()
-                .map(c -> new CashCutDto(
-                    c.getDenomination(),
-                    c.getCashQuantity(),
-                    c.getReserveQuantity(),
-                    c.getSubtotal()
-                ))
+                .map(CashSessionServiceImpl::cutDto)
                 .collect(Collectors.toList())
             : Collections.emptyList();
 
@@ -226,8 +441,39 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getHistoricalExpenses(),
             session.getHistoricalOtherOutflow(),
             session.getHistoricalInternalOutflow(),
-            session.getOperationDate()
+            session.getOperationDate(),
+            reopenings(id)
         );
+    }
+
+    private static CashCutDto cutDto(CashDenominationCut cut) {
+        return new CashCutDto(cut.getDenomination(), cut.getCashQuantity(), cut.getReserveQuantity(), cut.getSubtotal());
+    }
+
+    // CAJ-14: oldest first, each one with the cuts of the closing it undid
+    private List<CashSessionReopeningResponse> reopenings(UUID sessionId) {
+        List<CashSessionReopening> reopenings = cashSessionReopeningRepository.findByCashSessionIdOrderByReopenedAtAsc(sessionId);
+        if (reopenings.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<CashDenominationCut>> cuts = cashDenominationCutRepository
+            .findByReopeningIdInOrderByDenominationDesc(reopenings.stream().map(CashSessionReopening::getId).toList())
+            .stream()
+            .collect(Collectors.groupingBy(CashDenominationCut::getReopeningId));
+        return reopenings.stream()
+            .map(reopening -> new CashSessionReopeningResponse(
+                reopening.getId(),
+                reopening.getReason(),
+                reopening.getReopenedBy(),
+                reopening.getReopenedAt(),
+                reopening.getClosingAmount(),
+                reopening.getClosingComment(),
+                reopening.getClosedBy(),
+                reopening.getClosedAt(),
+                reopening.getExpectedCash(),
+                reopening.getDifference(),
+                cuts.getOrDefault(reopening.getId(), List.of()).stream().map(CashSessionServiceImpl::cutDto).toList()))
+            .toList();
     }
 
     // CAJ-04: the count by bills and coins is optional, but when given it must add up to the counted amount, so
@@ -270,7 +516,8 @@ public class CashSessionServiceImpl implements CashSessionService {
     }
 
     // CAJ-09: the difference goes to Caja as an Ajuste income (surplus) or expense (shortage) so its balance
-    // matches the counted cash. It is linked to the closed session, so it cannot be edited or voided (CAJ-06).
+    // matches the counted cash. It is linked to the closed session, so it cannot be edited or voided (CAJ-06); only
+    // reopening the session voids it (CAJ-14).
     // Lock order T-14: the session is already locked, then the account.
     private void recordClosingAdjustment(CashSession session, BigDecimal difference, String username) {
         if (difference.signum() == 0) {
@@ -279,8 +526,13 @@ public class CashSessionServiceImpl implements CashSessionService {
         boolean surplus = difference.signum() > 0;
         FinancialCategory category = adjustmentCategory(surplus);
         recordAdjustment(session, lockCashAccount(), category, difference,
-            (surplus ? "Sobrante" : "Faltante") + " al cierre de caja #" + session.getSessionNumber(),
+            closingAdjustmentDescription(surplus, session.getSessionNumber()),
             session.getClosingComment(), username);
+    }
+
+    // The only place this text is built: reopening finds the closing adjustment by it (CAJ-14)
+    private static String closingAdjustmentDescription(boolean surplus, Long sessionNumber) {
+        return (surplus ? "Sobrante" : "Faltante") + " al cierre de caja #" + sessionNumber;
     }
 
     // CAJ-10: the opening amount is the cash in the drawer, so the difference with the Caja balance (money taken
@@ -342,6 +594,10 @@ public class CashSessionServiceImpl implements CashSessionService {
     }
 
     private CashSessionSummaryResponse mapToSummary(CashSession session, long salesCount) {
+        return mapToSummary(session, salesCount, false);
+    }
+
+    private CashSessionSummaryResponse mapToSummary(CashSession session, long salesCount, boolean reopenable) {
         return new CashSessionSummaryResponse(
             session.getId(),
             session.getSessionNumber(),
@@ -361,7 +617,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getDifference(),
             salesCount,
             session.isHistorical(),
-            session.getOperationDate()
+            session.getOperationDate(),
+            reopenable
         );
     }
 }

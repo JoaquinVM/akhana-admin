@@ -22,4 +22,6 @@ public interface CashSessionService {
     List<CashSessionSummaryResponse> getAllSessions();
 
     CashSessionDetailResponse getSessionDetail(UUID id);
+
+    CashSessionSummaryResponse reopenSession(UUID id, ReopenCashRequest request, String username);
 }

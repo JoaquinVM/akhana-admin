@@ -327,7 +327,9 @@ class MigrationIntegrationTest {
         assertThat(session.get("status")).isEqualTo("CERRADA");
         assertThat((BigDecimal) session.get("difference")).isEqualByComparingTo("5.00");
         assertThat((BigDecimal) session.get("historical_expenses")).isEqualByComparingTo("50.00");
-        assertThat(cashSessionService.getOpeningProposal()).isEqualTo(proposalBefore);
+        // CAJ-12: the days do count it, so the amount and its source are what stays the same
+        assertThat(cashSessionService.getOpeningProposal().proposedAmount()).isEqualTo(proposalBefore.proposedAmount());
+        assertThat(cashSessionService.getOpeningProposal().previousSessionNumber()).isEqualTo(proposalBefore.previousSessionNumber());
 
         // Purchases: payment status from the spreadsheet, payments without a movement (P-43)
         List<Map<String, Object>> purchases = jdbc.queryForList(

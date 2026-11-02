@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -61,8 +62,8 @@ public class CashSession {
     @Builder.Default
     private Instant openedAt = Instant.now();
 
-    // CAJ-11: store day of the session; its sales and movements count for it
-    @Column(name = "operation_date", nullable = false)
+    // CAJ-11, CAJ-12: store day chosen when opening; its sales and movements count for it, and it never changes
+    @Column(name = "operation_date", nullable = false, updatable = false)
     private LocalDate operationDate;
 
     @Column(name = "closing_amount", precision = 12, scale = 2)
@@ -96,7 +97,9 @@ public class CashSession {
     @Column(name = "difference", precision = 12, scale = 2)
     private BigDecimal difference;
 
+    // CAJ-14: only the count of the current closing; those of undone closings stay tied to their reopening
     @OneToMany(mappedBy = "cashSession", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @SQLRestriction("reopening_id IS NULL")
     @Builder.Default
     private List<CashDenominationCut> cuts = new ArrayList<>();
 

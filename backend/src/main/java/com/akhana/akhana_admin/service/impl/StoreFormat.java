@@ -29,6 +29,11 @@ public final class StoreFormat {
         return LocalDate.now(STORE_ZONE);
     }
 
+    /** A store day for a message: "2/11", "30/10". */
+    public static String dayMonth(LocalDate day) {
+        return day.getDayOfMonth() + "/" + String.format("%02d", day.getMonthValue());
+    }
+
     /** An amount for a message: "Bs 1.234,50", 2 decimals HALF_UP. */
     public static String money(BigDecimal amount) {
         return "Bs " + number(amount, 2);

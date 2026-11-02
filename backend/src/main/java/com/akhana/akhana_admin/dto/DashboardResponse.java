@@ -27,7 +27,8 @@ public record DashboardResponse(LocalDate from,
                                 List<RankRow> topSuppliersByProfit,
                                 List<CategoryAmount> expenses,
                                 BigDecimal expenseTotal,
-                                Now now) {
+                                Now now,
+                                List<NoAttentionDay> noAttentionDays) {
 
     /**
      * Normal sales of a period: total, cost, profit, margin % (null without sales), tickets and average ticket
@@ -46,6 +47,10 @@ public record DashboardResponse(LocalDate from,
 
     /** One store day with normal sales and their profit. */
     public record DayPoint(LocalDate date, BigDecimal sales, BigDecimal profit) {
+    }
+
+    /** CAJ-13: a day of the period confirmed without attention, with its comment; not the same as a day without sales. */
+    public record NoAttentionDay(LocalDate date, String comment) {
     }
 
     /**
@@ -81,7 +86,9 @@ public record DashboardResponse(LocalDate from,
                           BigDecimal openingAmount,
                           BigDecimal totalSales,
                           long salesCount,
-                          BigDecimal expectedCash) {
+                          BigDecimal expectedCash,
+                          // CAJ-12: its day of operation; the screen marks it when it is not today
+                          LocalDate operationDate) {
     }
 
     public record AccountBalance(UUID id, String name, String color, BigDecimal balance) {

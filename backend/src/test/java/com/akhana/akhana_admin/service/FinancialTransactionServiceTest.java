@@ -567,6 +567,39 @@ class FinancialTransactionServiceTest {
     }
 
     @Test
+    @DisplayName("CAJ-09, CAJ-14: el ajuste de cierre no se anula desde Finanzas ni desde el POS: solo reabriendo la caja")
+    void testVoidClosingAdjustmentRejected() {
+        UUID sessionId = UUID.randomUUID();
+        FinancialCategory ajuste = FinancialCategory.builder().id(UUID.randomUUID()).name("Ajuste")
+                .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.CASH_SHORTAGE).build();
+        FinancialTransaction tx = FinancialTransaction.builder()
+                .id(UUID.randomUUID())
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccount(cajaAccount)
+                .category(ajuste)
+                .amount(new BigDecimal("7.00"))
+                .description("Faltante al cierre de caja #150")
+                .status(FinancialTransactionStatus.ACTIVO)
+                .cashSessionId(sessionId)
+                .build();
+        when(financialTransactionRepository.findByIdForUpdate(tx.getId())).thenReturn(Optional.of(tx));
+        // Reopened: the session is open again and the adjustment of a later closing still cannot be voided by hand
+        lenient().when(cashSessionRepository.findByIdForUpdate(sessionId))
+                .thenReturn(Optional.of(CashSession.builder().id(sessionId).status(CashSessionStatus.ABIERTA).build()));
+        VoidFinancialTransactionRequest request = VoidFinancialTransactionRequest.builder().voidReason("Error").build();
+
+        IllegalStateException fromFinances = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidTransaction(tx.getId(), request, "admin"));
+        IllegalStateException fromPos = assertThrows(IllegalStateException.class,
+                () -> financialTransactionService.voidCashExpense(tx.getId(), request, "operador"));
+
+        assertTrue(fromFinances.getMessage().contains("ajustes de caja"));
+        assertTrue(fromPos.getMessage().contains("ajustes de caja"));
+        assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());
+        assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
+    }
+
+    @Test
     @DisplayName("Debe procesar transferencia exitosa entre cuentas con saldo suficiente")
     void testTransferSuccess() {
         FinancialTransactionRequest req = FinancialTransactionRequest.builder()

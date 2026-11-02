@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.integration;
 
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
+import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.HistoricalImportRepository;
 import com.akhana.akhana_admin.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,7 @@ class SerializationLockIntegrationTest {
 
     @Autowired private UserRepository userRepository;
     @Autowired private HistoricalImportRepository historicalImportRepository;
+    @Autowired private CashSessionRepository cashSessionRepository;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbc;
 
@@ -117,6 +119,32 @@ class SerializationLockIntegrationTest {
             .active(true)
             .createdBy("it")
             .build();
+    }
+
+    @Test
+    @DisplayName("CAJ-12 a CAJ-14: abrir y reabrir esperan el mismo lock")
+    void cashOpeningLockSerializesOpeningAndReopening() throws Exception {
+        CountDownLatch locked = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> first = pool.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                cashSessionRepository.lockCashOpening();
+                locked.countDown();
+                sleep();
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<Long> second = pool.submit(() -> transactionTemplate.execute(status -> {
+                long start = System.nanoTime();
+                cashSessionRepository.lockCashOpening();
+                return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+            }));
+
+            first.get(10, TimeUnit.SECONDS);
+            assertThat(second.get(10, TimeUnit.SECONDS)).isGreaterThanOrEqualTo(HOLD_MS / 2);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     private static void sleep() {

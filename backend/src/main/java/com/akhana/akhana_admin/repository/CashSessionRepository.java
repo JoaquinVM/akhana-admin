@@ -41,4 +41,15 @@ public interface CashSessionRepository extends JpaRepository<CashSession, UUID> 
            "LEFT JOIN FETCH cs.cuts " +
            "WHERE cs.id = :id")
     Optional<CashSession> findByIdWithCuts(@Param("id") UUID id);
+
+    // CAJ-12 to CAJ-14: opening and reopening wait for each other, so what they read about the last session and the
+    // open one cannot change before they write. First thing in their transaction; nothing else takes it (T-14)
+    @Query(value = "SELECT 1 FROM pg_advisory_xact_lock(4801101)", nativeQuery = true)
+    Integer lockCashOpening();
+
+    // CAJ-12: a new day must be after this one, historical sessions included
+    Optional<CashSession> findFirstByOrderByOperationDateDescSessionNumberDesc();
+
+    // CAJ-14: the only session that can be reopened; opening order, so historical sessions are left out
+    Optional<CashSession> findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc();
 }

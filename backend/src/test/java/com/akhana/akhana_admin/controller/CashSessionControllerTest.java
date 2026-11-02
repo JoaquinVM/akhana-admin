@@ -34,6 +34,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -82,7 +84,8 @@ class CashSessionControllerTest {
             null,
             0,
             false,
-            LocalDate.of(2026, 10, 31)
+            LocalDate.of(2026, 10, 31),
+            false
         );
 
         User mockUser = User.builder()
@@ -121,13 +124,89 @@ class CashSessionControllerTest {
     @DisplayName("GET /api/cash-sessions/opening-proposal - Debe retornar el monto inicial propuesto (CAJ-10)")
     void getOpeningProposal_success() throws Exception {
         when(cashSessionService.getOpeningProposal())
-            .thenReturn(new CashOpeningProposalResponse(new BigDecimal("245.50"), 7L));
+            .thenReturn(new CashOpeningProposalResponse(new BigDecimal("245.50"), 7L, LocalDate.of(2026, 11, 3),
+                LocalDate.of(2026, 10, 31), 148L, LocalDate.of(2026, 10, 30), null,
+                List.of(LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 2))));
 
         mockMvc.perform(get("/api/cash-sessions/opening-proposal")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.proposedAmount").value(245.50))
-            .andExpect(jsonPath("$.previousSessionNumber").value(7));
+            .andExpect(jsonPath("$.previousSessionNumber").value(7))
+            .andExpect(jsonPath("$.today").value("2026-11-03"))
+            .andExpect(jsonPath("$.minDay").value("2026-10-31"))
+            .andExpect(jsonPath("$.lastSessionNumber").value(148))
+            .andExpect(jsonPath("$.lastSessionDay").value("2026-10-30"))
+            .andExpect(jsonPath("$.unresolvedDays[0]").value("2026-10-31"))
+            .andExpect(jsonPath("$.unresolvedDays[1]").value("2026-11-02"));
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/open - CAJ-12, CAJ-13: recibe el día, los días sin atención y su comentario")
+    void openSession_withDayAndNoAttentionDays() throws Exception {
+        when(cashSessionService.openSession(any(OpenCashRequest.class), any())).thenReturn(summaryResponse);
+
+        mockMvc.perform(post("/api/cash-sessions/open")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"openingAmount":100.00,"openingComment":"Carga atrasada","operationDate":"2026-11-03",
+                     "noAttentionDays":["2026-10-31","2026-11-02"],"noAttentionComment":"Feriado"}"""))
+            .andExpect(status().isCreated());
+
+        verify(cashSessionService).openSession(eq(new OpenCashRequest(new BigDecimal("100.00"), "Carga atrasada",
+            LocalDate.of(2026, 11, 3), List.of(LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 2)), "Feriado")), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/open - una pestaña anterior al cambio sigue abriendo con hoy")
+    void openSession_withoutDay_sendsNoDay() throws Exception {
+        when(cashSessionService.openSession(any(OpenCashRequest.class), any())).thenReturn(summaryResponse);
+
+        mockMvc.perform(post("/api/cash-sessions/open")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"openingAmount\":100.00}"))
+            .andExpect(status().isCreated());
+
+        verify(cashSessionService).openSession(eq(new OpenCashRequest(new BigDecimal("100.00"), null)), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/{id}/reopen - CAJ-14: reabre con motivo")
+    void reopenSession_success() throws Exception {
+        when(cashSessionService.reopenSession(eq(sessionId), eq(new ReopenCashRequest("Cerrada por error")), any()))
+            .thenReturn(summaryResponse);
+
+        mockMvc.perform(post("/api/cash-sessions/" + sessionId + "/reopen")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Cerrada por error\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ABIERTA"));
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/{id}/reopen - CAJ-14: sin motivo responde «El motivo es obligatorio.»")
+    void reopenSession_blankReason_rejected() throws Exception {
+        mockMvc.perform(post("/api/cash-sessions/" + sessionId + "/reopen")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"  \"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("El motivo es obligatorio.")));
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/{id}/reopen - CAJ-14: sin cuerpo decide el servicio")
+    void reopenSession_noBody_reachesTheService() throws Exception {
+        when(cashSessionService.reopenSession(eq(sessionId), isNull(), any()))
+            .thenThrow(new IllegalArgumentException("El motivo es obligatorio."));
+
+        mockMvc.perform(post("/api/cash-sessions/" + sessionId + "/reopen")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("El motivo es obligatorio."));
     }
 
     @Test
@@ -174,7 +253,8 @@ class CashSessionControllerTest {
             BigDecimal.ZERO,
             1,
             false,
-            LocalDate.of(2026, 10, 31)
+            LocalDate.of(2026, 10, 31),
+            false
         );
 
         when(cashSessionService.closeCurrentSession(any(CloseCashRequest.class), any())).thenReturn(closedSummary);
@@ -235,7 +315,8 @@ class CashSessionControllerTest {
             null,
             null,
             null,
-            LocalDate.of(2026, 10, 31)
+            LocalDate.of(2026, 10, 31),
+            Collections.emptyList()
         );
 
         when(cashSessionService.getSessionDetail(sessionId)).thenReturn(detailResponse);

@@ -9,12 +9,14 @@ import com.akhana.akhana_admin.dto.DashboardResponse.CashNow;
 import com.akhana.akhana_admin.dto.DashboardResponse.CategoryAmount;
 import com.akhana.akhana_admin.dto.DashboardResponse.DayPoint;
 import com.akhana.akhana_admin.dto.DashboardResponse.Indicators;
+import com.akhana.akhana_admin.dto.DashboardResponse.NoAttentionDay;
 import com.akhana.akhana_admin.dto.DashboardResponse.Now;
 import com.akhana.akhana_admin.dto.DashboardResponse.Payments;
 import com.akhana.akhana_admin.dto.DashboardResponse.RankRow;
 import com.akhana.akhana_admin.dto.FinancialSummaryResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
+import com.akhana.akhana_admin.repository.CashNoAttentionDayRepository;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.DashboardRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
@@ -61,6 +63,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final PurchaseService purchaseService;
     private final CreditorService creditorService;
     private final CustomerService customerService;
+    private final CashNoAttentionDayRepository cashNoAttentionDayRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -95,7 +98,10 @@ public class DashboardServiceImpl implements DashboardService {
             top(products, RankRow::sales), top(products, RankRow::profit),
             top(suppliers, RankRow::sales), top(suppliers, RankRow::profit),
             expenses, money(movements.expenseTotal().negate()),
-            now());
+            now(),
+            cashNoAttentionDayRepository.findByNoAttentionDateBetweenOrderByNoAttentionDateAsc(start, end).stream()
+                .map(day -> new NoAttentionDay(day.getNoAttentionDate(), day.getComment()))
+                .toList());
     }
 
     /**
@@ -201,7 +207,7 @@ public class DashboardServiceImpl implements DashboardService {
     private Now now() {
         CashNow cash = cashSessionService.findCurrentSession()
             .map(DashboardServiceImpl::cashNow)
-            .orElse(new CashNow(false, null, null, null, null, null, 0, null));
+            .orElse(new CashNow(false, null, null, null, null, null, 0, null, null));
         FinancialSummaryResponse summary = financialSummaryService.getSummary();
         List<AccountBalance> accounts = summary.getAccounts().stream()
             .map(account -> new AccountBalance(account.getId(), account.getName(), account.getColor(),
@@ -217,7 +223,8 @@ public class DashboardServiceImpl implements DashboardService {
 
     private static CashNow cashNow(CashSessionSummaryResponse session) {
         return new CashNow(true, session.sessionNumber(), session.openedBy(), session.openedAt(),
-            session.openingAmount(), session.totalSales(), session.salesCount(), session.expectedCash());
+            session.openingAmount(), session.totalSales(), session.salesCount(), session.expectedCash(),
+            session.operationDate());
     }
 
     private static boolean isFreeLine(Object[] line) {

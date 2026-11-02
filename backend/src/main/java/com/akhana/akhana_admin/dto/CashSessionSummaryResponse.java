@@ -28,5 +28,7 @@ public record CashSessionSummaryResponse(
     // FIN-11: closed session of Cierre de Caja
     boolean historical,
     // CAJ-11: the day its sales and movements count for; openedAt is the real time it was opened
-    LocalDate operationDate
+    LocalDate operationDate,
+    // CAJ-14: whether the history offers to reopen it; only the list of sessions computes it
+    boolean reopenable
 ) {}

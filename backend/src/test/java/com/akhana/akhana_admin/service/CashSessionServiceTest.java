@@ -4,6 +4,9 @@ import com.akhana.akhana_admin.dto.*;
 import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
+import com.akhana.akhana_admin.repository.CashDenominationCutRepository;
+import com.akhana.akhana_admin.repository.CashNoAttentionDayRepository;
+import com.akhana.akhana_admin.repository.CashSessionReopeningRepository;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
 import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
@@ -53,6 +56,15 @@ class CashSessionServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private CashNoAttentionDayRepository cashNoAttentionDayRepository;
+
+    @Mock
+    private CashSessionReopeningRepository cashSessionReopeningRepository;
+
+    @Mock
+    private CashDenominationCutRepository cashDenominationCutRepository;
+
     private CashSessionServiceImpl cashSessionService;
 
     private UUID sessionId;
@@ -62,7 +74,8 @@ class CashSessionServiceTest {
     void setUp() {
         cashSessionService = new CashSessionServiceImpl(cashSessionRepository, saleRepository,
             new ExpectedCashCalculator(financialTransactionRepository),
-            financialAccountRepository, financialCategoryRepository, financialTransactionRepository, entityManager);
+            financialAccountRepository, financialCategoryRepository, financialTransactionRepository, entityManager,
+            cashNoAttentionDayRepository, cashSessionReopeningRepository, cashDenominationCutRepository);
         sessionId = UUID.randomUUID();
         activeSession = CashSession.builder()
             .id(sessionId)
@@ -529,6 +542,691 @@ class CashSessionServiceTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Ajuste");
         verify(financialAccountRepository, never()).save(any());
+    }
+
+    // --- CAJ-12: choosing the day ---
+
+    // The example of the spec: Friday 30/10, Saturday 31/10, Sunday 1/11, Monday 2/11, Tuesday 3/11 (2020 has the same
+    // calendar as 2026 and is always in the past)
+    private static final LocalDate FRI_30 = LocalDate.of(2020, 10, 30);
+    private static final LocalDate SAT_31 = LocalDate.of(2020, 10, 31);
+    private static final LocalDate SUN_1 = LocalDate.of(2020, 11, 1);
+    private static final LocalDate MON_2 = LocalDate.of(2020, 11, 2);
+    private static final LocalDate TUE_3 = LocalDate.of(2020, 11, 3);
+
+    private CashSession lastSession(long number, LocalDate day) {
+        CashSession last = closedSession("150.00");
+        last.setSessionNumber(number);
+        last.setOperationDate(day);
+        last.setExpectedCash(new BigDecimal("150.00"));
+        return last;
+    }
+
+    private void stubLastSession(CashSession last) {
+        when(cashSessionRepository.findFirstByOrderByOperationDateDescSessionNumberDesc()).thenReturn(Optional.of(last));
+        lenient().when(cashSessionRepository.existsByHistoricalImportIdIsNull()).thenReturn(!last.isHistorical());
+    }
+
+    private void stubOpeningGoesThrough() {
+        lenient().when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("150.00")));
+        stubCashAccount("150.00");
+        lenient().when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> {
+            CashSession cs = invocation.getArgument(0);
+            cs.setId(sessionId);
+            cs.setSessionNumber(149L);
+            return cs;
+        });
+    }
+
+    private static OpenCashRequest openOn(LocalDate day, String comment) {
+        return new OpenCashRequest(new BigDecimal("150.00"), comment, day, null, null);
+    }
+
+    private void assertOpeningRejected(OpenCashRequest request, String message) {
+        assertThatThrownBy(() -> cashSessionService.openSession(request, "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage(message);
+        verify(cashSessionRepository, never()).saveAndFlush(any());
+        verify(cashNoAttentionDayRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-12: abrir con el día de hoy no pide comentario por el día")
+    void openSession_today_noCommentNeeded() {
+        LocalDate today = StoreFormat.today();
+        stubLastSession(lastSession(148, today.minusDays(1)));
+        stubOpeningGoesThrough();
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(openOn(today, null), "cajero1");
+
+        assertThat(response.operationDate()).isEqualTo(today);
+        assertThat(response.openingComment()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-12: sin día en el pedido, la caja es de hoy")
+    void openSession_noDay_isToday() {
+        LocalDate today = StoreFormat.today();
+        stubLastSession(lastSession(148, today.minusDays(1)));
+        stubOpeningGoesThrough();
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(
+            new OpenCashRequest(new BigDecimal("150.00"), null), "cajero1");
+
+        assertThat(response.operationDate()).isEqualTo(today);
+    }
+
+    @Test
+    @DisplayName("CAJ-12: un día anterior sin comentario se rechaza")
+    void openSession_pastDayWithoutComment_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(openOn(SAT_31, "   "), "Elegir un día anterior pide un comentario.");
+    }
+
+    @Test
+    @DisplayName("CAJ-12, CAJ-10: un solo comentario basta para el día anterior y el monto cambiado")
+    void openSession_pastDayAndChangedAmount_oneComment() {
+        stubLastSession(lastSession(148, FRI_30));
+        stubOpeningGoesThrough();
+        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.CASH_SHORTAGE))
+            .thenReturn(Optional.of(FinancialCategory.builder().id(UUID.randomUUID()).name("Ajuste")
+                .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.CASH_SHORTAGE).build()));
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(
+            new OpenCashRequest(new BigDecimal("100.00"), " Carga atrasada ", SAT_31, null, null), "cajero1");
+
+        assertThat(response.openingComment()).isEqualTo("Carga atrasada");
+        // CAJ-11: everything of the session counts for its day; the opening keeps the real date and time and who opened
+        assertThat(response.operationDate()).isEqualTo(SAT_31);
+        assertThat(StoreFormat.storeDay(response.openedAt())).isEqualTo(StoreFormat.today());
+        assertThat(response.openedBy()).isEqualTo("cajero1");
+        assertThat(captureAdjustment().getOperationDate()).isEqualTo(SAT_31);
+    }
+
+    @Test
+    @DisplayName("CAJ-12: un día futuro se rechaza, también llamando directo a la API")
+    void openSession_futureDay_rejected() {
+        assertOpeningRejected(openOn(StoreFormat.today().plusDays(1), "Mañana"), "El día de la caja no puede ser futuro.");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: un día igual al de la última caja se rechaza")
+    void openSession_sameDayAsLast_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(openOn(FRI_30, "Otra"), "El día debe ser posterior al de la última caja (#148, 30/10).");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: un día anterior al de la última caja se rechaza, con el mes en dos dígitos y el día sin cero")
+    void openSession_beforeLast_rejected() {
+        stubLastSession(lastSession(150, MON_2));
+
+        assertOpeningRejected(openOn(SAT_31, "Otra"), "El día debe ser posterior al de la última caja (#150, 2/11).");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: la regla también mira a la última caja si es histórica")
+    void openSession_sameDayAsHistorical_rejected() {
+        CashSession historical = lastSession(90, FRI_30);
+        historical.setHistoricalImportId(UUID.randomUUID());
+        stubLastSession(historical);
+
+        assertOpeningRejected(openOn(FRI_30, "Otra"), "El día debe ser posterior al de la última caja (#90, 30/10).");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: si la caja de hoy está cerrada no se abre otra hoy")
+    void openSession_todayAlreadyClosed_rejected() {
+        LocalDate today = StoreFormat.today();
+        stubLastSession(lastSession(151, today));
+
+        assertOpeningRejected(openOn(today, null), "El día debe ser posterior al de la última caja (#151, "
+            + StoreFormat.dayMonth(today) + ").");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: el índice de un día por caja responde con el mensaje del día, no con el de caja abierta")
+    void openSession_dayIndexViolated_answersDayTaken() {
+        stubLastSession(lastSession(148, StoreFormat.today().minusDays(1)));
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.of(closedSession("150.00")));
+        when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenThrow(new DataIntegrityViolationException(
+            "duplicate", new RuntimeException("violates unique constraint \"uq_cash_sessions_operation_date\"")));
+
+        assertThatThrownBy(() -> cashSessionService.openSession(openOn(StoreFormat.today(), null), "cajero1"))
+            .isInstanceOf(DuplicateResourceException.class)
+            .hasMessage("Ya existe una caja de ese día.");
+    }
+
+    @Test
+    @DisplayName("CAJ-12: abrir toma el bloqueo de apertura antes de leer nada")
+    void openSession_takesTheOpeningLockFirst() {
+        stubOpeningGoesThrough();
+
+        cashSessionService.openSession(openOn(StoreFormat.today(), null), "cajero1");
+
+        var order = inOrder(cashSessionRepository);
+        order.verify(cashSessionRepository).lockCashOpening();
+        order.verify(cashSessionRepository).existsByStatus(CashSessionStatus.ABIERTA);
+    }
+
+    // --- CAJ-13: sequence and days without attention ---
+
+    @Test
+    @DisplayName("CAJ-13: elegir el 31/10 no pregunta nada, porque no queda ningún día atrás")
+    void openSession_nextDay_asksNothing() {
+        stubLastSession(lastSession(148, FRI_30));
+        stubOpeningGoesThrough();
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(openOn(SAT_31, "Carga atrasada"), "cajero1");
+
+        assertThat(response.operationDate()).isEqualTo(SAT_31);
+        verify(cashNoAttentionDayRepository).saveAll(List.of());
+    }
+
+    @Test
+    @DisplayName("CAJ-13: abrir el 3/11 sin confirmar se rechaza con los días que faltan")
+    void openSession_missingDaysNotConfirmed_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(openOn(TUE_3, "Carga atrasada"), "Falta resolver: 31/10, 2/11.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: confirmar otros días que los que faltan se rechaza, para no marcar lo que no se vio")
+    void openSession_otherDaysConfirmed_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(new OpenCashRequest(new BigDecimal("150.00"), "Carga", TUE_3, List.of(SAT_31), "Feriado"),
+            "Falta resolver: 31/10, 2/11.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: confirmar días que ya no faltan se rechaza")
+    void openSession_daysNoLongerMissing_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(new OpenCashRequest(new BigDecimal("150.00"), "Carga", SAT_31, List.of(SAT_31), "Feriado"),
+            "Esos días ya no faltan; vuelve a abrir el formulario.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: confirmar sin comentario se rechaza con su propio mensaje")
+    void openSession_confirmedWithoutComment_rejected() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(new OpenCashRequest(new BigDecimal("150.00"), "Carga", TUE_3, List.of(SAT_31, MON_2), "  "),
+            "Confirmar los días sin atención pide un comentario.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: el comentario de los días no sirve de comentario de apertura: son dos cosas")
+    void openSession_noAttentionCommentDoesNotExplainThePastDay() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(new OpenCashRequest(new BigDecimal("150.00"), null, TUE_3, List.of(SAT_31, MON_2), "Feriado"),
+            "Elegir un día anterior pide un comentario.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: al confirmar, cada día queda marcado con el comentario, quién y cuándo, atado a la caja")
+    void openSession_confirmed_marksTheDays() {
+        stubLastSession(lastSession(148, FRI_30));
+        stubOpeningGoesThrough();
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(new OpenCashRequest(new BigDecimal("150.00"),
+            "Carga atrasada", TUE_3, List.of(MON_2, SAT_31), " Feriado "), "cajero1");
+
+        assertThat(response.operationDate()).isEqualTo(TUE_3);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<CashNoAttentionDay>> marks = ArgumentCaptor.forClass(List.class);
+        verify(cashNoAttentionDayRepository).saveAll(marks.capture());
+        assertThat(marks.getValue()).extracting(CashNoAttentionDay::getNoAttentionDate).containsExactly(SAT_31, MON_2);
+        assertThat(marks.getValue()).allSatisfy(mark -> {
+            assertThat(mark.getComment()).isEqualTo("Feriado");
+            assertThat(mark.getMarkedBy()).isEqualTo("cajero1");
+            assertThat(mark.getMarkedAt()).isEqualTo(response.openedAt());
+            assertThat(mark.getCashSessionId()).isEqualTo(sessionId);
+        });
+    }
+
+    @Test
+    @DisplayName("CAJ-13: se abre un domingo como cualquier otra caja")
+    void openSession_sunday_opens() {
+        stubLastSession(lastSession(148, SAT_31));
+        stubOpeningGoesThrough();
+
+        assertThat(cashSessionService.openSession(openOn(SUN_1, "Domingo"), "cajero1").operationDate()).isEqualTo(SUN_1);
+    }
+
+    @Test
+    @DisplayName("CAJ-13: al abrir un domingo, el sábado que falta se resuelve igual")
+    void openSession_sunday_resolvesTheSaturday() {
+        stubLastSession(lastSession(148, FRI_30));
+
+        assertOpeningRejected(openOn(SUN_1, "Domingo"), "Falta resolver: 31/10.");
+    }
+
+    @Test
+    @DisplayName("CAJ-13: el lunes se abre igual si el domingo no tuvo caja: no se pregunta ni se marca")
+    void openSession_mondayAfterSundayWithoutSession_asksNothing() {
+        stubLastSession(lastSession(148, SAT_31));
+        stubOpeningGoesThrough();
+
+        CashSessionSummaryResponse response = cashSessionService.openSession(openOn(MON_2, "Carga atrasada"), "cajero1");
+
+        assertThat(response.operationDate()).isEqualTo(MON_2);
+        verify(cashNoAttentionDayRepository).saveAll(List.of());
+    }
+
+    @Test
+    @DisplayName("CAJ-13: el lunes se abre igual si el domingo tuvo caja")
+    void openSession_mondayAfterSundayWithSession_asksNothing() {
+        stubLastSession(lastSession(148, SUN_1));
+        stubOpeningGoesThrough();
+
+        assertThat(cashSessionService.openSession(openOn(MON_2, "Carga atrasada"), "cajero1").operationDate()).isEqualTo(MON_2);
+    }
+
+    @Test
+    @DisplayName("CAJ-13: un día ya marcado no vuelve a faltar")
+    void openSession_markedDayIsNotMissing() {
+        stubLastSession(lastSession(148, FRI_30));
+        stubOpeningGoesThrough();
+        when(cashNoAttentionDayRepository.findByNoAttentionDateBetweenOrderByNoAttentionDateAsc(FRI_30, MON_2))
+            .thenReturn(List.of(CashNoAttentionDay.builder().noAttentionDate(SAT_31).build()));
+
+        assertThat(cashSessionService.openSession(openOn(MON_2, "Carga atrasada"), "cajero1").operationDate()).isEqualTo(MON_2);
+    }
+
+    @Test
+    @DisplayName("CAJ-13: sin ninguna caja que no sea histórica, la regla no pide días atrás")
+    void openSession_onlyHistorical_asksNoDays() {
+        CashSession historical = lastSession(90, FRI_30);
+        historical.setHistoricalImportId(UUID.randomUUID());
+        stubLastSession(historical);
+        stubOpeningGoesThrough();
+
+        assertThat(cashSessionService.openSession(openOn(TUE_3, "Carga"), "cajero1").operationDate()).isEqualTo(TUE_3);
+    }
+
+    @Test
+    @DisplayName("CAJ-13: sin ninguna caja, cualquier día que no sea futuro se abre sin preguntar")
+    void openSession_noSessions_asksNoDays() {
+        stubOpeningGoesThrough();
+
+        assertThat(cashSessionService.openSession(openOn(TUE_3, "Carga"), "cajero1").operationDate()).isEqualTo(TUE_3);
+    }
+
+    // --- CAJ-12, CAJ-13: the proposal ---
+
+    @Test
+    @DisplayName("CAJ-12, CAJ-13: la propuesta trae hoy, el primer día posible y los días sin resolver hasta ayer")
+    void getOpeningProposal_daysFromTheLastSession() {
+        LocalDate today = StoreFormat.today();
+        LocalDate lastDay = today.minusDays(8);
+        stubLastSession(lastSession(148, lastDay));
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.today()).isEqualTo(today);
+        assertThat(proposal.minDay()).isEqualTo(lastDay.plusDays(1));
+        assertThat(proposal.lastSessionNumber()).isEqualTo(148L);
+        assertThat(proposal.lastSessionDay()).isEqualTo(lastDay);
+        assertThat(proposal.todayClosedSessionNumber()).isNull();
+        assertThat(proposal.unresolvedDays())
+            .isNotEmpty()
+            .isEqualTo(lastDay.plusDays(1).datesUntil(today)
+                .filter(day -> day.getDayOfWeek() != java.time.DayOfWeek.SUNDAY).toList());
+    }
+
+    @Test
+    @DisplayName("CAJ-12: la propuesta avisa que la caja de hoy ya se cerró")
+    void getOpeningProposal_todayClosed() {
+        LocalDate today = StoreFormat.today();
+        stubLastSession(lastSession(151, today));
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.todayClosedSessionNumber()).isEqualTo(151L);
+        assertThat(proposal.minDay()).isEqualTo(today.plusDays(1));
+        assertThat(proposal.unresolvedDays()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("CAJ-12: una caja histórica de hoy no se puede reabrir, así que la propuesta no la ofrece")
+    void getOpeningProposal_todayHistorical_notOffered() {
+        CashSession historical = lastSession(90, StoreFormat.today());
+        historical.setHistoricalImportId(UUID.randomUUID());
+        stubLastSession(historical);
+
+        assertThat(cashSessionService.getOpeningProposal().todayClosedSessionNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-13: sin cajas no hay límite ni días por resolver")
+    void getOpeningProposal_noSessions() {
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.today()).isEqualTo(StoreFormat.today());
+        assertThat(proposal.minDay()).isNull();
+        assertThat(proposal.lastSessionNumber()).isNull();
+        assertThat(proposal.unresolvedDays()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("CAJ-13: con solo históricas tampoco hay días por resolver, pero sí el límite")
+    void getOpeningProposal_onlyHistorical() {
+        LocalDate lastDay = StoreFormat.today().minusDays(8);
+        CashSession historical = lastSession(90, lastDay);
+        historical.setHistoricalImportId(UUID.randomUUID());
+        stubLastSession(historical);
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.minDay()).isEqualTo(lastDay.plusDays(1));
+        assertThat(proposal.unresolvedDays()).isEmpty();
+    }
+
+    // --- CAJ-14: reopening ---
+
+    private CashSession closedWithDifference(String difference) {
+        CashSession closed = lastSession(150, FRI_30);
+        closed.setId(sessionId);
+        closed.setClosingComment("Cierre");
+        closed.setClosedBy("ana");
+        closed.setDifference(difference != null ? new BigDecimal(difference) : null);
+        return closed;
+    }
+
+    private void stubReopenable(CashSession closed) {
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(closed));
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc()).thenReturn(Optional.of(closed));
+        lenient().when(cashSessionRepository.findByIdForUpdate(sessionId)).thenReturn(Optional.of(closed));
+        lenient().when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(cashSessionReopeningRepository.saveAndFlush(any(CashSessionReopening.class))).thenAnswer(invocation -> {
+            CashSessionReopening reopening = invocation.getArgument(0);
+            return CashSessionReopening.builder().id(UUID.randomUUID()).cashSessionId(reopening.getCashSessionId())
+                .voidedAdjustmentId(reopening.getVoidedAdjustmentId()).build();
+        });
+    }
+
+    private FinancialTransaction stubClosingAdjustment(CashSession closed, FinancialTransactionType type, String amount, String description) {
+        FinancialTransaction adjustment = FinancialTransaction.builder()
+            .id(UUID.randomUUID())
+            .type(type)
+            .amount(new BigDecimal(amount))
+            .description(description)
+            .status(FinancialTransactionStatus.ACTIVO)
+            .cashSessionId(closed.getId())
+            .build();
+        when(financialTransactionRepository.findActiveClosingAdjustments(closed.getId(),
+                List.of("Sobrante al cierre de caja #150", "Faltante al cierre de caja #150")))
+            .thenReturn(List.of(adjustment));
+        lenient().when(financialTransactionRepository.findByIdForUpdate(adjustment.getId())).thenReturn(Optional.of(adjustment));
+        return adjustment;
+    }
+
+    private void assertReopenRejectedUntouched(Class<? extends Throwable> type, String message, CashSession closed) {
+        BigDecimal closing = closed.getClosingAmount();
+        assertThatThrownBy(() -> cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "ana"))
+            .isInstanceOf(type)
+            .hasMessage(message);
+        assertThat(closed.getStatus()).isEqualTo(CashSessionStatus.CERRADA);
+        assertThat(closed.getClosingAmount()).isEqualTo(closing);
+        verify(financialAccountRepository, never()).save(any());
+        verify(financialTransactionRepository, never()).save(any());
+        verify(cashSessionReopeningRepository, never()).saveAndFlush(any());
+        verify(cashDenominationCutRepository, never()).moveToReopening(any(), any());
+    }
+
+    @Test
+    @DisplayName("CAJ-14: sin motivo se rechaza, sin cuerpo, vacío o en blanco, y sin tomar el bloqueo")
+    void reopenSession_withoutReason_rejected() {
+        for (ReopenCashRequest request : Arrays.asList(null, new ReopenCashRequest(null), new ReopenCashRequest("   "))) {
+            assertThatThrownBy(() -> cashSessionService.reopenSession(sessionId, request, "ana"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("El motivo es obligatorio.");
+        }
+        verify(cashSessionRepository, never()).lockCashOpening();
+    }
+
+    @Test
+    @DisplayName("CAJ-14: una caja que no existe responde no encontrada")
+    void reopenSession_notFound() {
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "ana"))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: una caja histórica no se reabre")
+    void reopenSession_historical_rejected() {
+        CashSession closed = closedWithDifference("0.00");
+        closed.setHistoricalImportId(UUID.randomUUID());
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(closed));
+
+        assertReopenRejectedUntouched(IllegalStateException.class, "Una caja histórica no se reabre.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: con una caja abierta se rechaza")
+    void reopenSession_withOpenSession_rejected() {
+        CashSession closed = closedWithDifference("0.00");
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(closed));
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(true);
+
+        assertReopenRejectedUntouched(IllegalStateException.class, "Ya hay una caja abierta; ciérrala antes de reabrir otra.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: con una caja posterior, aunque esté cerrada, se rechaza")
+    void reopenSession_notTheLast_rejected() {
+        CashSession closed = closedWithDifference("0.00");
+        when(cashSessionRepository.findById(sessionId)).thenReturn(Optional.of(closed));
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(false);
+        when(cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc())
+            .thenReturn(Optional.of(lastSession(151, SAT_31)));
+
+        assertReopenRejectedUntouched(IllegalStateException.class, "Solo se puede reabrir la última caja.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: reabrir con faltante devuelve el saldo de Caja, anula el ajuste y guarda lo que tenía el cierre")
+    void reopenSession_withShortage_revertsBalance() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+        FinancialTransaction adjustment = stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "7.00", "Faltante al cierre de caja #150");
+        FinancialAccount cash = stubCashAccount("150.00");
+        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(4L);
+
+        CashSessionSummaryResponse response = cashSessionService.reopenSession(sessionId, new ReopenCashRequest(" Cerrada por error "), "luis");
+
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("157.00");
+        assertThat(cash.getCurrentBalance().scale()).isEqualTo(2);
+        assertThat(adjustment.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+        assertThat(adjustment.getVoidedBy()).isEqualTo("luis");
+        assertThat(adjustment.getVoidedAt()).isNotNull();
+        assertThat(adjustment.getVoidReason()).isEqualTo("Reapertura de caja #150: Cerrada por error");
+
+        ArgumentCaptor<CashSessionReopening> reopening = ArgumentCaptor.forClass(CashSessionReopening.class);
+        verify(cashSessionReopeningRepository).saveAndFlush(reopening.capture());
+        assertThat(reopening.getValue().getCashSessionId()).isEqualTo(sessionId);
+        assertThat(reopening.getValue().getReason()).isEqualTo("Cerrada por error");
+        assertThat(reopening.getValue().getReopenedBy()).isEqualTo("luis");
+        assertThat(reopening.getValue().getReopenedAt()).isNotNull();
+        assertThat(reopening.getValue().getClosingAmount()).isEqualByComparingTo("150.00");
+        assertThat(reopening.getValue().getClosingComment()).isEqualTo("Cierre");
+        assertThat(reopening.getValue().getClosedBy()).isEqualTo("ana");
+        assertThat(reopening.getValue().getClosedAt()).isNotNull();
+        assertThat(reopening.getValue().getExpectedCash()).isEqualByComparingTo("150.00");
+        assertThat(reopening.getValue().getDifference()).isEqualByComparingTo("-7.00");
+        assertThat(reopening.getValue().getVoidedAdjustmentId()).isEqualTo(adjustment.getId());
+        verify(cashDenominationCutRepository).moveToReopening(eq(sessionId), any());
+
+        assertThat(response.status()).isEqualTo(CashSessionStatus.ABIERTA);
+        assertThat(response.sessionNumber()).isEqualTo(150L);
+        assertThat(response.operationDate()).isEqualTo(FRI_30);
+        assertThat(response.openingAmount()).isEqualByComparingTo("100.00");
+        assertThat(response.salesCount()).isEqualTo(4L);
+        assertThat(response.closingAmount()).isNull();
+        assertThat(response.closingComment()).isNull();
+        assertThat(response.closedBy()).isNull();
+        assertThat(response.closedAt()).isNull();
+        assertThat(response.difference()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-14: reabrir con sobrante baja el saldo de Caja a lo que era")
+    void reopenSession_withSurplus_revertsBalance() {
+        CashSession closed = closedWithDifference("12.50");
+        stubReopenable(closed);
+        FinancialTransaction adjustment = stubClosingAdjustment(closed, FinancialTransactionType.INGRESO_MANUAL, "12.50", "Sobrante al cierre de caja #150");
+        FinancialAccount cash = stubCashAccount("150.00");
+
+        cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "luis");
+
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("137.50");
+        assertThat(adjustment.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: la reversión puede dejar Caja en negativo, porque vuelve a lo que era")
+    void reopenSession_surplusBackToNegative_allowed() {
+        CashSession closed = closedWithDifference("30.00");
+        stubReopenable(closed);
+        stubClosingAdjustment(closed, FinancialTransactionType.INGRESO_MANUAL, "30.00", "Sobrante al cierre de caja #150");
+        FinancialAccount cash = stubCashAccount("20.00");
+
+        cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "luis");
+
+        assertThat(cash.getCurrentBalance()).isEqualByComparingTo("-10.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-14: sin diferencia no toca ningún saldo ni bloquea la cuenta")
+    void reopenSession_withoutDifference_touchesNoBalance() {
+        CashSession closed = closedWithDifference("0.00");
+        stubReopenable(closed);
+
+        CashSessionSummaryResponse response = cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "luis");
+
+        assertThat(response.status()).isEqualTo(CashSessionStatus.ABIERTA);
+        verify(financialAccountRepository, never()).findAllByIdForUpdate(any());
+        verify(financialAccountRepository, never()).save(any());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-14: el motivo largo se corta en la anulación; entero queda en la reapertura")
+    void reopenSession_longReason_cutInTheVoid() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+        FinancialTransaction adjustment = stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "7.00", "Faltante al cierre de caja #150");
+        stubCashAccount("150.00");
+        String reason = "x".repeat(500);
+
+        cashSessionService.reopenSession(sessionId, new ReopenCashRequest(reason), "luis");
+
+        assertThat(adjustment.getVoidReason()).hasSize(500);
+        ArgumentCaptor<CashSessionReopening> reopening = ArgumentCaptor.forClass(CashSessionReopening.class);
+        verify(cashSessionReopeningRepository).saveAndFlush(reopening.capture());
+        assertThat(reopening.getValue().getReason()).isEqualTo(reason);
+    }
+
+    @Test
+    @DisplayName("CAJ-14, T-14: el orden de bloqueos es apertura, ajuste, caja, cuenta")
+    void reopenSession_lockOrder() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+        FinancialTransaction adjustment = stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "7.00", "Faltante al cierre de caja #150");
+        FinancialAccount cash = stubCashAccount("150.00");
+
+        cashSessionService.reopenSession(sessionId, new ReopenCashRequest("Error"), "luis");
+
+        var order = inOrder(cashSessionRepository, financialTransactionRepository, financialAccountRepository);
+        order.verify(cashSessionRepository).lockCashOpening();
+        order.verify(cashSessionRepository).findById(sessionId);
+        order.verify(financialTransactionRepository).findByIdForUpdate(adjustment.getId());
+        order.verify(cashSessionRepository).findByIdForUpdate(sessionId);
+        order.verify(financialAccountRepository).findAllByIdForUpdate(List.of(cash.getId()));
+    }
+
+    @Test
+    @DisplayName("CAJ-14: con diferencia y sin ajuste se rechaza sin cambiar nada")
+    void reopenSession_differenceWithoutAdjustment_rejected() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+
+        assertReopenRejectedUntouched(IllegalStateException.class,
+            "El ajuste del cierre de la caja #150 no coincide con su diferencia; no se puede reabrir.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: si el monto del ajuste no calza se rechaza sin cambiar nada")
+    void reopenSession_adjustmentAmountMismatch_rejected() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+        stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "8.00", "Faltante al cierre de caja #150");
+
+        assertReopenRejectedUntouched(IllegalStateException.class,
+            "El ajuste del cierre de la caja #150 no coincide con su diferencia; no se puede reabrir.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: si el tipo del ajuste no calza se rechaza sin cambiar nada")
+    void reopenSession_adjustmentTypeMismatch_rejected() {
+        CashSession closed = closedWithDifference("-7.00");
+        stubReopenable(closed);
+        stubClosingAdjustment(closed, FinancialTransactionType.INGRESO_MANUAL, "7.00", "Faltante al cierre de caja #150");
+
+        assertReopenRejectedUntouched(IllegalStateException.class,
+            "El ajuste del cierre de la caja #150 no coincide con su diferencia; no se puede reabrir.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: sin diferencia pero con un ajuste de cierre activo se rechaza sin cambiar nada")
+    void reopenSession_adjustmentWithoutDifference_rejected() {
+        CashSession closed = closedWithDifference("0.00");
+        stubReopenable(closed);
+        stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "7.00", "Faltante al cierre de caja #150");
+
+        assertReopenRejectedUntouched(IllegalStateException.class,
+            "El ajuste del cierre de la caja #150 no coincide con su diferencia; no se puede reabrir.", closed);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: el historial ofrece reabrir solo la última caja cerrada que no es histórica")
+    void getAllSessions_onlyTheLastIsReopenable() {
+        CashSession last = lastSession(150, SAT_31);
+        last.setId(UUID.randomUUID());
+        CashSession previous = lastSession(149, FRI_30);
+        previous.setId(UUID.randomUUID());
+        CashSession historical = lastSession(90, LocalDate.of(2020, 9, 1));
+        historical.setId(UUID.randomUUID());
+        historical.setHistoricalImportId(UUID.randomUUID());
+        when(cashSessionRepository.findAllByOrderByOpenedAtDesc()).thenReturn(List.of(last, previous, historical));
+        when(cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc()).thenReturn(Optional.of(last));
+
+        assertThat(cashSessionService.getAllSessions()).extracting(CashSessionSummaryResponse::reopenable)
+            .containsExactly(true, false, false);
+    }
+
+    @Test
+    @DisplayName("CAJ-14: con una caja abierta ninguna se ofrece para reabrir")
+    void getAllSessions_withOpenSession_noneReopenable() {
+        CashSession closed = lastSession(150, SAT_31);
+        closed.setId(UUID.randomUUID());
+        when(cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)).thenReturn(true);
+        when(cashSessionRepository.findAllByOrderByOpenedAtDesc()).thenReturn(List.of(activeSession, closed));
+
+        assertThat(cashSessionService.getAllSessions()).extracting(CashSessionSummaryResponse::reopenable)
+            .containsExactly(false, false);
     }
 
     private FinancialAccount stubCashAccount(String balance) {

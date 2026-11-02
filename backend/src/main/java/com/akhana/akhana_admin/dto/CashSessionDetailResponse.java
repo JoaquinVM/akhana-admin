@@ -35,5 +35,7 @@ public record CashSessionDetailResponse(
     BigDecimal historicalOtherOutflow,
     BigDecimal historicalInternalOutflow,
     // CAJ-11: the day its sales and movements count for; openedAt is the real time it was opened
-    LocalDate operationDate
+    LocalDate operationDate,
+    // CAJ-14: its reopenings, oldest first
+    List<CashSessionReopeningResponse> reopenings
 ) {}
