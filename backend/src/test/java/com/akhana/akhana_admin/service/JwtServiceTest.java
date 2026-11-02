@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,5 +76,19 @@ class JwtServiceTest {
         String tamperedToken = token.substring(0, token.length() - 5) + "abcde";
 
         assertThat(jwtService.isTokenValid(tamperedToken, "admin")).isFalse();
+    }
+
+    @Test
+    @DisplayName("T-19: a token issued in the same millisecond as the password change stays valid; an older one does not")
+    void isIssuedBefore_ComparesAtMillisecondPrecision() {
+        String token = jwtService.generateToken(testUser);
+        Instant issuedAt = Instant.ofEpochMilli(jwtService.extractAllClaims(token).get("iatMs", Long.class));
+
+        assertThat(jwtService.isIssuedBefore(token, null)).isFalse();
+        assertThat(jwtService.isIssuedBefore(token, issuedAt.minusMillis(1))).isFalse();
+        assertThat(jwtService.isIssuedBefore(token, issuedAt)).isFalse();
+        // Same millisecond, as PostgreSQL and Instant.now() keep microseconds
+        assertThat(jwtService.isIssuedBefore(token, issuedAt.plusNanos(999_000))).isFalse();
+        assertThat(jwtService.isIssuedBefore(token, issuedAt.plusMillis(1))).isTrue();
     }
 }
