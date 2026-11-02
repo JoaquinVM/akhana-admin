@@ -6,49 +6,16 @@ const EAN = '7791234567898';
 describe('ProductBarcodesSectionComponent (CAT-10)', () => {
   let fixture: ComponentFixture<ProductBarcodesSectionComponent>;
   let emitted: string[][];
-  let now: number;
-
-  const scan = (code: string): KeyboardEvent => {
-    let last!: KeyboardEvent;
-    for (const key of [...code, 'Enter']) {
-      last = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
-      now += 10;
-      Object.defineProperty(last, 'timeStamp', { value: now });
-      document.body.dispatchEvent(last);
-    }
-    return last;
-  };
 
   beforeEach(async () => {
-    now = 1000;
     emitted = [];
     await TestBed.configureTestingModule({ imports: [ProductBarcodesSectionComponent] }).compileComponents();
     fixture = TestBed.createComponent(ProductBarcodesSectionComponent);
     fixture.componentInstance.barcodesChange.subscribe((value) => emitted.push(value));
-    fixture.componentRef.setInput('active', true);
     fixture.detectChanges();
-    TestBed.tick();
   });
 
   afterEach(() => fixture.destroy());
-
-  it('un escaneo va a la lista y su Enter no envía el formulario', () => {
-    const enter = scan(EAN);
-
-    expect(emitted).toEqual([[EAN]]);
-    expect(enter.defaultPrevented).toBe(true);
-  });
-
-  it('con el formulario cerrado no escucha al lector', () => {
-    fixture.componentRef.setInput('active', false);
-    fixture.detectChanges();
-    TestBed.tick();
-
-    const enter = scan(EAN);
-
-    expect(emitted).toEqual([]);
-    expect(enter.defaultPrevented).toBe(false);
-  });
 
   it('un código escrito se agrega con Enter, sin enviar el formulario', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('#productBarcode');
@@ -76,7 +43,7 @@ describe('ProductBarcodesSectionComponent (CAT-10)', () => {
     fixture.componentRef.setInput('barcodes', [EAN]);
     fixture.detectChanges();
 
-    scan(EAN);
+    fixture.componentInstance.add(EAN);
 
     expect(emitted).toEqual([]);
   });

@@ -778,7 +778,6 @@
       <!-- Barcodes of the product (CAT-10) -->
       @if (showBarcodes()) {
         <app-product-barcodes-section
-          [active]="isFormModalOpen() && !isDiscardConfirmOpen()"
           [barcodes]="barcodes()"
           [modified]="barcodesModified()"
           [noBarcode]="formNoBarcode()"

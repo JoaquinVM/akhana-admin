@@ -627,6 +627,50 @@ describe('ProductsComponent', () => {
   describe('códigos de barras (CAT-10)', () => {
     const EAN = '7791234567898';
 
+    const scan = (code: string): KeyboardEvent => {
+      let time = 1000;
+      let last!: KeyboardEvent;
+      for (const key of [...code, 'Enter']) {
+        last = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        time += 10;
+        Object.defineProperty(last, 'timeStamp', { value: time });
+        document.body.dispatchEvent(last);
+      }
+      return last;
+    };
+
+    it('un escaneo va a la lista y su Enter no envía el formulario', () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan(EAN);
+      scan(EAN);
+
+      expect(component.barcodes()).toEqual([EAN]);
+      expect(enter.defaultPrevented).toBe(true);
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('en un producto que no admite códigos, un escaneo avisa, no escribe y no guarda', () => {
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan(EAN);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('con el formulario cerrado no escucha al lector', () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.closeFormModal();
+      TestBed.tick();
+
+      expect(scan(EAN).defaultPrevented).toBe(false);
+    });
+
     it('sin cambios en los códigos no los envía, y el servidor los conserva', () => {
       mockProductService.updateProduct.mockReturnValue(of(mockProducts[0]));
       component.openEditModal({ ...mockProducts[0], barcodes: [EAN] });

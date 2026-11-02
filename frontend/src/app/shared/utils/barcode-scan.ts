@@ -4,6 +4,7 @@ export const SCAN_MAX_KEY_GAP_MS = 60;
 export const SCAN_MIN_DIGITS = 6;
 
 const NOT_REPLAYABLE_TYPES = new Set(['date', 'time', 'month', 'week', 'datetime-local']);
+const NOT_TYPED_IN_TYPES = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image']);
 
 /**
  * POS-15: tells a USB reader, which types like a keyboard, from a person. Digits are held back at the capture phase of
@@ -137,8 +138,9 @@ export class ScanCapture {
 
   private writeBack(digits: string): void {
     const active = this.document.activeElement;
-    const editable = (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)
-      && !active.readOnly && !active.disabled;
+    const typedIn = active instanceof HTMLTextAreaElement
+      || (active instanceof HTMLInputElement && !NOT_TYPED_IN_TYPES.has(active.type));
+    const editable = typedIn && !(active as HTMLInputElement).readOnly && !(active as HTMLInputElement).disabled;
     if (!editable) return;
     // Number fields have no selection API: this is the only way to write at the cursor, and it fires the input event
     if (!this.document.execCommand('insertText', false, digits)) {

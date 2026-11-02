@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
+import { Component, DOCUMENT, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -30,6 +30,8 @@ import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-
 import { ProductBarcodesSectionComponent } from './product-barcodes-section/product-barcodes-section.component';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
+import { canonicalBarcode } from '../../shared/utils/barcode';
+import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -72,6 +74,7 @@ export const PRODUCTS_PAGE_SIZE = 100;
 })
 export class ProductsComponent implements OnInit {
   private readonly toast = inject(ToastService);
+  private readonly document = inject(DOCUMENT);
   private readonly productService = inject(ProductService);
   private readonly categoryService = inject(CategoryService);
   private readonly supplierService = inject(SupplierService);
@@ -328,6 +331,25 @@ export class ProductsComponent implements OnInit {
     this.formVersion();
     return !this.isSpecialForm() && (!this.isKilogramForm() || this.barcodes().length > 0);
   });
+
+  // CAT-10: on the whole open form, so a scan never writes in another field or saves it, whatever the product is
+  private readonly barcodeCapture = effect((onCleanup) => {
+    if (!this.isFormModalOpen() || this.isDiscardConfirmOpen()) return;
+    const capture = new ScanCapture(this.document, (code) => this.onBarcodeScanned(code));
+    capture.install();
+    onCleanup(() => capture.uninstall());
+  });
+
+  private onBarcodeScanned(code: string): void {
+    if (!this.showBarcodes()) {
+      this.toast.error('Este producto no admite código de barras.');
+      return;
+    }
+    const barcode = canonicalBarcode(code);
+    if (!this.barcodes().includes(barcode)) {
+      this.barcodes.update((list) => [...list, barcode]);
+    }
+  }
 
   clearNoBarcodeMark(): void {
     const id = this.selectedProductId();

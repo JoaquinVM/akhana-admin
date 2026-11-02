@@ -1,11 +1,7 @@
-import { Component, DOCUMENT, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { canonicalBarcode } from '../../../shared/utils/barcode';
-import { ScanCapture } from '../../../shared/utils/barcode-scan';
 
-/**
- * CAT-10: barcodes of the product form. A scan only goes to this list: saving is always the form's button. The modal
- * projects this component even while closed, so the reader is listened to only while `active`.
- */
+// CAT-10: barcodes of the product form; the form listens to the reader and saving is always its button
 @Component({
   selector: 'app-product-barcodes-section',
   standalone: true,
@@ -13,9 +9,6 @@ import { ScanCapture } from '../../../shared/utils/barcode-scan';
   styleUrls: ['./product-barcodes-section.component.css']
 })
 export class ProductBarcodesSectionComponent {
-  private readonly document = inject(DOCUMENT);
-
-  readonly active = input<boolean>(false);
   readonly barcodes = input<string[]>([]);
   readonly modified = input<boolean>(false);
   readonly noBarcode = input<boolean>(false);
@@ -26,15 +19,6 @@ export class ProductBarcodesSectionComponent {
 
   readonly typed = signal<string>('');
   readonly canAdd = computed(() => this.typed().trim().length > 0);
-
-  constructor() {
-    effect((onCleanup) => {
-      if (!this.active()) return;
-      const capture = new ScanCapture(this.document, (code) => this.add(code));
-      capture.install();
-      onCleanup(() => capture.uninstall());
-    });
-  }
 
   add(code: string): void {
     const barcode = canonicalBarcode(code);

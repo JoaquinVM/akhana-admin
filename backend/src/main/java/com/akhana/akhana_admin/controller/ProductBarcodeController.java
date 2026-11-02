@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.controller;
 import com.akhana.akhana_admin.dto.BarcodePendingResponse;
 import com.akhana.akhana_admin.dto.ProductBarcodeRequest;
 import com.akhana.akhana_admin.dto.ProductResponse;
+import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.ProductBarcodeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,16 +41,21 @@ public class ProductBarcodeController {
             @PathVariable UUID id,
             @Valid @RequestBody ProductBarcodeRequest request,
             Authentication authentication) {
-        return ResponseEntity.ok(barcodeService.addBarcode(id, request.barcode(), authentication.getName()));
+        return ResponseEntity.ok(barcodeService.addBarcode(id, request.barcode(), username(authentication)));
     }
 
     @PutMapping("/{id}/no-barcode")
     public ResponseEntity<ProductResponse> markNoBarcode(@PathVariable UUID id, Authentication authentication) {
-        return ResponseEntity.ok(barcodeService.markNoBarcode(id, authentication.getName()));
+        return ResponseEntity.ok(barcodeService.markNoBarcode(id, username(authentication)));
     }
 
     @DeleteMapping("/{id}/no-barcode")
     public ResponseEntity<ProductResponse> clearNoBarcode(@PathVariable UUID id, Authentication authentication) {
-        return ResponseEntity.ok(barcodeService.clearNoBarcode(id, authentication.getName()));
+        return ResponseEntity.ok(barcodeService.clearNoBarcode(id, username(authentication)));
+    }
+
+    // The principal is our User, whose toString is not its name
+    private static String username(Authentication authentication) {
+        return authentication.getPrincipal() instanceof User user ? user.getUsername() : authentication.getName();
     }
 }

@@ -53,7 +53,7 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
   (<código>).» y no se guarda.
 - **Cuando** se quiere guardar un sexto código **entonces** «Un producto admite hasta 5 códigos de barras.»
 - **Cuando** el producto se vende por kilo o es especial **entonces** el formulario no ofrece códigos y el servidor
-  rechaza: «Este producto no admite código de barras.»
+  rechaza: «Este producto no admite código de barras.» Un escaneo en ese formulario muestra ese aviso, sin escribir en ningún campo ni guardar.
 - **Cuando** un producto con códigos pasa a venderse por kilo **entonces** «Quita sus códigos de barras para venderlo por
   kilo.»
 - **Cuando** se quita un código **entonces** se desactiva, no se borra (RG-01), con quién y cuándo. Otro producto puede

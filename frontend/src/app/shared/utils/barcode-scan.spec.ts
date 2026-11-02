@@ -196,6 +196,21 @@ describe('ScanCapture (POS-15)', () => {
     expect(execCommand).not.toHaveBeenCalled();
   });
 
+  it('un dígito con foco en una casilla no le escribe nada', () => {
+    execCommand.mockReturnValue(false);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    document.body.appendChild(checkbox);
+    checkbox.focus();
+
+    press(checkbox, '5');
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
+
+    expect(checkbox.value).toBe('on');
+    expect(execCommand).not.toHaveBeenCalled();
+    checkbox.remove();
+  });
+
   it('si no se puede escribir en el cursor, agrega al valor y avisa al campo', () => {
     execCommand.mockReturnValue(false);
     const text = document.createElement('input');
