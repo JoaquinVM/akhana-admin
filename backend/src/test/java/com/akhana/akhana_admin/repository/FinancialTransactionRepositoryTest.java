@@ -71,9 +71,9 @@ class FinancialTransactionRepositoryTest {
                 UUID.class, "IT efectivo " + UUID.randomUUID().toString().substring(0, 8));
         // Closed so it never collides with a real open session; rolled back at the end
         UUID session = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', CURRENT_DATE) RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', '2001-07-01') RETURNING id", UUID.class);
         UUID otherSession = jdbc.queryForObject(
-                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', CURRENT_DATE) RETURNING id", UUID.class);
+                "INSERT INTO cash_sessions (status, opening_amount, opened_by, operation_date) VALUES ('CERRADA', 100, 'it-repo', '2001-07-02') RETURNING id", UUID.class);
 
         insert("GASTO_MANUAL", caja, null, "40.00", "ACTIVO", session);
         insert("GASTO_MANUAL", caja, null, "15.00", "ANULADO", session);
