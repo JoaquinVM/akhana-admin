@@ -1,0 +1,59 @@
+.photo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.photo-section-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.photo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.photo-actions label {
+  cursor: pointer;
+}
+
+.photo-actions label.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.photo-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.text-muted-sm {
+  font-size: 0.8rem;
+  color: #64748b;
+}

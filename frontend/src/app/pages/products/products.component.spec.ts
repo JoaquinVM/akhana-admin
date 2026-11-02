@@ -8,6 +8,7 @@ import { Product } from '../../core/product/models/product.models';
 import { Category } from '../../core/category/models/category.models';
 import { Supplier } from '../../core/supplier/models/supplier.models';
 import { Tag } from '../../core/tag/models/tag.models';
+import { ProductPhotoService } from '../../core/product/product-photo.service';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -18,6 +19,7 @@ describe('ProductsComponent', () => {
   let mockCategoryService: any;
   let mockSupplierService: any;
   let mockTagService: any;
+  let mockPhotoService: any;
 
   const mockCategories: Category[] = [
     {
@@ -164,6 +166,13 @@ describe('ProductsComponent', () => {
       deleteProduct: vi.fn().mockReturnValue(of(null))
     };
 
+    mockPhotoService = {
+      getThumbnail: vi.fn().mockReturnValue(of(new Blob(['x']))),
+      getImage: vi.fn().mockReturnValue(of(new Blob(['x']))),
+      upload: vi.fn(),
+      remove: vi.fn()
+    };
+
     mockCategoryService = {
       getCategories: vi.fn().mockReturnValue(of(mockCategories))
     };
@@ -180,6 +189,7 @@ describe('ProductsComponent', () => {
       imports: [ProductsComponent],
       providers: [
         { provide: ProductService, useValue: mockProductService },
+        { provide: ProductPhotoService, useValue: mockPhotoService },
         { provide: CategoryService, useValue: mockCategoryService },
         { provide: SupplierService, useValue: mockSupplierService },
         { provide: TagService, useValue: mockTagService }
@@ -510,5 +520,76 @@ describe('ProductsComponent', () => {
     component.searchTerm.set('producto 1');
     fixture.detectChanges();
     expect(component.visibleCount()).toBe(100);
+  });
+
+  describe('foto del producto (CAT-12)', () => {
+    const withPhoto = (): Product[] => [
+      { ...mockProducts[0], photoId: 'photo-1' },
+      { ...mockProducts[1], photoId: null },
+      { ...mockProducts[2], photoId: null }
+    ];
+
+    it('el filtro «Sin foto» se combina con el estado y la búsqueda, y el contador los cuenta', () => {
+      component.products.set(withPhoto());
+      component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+      fixture.detectChanges();
+      expect(component.filteredProducts().map((p) => p.id)).toEqual(['prod-2', 'prod-1']);
+
+      const pill = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('.filter-pill'))
+        .find((button) => button.textContent?.includes('Sin foto'))!;
+      pill.click();
+      fixture.detectChanges();
+
+      expect(component.filteredProducts().map((p) => p.id)).toEqual(['prod-2']);
+      expect(fixture.nativeElement.querySelector('.total-counter').textContent).toContain('1 producto encontrado');
+
+      component.selectedStatusFilter.set('ACTIVO');
+      expect(component.filteredProducts()).toEqual([]);
+
+      component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+      component.searchTerm.set('matcha');
+      expect(component.filteredProducts()).toEqual([]);
+    });
+
+    it('cada fila muestra su miniatura o «Sin foto»', () => {
+      component.products.set(withPhoto());
+      component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+      fixture.detectChanges();
+
+      const rows = fixture.nativeElement.querySelectorAll('tbody app-product-photo-thumb');
+      expect(rows.length).toBe(2);
+      expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('Sin foto');
+    });
+
+    it('al crear pide guardar primero; al editar muestra la sección y actualiza el listado sin recargar', () => {
+      component.products.set(withPhoto());
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-product-photo-section').textContent)
+        .toContain('Guarda el producto para agregar la foto.');
+      component.closeFormModal();
+
+      component.openEditModal(component.products()[1]);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-product-photo-section').textContent).toContain('Agregar foto');
+
+      mockProductService.getProducts.mockClear();
+      component.onPhotoChange('photo-9');
+
+      expect(component.products()[1].photoId).toBe('photo-9');
+      expect(component.selectedProductPhotoId()).toBe('photo-9');
+      expect(mockProductService.getProducts).not.toHaveBeenCalled();
+    });
+
+    it('cambiar la foto no cuenta como cambio sin guardar del formulario', () => {
+      component.products.set(withPhoto());
+      component.openEditModal(component.products()[1]);
+      component.onPhotoChange('photo-9');
+
+      component.attemptCloseForm();
+
+      expect(component.isDiscardConfirmOpen()).toBe(false);
+      expect(component.isFormModalOpen()).toBe(false);
+    });
   });
 });

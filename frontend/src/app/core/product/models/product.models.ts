@@ -68,6 +68,8 @@ export interface Product {
   specialType?: ProductSpecialType | null;
   ownerCreditorId?: string | null;
   ownerCreditorName?: string | null;
+  // CAT-12: reference to the active photo; the image is requested apart
+  photoId?: string | null;
 }
 
 export interface ProductRequest {
