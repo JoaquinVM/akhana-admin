@@ -56,6 +56,8 @@ en ese momento (`buy_price`), y subtotal = cantidad × costo. Total = suma de l�
 - **Cuando** se registra un consumo **entonces** no exige caja abierta: no mueve dinero.
 - **Cuando** no se indica fecha **entonces** se toma hoy (hora de Bolivia); se puede elegir una fecha anterior
   para anotar consumos atrasados, pero no una futura: «La fecha del consumo no puede ser futura.»
+- **Cuando** se registra un consumo con una caja de un día anterior abierta (CAJ-12) **entonces** la fecha propuesta
+  es el día de esa caja, y se puede cambiar. Sin caja abierta, o con la caja de hoy, propone hoy.
 - **Cuando** el consumo no tiene líneas **entonces** se rechaza: «El consumo debe tener al menos una línea.»
 - **Cuando** el mismo producto se agrega dos veces **entonces** se suma la cantidad en una línea, como en el POS
   (POS-01).
@@ -217,6 +219,8 @@ Consumos (se puede construir ya):
   presentaciones por peso, detalle, anulación), menú POS → Consumos.
 - [x] CON-05: precio de venta en el buscador y en la tabla de `consumption-form-modal`, solo frontend. Pruebas en
   `consumption-form-modal.component.spec.ts`.
+- [x] CAJ-12: fecha propuesta con la caja abierta de un día anterior, en `consumption-form-modal`, solo frontend.
+  Pruebas en `consumption-form-modal.component.spec.ts`.
 
 Hecho el 25-10-2026: migración `V11__consumptions.sql` (estados `REGISTRADO` y `ANULADO`; «Para quién» en
 `consumed_for`). El texto del listado busca en número, para quién, comentario y nombre de producto de las líneas.

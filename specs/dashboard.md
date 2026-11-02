@@ -55,6 +55,8 @@ Botones **Hoy · Semana · Mes · Rango**. Semana es del lunes a hoy; Rango mues
 - Línea de ventas normales por día del período (continua) y del período anterior (punteada), en la misma escala.
   Cada día del período aparece, con 0 los días sin ventas. Al pasar el mouse (o tocar en el celular) se ven el día,
   sus ventas y utilidad, y las ventas del día equivalente del período anterior. «Ver tabla» muestra los números.
+- **Cuando** se abre «Ver tabla» y un día está marcado sin atención (CAJ-13) **entonces** ese día dice «Sin atención»,
+  con su comentario, distinto de un día sin ventas. El gráfico lo sigue mostrando en 0.
 - **Cuando** el 02-10 hay ventas por Bs 100,00 con costo Bs 60,00 y el 01 y el 03 no hay **entonces** la línea
   tiene 3 puntos: 0, 100,00 (utilidad 40,00) y 0.
 - **Cómo se cobró**: suma de `amount_cash`, `amount_qr` y `credit_amount` de las ventas activas del período, de
@@ -85,6 +87,8 @@ No depende del período.
 
 - Caja actual: abierta (número, quién y cuándo abrió, caja inicial, ventas y efectivo esperado, como el POS) o
   «Cerrada».
+- **Cuando** la caja abierta no es de hoy (CAJ-12) **entonces** Caja actual muestra «Día 28/10 · abierta el 30/10»,
+  también si se abrió ese mismo día («Día 02/11 · abierta el 02/11»). Si es de hoy, no se muestra marca.
 - Saldos: cada cuenta activa (Caja, Bisa, Efectivo) con su color y el total consolidado, como Finanzas → Resumen
   (FIN-09).
 - Deudas: por pagar a proveedores (saldo de los pedidos, COM-08), por devolver a personas (DEU-01) y por cobrar a
@@ -94,7 +98,7 @@ No depende del período.
 
 - **Cuando** una venta o un gasto de la caja del 31/10 se cargó pasada la medianoche **entonces** cuenta el 31/10
   en los indicadores, ventas por día, cómo se cobró, top de productos y proveedores y gastos por categoría. El
-  dashboard no lleva marca. La caja abierta de «Ahora mismo» no cambia.
+  dashboard no lleva marca en esos números. La caja abierta de «Ahora mismo» lleva la suya si no es de hoy (DSH-04).
 - Cobro y top de productos filtran por `sales.operation_date`; lo demás sale de los reportes, que ya usan el día de
   operación. Prueba en `DashboardRepositoryTest` (contra PostgreSQL) y `DashboardServiceTest`.
 
@@ -116,4 +120,7 @@ el bloque «ahora». Todo se suma en la base y en el servidor; al navegador lleg
 - [x] Revisión en el navegador con la base local (30-10-2026): del 1 al 30-10 ventas, utilidad, tickets, al costo y
   consumos iguales a Reportes → Totales; sin scroll horizontal a 375 px. Con el historial, el cobro solo sumaba lo
   del POS: se agregó el total sin dato de cobro de los días migrados.
+- [x] Días sin atención en «Ver tabla» y marca de la caja de otro día (CAJ-12, CAJ-13): `noAttentionDays` del período
+  y `now.cash.operationDate` en la respuesta. Pruebas en `DashboardServiceTest`, `CashReopenIntegrationTest` y
+  `dashboard.component.spec.ts`.
 - [ ] Revisar en producción con el dueño que Ventas y Utilidad del mes coincidan con Reportes → Totales.
