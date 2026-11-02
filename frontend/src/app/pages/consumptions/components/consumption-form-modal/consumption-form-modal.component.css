@@ -168,6 +168,16 @@
     flex-wrap: wrap;
   }
 
+  .match-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .match-sell-price {
+    text-align: left;
+  }
+
   .totals {
     flex-wrap: wrap;
     justify-content: flex-start;

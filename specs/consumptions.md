@@ -183,7 +183,9 @@ detalle de un consumo no lo muestran.
   la izquierda y «Bs 90,00/kg» a la derecha.
 - **Cuando** se agrega una línea **entonces** la columna «Precio de venta», después de «Subtotal», separada con una línea
   y resaltada, muestra el precio de una unidad sin multiplicar por la cantidad: «Bs 4,00» por unidad y «Bs 90,00/kg» con
-  «Otro peso».
+  «Otro peso». La unidad y el peso van debajo de la cantidad, para que las casillas queden alineadas.
+- **Cuando** la pantalla mide 720 px o menos **entonces** el precio del resultado del buscador va debajo del texto, para
+  no apretar el nombre.
 - **Cuando** la línea es una presentación **entonces** muestra «Bs X c/u» con el precio de venta de esa presentación, el
   que cobra el POS: su precio fijo, o peso × precio por kilo. «Costo unitario» sigue por kilo.
 - **Cuando** el producto tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
