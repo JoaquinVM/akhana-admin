@@ -32,6 +32,10 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	// Excel export of the reports (FIN-10)
 	implementation 'org.apache.poi:poi-ooxml:5.4.1'
+	// Product photos (CAT-12): WebP and CMYK JPEG, which the JDK cannot read, and the EXIF orientation
+	implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.13.0'
+	implementation 'com.twelvemonkeys.imageio:imageio-webp:3.13.0'
+	implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'

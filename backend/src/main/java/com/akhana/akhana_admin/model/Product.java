@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -89,6 +90,10 @@ public class Product {
     @BatchSize(size = 100)
     @Builder.Default
     private List<ProductPresentation> presentations = new ArrayList<>();
+
+    // CAT-12: read in the same query as the product, so the catalog does not load photos one by one
+    @Formula("(SELECT pp.id FROM product_photos pp WHERE pp.product_id = id AND pp.active)")
+    private UUID activePhotoId;
 
     // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)

@@ -2,6 +2,8 @@ package com.akhana.akhana_admin.exception;
 
 import com.akhana.akhana_admin.dto.ErrorResponse;
 import com.akhana.akhana_admin.service.ProductImportService;
+import com.akhana.akhana_admin.service.ProductPhotoService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -68,12 +70,23 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.badRequest(ex.getMessage()));
     }
 
-    // Only the product import uploads files (CAT-06)
+    // The product import (CAT-06) and the product photos (CAT-12) upload files, each with its own message
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex,
+                                                             HttpServletRequest request) {
+        String message = request.getRequestURI().endsWith("/photo")
+            ? ProductPhotoService.INVALID_FILE
+            : ProductImportService.INVALID_FILE;
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponse.badRequest(ProductImportService.INVALID_FILE));
+            .body(ErrorResponse.badRequest(message));
+    }
+
+    @ExceptionHandler(ProductPhotoStorageException.class)
+    public ResponseEntity<ErrorResponse> handleProductPhotoStorage(ProductPhotoStorageException ex) {
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse.internalError(ex.getMessage()));
     }
 
     // One message per field (the first broken rule), so a blank field does not also report its length

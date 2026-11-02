@@ -63,6 +63,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         MigrationController.class,
         ProductController.class,
         ProductImportController.class,
+        ProductPhotoController.class,
         PurchaseController.class,
         QuickProductController.class,
         ReportController.class,
@@ -165,6 +166,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private MigrationService migrationService;
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductImportService productImportService;
+    @MockitoBean private ProductPhotoService productPhotoService;
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private QuickProductService quickProductService;
     @MockitoBean private DashboardService dashboardService;
@@ -225,6 +227,11 @@ class EndpointAuthorizationTest {
                 // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
                 both(post, "/api/products/import/preview", XLSX_FILE),
                 both(post, "/api/products/import", XLSX_FILE),
+                // Foto del producto con el permiso de la pantalla (CAT-12)
+                both(post, "/api/products/" + ID + "/photo", XLSX_FILE),
+                both(delete, "/api/products/" + ID + "/photo?expectedPhotoId=" + ID, null),
+                both(get, "/api/products/" + ID + "/photo/" + ID + "/image", null),
+                both(get, "/api/products/" + ID + "/photo/" + ID + "/thumbnail", null),
                 both(get, "/api/categories", null),
                 both(get, "/api/categories/" + ID, null),
                 both(post, "/api/categories", NAME_COLOR),
