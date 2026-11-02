@@ -343,4 +343,45 @@ describe('DashboardComponent instalado (MOV-02)', () => {
     slowToday.next(dashboard);
     expect(fixture.componentInstance.dashboard()).toEqual(month);
   });
+
+  it('MOV-03: una petición pendiente al salir del Dashboard no recarga la pantalla a la que se fue', () => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    const pending = new Subject<Dashboard>();
+    getDashboard.mockReturnValue(pending);
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.destroy();
+    pending.error(new HttpErrorResponse({ status: 0 }));
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('MOV-03: si al volver la petición queda colgada, a los 10 s recarga', () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, getDashboard } = create(true);
+      const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+      getDashboard.mockReturnValue(new Subject<Dashboard>());
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(9999);
+      expect(reload).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(reload).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('MOV-03: instalada, sin conexión al cargar dice qué revisar; en el navegador sigue el mensaje de siempre', () => {
+    const installed = create(true);
+    installed.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    installed.fixture.componentInstance.selectPeriod('WEEK');
+    expect(installed.fixture.componentInstance.errorMessage()).toContain('Tailscale');
+    installed.fixture.destroy();
+
+    TestBed.resetTestingModule();
+    const browser = create(false);
+    browser.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    browser.fixture.componentInstance.selectPeriod('WEEK');
+    expect(browser.fixture.componentInstance.errorMessage()).toBe('Error al cargar el dashboard. Intente nuevamente.');
+  });
 });

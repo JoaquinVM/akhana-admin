@@ -42,8 +42,10 @@ caja no cambia. En un Android, el Chrome normal comparte el worker una vez regis
 - **Cuando** se abre la app sin internet o con Tailscale apagado **entonces** muestra «No se pudo conectar. Revisa tu
   internet y que Tailscale esté encendido.» con un botón **Reintentar**.
 - **Cuando** el servidor responde 502, 503 o 504, o no responde en 10 s **entonces** muestra la misma página.
-- **Cuando** el Dashboard vuelve de segundo plano y no llega al servidor (sin conexión, 502, 503 o 504) **entonces**
-  recarga la página para mostrar lo mismo, sin pasar por un Dashboard vacío.
+- **Cuando** el Dashboard vuelve de segundo plano y no llega al servidor (sin conexión, 502, 503, 504 o sin respuesta en
+  10 s) **entonces** recarga la página para mostrar lo mismo. Si ya se salió del Dashboard, no recarga nada.
+- **Cuando** en la app instalada el Dashboard no llega al servidor al entrar o al elegir un período, o solo falla la API
+  con el resto arriba **entonces** dice el mismo texto en su mensaje de error, sin botón **Reintentar**.
 - **Cuando** se toca **Reintentar** con la conexión de vuelta **entonces** abre la pantalla que se estaba pidiendo.
 - **Cuando** se pide cualquier otra cosa (`/api`, bundles, otros orígenes) **entonces** el worker no interviene.
 - **Cuando** se publica una versión nueva **entonces** la app la usa al abrirse: el worker guarda solo `offline.html` y
@@ -53,8 +55,9 @@ caja no cambia. En un Android, el Chrome normal comparte el worker una vez regis
 Límites conocidos:
 
 - La página propia aparece desde la segunda apertura: la primera, ya instalada y con conexión, registra el worker.
-- En las demás pantallas, con la app ya abierta y sin conexión, no se muestra esta página: cada una muestra su error,
-  como en el navegador. No se recargan solas para no perder lo que se esté escribiendo, como una venta en el POS.
+- En las demás pantallas, con la app ya abierta y sin conexión, no se muestra esta página: se comportan como en el
+  navegador. No se recargan solas para no perder lo que se esté escribiendo, como una venta en el POS. Al entrar al POS
+  sin conexión dice «Caja cerrada» aunque la caja esté abierta, igual que en el navegador.
 - Una app retomada de segundo plano sigue con la versión que tenía hasta que se cierre o el sistema la cierre: la versión
   nueva llega al abrirla de nuevo.
 - En iPhone el sistema puede borrar la caché de una app que no se usa; entonces vuelve el error del navegador hasta la
