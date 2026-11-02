@@ -140,7 +140,7 @@ class PurchaseServiceTest {
             .id(UUID.randomUUID())
             .purchaseNumber("PED-000001")
             .supplier(supplier)
-            .purchaseDate(LocalDate.now())
+            .purchaseDate(LocalDate.now(ZoneId.of("America/La_Paz")))
             .itemsTotal(new BigDecimal(itemsTotal))
             .shippingCost(new BigDecimal("0.00"))
             .totalAmount(new BigDecimal(itemsTotal))
