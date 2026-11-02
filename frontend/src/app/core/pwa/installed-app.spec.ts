@@ -155,9 +155,9 @@ describe('service worker (MOV-03, CA-09, CA-11)', () => {
     }
   });
 
-  it('un error de la app (404, 500) no se confunde con estar sin conexión', async () => {
-    const notFound = new Response('', { status: 500 });
-    networkFetch.mockResolvedValue(notFound);
-    expect(await intercept('/', 'navigate')).toBe(notFound);
+  it.each([404, 500])('un error de la app (%i) no se confunde con estar sin conexión', async status => {
+    const appError = new Response('', { status });
+    networkFetch.mockResolvedValue(appError);
+    expect(await intercept('/', 'navigate')).toBe(appError);
   });
 });

@@ -1,6 +1,8 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardRankRow } from '../../core/dashboard/models/dashboard.models';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
@@ -19,6 +21,8 @@ const CHART_WIDTH = 640;
 const CHART_HEIGHT = 200;
 const CHART_TOP = 12;
 const CHART_BOTTOM = 188;
+// The server cannot be reached: no network, Tailscale off or a gateway error (MOV-03, like public/sw.js)
+const CONNECTION_ERRORS = [0, 502, 503, 504];
 
 /** Today in the store's time zone as YYYY-MM-DD, like the store days of the server. */
 export function storeToday(now: Date = new Date()): string {
@@ -60,6 +64,7 @@ export class DashboardComponent implements OnInit {
   private readonly dashboardService = inject(DashboardService);
   private readonly document = inject(DOCUMENT);
   readonly installed = inject(INSTALLED_APP);
+  private loadSubscription?: Subscription;
 
   readonly periods: { value: DashboardPeriod; label: string }[] = [
     { value: 'TODAY', label: 'Hoy' },
@@ -150,19 +155,27 @@ export class DashboardComponent implements OnInit {
   // MOV-02: a phone resumes the app without opening it again, and it must not keep showing an old «Ahora mismo»
   @HostListener('document:visibilitychange')
   onVisibilityChange(): void {
-    if (this.installed && this.document.visibilityState === 'visible' && this.period() !== 'RANGE') {
-      this.selectPeriod(this.period());
+    if (this.installed && this.document.visibilityState === 'visible') {
+      const period = this.period();
+      if (period !== 'RANGE') {
+        this.setRange(period);
+      }
+      this.load(true);
     }
   }
 
   selectPeriod(period: DashboardPeriod): void {
     this.period.set(period);
     if (period !== 'RANGE') {
-      const range = periodRange(period, storeToday());
-      this.fromDate.set(range.from);
-      this.toDate.set(range.to);
+      this.setRange(period);
       this.load();
     }
+  }
+
+  private setRange(period: Exclude<DashboardPeriod, 'RANGE'>): void {
+    const range = periodRange(period, storeToday());
+    this.fromDate.set(range.from);
+    this.toDate.set(range.to);
   }
 
   onFromDate(value: string): void {
@@ -175,11 +188,13 @@ export class DashboardComponent implements OnInit {
     this.load();
   }
 
-  load(): void {
+  load(resuming = false): void {
+    // A slower answer of a previous period must not replace the one just chosen
+    this.loadSubscription?.unsubscribe();
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.hoverIndex.set(null);
-    this.dashboardService.getDashboard({ from: this.fromDate() || null, to: this.toDate() || null }).subscribe({
+    this.loadSubscription = this.dashboardService.getDashboard({ from: this.fromDate() || null, to: this.toDate() || null }).subscribe({
       next: dashboard => {
         this.dashboard.set(dashboard);
         this.fromDate.set(dashboard.from);
@@ -187,11 +202,20 @@ export class DashboardComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: err => {
+        // MOV-03: opening the page again lets the service worker show what to check
+        if (resuming && err instanceof HttpErrorResponse && CONNECTION_ERRORS.includes(err.status)) {
+          this.reloadPage();
+          return;
+        }
         this.dashboard.set(null);
         this.errorMessage.set(err?.error?.message || 'Error al cargar el dashboard. Intente nuevamente.');
         this.isLoading.set(false);
       }
     });
+  }
+
+  reloadPage(): void {
+    this.document.location.reload();
   }
 
   readonly changePercent = changePercent;

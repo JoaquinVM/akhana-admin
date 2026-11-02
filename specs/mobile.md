@@ -30,9 +30,9 @@ La app se reconoce instalada con `display-mode: standalone` y, en iPhone, `navig
 - **Cuando** abre Admin en el navegador, en la PC o en el celular **entonces** sigue en **Mes** y con el orden de siempre
   (`dashboard.md`).
 - **Cuando** elige **Semana** o **Mes** en la app **entonces** ve los mismos números que en el navegador (DSH-01).
-- **Cuando** la app instalada vuelve de segundo plano **entonces** recarga el período elegido, salvo en **Rango**: el
-  teléfono retoma la app sin abrirla de nuevo y no debe seguir mostrando un «Ahora mismo» viejo. Si el token venció,
-  esa recarga lleva al login.
+- **Cuando** la app instalada vuelve de segundo plano **entonces** el Dashboard recarga el período elegido: el teléfono
+  retoma la app sin abrirla de nuevo y no debe seguir mostrando un «Ahora mismo» viejo. Si el token venció, esa recarga
+  lleva al login.
 
 ## MOV-03 · Sin conexión
 
@@ -42,6 +42,8 @@ caja no cambia. En un Android, el Chrome normal comparte el worker una vez regis
 - **Cuando** se abre la app sin internet o con Tailscale apagado **entonces** muestra «No se pudo conectar. Revisa tu
   internet y que Tailscale esté encendido.» con un botón **Reintentar**.
 - **Cuando** el servidor responde 502, 503 o 504, o no responde en 10 s **entonces** muestra la misma página.
+- **Cuando** el Dashboard vuelve de segundo plano y no llega al servidor (sin conexión, 502, 503 o 504) **entonces**
+  recarga la página para mostrar lo mismo, sin pasar por un Dashboard vacío.
 - **Cuando** se toca **Reintentar** con la conexión de vuelta **entonces** abre la pantalla que se estaba pidiendo.
 - **Cuando** se pide cualquier otra cosa (`/api`, bundles, otros orígenes) **entonces** el worker no interviene.
 - **Cuando** se publica una versión nueva **entonces** la app la usa al abrirse: el worker guarda solo `offline.html` y
@@ -51,7 +53,10 @@ caja no cambia. En un Android, el Chrome normal comparte el worker una vez regis
 Límites conocidos:
 
 - La página propia aparece desde la segunda apertura: la primera, ya instalada y con conexión, registra el worker.
-- Con la app ya abierta y sin conexión no se muestra esta página: cada pantalla muestra su error, como en el navegador.
+- En las demás pantallas, con la app ya abierta y sin conexión, no se muestra esta página: cada una muestra su error,
+  como en el navegador. No se recargan solas para no perder lo que se esté escribiendo, como una venta en el POS.
+- Una app retomada de segundo plano sigue con la versión que tenía hasta que se cierre o el sistema la cierre: la versión
+  nueva llega al abrirla de nuevo.
 - En iPhone el sistema puede borrar la caché de una app que no se usa; entonces vuelve el error del navegador hasta la
   siguiente apertura con conexión.
 
