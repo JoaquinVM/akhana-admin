@@ -1,8 +1,9 @@
 # Reportes
 
 Detalle del módulo Reportes de la V1 (FIN-10 en la sección 3.8 y CON-03 en la 3.5 de `specs/requirements.md`),
-con los mismos IDs. Reemplaza las tablas dinámicas de *Akhana Recaudaciones*; en la fase 2 cada reporte se compara
-con su tabla durante dos semanas (sección 2.3).
+con los mismos IDs. Reemplaza las tablas dinámicas de *Akhana Recaudaciones*. La comparación de cada reporte con su
+tabla durante dos semanas se canceló (P-53); las demás menciones a la fase 2 quedan solo como referencia de las
+diferencias con la planilla.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (kilos en los productos por peso,
 CAT-08). Los días son días de la tienda (America/La_Paz), como en el historial de ventas (POS-09). Los reportes
@@ -251,8 +252,5 @@ hasta hoy.
 - [x] Tercera revisión (29-10-2026): los cinco `.xlsx` del 01-07 al 29-10 de la base local (con el historial) se
   abrieron y compararon con la respuesta de la pantalla: mismos totales, costo, utilidad, margen, días, neto y
   consumos.
-- [ ] Fase 2: comparar dos semanas con las tablas dinámicas.
 - [x] Regalos y roturas a la venta al costo en la migración (P-39, 28-10-2026): la comparación de la fase 2 ya no
   los suma aparte como consumos.
-- [ ] En la fase 2, revisar que ventas por día del 25-08 y del 21-09 den el Total de la planilla (normales + al
-  costo).

@@ -86,8 +86,6 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 ### 2.3 Criterio para dejar las planillas
 
 - Datos migrados: productos, saldos de cuentas al día del corte y todo el historial de las dos planillas (FIN-11). La única deuda inicial con personas es lo vendido de Mami y todavía no pagado (POS-13, P-42).
-- Dos semanas en paralelo con las planillas: cada cierre diario da la misma caja final en ambos.
-- Los reportes de esas dos semanas coinciden con las tablas dinámicas (ventas por día y por proveedor, movimientos por categoría).
 - Respaldo diario de la base funcionando y con una restauración probada.
 
 ## 3. Requerimientos por versión
@@ -336,17 +334,17 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
 | P-52 | ¿Para qué día cuentan lo cargado pasada la medianoche y el cierre del día siguiente, y qué pasa con lo ya registrado? | Para el día de operación de su caja, el de su apertura; lo ya registrado conserva su día, salvo las cajas #146, #147 y #148, que pasan una sola vez al 28, 29 y 30/10. No hay forma de cambiar el día de una caja (CAJ-11). |
+| P-53 | ¿Se hacen las dos semanas en paralelo con las planillas antes de dejarlas? | No; la tienda usa solo el sistema. |
 
 ## 6. Hoja de ruta
 
-Las planillas se dejan al terminar la fase 2, después de dos semanas en paralelo; el inventario (V2) y las extensiones (V3) llegan después sin frenar la operación. Ninguna fase avanza sin pasar su compuerta, probada con datos reales de la tienda.
+Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin periodo en paralelo (P-53); el inventario (V2) y las extensiones (V3) llegan después sin frenar la operación. Ninguna fase avanza sin pasar su compuerta, probada con datos reales de la tienda.
 
 1. ✅ **Fase 0 · Decisiones y base técnica** — Revisión del código, Flyway, secretos, roles (T-00 a T-19, USR-05).
    - Compuerta pendiente: servidor de producción listo (NF-01, NF-02, NF-05).
 2. 🟡 **Fase 1 · V1** — Compras, deudas, consumos, venta por peso, caja, historial, reportes, importación y migración. Construida.
    - Compuerta: productos, saldos y todo el historial de las dos planillas migrados en producción.
-3. **Fase 2 · Dos semanas en paralelo con las planillas** — Se registra todo en ambos lados.
-   - Compuerta: 14 cierres seguidos iguales y reportes que coinciden con las tablas dinámicas.
+3. ❌ **Fase 2 · Dos semanas en paralelo con las planillas** — Cancelada por decisión de Joaquín: la tienda usa solo el sistema (P-53).
 4. **Fase 3 · V2: inventario** — INV-01 a INV-05, CAT-05, CAT-09, CAT-10, CON-04, COM-10, T-04. Resolver P-06, P-07, P-09, P-13 y P-33.
    - Compuerta: un conteo físico completo cuadra con el sistema.
 5. **Fase 4 · V3: extensiones** — Facturación (P-10), clientes y crédito (P-12), varias tiendas o cajas (P-01), reportes avanzados.
@@ -358,8 +356,6 @@ Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 - [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
-- [ ] Fase 2: comparar cada cierre y los reportes con las planillas durante dos semanas.
-- [ ] Reportes, fase 2: comparar dos semanas con las tablas dinámicas (`reports.md`).
 
 ### Cómo se trabaja cada módulo
 
