@@ -1,8 +1,8 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription, TimeoutError, timeout } from 'rxjs';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardRankRow } from '../../core/dashboard/models/dashboard.models';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
@@ -23,6 +23,12 @@ const CHART_TOP = 12;
 const CHART_BOTTOM = 188;
 // The server cannot be reached: no network, Tailscale off or a gateway error (MOV-03, like public/sw.js)
 const CONNECTION_ERRORS = [0, 502, 503, 504];
+const RESUME_TIMEOUT_MS = 10000;
+const CONNECTION_MESSAGE = 'No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.';
+
+function isConnectionError(err: unknown): boolean {
+  return err instanceof TimeoutError || (err instanceof HttpErrorResponse && CONNECTION_ERRORS.includes(err.status));
+}
 
 /** Today in the store's time zone as YYYY-MM-DD, like the store days of the server. */
 export function storeToday(now: Date = new Date()): string {
@@ -60,7 +66,7 @@ export function changePercent(current: number | null, previous: number | null): 
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private readonly document = inject(DOCUMENT);
   readonly installed = inject(INSTALLED_APP);
@@ -152,6 +158,11 @@ export class DashboardComponent implements OnInit {
     this.selectPeriod(this.installed ? 'TODAY' : 'MONTH');
   }
 
+  // A request still pending after leaving the Dashboard must not reload the screen the user went to (MOV-03)
+  ngOnDestroy(): void {
+    this.loadSubscription?.unsubscribe();
+  }
+
   // MOV-02: a phone resumes the app without opening it again, and it must not keep showing an old «Ahora mismo»
   @HostListener('document:visibilitychange')
   onVisibilityChange(): void {
@@ -194,7 +205,9 @@ export class DashboardComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.hoverIndex.set(null);
-    this.loadSubscription = this.dashboardService.getDashboard({ from: this.fromDate() || null, to: this.toDate() || null }).subscribe({
+    const request: Observable<Dashboard> =
+      this.dashboardService.getDashboard({ from: this.fromDate() || null, to: this.toDate() || null });
+    this.loadSubscription = (resuming ? request.pipe(timeout(RESUME_TIMEOUT_MS)) : request).subscribe({
       next: dashboard => {
         this.dashboard.set(dashboard);
         this.fromDate.set(dashboard.from);
@@ -203,12 +216,14 @@ export class DashboardComponent implements OnInit {
       },
       error: err => {
         // MOV-03: opening the page again lets the service worker show what to check
-        if (resuming && err instanceof HttpErrorResponse && CONNECTION_ERRORS.includes(err.status)) {
+        if (resuming && isConnectionError(err)) {
           this.reloadPage();
           return;
         }
         this.dashboard.set(null);
-        this.errorMessage.set(err?.error?.message || 'Error al cargar el dashboard. Intente nuevamente.');
+        this.errorMessage.set(this.installed && isConnectionError(err)
+          ? CONNECTION_MESSAGE
+          : err?.error?.message || 'Error al cargar el dashboard. Intente nuevamente.');
         this.isLoading.set(false);
       }
     });
