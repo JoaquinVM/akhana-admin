@@ -28,6 +28,7 @@ import { productForEnter, searchProducts, stopImplicitSubmit } from '../../../..
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../../../shared/components/search-select/search-select.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { QuantityStepperComponent, WEIGHT_STEP_KG } from '../../../../shared/components/quantity-stepper/quantity-stepper.component';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -66,7 +67,7 @@ export function todayIso(): string {
 @Component({
   selector: 'app-purchase-form-modal',
   standalone: true,
-  imports: [IconComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent],
+  imports: [IconComponent, QuantityStepperComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent],
   templateUrl: './purchase-form-modal.component.html',
   styleUrls: ['./purchase-form-modal.component.css']
 })
@@ -307,6 +308,33 @@ export class PurchaseFormModalComponent {
 
   onQuantityChange(index: number, value: number | string): void {
     this.updateLine(index, { quantity: Number(value) || 0 });
+  }
+
+  // COM-14: 1 by unit or 100 g by kilo, as in the POS
+  private quantityStep(line: PurchaseLineDraft): number {
+    return this.isWeighted(line.product) ? WEIGHT_STEP_KG : 1;
+  }
+
+  private quantityAfterStep(line: PurchaseLineDraft, step: number): number {
+    return Math.round(((Number(line.quantity) || 0) + step) * 1000) / 1000;
+  }
+
+  // COM-14: the − stops at the minimum; a line is only removed with its X
+  canDecrement(line: PurchaseLineDraft): boolean {
+    const remaining = this.quantityAfterStep(line, -this.quantityStep(line));
+    return this.isWeighted(line.product) ? remaining > 0 : remaining >= 1;
+  }
+
+  incrementQuantity(index: number): void {
+    const line = this.lines()[index];
+    this.updateLine(index, { quantity: this.quantityAfterStep(line, this.quantityStep(line)) });
+  }
+
+  decrementQuantity(index: number): void {
+    const line = this.lines()[index];
+    if (this.canDecrement(line)) {
+      this.updateLine(index, { quantity: this.quantityAfterStep(line, -this.quantityStep(line)) });
+    }
   }
 
   onCostChange(index: number, value: number | string): void {

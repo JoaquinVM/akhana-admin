@@ -1,0 +1,33 @@
+<div class="qty-stepper">
+  <button
+    type="button"
+    class="qty-btn"
+    title="Restar cantidad"
+    aria-label="Restar cantidad"
+    [disabled]="decrementDisabled()"
+    (click)="decrement.emit()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  </button>
+  <input
+    type="number"
+    [min]="weight() ? 0.001 : 1"
+    [step]="weight() ? 0.001 : 1"
+    class="qty-input"
+    [class.qty-input-weight]="weight()"
+    [title]="weight() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
+    [ngModel]="quantity()"
+    (ngModelChange)="quantityChange.emit($event)" />
+  <button
+    type="button"
+    class="qty-btn"
+    title="Sumar cantidad"
+    aria-label="Sumar cantidad"
+    (click)="increment.emit()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  </button>
+</div>

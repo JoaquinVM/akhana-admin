@@ -141,9 +141,13 @@
                 <span class="line-code">{{ line.product.code }}</span>
               </td>
               <td class="text-right">
-                <input type="number" class="form-control input-number" [name]="'qty-' + i"
-                       [step]="isWeighted(line.product) ? 0.001 : 1" min="0"
-                       [ngModel]="line.quantity" (ngModelChange)="onQuantityChange(i, $event)" />
+                <app-quantity-stepper
+                  [quantity]="line.quantity"
+                  [weight]="isWeighted(line.product)"
+                  [decrementDisabled]="!canDecrement(line)"
+                  (increment)="incrementQuantity(i)"
+                  (decrement)="decrementQuantity(i)"
+                  (quantityChange)="onQuantityChange(i, $event)" />
                 <span class="unit-hint">{{ isWeighted(line.product) ? 'kg' : 'u' }}</span>
               </td>
               <td class="text-right">
@@ -220,7 +224,7 @@
     <div class="form-grid form-grid-3">
       <div class="form-group">
         <label class="form-label" for="purchase-shipping">Costo de envío (Bs)</label>
-        <input id="purchase-shipping" type="number" min="0" step="0.01" class="form-control" name="shippingCost"
+        <input id="purchase-shipping" type="number" min="0" step="0.01" class="form-control no-spinner" name="shippingCost"
                [ngModel]="shippingCost()" (ngModelChange)="shippingCost.set($event)" />
         <span class="form-hint">Se registra como gasto de Transporte vinculado al pedido.</span>
       </div>
@@ -310,7 +314,7 @@
       @if (initialPaymentSource()) {
         <div class="form-group">
           <label class="form-label" for="purchase-initial-amount">Monto pagado (Bs) <span class="required-mark">*</span></label>
-          <input id="purchase-initial-amount" type="number" min="0.01" step="0.01" class="form-control"
+          <input id="purchase-initial-amount" type="number" min="0.01" step="0.01" class="form-control no-spinner"
                  name="initialPaymentAmount"
                  [ngModel]="initialPaymentAmount()" (ngModelChange)="initialPaymentAmount.set($event)" />
           <span class="form-hint">Hasta el total de las líneas, Bs {{ itemsTotal() | number:'1.2-2' }}.</span>

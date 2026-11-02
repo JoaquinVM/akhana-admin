@@ -14,36 +14,12 @@
   </div>
 
   <!-- Quantity control -->
-  <div class="qty-stepper">
-    <button
-      type="button"
-      class="qty-btn"
-      title="Restar cantidad"
-      (click)="decrement.emit()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-    </button>
-    <input
-      type="number"
-      [min]="weightLine() ? 0.001 : 1"
-      [step]="weightLine() ? 0.001 : 1"
-      class="qty-input"
-      [class.qty-input-weight]="weightLine()"
-      [title]="weightLine() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
-      [ngModel]="item().quantity"
-      (ngModelChange)="quantityChange.emit($event)" />
-    <button
-      type="button"
-      class="qty-btn"
-      title="Sumar cantidad"
-      (click)="increment.emit()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-    </button>
-  </div>
+  <app-quantity-stepper
+    [quantity]="item().quantity"
+    [weight]="weightLine()"
+    (increment)="increment.emit()"
+    (decrement)="decrement.emit()"
+    (quantityChange)="quantityChange.emit($event)" />
 
   @if (!atCost() && !item().freeName) {
     <!-- Unit discount -->

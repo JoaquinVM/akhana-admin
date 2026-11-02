@@ -141,6 +141,27 @@
   white-space: nowrap;
 }
 
+/* COM-14: wide enough for 1000 or 25.125 */
+app-quantity-stepper {
+  --qty-stepper-width: 114px;
+  --qty-input-width: 60px;
+  --qty-stepper-weight-width: 114px;
+  --qty-input-weight-width: 60px;
+  vertical-align: middle;
+}
+
+/* COM-14: no browser spinners in the shipping cost and the amount paid */
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .new-product-card {
   padding: 1rem;
   border: 1px dashed #cbd5e1;

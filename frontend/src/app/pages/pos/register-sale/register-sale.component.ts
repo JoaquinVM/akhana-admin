@@ -23,6 +23,7 @@ import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.co
 import { SaleCartComponent } from '../components/sale-cart/sale-cart.component';
 import { CartSummaryComponent } from '../components/cart-summary/cart-summary.component';
 import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineName } from './cart-item';
+import { WEIGHT_STEP_KG } from '../../../shared/components/quantity-stepper/quantity-stepper.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
@@ -30,7 +31,7 @@ import { formatBs } from '../../../shared/utils/money';
 import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
 
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
-export const WEIGHT_STEP_KG = 0.1;
+export { WEIGHT_STEP_KG };
 
 // CAT-11: a line is a product, or a product by kilo with a presentation (whole packs)
 export function cartKey(product: Product, presentation: ProductPresentation | null): string {
