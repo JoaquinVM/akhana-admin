@@ -184,4 +184,25 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.cash-day-mark')).toBeNull();
   });
+
+  it('CAJ-12: «Caja actual» de hoy muestra la marca al pasar la medianoche de La Paz, sin recargar', async () => {
+    // 23:59:30 del 02-11 en La Paz (UTC-4)
+    vi.useFakeTimers({ now: new Date('2026-11-03T03:59:30Z') });
+    try {
+      dashboardService.getDashboard.mockReturnValue(of({
+        ...dashboard,
+        now: { ...dashboard.now, cash: { ...dashboard.now.cash, openedAt: '2026-11-02T13:00:00Z', operationDate: '2026-11-02' } }
+      }));
+      // Created under the fake clock: the fixture of beforeEach already has a mark on the real one
+      const page = TestBed.createComponent(DashboardComponent);
+      page.autoDetectChanges();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(page.nativeElement.querySelector('.cash-day-mark')).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(60_100);
+      expect(page.nativeElement.querySelector('.cash-day-mark').textContent).toContain('Día 02/11 · abierta el 02/11');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

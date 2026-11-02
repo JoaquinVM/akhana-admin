@@ -512,6 +512,24 @@ describe('PosComponent', () => {
     expect(fixture.nativeElement.querySelector('.cash-day-mark')).toBeNull();
   });
 
+  it('CAJ-12: la caja de hoy muestra la marca al pasar la medianoche de La Paz, con la pestaña abierta', async () => {
+    // 23:59:30 del 02-11 en La Paz (UTC-4)
+    vi.useFakeTimers({ now: new Date('2026-11-03T03:59:30Z') });
+    try {
+      mockCashService.currentSession.set({ ...mockSession, operationDate: '2026-11-02', openedAt: '2026-11-02T13:00:00Z' });
+      // Created under the fake clock: the fixture of beforeEach already has a mark on the real one
+      const page = TestBed.createComponent(PosComponent);
+      page.autoDetectChanges();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(page.nativeElement.querySelector('.cash-day-mark')).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(60_100);
+      expect(page.nativeElement.querySelector('.cash-day-mark').textContent).toContain('Día 02/11 · abierta el 02/11');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('CAJ-13: el rechazo de la apertura queda en el modal y no se cierra', () => {
     mockCashService.openSession.mockReturnValue(throwError(() => ({ error: { message: 'Falta resolver: 31/10, 2/11.' } })));
     component.openCashModal();
