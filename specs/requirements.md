@@ -29,7 +29,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 
 ### 1.1 Las planillas que se reemplazan
 
-La operación vive hoy en dos Google Sheets: **Akhana Recaudaciones** y **Akhana Pedidos**. Ventas de unos
+La operación vivía en dos Google Sheets: **Akhana Recaudaciones** y **Akhana Pedidos**. Ventas de unos
 Bs 2.000–4.000 por día, 880 productos y ~420 pedidos desde abril. Ni las planillas ni la V1 llevan stock.
 
 | Hoja | Qué registra | En el sistema |
