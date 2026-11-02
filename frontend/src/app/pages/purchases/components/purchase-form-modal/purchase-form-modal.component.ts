@@ -131,6 +131,9 @@ export class PurchaseFormModalComponent {
       .sort((a, b) => Number(b.supplierId === supplierId) - Number(a.supplierId === supplierId));
   });
 
+  // COM-13: current sell price by product; an edited line's product starts without one until the catalog loads
+  private sellPrices = computed(() => new Map(this.products().map(p => [p.id, p.sellPrice])));
+
   itemsTotal = computed(() => round2(this.lines().reduce((sum, line) => sum + this.lineSubtotal(line), 0)));
   totalAmount = computed(() => round2(this.itemsTotal() + (Number(this.shippingCost()) || 0)));
   needsShippingAccount = computed(() => (Number(this.shippingCost()) || 0) > 0);
@@ -248,6 +251,11 @@ export class PurchaseFormModalComponent {
 
   lineSubtotal(line: PurchaseLineDraft): number {
     return round2((Number(line.quantity) || 0) * (Number(line.unitCost) || 0));
+  }
+
+  // COM-13: reference only; null while the catalog loads or if the product left it (deleted)
+  referenceSellPrice(line: PurchaseLineDraft): number | null {
+    return this.sellPrices().get(line.product.id) ?? null;
   }
 
   // COM-03: alert when the line cost differs from the registered cost

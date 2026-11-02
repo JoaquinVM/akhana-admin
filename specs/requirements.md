@@ -15,7 +15,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11 | ✅ Completo | — | `product-import.md`, `product-presentations.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11, COM-12 | ✅ Completo | — | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-13 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-11 | ✅ Completo | CAJ-11 sin desplegar: cerrar antes las cajas #146 a #148 y después comparar el 28 al 30/10 con la planilla | `cash.md` |
@@ -132,6 +132,7 @@ Detalle en `purchases.md`.
 - **COM-10** · V2 — Cajas vinculadas a su unidad (Caja x12 = 12 × Barra Chia) con «Abrir caja». En la V1 la caja es un producto aparte.
 - **COM-11** Un pedido registrado (no anulado ni histórico) se edita en cualquier estado de entrega o pago, con motivo obligatorio: cabecera, entrega, envío y líneas (agregar lo que llegó sin pedirse, cambiar cantidad o costo, quitar lo que faltó con baja lógica), con producto nuevo y precio sugerido como en COM-03 (P-51).
 - **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
+- **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 

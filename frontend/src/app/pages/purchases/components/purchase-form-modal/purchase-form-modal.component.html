@@ -50,7 +50,7 @@
               <li>
                 <button type="button" class="match-item" (click)="addProduct(product)">
                   <span class="match-name">{{ product.name }}</span>
-                  <span class="match-meta">{{ product.code }} · {{ product.supplierName }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  <span class="match-meta">{{ product.code }} · {{ product.supplierName }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }} · venta Bs {{ product.sellPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
                 </button>
               </li>
             }
@@ -122,6 +122,7 @@
             <th>Producto</th>
             <th class="text-right">Cantidad</th>
             <th class="text-right">Costo unitario (Bs)</th>
+            <th class="text-right">Precio de venta</th>
             <th class="text-right">Subtotal</th>
             <th></th>
           </tr>
@@ -143,6 +144,13 @@
                 <input type="number" class="form-control input-number" [name]="'cost-' + i" step="0.01" min="0"
                        [ngModel]="line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
               </td>
+              <td class="text-right line-sell-price">
+                @if (referenceSellPrice(line) !== null) {
+                  Bs {{ referenceSellPrice(line) | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}
+                } @else {
+                  —
+                }
+              </td>
               <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right">
                 <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
@@ -150,7 +158,7 @@
             </tr>
             @if (costDiffers(line)) {
               <tr class="cost-alert-row">
-                <td colspan="5">
+                <td colspan="6">
                   <div class="cost-alert" role="alert">
                     <p>
                       El costo registrado de <strong>{{ line.product.name }}</strong> es
@@ -196,7 +204,7 @@
             }
           } @empty {
             <tr>
-              <td colspan="5" class="text-center empty-lines">Busque un producto para agregar la primera línea.</td>
+              <td colspan="6" class="text-center empty-lines">Busque un producto para agregar la primera línea.</td>
             </tr>
           }
         </tbody>

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { PurchaseFormModalComponent, round2 } from './purchase-form-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
@@ -225,6 +225,108 @@ describe('PurchaseFormModalComponent', () => {
     component.submit();
     expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000029 registrado.');
   });
+  describe('COM-13: precio de venta como referencia', () => {
+    const sellPrices = (): string[] => {
+      fixture.detectChanges();
+      return Array.from(fixture.nativeElement.querySelectorAll('.line-sell-price'))
+        .map((el: any) => el.textContent.trim());
+    };
+
+    it('el buscador lo muestra después del costo, por kilo si se vende por kilo', () => {
+      const metaOf = (search: string): string => {
+        component.productSearch.set(search);
+        fixture.detectChanges();
+        return fixture.nativeElement.querySelector('.match-meta').textContent.trim();
+      };
+
+      expect(metaOf('te-1')).toContain('costo Bs 10.00 · venta Bs 15.00');
+      expect(metaOf('nue-1')).toContain('costo Bs 40.00/kg · venta Bs 60.00/kg');
+    });
+
+    it('la columna muestra el precio de una unidad o un kilo, sin multiplicar por la cantidad', () => {
+      component.addProduct(tea);
+      component.addProduct(nuts);
+      expect(sellPrices()).toEqual(['Bs 15.00', 'Bs 60.00/kg']);
+      component.onQuantityChange(0, 2);
+      expect(sellPrices()).toEqual(['Bs 15.00', 'Bs 60.00/kg']);
+    });
+
+    it('la columna es texto, no un campo', () => {
+      component.addProduct(tea);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.line-sell-price input')).toBeNull();
+    });
+
+    it('un producto creado desde el pedido muestra su precio', () => {
+      component.supplierId.set('sup-1');
+      component.openNewProduct();
+      component.patchNewProduct({ code: 'NV-1', name: 'Nuevo', categoryId: 'c-1', buyPrice: 12, sellPrice: 20 });
+      productService.createProduct.mockReturnValue(of(product({ id: 'p-9', code: 'NV-1', name: 'Nuevo', buyPrice: 12, sellPrice: 20 })));
+      component.createProduct();
+      expect(sellPrices()).toEqual(['Bs 20.00']);
+    });
+
+    it('un producto con precio 0 muestra Bs 0.00, porque el precio se conoce', () => {
+      const free = product({ id: 'p-0', code: 'GR-0', name: 'Muestra', sellPrice: 0 });
+      component.products.update(list => [...list, free]);
+      component.addProduct(free);
+      expect(sellPrices()).toEqual(['Bs 0.00']);
+    });
+
+    it('COM-03: la alerta de costo no mueve la referencia', () => {
+      component.addProduct(tea);
+      component.onCostChange(0, 12.3);
+      expect(sellPrices()).toEqual(['Bs 15.00']);
+      component.onUpdateCostToggle(0, true);
+      component.updateLine(0, { priceChoice: 'CUSTOM', customPrice: 25 });
+      expect(sellPrices()).toEqual(['Bs 15.00']);
+      expect(fixture.nativeElement.querySelector('.price-title').textContent).toContain('actual Bs 15.00');
+      expect(component.chosenSellPrice(component.lines()[0])).toBe(25);
+    });
+
+    it('la alerta y la fila vacía ocupan todo el ancho de la tabla', () => {
+      fixture.detectChanges();
+      const columns = String(fixture.nativeElement.querySelectorAll('.lines-table th').length);
+      expect(fixture.nativeElement.querySelector('.empty-lines').getAttribute('colspan')).toBe(columns);
+      component.addProduct(tea);
+      component.onCostChange(0, 12.3);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.cost-alert-row td').getAttribute('colspan')).toBe(columns);
+    });
+
+    it('no cambia lo que se envía ni los totales', () => {
+      component.addProduct(tea);
+      component.onQuantityChange(0, 2);
+      expect(component.lineSubtotal(component.lines()[0])).toBe(20);
+      expect(component.itemsTotal()).toBe(20);
+      expect(component.buildRequest().items).toEqual([
+        { productId: 'p-1', quantity: 2, unitCost: 10, updateProductCost: false, newSellPrice: null }
+      ]);
+    });
+
+    it('al editar muestra el precio del catálogo, y — si no cargó o el producto ya no está', () => {
+      const editable = {
+        id: 'pur-8', purchaseNumber: 'PED-000008', supplierId: 'sup-1', purchaseDate: '2026-10-20', shippingCost: 0,
+        consignment: false, deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE', paidAmount: 0,
+        items: [
+          { id: 'it-1', productId: 'p-1', productName: 'Té verde', productCode: 'TE-1', saleUnit: 'UNIT', quantity: 1, unitCost: 8 },
+          { id: 'it-2', productId: 'p-gone', productName: 'Eliminado', productCode: 'EL-1', saleUnit: 'UNIT', quantity: 1, unitCost: 5 }
+        ]
+      } as unknown as Purchase;
+      const catalog = new Subject<Product[]>();
+      productService.getProducts.mockReturnValue(catalog);
+      component.products.set([]);
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('purchase', editable);
+      fixture.componentRef.setInput('isOpen', true);
+      expect(sellPrices()).toEqual(['—', '—']);
+
+      catalog.next([tea, nuts]);
+      expect(sellPrices()).toEqual(['Bs 15.00', '—']);
+    });
+  });
+
   describe('COM-11: edición', () => {
     const editable = {
       id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
