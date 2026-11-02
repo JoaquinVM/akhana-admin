@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { DashboardComponent, changePercent, periodRange, storeToday } from './dashboard.component';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardIndicators } from '../../core/dashboard/models/dashboard.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { homeRedirect } from '../../app.routes';
+import { INSTALLED_APP } from '../../core/pwa/installed-app';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -204,5 +206,182 @@ describe('DashboardComponent', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('DashboardComponent instalado (MOV-02)', () => {
+  const today = storeToday();
+  const now = {
+    cash: { open: false }, accounts: [{ id: 'a1', name: 'Caja', color: null, balance: 1500 }],
+    totalBalance: 1500, payables: 320, creditorsDebt: 200.25, receivables: 104
+  };
+  const zero = { sales: 0, cost: 0, profit: 0, margin: null, tickets: 0, averageTicket: null, atCostSales: 0, atCostTotal: 0, consumptionTotal: 0 };
+  const dashboard = {
+    from: today, to: today, previousFrom: today, previousTo: today, current: zero, previous: zero, days: [], previousDays: [],
+    payments: { cash: 0, qr: 0, credit: 0, historicalTotal: 0, historicalSales: 0 },
+    topProductsBySales: [], topProductsByProfit: [], topSuppliersBySales: [], topSuppliersByProfit: [],
+    expenses: [], expenseTotal: 0, now, noAttentionDays: []
+  } as unknown as Dashboard;
+
+  function create(installed: boolean) {
+    const getDashboard = vi.fn().mockReturnValue(of(dashboard));
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        { provide: DashboardService, useValue: { getDashboard } },
+        { provide: INSTALLED_APP, useValue: installed }
+      ]
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    return { fixture, getDashboard, element: fixture.nativeElement as HTMLElement };
+  }
+
+  const titles = (element: HTMLElement) => Array.from(element.querySelectorAll('h2')).map(h => h.textContent?.trim());
+  const follows = (first: Element, second: Element) =>
+    (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it('CA-04: abre en Hoy y «Ahora mismo» va antes de los filtros y los indicadores', () => {
+    const { fixture, getDashboard, element } = create(true);
+    expect(getDashboard).toHaveBeenCalledWith({ from: today, to: today });
+    expect(fixture.componentInstance.period()).toBe('TODAY');
+    const nowBlock = element.querySelector('section.now')!;
+    expect(nowBlock.querySelector('h2')?.textContent).toContain('Ahora mismo');
+    expect(follows(nowBlock, element.querySelector('.filters')!)).toBe(true);
+    expect(follows(nowBlock, element.querySelector('.kpis')!)).toBe(true);
+    expect(nowBlock.querySelector('#cash-title')).toBeTruthy();
+    expect(nowBlock.querySelector('#balances-title')).toBeTruthy();
+  });
+
+  it('CA-04: caja y saldos se muestran una sola vez', () => {
+    const { element } = create(true);
+    expect(titles(element).filter(t => t === 'Caja actual')).toHaveLength(1);
+    expect(titles(element).filter(t => t === 'Saldos y deudas')).toHaveLength(1);
+  });
+
+  it('CA-05: en el navegador abre en Mes, sin «Ahora mismo» y con el orden de siempre', () => {
+    const { fixture, getDashboard, element } = create(false);
+    expect(getDashboard).toHaveBeenCalledWith({ from: `${today.slice(0, 7)}-01`, to: today });
+    expect(fixture.componentInstance.period()).toBe('MONTH');
+    expect(element.querySelector('section.now')).toBeNull();
+    expect(titles(element)).toEqual(['Ventas por día', 'Cómo se cobró', 'Caja actual', 'Top productos',
+      'Top proveedores', 'Gastos por categoría', 'Saldos y deudas']);
+  });
+
+  it('CA-06: dentro de la app, Semana y Mes piden el mismo período que en el navegador', () => {
+    const { fixture, getDashboard, element } = create(true);
+    const button = (label: string) => Array.from(element.querySelectorAll<HTMLButtonElement>('.filter-pill'))
+      .find(b => b.textContent?.trim() === label)!;
+    button('Semana').click();
+    fixture.detectChanges();
+    expect(getDashboard).toHaveBeenLastCalledWith(periodRange('WEEK', today));
+    button('Mes').click();
+    fixture.detectChanges();
+    expect(getDashboard).toHaveBeenLastCalledWith(periodRange('MONTH', today));
+  });
+
+  it('MOV-02: al volver de segundo plano recarga el período elegido, solo en la app', () => {
+    const installed = create(true);
+    installed.getDashboard.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(installed.getDashboard).toHaveBeenCalledWith({ from: today, to: today });
+    installed.fixture.destroy();
+
+    TestBed.resetTestingModule();
+    const browser = create(false);
+    browser.getDashboard.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(browser.getDashboard).not.toHaveBeenCalled();
+  });
+
+  it('MOV-02: oculta no recarga, y en Rango vuelve a pedir el mismo rango', () => {
+    const { fixture, getDashboard } = create(true);
+    getDashboard.mockClear();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(getDashboard).not.toHaveBeenCalled();
+    visibility.mockRestore();
+
+    fixture.componentInstance.selectPeriod('RANGE');
+    fixture.componentInstance.fromDate.set('2026-10-01');
+    fixture.componentInstance.toDate.set('2026-10-15');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(fixture.componentInstance.period()).toBe('RANGE');
+    expect(getDashboard).toHaveBeenCalledWith({ from: '2026-10-01', to: '2026-10-15' });
+  });
+
+  it.each([0, 502, 503, 504])('MOV-03: si al volver el servidor no responde (%i) recarga para mostrar la página sin conexión', status => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(reload).toHaveBeenCalledOnce();
+    expect(fixture.componentInstance.dashboard()).toEqual(dashboard);
+  });
+
+  it('MOV-03: un error del servidor al volver, o sin conexión al elegir un período, sigue mostrando su mensaje', () => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(fixture.componentInstance.errorMessage()).toBeTruthy();
+
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    fixture.componentInstance.selectPeriod('WEEK');
+    expect(fixture.componentInstance.errorMessage()).toBeTruthy();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('CA-06: una respuesta lenta de otro período no reemplaza a la recién elegida', () => {
+    const { fixture, getDashboard } = create(true);
+    const slowToday = new Subject<Dashboard>();
+    getDashboard.mockReturnValueOnce(slowToday);
+    document.dispatchEvent(new Event('visibilitychange'));
+    const month = { ...dashboard, from: `${today.slice(0, 7)}-01` };
+    getDashboard.mockReturnValueOnce(of(month));
+    fixture.componentInstance.selectPeriod('MONTH');
+    slowToday.next(dashboard);
+    expect(fixture.componentInstance.dashboard()).toEqual(month);
+  });
+
+  it('MOV-03: una petición pendiente al salir del Dashboard no recarga la pantalla a la que se fue', () => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    const pending = new Subject<Dashboard>();
+    getDashboard.mockReturnValue(pending);
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.destroy();
+    pending.error(new HttpErrorResponse({ status: 0 }));
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('MOV-03: si al volver la petición queda colgada, a los 10 s recarga', () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, getDashboard } = create(true);
+      const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+      getDashboard.mockReturnValue(new Subject<Dashboard>());
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(9999);
+      expect(reload).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(reload).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('MOV-03: instalada, sin conexión al cargar dice qué revisar; en el navegador sigue el mensaje de siempre', () => {
+    const installed = create(true);
+    installed.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    installed.fixture.componentInstance.selectPeriod('WEEK');
+    expect(installed.fixture.componentInstance.errorMessage()).toContain('Tailscale');
+    installed.fixture.destroy();
+
+    TestBed.resetTestingModule();
+    const browser = create(false);
+    browser.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    browser.fixture.componentInstance.selectPeriod('WEEK');
+    expect(browser.fixture.componentInstance.errorMessage()).toBe('Error al cargar el dashboard. Intente nuevamente.');
   });
 });

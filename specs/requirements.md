@@ -24,7 +24,8 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
+| App instalable | MOV-01 a MOV-04 | ✅ Completo | Sin publicar; probar en teléfonos reales la instalación, la zona segura del iPhone y Tailscale apagado | `mobile.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y los teléfonos | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -241,6 +242,15 @@ Detalle en `dashboard.md`. Solo Administrador (permiso propio, P-33) y su pantal
 - **DSH-03** Top 10 de productos y de proveedores por venta o por utilidad, y gastos por categoría sin transferencias.
 - **DSH-04** Ahora mismo: estado de la caja abierta, saldo por cuenta y total, por pagar a proveedores, por devolver a personas y por cobrar.
 
+### 3.12 App instalable · V1
+
+Detalle en `mobile.md`. Admin instalado en el teléfono, no un sistema aparte; sigue sin modo sin internet (P-14).
+
+- **MOV-01** Admin se puede instalar en la pantalla de inicio de Android e iPhone, con nombre «Akhana» e ícono de la tienda, y abre sin la barra del navegador.
+- **MOV-02** Instalado, el Dashboard abre en Hoy y muestra «Ahora mismo» (DSH-04) antes de los demás bloques. En el navegador sigue como hasta ahora: mes en curso y el orden actual.
+- **MOV-03** Si no se llega al servidor, la app instalada muestra una página propia que dice qué revisar.
+- **MOV-04** Instalar la app no cambia lo que cada usuario puede ver o hacer (USR-05, P-33), ni las sesiones (T-19).
+
 ## 4. Requerimientos técnicos y de seguridad
 
 Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; el detalle de cada uno está en la spec indicada.
@@ -370,7 +380,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] Instalar Tailscale en la PC de caja y el celular de la tienda (`deploy.md`).
+- [ ] Instalar Tailscale en la PC de caja y en los teléfonos que usarán la app (`deploy.md`, `mobile.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
 
