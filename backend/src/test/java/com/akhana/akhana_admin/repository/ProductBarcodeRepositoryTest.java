@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,6 +65,16 @@ class ProductBarcodeRepositoryTest {
         }
     }
 
+    // A valid EAN-13 no other test or local data has: the database may be shared
+    private static String freeBarcode() {
+        String digits = "2" + String.format("%011d", ThreadLocalRandom.current().nextLong(100_000_000_000L));
+        int sum = 0;
+        for (int i = 0; i < 12; i++) {
+            sum += (digits.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
+        }
+        return digits + (10 - sum % 10) % 10;
+    }
+
     private List<UUID> pendingOfThisTest() {
         return service.findPending().stream().map(BarcodePendingResponse::id).filter(created::contains).toList();
     }
@@ -93,7 +104,7 @@ class ProductBarcodeRepositoryTest {
         UUID marked = product("Marcado", "UNIT", "ACTIVO", null);
         service.markNoBarcode(marked, "it");
         UUID withCode = product("Con codigo", "UNIT", "ACTIVO", null);
-        service.addBarcode(withCode, "7791234567898", "it");
+        service.addBarcode(withCode, freeBarcode(), "it");
 
         assertThat(pendingOfThisTest()).containsExactly(pending);
     }
@@ -102,11 +113,12 @@ class ProductBarcodeRepositoryTest {
     void aRemovedCodeLeavesTheProductPendingAndFreesTheCode() {
         UUID first = product("Primero", "UNIT", "ACTIVO", null);
         UUID second = product("Segundo", "UNIT", "ACTIVO", null);
-        service.addBarcode(first, "7791234567898", "it");
+        String code = freeBarcode();
+        service.addBarcode(first, code, "it");
         jdbc.update("UPDATE product_barcodes SET active = false, deactivated_by = 'it', deactivated_at = now() "
             + "WHERE product_id = ?", first);
 
-        assertThat(service.addBarcode(second, "7791234567898", "it").barcodes()).containsExactly("7791234567898");
+        assertThat(service.addBarcode(second, code, "it").barcodes()).containsExactly(code);
     }
 
     @Test

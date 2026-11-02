@@ -14,9 +14,11 @@ export class ScanCapture {
   private held = '';
   private lastKeyAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  // A date field cannot be written back: its digits go through, but the final Enter of a scan is still stopped
-  private passThrough = false;
+  // A date field cannot be written back: its digits go through, and a scan puts back the value it had
+  private passThrough: { input: HTMLInputElement; value: string } | null = null;
   private swallowEnterUntil = -1;
+  // Fields can act on the release of Enter too, so each stopped Enter also stops its keyup
+  private enterUpsToStop = 0;
 
   constructor(
     private readonly document: Document,
@@ -29,12 +31,14 @@ export class ScanCapture {
 
   install(): void {
     this.window.addEventListener('keydown', this.onKeydown, true);
+    this.window.addEventListener('keyup', this.onKeyup, true);
     this.window.addEventListener('mousedown', this.release, true);
   }
 
   uninstall(): void {
     this.release();
     this.window.removeEventListener('keydown', this.onKeydown, true);
+    this.window.removeEventListener('keyup', this.onKeyup, true);
     this.window.removeEventListener('mousedown', this.release, true);
   }
 
@@ -46,7 +50,8 @@ export class ScanCapture {
     }
     if (event.key === 'Enter' && this.isScanEnd(event)) {
       const code = this.passThrough ? '' : this.held;
-      this.block(event);
+      this.restoreDate();
+      this.blockEnter(event);
       this.clear();
       this.swallowEnterUntil = event.timeStamp + SCAN_MAX_KEY_GAP_MS;
       if (code) this.onScan(code);
@@ -54,11 +59,21 @@ export class ScanCapture {
     }
     // A reader that ends with CR and LF sends two Enter
     if (event.key === 'Enter' && event.timeStamp <= this.swallowEnterUntil) {
-      this.block(event);
+      this.blockEnter(event);
       return;
+    }
+    if (event.key === 'Enter') {
+      this.enterUpsToStop = 0;
     }
     // Any other key, written back first to keep the order of what was typed
     this.release();
+  };
+
+  private readonly onKeyup = (event: KeyboardEvent): void => {
+    if (event.key === 'Enter' && this.enterUpsToStop > 0) {
+      this.enterUpsToStop--;
+      this.block(event);
+    }
   };
 
   private onDigit(event: KeyboardEvent): void {
@@ -66,7 +81,7 @@ export class ScanCapture {
       this.release();
     }
     if (!this.held) {
-      this.passThrough = this.focusedCannotBeWrittenBack();
+      this.passThrough = this.focusedDateField();
     }
     if (!this.passThrough) {
       this.block(event);
@@ -79,6 +94,11 @@ export class ScanCapture {
 
   private isScanEnd(event: KeyboardEvent): boolean {
     return this.held.length >= SCAN_MIN_DIGITS && event.timeStamp - this.lastKeyAt <= SCAN_MAX_KEY_GAP_MS;
+  }
+
+  private blockEnter(event: KeyboardEvent): void {
+    this.enterUpsToStop++;
+    this.block(event);
   }
 
   private block(event: KeyboardEvent): void {
@@ -94,16 +114,25 @@ export class ScanCapture {
 
   private clear(): void {
     this.held = '';
-    this.passThrough = false;
+    this.passThrough = null;
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
     }
   }
 
-  private focusedCannotBeWrittenBack(): boolean {
+  private focusedDateField(): { input: HTMLInputElement; value: string } | null {
     const active = this.document.activeElement;
-    return active instanceof HTMLInputElement && NOT_REPLAYABLE_TYPES.has(active.type);
+    return active instanceof HTMLInputElement && NOT_REPLAYABLE_TYPES.has(active.type)
+      ? { input: active, value: active.value }
+      : null;
+  }
+
+  private restoreDate(): void {
+    if (!this.passThrough) return;
+    const { input, value } = this.passThrough;
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   private writeBack(digits: string): void {

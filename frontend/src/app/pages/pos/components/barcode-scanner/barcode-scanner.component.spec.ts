@@ -161,6 +161,18 @@ describe('BarcodeScannerComponent (POS-15)', () => {
     expect(products.getProductByBarcode).not.toHaveBeenCalled();
   });
 
+  it('una respuesta que llega después de salir de la pantalla no agrega ni avisa', () => {
+    const response = new Subject<Product>();
+    products.getProductByBarcode.mockReturnValue(response);
+
+    scan('4006381333931');
+    fixture.destroy();
+    response.next(product({ id: 'p2' }));
+
+    expect(scanned).toEqual([]);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
   it('al salir de la pantalla deja de escuchar', () => {
     fixture.destroy();
 

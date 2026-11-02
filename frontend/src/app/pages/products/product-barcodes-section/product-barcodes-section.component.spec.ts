@@ -62,6 +62,16 @@ describe('ProductBarcodesSectionComponent (CAT-10)', () => {
     expect(enter.defaultPrevented).toBe(true);
   });
 
+  it('un código escrito sin pulsar Agregar entra a la lista al salir del campo, antes de guardar', () => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#productBarcode');
+    input.value = EAN;
+    input.dispatchEvent(new Event('input'));
+
+    input.dispatchEvent(new Event('blur'));
+
+    expect(emitted).toEqual([[EAN]]);
+  });
+
   it('el mismo código no se repite en la lista', () => {
     fixture.componentRef.setInput('barcodes', [EAN]);
     fixture.detectChanges();

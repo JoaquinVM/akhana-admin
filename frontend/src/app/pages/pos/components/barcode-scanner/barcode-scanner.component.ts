@@ -1,4 +1,5 @@
 import { Component, DOCUMENT, DestroyRef, OnInit, computed, inject, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Product } from '../../../../core/product/models/product.models';
 import { ProductService } from '../../../../core/product/product.service';
@@ -28,7 +29,9 @@ export interface ScannedProduct {
 @Component({
   selector: 'app-barcode-scanner',
   standalone: true,
-  template: ''
+  template: '',
+  // Nothing to draw: it must not count as an item of the page's layout
+  styles: ':host { display: none; }'
 })
 export class BarcodeScannerComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
@@ -65,7 +68,7 @@ export class BarcodeScannerComponent implements OnInit {
       this.scanned.emit({ product: known, fromServer: false });
       return;
     }
-    this.productService.getProductByBarcode(code).subscribe({
+    this.productService.getProductByBarcode(code).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (product) => {
         if (!this.canAdd()) return;
         if (product.status !== 'ACTIVO') {

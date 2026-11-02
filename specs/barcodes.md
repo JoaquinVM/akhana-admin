@@ -78,11 +78,12 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
 
 - **Reconocer el escaneo:** `shared/utils/barcode-scan.ts` retiene los dígitos en la fase de captura de `window`, antes que
   NF-07 y los campos. Hasta 60 ms entre teclas, al menos 6 dígitos y Enter son un escaneo. Lo demás se repone en el cursor,
-  con hasta 60 ms de retraso. Un campo de fecha no se puede reponer: sus dígitos pasan, y el Enter del escaneo se detiene.
+  con hasta 60 ms de retraso. Un campo de fecha no se puede reponer: sus dígitos pasan, y un escaneo le devuelve el valor que tenía. Cada Enter detenido detiene también su `keyup`, porque hay campos que actúan al soltarlo.
   Los 60 ms son un valor inicial, por confirmar con el lector real.
 - **Lector:** tiene que funcionar como teclado USB y terminar cada lectura con Enter. Un código con letras (Code 128) no se
   retiene; esas simbologías se apagan con el manual del lector.
 - **Ventana abierta:** se detecta con `[aria-modal="true"]`, que tienen todas las ventanas de la app.
+- **Catálogo cargado:** un código movido o un producto inactivado en otra PC sigue resolviendo como antes hasta recargar el catálogo, y eso pasa al volver a entrar a la venta.
 - **Fuera de la venta y de Productos:** en Compras y Consumos el lector escribe como un teclado.
 - **Datos:** migración `V27__product_barcodes.sql`. UPC-A se guarda con 13 dígitos. La validación y la forma canónica viven
   en el servidor (`BarcodeFormat`).

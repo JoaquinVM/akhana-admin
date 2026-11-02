@@ -296,6 +296,16 @@ describe('SaleDetailModalComponent', () => {
     expect(compiled.textContent).toContain('No se pudo cargar la información de la venta');
   });
 
+  it('POS-01: el buscador de asignar encuentra el código de barras completo', () => {
+    component.assignableProducts.set([{ id: 'p1', code: 'NEF-SHA', name: 'Shampoo', barcodes: ['7791234567898'] } as any]);
+
+    component.assignSearch.set('7791234567898');
+    expect(component.assignResults().map((p) => p.id)).toEqual(['p1']);
+
+    component.assignSearch.set('77912345');
+    expect(component.assignResults()).toEqual([]);
+  });
+
   describe('POS-12: asignación desde el historial', () => {
     const pendingSale: Sale = {
       ...mockCompletedSale,
