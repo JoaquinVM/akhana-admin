@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { DashboardComponent, changePercent, periodRange, storeToday } from './dashboard.component';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
@@ -291,5 +292,55 @@ describe('DashboardComponent instalado (MOV-02)', () => {
     browser.getDashboard.mockClear();
     document.dispatchEvent(new Event('visibilitychange'));
     expect(browser.getDashboard).not.toHaveBeenCalled();
+  });
+
+  it('MOV-02: oculta no recarga, y en Rango vuelve a pedir el mismo rango', () => {
+    const { fixture, getDashboard } = create(true);
+    getDashboard.mockClear();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(getDashboard).not.toHaveBeenCalled();
+    visibility.mockRestore();
+
+    fixture.componentInstance.selectPeriod('RANGE');
+    fixture.componentInstance.fromDate.set('2026-10-01');
+    fixture.componentInstance.toDate.set('2026-10-15');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(fixture.componentInstance.period()).toBe('RANGE');
+    expect(getDashboard).toHaveBeenCalledWith({ from: '2026-10-01', to: '2026-10-15' });
+  });
+
+  it.each([0, 502, 503, 504])('MOV-03: si al volver el servidor no responde (%i) recarga para mostrar la página sin conexión', status => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(reload).toHaveBeenCalledOnce();
+    expect(fixture.componentInstance.dashboard()).toEqual(dashboard);
+  });
+
+  it('MOV-03: un error del servidor al volver, o sin conexión al elegir un período, sigue mostrando su mensaje', () => {
+    const { fixture, getDashboard } = create(true);
+    const reload = vi.spyOn(fixture.componentInstance, 'reloadPage').mockImplementation(() => undefined);
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(fixture.componentInstance.errorMessage()).toBeTruthy();
+
+    getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    fixture.componentInstance.selectPeriod('WEEK');
+    expect(fixture.componentInstance.errorMessage()).toBeTruthy();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('CA-06: una respuesta lenta de otro período no reemplaza a la recién elegida', () => {
+    const { fixture, getDashboard } = create(true);
+    const slowToday = new Subject<Dashboard>();
+    getDashboard.mockReturnValueOnce(slowToday);
+    document.dispatchEvent(new Event('visibilitychange'));
+    const month = { ...dashboard, from: `${today.slice(0, 7)}-01` };
+    getDashboard.mockReturnValueOnce(of(month));
+    fixture.componentInstance.selectPeriod('MONTH');
+    slowToday.next(dashboard);
+    expect(fixture.componentInstance.dashboard()).toEqual(month);
   });
 });
