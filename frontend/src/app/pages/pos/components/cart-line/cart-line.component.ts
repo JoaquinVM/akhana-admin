@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { QuantityStepperComponent } from '../../../../shared/components/quantity-stepper/quantity-stepper.component';
 import { CartItem, freeLineLabel, isWeightLine, lineName } from '../../register-sale/cart-item';
 
 /**
@@ -10,7 +11,7 @@ import { CartItem, freeLineLabel, isWeightLine, lineName } from '../../register-
 @Component({
   selector: 'app-cart-line',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QuantityStepperComponent],
   templateUrl: './cart-line.component.html',
   styleUrls: ['./cart-line.component.css']
 })

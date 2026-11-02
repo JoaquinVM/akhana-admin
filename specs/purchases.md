@@ -1,7 +1,7 @@
 # Compras (pedidos)
 
 Detalle del módulo Compras de la V1 (sección 3.3 de `specs/requirements.md`), con los mismos IDs.
-Alcance: COM-01 a COM-09, COM-11 a COM-13. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
+Alcance: COM-01 a COM-09, COM-11 a COM-14. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
 queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
@@ -281,6 +281,26 @@ no lo muestran.
 - **Cuando** el producto del catálogo tiene precio 0 **entonces** muestra «Bs 0,00», sin aviso.
 
 Pruebas en `purchase-form-modal.component.spec.ts`.
+
+## COM-14 · Botones de cantidad
+
+Cada línea del formulario de pedido, al registrar y al editar, usa `shared/components/quantity-stepper`, el mismo control
+del POS. Producto por unidad: Té verde. Producto por kilo: Nueces.
+
+- **Cuando** Té verde tiene cantidad 2 y se aprieta + **entonces** queda en 3; con − queda en 1. El subtotal y los totales
+  se recalculan al momento.
+- **Cuando** Nueces tiene 1,500 kg y se aprieta + **entonces** queda en 1,600 kg; con − queda en 1,400 kg, sin decimales
+  de más.
+- **Cuando** se agrega un producto **entonces** entra con 1 unidad o 1 kg, como antes (en el POS, por peso entra con 0,1).
+- **Cuando** Té verde tiene cantidad 1 **entonces** el − está deshabilitado. **Cuando** Nueces tiene 0,100 kg o menos
+  **entonces** también: se deshabilita si restar dejaría 0 o menos. La línea se quita solo con su X. En el POS, en cambio,
+  el − al llegar a 0 quita la línea.
+- **Cuando** se vacía el campo o se escribe 0 **entonces** la línea no se quita, el − queda deshabilitado y el + sigue
+  desde 0; registrar con cantidad 0 lo rechaza el servidor (COM-02).
+- **Cuando** una línea registrada cambia de cantidad con los botones **entonces** conserva su `itemId` (COM-11).
+- Cantidad, costo de envío y monto pagado no muestran las flechitas del navegador; el costo unitario, el costo y el
+  precio de «Producto nuevo» y el precio «Otro» de la alerta de costo las conservan. Pruebas en
+  `purchase-form-modal.component.spec.ts` y `quantity-stepper.component.spec.ts`.
 
 ## Día de los pagos (CAJ-11)
 

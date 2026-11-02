@@ -1,0 +1,66 @@
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+  width: var(--qty-stepper-width, 84px);
+}
+
+.qty-btn {
+  background: #f8fafc;
+  border: none;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  transition: background-color 0.15s ease;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+}
+
+.qty-btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.qty-input {
+  width: var(--qty-input-width, 32px);
+  height: 26px;
+  border: none;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Hide the browser's number spinners in the quantity control */
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qty-input.qty-input-weight {
+  width: var(--qty-input-weight-width, 52px);
+}
+
+.qty-stepper:has(.qty-input-weight) {
+  width: var(--qty-stepper-weight-width, 104px);
+}

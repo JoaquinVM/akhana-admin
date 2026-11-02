@@ -382,6 +382,135 @@ describe('PurchaseFormModalComponent', () => {
     });
   });
 
+  describe('COM-14: botones de cantidad', () => {
+    const steppers = (): HTMLElement[] => Array.from(fixture.nativeElement.querySelectorAll('app-quantity-stepper'));
+    const minus = (stepper: HTMLElement) => stepper.querySelectorAll<HTMLButtonElement>('.qty-btn')[0];
+    const plus = (stepper: HTMLElement) => stepper.querySelectorAll<HTMLButtonElement>('.qty-btn')[1];
+
+    it('por unidad suma y resta 1, y recalcula el subtotal y el total', () => {
+      component.addProduct(tea);
+      fixture.detectChanges();
+
+      plus(steppers()[0]).click();
+      plus(steppers()[0]).click();
+      expect(component.lines()[0].quantity).toBe(3);
+      expect(component.itemsTotal()).toBe(30);
+
+      fixture.detectChanges();
+      minus(steppers()[0]).click();
+      expect(component.lines()[0].quantity).toBe(2);
+      expect(component.lineSubtotal(component.lines()[0])).toBe(20);
+    });
+
+    it('por kilo suma y resta 0,1 kg, sin decimales de más', () => {
+      component.addProduct(nuts);
+      component.onQuantityChange(0, 1.5);
+      component.incrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(1.6);
+      component.decrementQuantity(0);
+      component.decrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(1.4);
+
+      component.onQuantityChange(0, 0.3);
+      component.decrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(0.2);
+      component.onQuantityChange(0, 0.1);
+      component.incrementQuantity(0);
+      component.incrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(0.3);
+    });
+
+    it('un producto entra con la misma cantidad de hoy: 1 unidad o 1 kg', () => {
+      component.addProduct(tea);
+      component.addProduct(nuts);
+      expect(component.lines().map(l => l.quantity)).toEqual([1, 1]);
+    });
+
+    it('el − se deshabilita en el mínimo por unidad y la línea no se quita', () => {
+      component.addProduct(tea);
+      fixture.detectChanges();
+      expect(minus(steppers()[0]).disabled).toBe(true);
+
+      minus(steppers()[0]).click();
+      component.decrementQuantity(0);
+      expect(component.lines().length).toBe(1);
+      expect(component.lines()[0].quantity).toBe(1);
+
+      plus(steppers()[0]).click();
+      fixture.detectChanges();
+      expect(minus(steppers()[0]).disabled).toBe(false);
+    });
+
+    it('por kilo, el − se deshabilita cuando restar dejaría 0 o menos', () => {
+      component.addProduct(nuts);
+      const canDecrementAt = (quantity: number) => {
+        component.onQuantityChange(0, quantity);
+        return component.canDecrement(component.lines()[0]);
+      };
+      expect(canDecrementAt(0.1)).toBe(false);
+      expect(canDecrementAt(0.05)).toBe(false);
+      expect(canDecrementAt(0.15)).toBe(true);
+      component.decrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(0.05);
+    });
+
+    it('vaciar el campo o escribir 0 no quita la línea, deshabilita el − y el + sigue desde 0', () => {
+      component.addProduct(tea);
+      component.addProduct(nuts);
+      component.onQuantityChange(0, '');
+      component.onQuantityChange(1, 0);
+
+      expect(component.lines().map(l => l.quantity)).toEqual([0, 0]);
+      expect(component.lines().map(l => component.canDecrement(l))).toEqual([false, false]);
+
+      component.incrementQuantity(0);
+      component.incrementQuantity(1);
+      expect(component.lines().map(l => l.quantity)).toEqual([1, 0.1]);
+    });
+
+    it('se sigue escribiendo a mano, y los botones siguen desde ese valor', () => {
+      component.addProduct(tea);
+      component.addProduct(nuts);
+      component.onQuantityChange(0, 24);
+      component.onQuantityChange(1, 2.125);
+      component.incrementQuantity(0);
+      component.decrementQuantity(1);
+      expect(component.lines().map(l => l.quantity)).toEqual([25, 2.025]);
+    });
+
+    it('apretar los botones no envía el pedido, y la X sí quita la línea', () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      fixture.detectChanges();
+      plus(steppers()[0]).click();
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+
+      component.removeLine(0);
+      expect(component.lines()).toEqual([]);
+    });
+
+    it('la petición sigue teniendo la misma forma', () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.incrementQuantity(0);
+      expect(component.buildRequest().items).toEqual([
+        { productId: 'p-1', quantity: 2, unitCost: 10, updateProductCost: false, newSellPrice: null }
+      ]);
+    });
+
+    it('cantidad, envío y monto pagado no muestran flechitas; el costo unitario las conserva', () => {
+      component.addProduct(tea);
+      component.initialPaymentSource.set('account:acc-1');
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+
+      expect(el.querySelector('#purchase-shipping')!.classList).toContain('no-spinner');
+      expect(el.querySelector('#purchase-initial-amount')!.classList).toContain('no-spinner');
+      expect(el.querySelector('app-quantity-stepper .qty-input')).not.toBeNull();
+      expect(el.querySelector('.lines-table input.input-number')!.classList).not.toContain('no-spinner');
+    });
+  });
+
   describe('COM-11: edición', () => {
     const editable = {
       id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
@@ -429,6 +558,19 @@ describe('PurchaseFormModalComponent', () => {
       expect('initialPayment' in request).toBe(false);
       expect(request.items.map((i: any) => [i.productId, i.itemId, i.quantity])).toEqual([['p-1', 'it-1', 26], ['p-3', undefined, 1]]);
       expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000007 actualizado.');
+    });
+
+    it('COM-14: la línea registrada tiene los botones y conserva su id al cambiar la cantidad', () => {
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('app-quantity-stepper').length).toBe(2);
+
+      component.decrementQuantity(0);
+      component.incrementQuantity(1);
+      component.reason.set('Llegó otra cantidad');
+      component.submit();
+
+      const [, request] = purchaseService.updatePurchase.mock.calls[0];
+      expect(request.items.map((i: any) => [i.itemId, i.quantity])).toEqual([['it-1', 23], ['it-2', 1.6]]);
     });
 
     it('exige el motivo antes de guardar', () => {

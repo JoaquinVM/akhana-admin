@@ -1,0 +1,62 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { QuantityStepperComponent } from './quantity-stepper.component';
+
+describe('QuantityStepperComponent', () => {
+  let fixture: ComponentFixture<QuantityStepperComponent>;
+  let component: QuantityStepperComponent;
+  let calls: unknown[];
+
+  const buttons = (): HTMLButtonElement[] => Array.from(fixture.nativeElement.querySelectorAll('.qty-btn'));
+  const field = (): HTMLInputElement => fixture.nativeElement.querySelector('.qty-input');
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [QuantityStepperComponent] }).compileComponents();
+    fixture = TestBed.createComponent(QuantityStepperComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('quantity', 2);
+    calls = [];
+    component.increment.subscribe(() => calls.push('+'));
+    component.decrement.subscribe(() => calls.push('-'));
+    component.quantityChange.subscribe(value => calls.push(value));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  it('muestra la cantidad y avisa al padre al sumar, restar y escribir, sin cambiarla', async () => {
+    expect(field().value).toBe('2');
+
+    buttons()[0].click();
+    buttons()[1].click();
+    field().value = '24';
+    field().dispatchEvent(new Event('input'));
+
+    expect(calls).toEqual(['-', '+', 24]);
+    expect(component.quantity()).toBe(2);
+  });
+
+  it('los botones no envían el formulario en el que están', () => {
+    expect(buttons().map(button => button.type)).toEqual(['button', 'button']);
+  });
+
+  it('con el − deshabilitado no avisa, y el + sigue funcionando', () => {
+    fixture.componentRef.setInput('decrementDisabled', true);
+    fixture.detectChanges();
+
+    buttons()[0].click();
+    buttons()[1].click();
+
+    expect(buttons()[0].disabled).toBe(true);
+    expect(calls).toEqual(['+']);
+  });
+
+  it('por peso acepta 3 decimales; por unidad, enteros', () => {
+    expect(field().step).toBe('1');
+    expect(field().classList.contains('qty-input-weight')).toBe(false);
+
+    fixture.componentRef.setInput('weight', true);
+    fixture.detectChanges();
+
+    expect(field().step).toBe('0.001');
+    expect(field().classList.contains('qty-input-weight')).toBe(true);
+  });
+});
