@@ -443,3 +443,23 @@ En la Mac, sin pasar por el VPS, con `rclone` configurado solo con las claves de
 - El backend arrancó sano contra esa base; el reporte de totales de octubre dio 32 ventas normales por Bs 57.253,74,
   total Bs 58.182,74 y utilidad después de consumos Bs 13.881,98.
 - Las ventas de octubre por estado y tipo (cantidad y monto) y los movimientos coinciden exactamente con producción.
+
+Fotos de productos en la Mac (rama `feat/product-photos`), con `docker-compose.prod.yml` y el nginx de producción en un
+proyecto aparte, un remoto `crypt` sobre una carpeta local en lugar de B2 y rclone 1.60.1, la versión del VPS. Docker Desktop
+no expone la carpeta del volumen, así que los scripts leyeron una copia de él con `PHOTOS_DIR`; falta verlos contra el volumen
+real en el VPS.
+
+- Con el jar real, por nginx: WebP, JPEG en CMYK y 12 megapíxeles (392 KB, 1600×1200) se guardaron; un texto `.jpg` y 11 MB
+  dieron 400 con el mensaje de la foto; 25 MB, 413 de nginx. Una foto con GPS y orientación 6 quedó girada (200×400) y sin EXIF,
+  también en la miniatura. La imagen llega como `image/jpeg` con caché privada y `nosniff`; sin token, 401; `/api/x.jpg` sin
+  token da 401, no el 404 de nginx. `docker compose config` muestra los mismos puertos que antes.
+- El volumen nuevo quedó con dueño 10001 y `api` escribió en él.
+- `backup.sh` subió la base y las 8 fotos con nombres cifrados. Con el remoto envejecido a 2020, la limpieza borró el dump viejo y
+  ninguna foto.
+- `restore.sh --check` pasó, y falló al apartar una foto del remoto y al alterar las del volumen. Con una foto alterada, `backup.sh`
+  terminó con error por `--immutable` y no tocó la copia. Con la carpeta de fotos inexistente, terminó con código 1, el dump
+  subido y aviso `fail`.
+- `restore.sh --photos` trajo las 8 fotos idénticas a una carpeta vacía. Con esa copia en un volumen nuevo, `api` mostró la
+  foto y aceptó otra; el respaldo siguiente y `--check` pasaron con 10 fotos.
+- `--immutable` también compara la fecha: una foto copiada al volumen sin conservarla da error en la copia, sin perder nada.
+  `restore.sh --photos` la conserva.

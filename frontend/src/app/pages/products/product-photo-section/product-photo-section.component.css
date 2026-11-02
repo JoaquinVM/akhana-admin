@@ -53,6 +53,11 @@
   overflow: hidden;
 }
 
+.btn-sm {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8rem;
+}
+
 .text-muted-sm {
   font-size: 0.8rem;
   color: #64748b;
