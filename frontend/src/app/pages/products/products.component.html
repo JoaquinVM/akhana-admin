@@ -605,17 +605,6 @@
         [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
         (photoChange)="onPhotoChange($event)" />
 
-      <!-- Barcodes of the product (CAT-10) -->
-      @if (showBarcodes()) {
-        <app-product-barcodes-section
-          [active]="isFormModalOpen() && !isDiscardConfirmOpen()"
-          [barcodes]="barcodes()"
-          [modified]="barcodesModified()"
-          [noBarcode]="formNoBarcode()"
-          (barcodesChange)="barcodes.set($event)"
-          (clearMark)="clearNoBarcodeMark()" />
-      }
-
       <!-- Presentations of the product by kilo (CAT-11) -->
       @if (isKilogramForm() && !isSpecialForm()) {
         <div class="form-group presentations-section">
@@ -785,6 +774,17 @@
           placeholder="Características, presentación o notas del producto...">
         </textarea>
       </div>
+
+      <!-- Barcodes of the product (CAT-10) -->
+      @if (showBarcodes()) {
+        <app-product-barcodes-section
+          [active]="isFormModalOpen() && !isDiscardConfirmOpen()"
+          [barcodes]="barcodes()"
+          [modified]="barcodesModified()"
+          [noBarcode]="formNoBarcode()"
+          (barcodesChange)="barcodes.set($event)"
+          (clearMark)="clearNoBarcodeMark()" />
+      }
 
       <div modal-footer class="form-actions">
         <button type="button" class="btn btn-outline" (click)="attemptCloseForm()" [disabled]="isSubmitting()">
