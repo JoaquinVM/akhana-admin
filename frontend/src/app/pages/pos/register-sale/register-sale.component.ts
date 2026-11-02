@@ -288,17 +288,20 @@ export class RegisterSaleComponent implements OnInit {
   decrementQuantity(key: string): void {
     const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
-    this.updateQuantity(key, item.quantity - this.quantityStep(item));
+    const next = item.quantity - this.quantityStep(item);
+    if (this.normalizeQuantity(item, next) <= 0) {
+      this.removeFromCart(key);
+      return;
+    }
+    this.updateQuantity(key, next);
   }
 
+  // POS-14: what is typed never removes the line: empty or 0 keeps the last valid quantity. The − and the X remove it
   updateQuantity(key: string, quantity: number): void {
     const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
     const normalized = this.normalizeQuantity(item, Number(quantity) || 0);
-    if (normalized <= 0) {
-      this.removeFromCart(key);
-      return;
-    }
+    if (normalized <= 0) return;
     this.cartItems.update((items) =>
       items.map((it) => {
         if (it.key === key) {

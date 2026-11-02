@@ -181,6 +181,25 @@ describe('RegisterSaleComponent', () => {
     expect(component.cartItems()[0].product.id).toBe('prod-1');
   });
 
+  describe('POS-14: escribir no quita la línea', () => {
+    it('vaciar o escribir 0 deja la línea con la última cantidad válida', () => {
+      component.addToCart(mockProduct1);
+      component.updateQuantity(mockProduct1.id, 3);
+
+      component.updateQuantity(mockProduct1.id, 0);
+      component.updateQuantity(mockProduct1.id, null as unknown as number);
+
+      expect(component.cartItems().length).toBe(1);
+      expect(component.cartItems()[0].quantity).toBe(3);
+    });
+
+    it('el − al llegar a 0 sigue quitando la línea', () => {
+      component.addToCart(mockProduct1);
+      component.decrementQuantity(mockProduct1.id);
+      expect(component.cartItems().length).toBe(0);
+    });
+  });
+
   describe('POS-10: venta por peso', () => {
     // Almendras a Bs 80,00 el kilo
     const weightProduct: Product = { ...mockProduct1, id: 'prod-kg', code: 'G001', name: 'Almendras', sellPrice: 80, saleUnit: 'KILOGRAM' };
