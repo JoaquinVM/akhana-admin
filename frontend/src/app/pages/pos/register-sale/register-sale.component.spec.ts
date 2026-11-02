@@ -474,4 +474,11 @@ describe('RegisterSaleComponent', () => {
       expect(component.errorMessage()).toBe('Una venta al costo no admite líneas libres.');
     });
   });
+
+  it('CAJ-12: registrar una venta en la caja de un día anterior muestra la marca junto a la caja', () => {
+    mockCashService.currentSession.set({ ...mockSession, operationDate: '2026-10-28', openedAt: '2026-10-30T13:00:00Z' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-cash-day-mark').textContent).toContain('Día 28/10 · abierta el 30/10');
+  });
 });

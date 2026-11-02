@@ -13,6 +13,9 @@
         <h1 class="page-title">Registrar venta</h1>
         @if (cashService.currentSession()) {
           <span class="session-badge">Caja #{{ cashService.currentSession()?.sessionNumber }}</span>
+          <app-cash-day-mark
+            [operationDate]="cashService.currentSession()?.operationDate"
+            [openedAt]="cashService.currentSession()?.openedAt" />
         }
       </div>
       <p class="page-subtitle">Selecciona productos, aplica descuentos y procesa el cobro directamente</p>

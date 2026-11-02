@@ -109,3 +109,44 @@
 .form-hint-warning {
   color: var(--color-warning, #b45309);
 }
+
+.form-alert {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #991b1b;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+}
+
+.missing-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  background-color: #fff4dc;
+  border: 1px solid #f5d999;
+  border-radius: var(--radius-md);
+}
+
+.missing-days-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #8a5a00;
+}
+
+.missing-days-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.missing-days-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}

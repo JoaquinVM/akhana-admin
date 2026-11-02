@@ -18,6 +18,7 @@ import { SaleDetailModalComponent } from '../../shared/components/sale-detail-mo
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
 import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { formatBs } from '../../shared/utils/money';
+import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
 import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
 import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
@@ -35,7 +36,8 @@ import { SessionTransactionsComponent } from './components/session-transactions/
     PosFeedbackBannerComponent,
     PosClosedStateComponent,
     SaleDetailModalComponent,
-    SessionTransactionsComponent
+    SessionTransactionsComponent,
+    CashDayMarkComponent
   ],
   templateUrl: './pos.component.html',
   styleUrls: ['./pos.component.css']
@@ -54,6 +56,8 @@ export class PosComponent implements OnInit {
   isDetailModalVisible = signal<boolean>(false);
   isCashExpenseModalVisible = signal<boolean>(false);
   isActionLoading = signal<boolean>(false);
+  // What the server answered to the opening: it shows in the modal, since the banner stays behind it
+  openError = signal<string | null>(null);
 
 
   selectedSaleToVoid = signal<Sale | null>(null);
@@ -227,6 +231,7 @@ export class PosComponent implements OnInit {
   }
 
   openCashModal(): void {
+    this.openError.set(null);
     this.isOpenModalVisible.set(true);
   }
 
@@ -236,6 +241,7 @@ export class PosComponent implements OnInit {
 
   handleConfirmOpen(request: OpenCashRequest): void {
     this.isActionLoading.set(true);
+    this.openError.set(null);
     this.cashService.openSession(request).subscribe({
       next: () => {
         this.isActionLoading.set(false);
@@ -245,8 +251,7 @@ export class PosComponent implements OnInit {
       },
       error: (err) => {
         this.isActionLoading.set(false);
-        const msg = err.error?.message || 'Error al abrir la caja.';
-        this.showFeedback('error', msg);
+        this.openError.set(err.error?.message || 'Error al abrir la caja.');
       }
     });
   }

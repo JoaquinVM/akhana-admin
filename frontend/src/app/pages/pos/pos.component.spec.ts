@@ -6,7 +6,8 @@ import { SaleService } from '../../core/sale/sale.service';
 import { CashSessionSummary, CashSessionDetail, Sale } from '../../core/cash/models/cash.models';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
 import { FinancialCategoryService } from '../../core/finance/financial-category.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { storeToday } from '../../shared/utils/store-date';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
@@ -495,5 +496,38 @@ describe('PosComponent', () => {
     expect(component.totalExpensesAmount()).toBe(50.0);
     // CAJ-08: las transferencias de Caja van a la pestaña Ingresos / Retiros
     expect(component.recentTransfers().map((t) => t.id)).toEqual(['tx-2']);
+  });
+
+  it('CAJ-12: una caja abierta de un día anterior lleva la marca, para no confundirla con la de hoy', () => {
+    mockCashService.currentSession.set({ ...mockSession, operationDate: '2026-10-28', openedAt: '2026-10-30T13:00:00Z' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-cash-day-mark').textContent).toContain('Día 28/10 · abierta el 30/10');
+  });
+
+  it('CAJ-12: la caja de hoy no lleva marca', () => {
+    mockCashService.currentSession.set({ ...mockSession, operationDate: storeToday(), openedAt: new Date().toISOString() });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.cash-day-mark')).toBeNull();
+  });
+
+  it('CAJ-13: el rechazo de la apertura queda en el modal y no se cierra', () => {
+    mockCashService.openSession.mockReturnValue(throwError(() => ({ error: { message: 'Falta resolver: 31/10, 2/11.' } })));
+    component.openCashModal();
+
+    component.handleConfirmOpen({ openingAmount: 100 });
+
+    expect(component.openError()).toBe('Falta resolver: 31/10, 2/11.');
+    expect(component.isOpenModalVisible()).toBe(true);
+    expect(component.isActionLoading()).toBe(false);
+  });
+
+  it('CAJ-13: al volver a abrir el modal el rechazo anterior ya no se ve', () => {
+    component.openError.set('Falta resolver: 31/10, 2/11.');
+
+    component.openCashModal();
+
+    expect(component.openError()).toBeNull();
   });
 });
