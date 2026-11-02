@@ -174,6 +174,7 @@ public class SaleServiceImpl implements SaleService {
                 .presentationWeightKg(presentation != null ? presentation.getWeightKg() : null)
                 .weightKg(presentation != null ? packWeight(qty, presentation) : null)
                 .subtotal(lineSubtotal)
+                .scanned(Boolean.TRUE.equals(itemReq.scanned()))
                 .build();
 
             saleItems.add(item);

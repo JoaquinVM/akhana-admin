@@ -1075,5 +1075,27 @@ class SaleServiceTest {
             .hasMessage("La fecha desde no puede ser posterior a la fecha hasta.");
         verifyNoInteractions(saleRepository);
     }
-}
 
+    // POS-15: only for measuring: a scanned line costs and charges the same
+    @Test
+    void savesWhetherALineCameByScanWithoutChangingAmounts() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.nextSaleNumber()).thenReturn(9L);
+        ArgumentCaptor<Sale> saleCaptor = ArgumentCaptor.forClass(Sale.class);
+        when(saleRepository.save(saleCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SaleItemRequest scanned = new SaleItemRequest(product1.getId(), new BigDecimal("1"), BigDecimal.ZERO, null, null, null, true);
+        SaleResponse withScan = saleService.registerSale(new SaleDetailRequest(List.of(scanned), BigDecimal.ZERO,
+            PaymentMethod.EFECTIVO, null, null, new BigDecimal("500.00"), null), "cajero");
+        assertThat(saleCaptor.getValue().getItems().get(0).isScanned()).isTrue();
+
+        SaleItemRequest typed = new SaleItemRequest(product1.getId(), new BigDecimal("1"), BigDecimal.ZERO);
+        SaleResponse withoutScan = saleService.registerSale(new SaleDetailRequest(List.of(typed), BigDecimal.ZERO,
+            PaymentMethod.EFECTIVO, null, null, new BigDecimal("500.00"), null), "cajero");
+        assertThat(saleCaptor.getValue().getItems().get(0).isScanned()).isFalse();
+
+        assertThat(withScan.totalAmount()).isEqualByComparingTo(withoutScan.totalAmount());
+    }
+}

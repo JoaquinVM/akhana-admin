@@ -11,6 +11,7 @@ import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
+import com.akhana.akhana_admin.service.ProductBarcodeService;
 import com.akhana.akhana_admin.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +46,9 @@ class ProductServiceTest {
     private ProductPresentationService presentationService;
     @Mock
     private ProductPriceChangeRepository priceChangeRepository;
+
+    @Mock
+    private ProductBarcodeService barcodeService;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -452,6 +456,18 @@ class ProductServiceTest {
         assertThat(activeProduct.getStatus()).isEqualTo(ProductStatus.ELIMINADO);
         assertThat(activeProduct.getDeletedBy()).isEqualTo("admin");
         assertThat(activeProduct.getDeletedAt()).isNotNull();
+    }
+
+    // ---------------------------------------------------------------- CAT-10
+
+    @Test
+    void deleteDeactivatesTheBarcodes() {
+        Product product = Product.builder().id(UUID.randomUUID()).status(ProductStatus.ACTIVO).build();
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+
+        productService.deleteProduct(product.getId(), "admin");
+
+        verify(barcodeService).deactivateAll(product, "admin");
     }
 
     // ---------------------------------------------------------------- POS-11
