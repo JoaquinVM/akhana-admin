@@ -49,8 +49,14 @@
             @for (product of productMatches(); track product.id) {
               <li>
                 <button type="button" class="match-item" (click)="addProduct(product)">
-                  <span class="match-name">{{ product.name }}</span>
-                  <span class="match-meta">{{ product.code }} · {{ product.supplierName }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }} · venta Bs {{ product.sellPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  <span class="match-info">
+                    <span class="match-name">{{ product.name }}</span>
+                    <span class="match-meta">{{ product.code }} · {{ product.supplierName }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                  </span>
+                  <span class="match-sell-price">
+                    <span class="match-sell-label">Venta</span>
+                    Bs {{ product.sellPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}
+                  </span>
                 </button>
               </li>
             }
@@ -122,8 +128,8 @@
             <th>Producto</th>
             <th class="text-right">Cantidad</th>
             <th class="text-right">Costo unitario (Bs)</th>
-            <th class="text-right">Precio de venta</th>
             <th class="text-right">Subtotal</th>
+            <th class="text-right line-sell-price-header">Precio de venta</th>
             <th></th>
           </tr>
         </thead>
@@ -144,6 +150,7 @@
                 <input type="number" class="form-control input-number" [name]="'cost-' + i" step="0.01" min="0"
                        [ngModel]="line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
               </td>
+              <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right line-sell-price">
                 @if (referenceSellPrice(line) !== null) {
                   Bs {{ referenceSellPrice(line) | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}
@@ -151,7 +158,6 @@
                   —
                 }
               </td>
-              <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right">
                 <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
               </td>

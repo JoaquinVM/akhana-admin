@@ -232,15 +232,20 @@ describe('PurchaseFormModalComponent', () => {
         .map((el: any) => el.textContent.trim());
     };
 
-    it('el buscador lo muestra después del costo, por kilo si se vende por kilo', () => {
-      const metaOf = (search: string): string => {
+    it('el buscador lo muestra aparte del costo, por kilo si se vende por kilo', () => {
+      const resultOf = (search: string): { meta: string; sellPrice: string } => {
         component.productSearch.set(search);
         fixture.detectChanges();
-        return fixture.nativeElement.querySelector('.match-meta').textContent.trim();
+        const text = (selector: string): string =>
+          fixture.nativeElement.querySelector(selector).textContent.replace(/\s+/g, ' ').trim();
+        return { meta: text('.match-meta'), sellPrice: text('.match-sell-price') };
       };
 
-      expect(metaOf('te-1')).toContain('costo Bs 10.00 · venta Bs 15.00');
-      expect(metaOf('nue-1')).toContain('costo Bs 40.00/kg · venta Bs 60.00/kg');
+      expect(resultOf('te-1').sellPrice).toBe('Venta Bs 15.00');
+      expect(resultOf('te-1').meta).toContain('costo Bs 10.00');
+      expect(resultOf('te-1').meta).not.toContain('Bs 15.00');
+      expect(resultOf('nue-1').sellPrice).toBe('Venta Bs 60.00/kg');
+      expect(resultOf('nue-1').meta).toContain('costo Bs 40.00/kg');
     });
 
     it('la columna muestra el precio de una unidad o un kilo, sin multiplicar por la cantidad', () => {
@@ -342,11 +347,11 @@ describe('PurchaseFormModalComponent', () => {
         reopen(catalog);
         component.productSearch.set('te-1');
         fixture.detectChanges();
-        expect(fixture.nativeElement.querySelector('.match-meta')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.match-sell-price')).toBeNull();
 
         catalog.next([{ ...tea, sellPrice: 19 }]);
         fixture.detectChanges();
-        expect(fixture.nativeElement.querySelector('.match-meta').textContent).toContain('venta Bs 19.00');
+        expect(fixture.nativeElement.querySelector('.match-sell-price').textContent.replace(/\s+/g, ' ').trim()).toBe('Venta Bs 19.00');
       });
 
       it('una línea muestra — si el catálogo no carga, junto al error', () => {
@@ -361,14 +366,18 @@ describe('PurchaseFormModalComponent', () => {
       });
     });
 
-    it('el buscador conserva código y proveedor, y la columna va entre el costo y el subtotal', () => {
+    it('el buscador conserva código y proveedor, con el precio aparte, y la columna va después del subtotal', () => {
       component.productSearch.set('te-1');
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.match-meta').textContent.trim())
-        .toBe('TE-1 · Granel · costo Bs 10.00 · venta Bs 15.00');
+        .toBe('TE-1 · Granel · costo Bs 10.00');
+      expect(fixture.nativeElement.querySelector('.match-sell-price').textContent.replace(/\s+/g, ' ').trim()).toBe('Venta Bs 15.00');
       const headers = Array.from(fixture.nativeElement.querySelectorAll('.lines-table th'))
         .map((th: any) => th.textContent.trim());
-      expect(headers.slice(2, 5)).toEqual(['Costo unitario (Bs)', 'Precio de venta', 'Subtotal']);
+      expect(headers.slice(2, 5)).toEqual(['Costo unitario (Bs)', 'Subtotal', 'Precio de venta']);
+      component.addProduct(tea);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.lines-table tbody tr').children[4].classList).toContain('line-sell-price');
     });
   });
 
