@@ -19,6 +19,8 @@ final class ProductPhotoInspector {
     private static final int PNG_CRC_BYTES = 4;
     private static final int APP1 = 0xE1;
     private static final int START_OF_SCAN = 0xDA;
+    private static final int START_OF_IMAGE = 0xD8;
+    private static final int TEMPORARY_MARKER = 0x01;
     private static final int END_OF_IMAGE = 0xD9;
     private static final int ORIENTATION_TAG = 0x0112;
     private static final int SHORT_TYPE = 3;
@@ -83,26 +85,45 @@ final class ProductPhotoInspector {
         return width * height;
     }
 
-    // Counted from the first scan on, so the metadata before it cannot be taken for a marker
+    // Walked as the decoder does: scans that follow a marker with no length count too, and what comes after the end of
+    // the image (the video of a motion photo, other images) is not part of it
     static void checkJpeg(byte[] content) {
         int scans = 0;
-        for (int i = firstJpegScan(content); i + 1 < content.length; i++) {
-            if ((content[i] & 0xFF) == 0xFF && (content[i + 1] & 0xFF) == START_OF_SCAN && ++scans > MAX_JPEG_SCANS) {
+        int offset = nextJpegMarker(content, 2);
+        while (offset >= 0) {
+            int marker = content[offset + 1] & 0xFF;
+            if (marker == END_OF_IMAGE) {
+                return;
+            }
+            if (marker == START_OF_SCAN && ++scans > MAX_JPEG_SCANS) {
                 throw invalid();
             }
+            offset = nextJpegMarker(content, afterJpegMarker(content, offset, marker));
         }
     }
 
-    private static int firstJpegScan(byte[] content) {
-        int offset = 2;
-        while (offset + 4 <= content.length && (content[offset] & 0xFF) == 0xFF) {
-            int marker = content[offset + 1] & 0xFF;
-            if (marker == START_OF_SCAN || marker == END_OF_IMAGE) {
-                return offset;
+    // The next real marker: fill bytes, stuffed zeros, restart markers and data in between are skipped
+    private static int nextJpegMarker(byte[] content, int from) {
+        for (int i = from; i + 1 < content.length; i++) {
+            if ((content[i] & 0xFF) == 0xFF) {
+                int next = content[i + 1] & 0xFF;
+                if (next != 0xFF && next != 0 && !isRestartMarker(next)) {
+                    return i;
+                }
             }
-            offset += 2 + unsignedShort(content, offset + 2, false);
         }
-        return Math.min(offset, content.length);
+        return -1;
+    }
+
+    private static int afterJpegMarker(byte[] content, int offset, int marker) {
+        if (marker == TEMPORARY_MARKER || marker == START_OF_IMAGE || offset + 4 > content.length) {
+            return offset + 2;
+        }
+        return offset + 2 + Math.max(2, unsignedShort(content, offset + 2, false));
+    }
+
+    private static boolean isRestartMarker(int marker) {
+        return marker >= 0xD0 && marker <= 0xD7;
     }
 
     // Only tag 0x0112 of the first EXIF block: a general reader builds an array for every tag, and thousands of tags can
@@ -117,19 +138,17 @@ final class ProductPhotoInspector {
     }
 
     private static int jpegOrientation(byte[] content) {
-        int offset = 2;
-        while (offset + 4 <= content.length && (content[offset] & 0xFF) == 0xFF) {
+        int offset = nextJpegMarker(content, 2);
+        while (offset >= 0) {
             int marker = content[offset + 1] & 0xFF;
             if (marker == START_OF_SCAN || marker == END_OF_IMAGE) {
                 break;
             }
-            int size = unsignedShort(content, offset + 2, false);
-            int payload = offset + 4;
-            int end = Math.min(offset + 2 + size, content.length);
-            if (marker == APP1 && hasExifPrefix(content, payload, end)) {
-                return tiffOrientation(content, payload + EXIF_PREFIX.length, end);
+            int next = afterJpegMarker(content, offset, marker);
+            if (marker == APP1 && hasExifPrefix(content, offset + 4, Math.min(next, content.length))) {
+                return exifOrientation(content, offset + 4, Math.min(next, content.length));
             }
-            offset += 2 + size;
+            offset = nextJpegMarker(content, next);
         }
         return DEFAULT_ORIENTATION;
     }
@@ -144,7 +163,7 @@ final class ProductPhotoInspector {
                 break;
             }
             if (chunkType(content, offset + 4).equals("eXIf")) {
-                return tiffOrientation(content, payload, payload + (int) size);
+                return exifOrientation(content, payload, payload + (int) size);
             }
             offset = payload + (int) size + PNG_CRC_BYTES;
         }
@@ -161,13 +180,15 @@ final class ProductPhotoInspector {
                 break;
             }
             if (chunkType(content, offset).equals("EXIF")) {
-                int end = payload + (int) size;
-                int start = hasExifPrefix(content, payload, end) ? payload + EXIF_PREFIX.length : payload;
-                return tiffOrientation(content, start, end);
+                return exifOrientation(content, payload, payload + (int) size);
             }
             offset = payload + (int) (size + (size & 1));
         }
         return DEFAULT_ORIENTATION;
+    }
+
+    private static int exifOrientation(byte[] content, int start, int end) {
+        return tiffOrientation(content, hasExifPrefix(content, start, end) ? start + EXIF_PREFIX.length : start, end);
     }
 
     private static int tiffOrientation(byte[] content, int start, int end) {

@@ -23,7 +23,7 @@ BACKUP_DIR=${BACKUP_DIR:-/var/backups/akhana}
 BACKUP_KEEP_LOCAL_DAYS=${BACKUP_KEEP_LOCAL_DAYS:-7}
 BACKUP_KEEP_REMOTE_DAYS=${BACKUP_KEEP_REMOTE_DAYS:-60}
 
-# Copy of the product photos off the VPS (NF-07), in a folder that the 60-day cleanup of the dumps does not reach
+# Copy of the product photos off the VPS (NF-08), in a folder that the 60-day cleanup of the dumps does not reach
 photos_remote() {
     echo "${BACKUP_REMOTE:?BACKUP_REMOTE no está definido}product-photos/"
 }

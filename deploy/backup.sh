@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Daily backup (NF-01, NF-07, specs/deploy.md): dump, verify, upload encrypted off the VPS, prune, copy the
+# Daily backup (NF-01, NF-08, specs/deploy.md): dump, verify, upload encrypted off the VPS, prune, copy the
 # product photos, report.
 # Usage: backup.sh [--tag pre-deploy|pre-restore] [--local-only]
 #   --local-only skips the upload (pre-deploy copies, whose remote copy is tomorrow's daily one).
@@ -51,14 +51,14 @@ if $upload; then
     log "Subiendo a $BACKUP_REMOTE"
     $RCLONE copy "$file" "$BACKUP_REMOTE"
     log "Borrando del remoto los respaldos de más de $BACKUP_KEEP_REMOTE_DAYS días"
-    # Only the dumps: delete is recursive and would also take the product photos (NF-07)
+    # Only the dumps: delete is recursive and would also take the product photos (NF-08)
     $RCLONE delete --min-age "${BACKUP_KEEP_REMOTE_DAYS}d" --max-depth 1 --include '/akhana-*.dump' "$BACKUP_REMOTE"
 fi
 
 log "Borrando los respaldos locales de más de $BACKUP_KEEP_LOCAL_DAYS días"
 find "$BACKUP_DIR" -name 'akhana-*.dump' -mtime +"$BACKUP_KEEP_LOCAL_DAYS" -delete
 
-# Last, so a failure here leaves the database already off the VPS and still alerts (NF-07).
+# Last, so a failure here leaves the database already off the VPS and still alerts (NF-08).
 # A saved photo never changes, so --immutable makes a changed file an error instead of replacing the copy.
 if $upload; then
     photos_source=$(photos_dir)

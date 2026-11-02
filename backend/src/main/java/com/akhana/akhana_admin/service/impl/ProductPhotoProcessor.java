@@ -48,6 +48,7 @@ public class ProductPhotoProcessor {
     private static final float THUMBNAIL_QUALITY = 0.8f;
     private static final double SHRINK_STEP = 0.85;
     private static final int PERMIT_WAIT_SECONDS = 30;
+    static final int MAX_WAITING_UPLOADS = 2;
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
     private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
@@ -55,7 +56,7 @@ public class ProductPhotoProcessor {
     private static final byte[] WEBP_MAGIC = "WEBP".getBytes(StandardCharsets.US_ASCII);
 
     // One image at a time: a 50 megapixel WebP is decoded whole, about 400 MB of heap with its copy
-    private final Semaphore permit = new Semaphore(1);
+    final Semaphore permit = new Semaphore(1);
 
     public ProductPhotoProcessor() {
         // Inside the Spring Boot jar the plugins may not register by themselves
@@ -83,6 +84,10 @@ public class ProductPhotoProcessor {
     }
 
     private void acquirePermit() {
+        // Each upload that waits holds a database connection (open-in-view), which the POS shares
+        if (permit.getQueueLength() >= MAX_WAITING_UPLOADS) {
+            throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);
+        }
         try {
             if (!permit.tryAcquire(PERMIT_WAIT_SECONDS, TimeUnit.SECONDS)) {
                 throw new ProductPhotoStorageException(ProductPhotoService.SAVE_FAILED, null);

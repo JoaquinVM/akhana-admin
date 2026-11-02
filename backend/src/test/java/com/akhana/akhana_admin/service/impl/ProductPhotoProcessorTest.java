@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service.impl;
 
+import com.akhana.akhana_admin.exception.ProductPhotoStorageException;
 import com.akhana.akhana_admin.service.ProductPhotoService;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.Directory;
@@ -20,9 +21,14 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
 import static com.akhana.akhana_admin.service.impl.ProductPhotoFixtures.*;
@@ -280,5 +286,33 @@ class ProductPhotoProcessorTest {
 
         assertThat(image.getWidth()).isEqualTo(400);
         assertThat(colorAt(image, 0.25, 0.25)).isEqualTo('R');
+    }
+
+    @Test
+    @DisplayName("Con dos subidas ya esperando, la siguiente se rechaza enseguida y no retiene una conexión")
+    void limitsWaitingUploads() throws Exception {
+        byte[] content = jpeg(quadrants(40, 40));
+        processor.permit.acquire();
+        ExecutorService pool = Executors.newFixedThreadPool(ProductPhotoProcessor.MAX_WAITING_UPLOADS);
+        try {
+            List<Future<?>> waiting = new ArrayList<>();
+            for (int i = 0; i < ProductPhotoProcessor.MAX_WAITING_UPLOADS; i++) {
+                waiting.add(pool.submit(() -> processor.process(content)));
+            }
+            while (processor.permit.getQueueLength() < ProductPhotoProcessor.MAX_WAITING_UPLOADS) {
+                Thread.onSpinWait();
+            }
+
+            assertThatThrownBy(() -> processor.process(content))
+                .isInstanceOf(ProductPhotoStorageException.class)
+                .hasMessage(ProductPhotoService.SAVE_FAILED);
+
+            processor.permit.release();
+            for (Future<?> upload : waiting) {
+                assertThat(upload.get(30, TimeUnit.SECONDS)).isNotNull();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }

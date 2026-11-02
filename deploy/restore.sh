@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore of a PostgreSQL backup and of the product photos (NF-01, NF-07, specs/deploy.md).
+# Restore of a PostgreSQL backup and of the product photos (NF-01, NF-08, specs/deploy.md).
 #   restore.sh --check [latest|<file>]   restores into a temporary database, compares it with the live one,
 #                                        checks its photos against the remote and drops it; never touches the
 #                                        real database (weekly timer).
@@ -78,7 +78,7 @@ list_photo_files() {
     fi
 }
 
-# Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-07).
+# Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-08).
 # It runs on the left of ||, where set -e does not apply, so each step checks its own result.
 check_photos() {
     local expected=$1 remote dir stored=$work_dir/photos_stored shuffled=$work_dir/photos_shuffled missing name
