@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -64,6 +65,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     static final String PAST_DAY_COMMENT_REQUIRED = "Elegir un día anterior pide un comentario.";
     static final String MISSING_DAYS = "Falta resolver: %s.";
     static final String DAYS_NOT_MISSING = "Esos días ya no faltan; vuelve a abrir el formulario.";
+    static final String NO_ATTENTION_DAY_EMPTY = "Hay un día sin atención vacío; vuelve a abrir el formulario.";
     static final String NO_ATTENTION_COMMENT_REQUIRED = "Confirmar los días sin atención pide un comentario.";
     static final String REOPEN_REASON_REQUIRED = "El motivo es obligatorio.";
     static final String REOPEN_ONLY_LAST = "Solo se puede reabrir la última caja.";
@@ -79,6 +81,11 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     @Override
     public CashSessionSummaryResponse openSession(OpenCashRequest request, String username) {
+        // CAJ-13: a day sent empty cannot be compared with the missing ones
+        if (request.noAttentionDays() != null && request.noAttentionDays().stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException(NO_ATTENTION_DAY_EMPTY);
+        }
+
         // CAJ-12, CAJ-13: nothing read below about the sessions can change until this transaction ends (T-14)
         cashSessionRepository.lockCashOpening();
         if (cashSessionRepository.existsByStatus(CashSessionStatus.ABIERTA)) {
