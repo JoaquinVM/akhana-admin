@@ -11,6 +11,7 @@
       <p class="page-subtitle">Gestión integral de artículos, márgenes comerciales, categorías y etiquetas.</p>
     </div>
     <div class="header-actions">
+      <a class="btn btn-outline" routerLink="/products/barcodes">Cargar códigos</a>
       <button type="button" class="btn btn-outline" (click)="isImportModalOpen.set(true)">Importar</button>
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
@@ -603,6 +604,17 @@
         [productId]="isFormModalOpen() && isEditing() ? selectedProductId() : null"
         [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
         (photoChange)="onPhotoChange($event)" />
+
+      <!-- Barcodes of the product (CAT-10) -->
+      @if (showBarcodes()) {
+        <app-product-barcodes-section
+          [active]="isFormModalOpen() && !isDiscardConfirmOpen()"
+          [barcodes]="barcodes()"
+          [modified]="barcodesModified()"
+          [noBarcode]="formNoBarcode()"
+          (barcodesChange)="barcodes.set($event)"
+          (clearMark)="clearNoBarcodeMark()" />
+      }
 
       <!-- Presentations of the product by kilo (CAT-11) -->
       @if (isKilogramForm() && !isSpecialForm()) {

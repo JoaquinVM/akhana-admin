@@ -1,0 +1,39 @@
+<div class="form-group barcodes-section">
+  <label class="form-label" for="productBarcode">
+    <span>Códigos de barras</span>
+    @if (modified()) {
+      <span class="field-modified-badge">Modificado</span>
+    }
+  </label>
+  <span class="text-muted-sm">Escanea el código o escríbelo. Se guarda con el botón del formulario.</span>
+
+  @if (noBarcode()) {
+    <div class="no-barcode-mark">
+      <span>Marcado «No trae»</span>
+      <button type="button" class="btn btn-outline btn-sm" (click)="clearMark.emit()">Quitar marca</button>
+    </div>
+  }
+
+  @for (barcode of barcodes(); track barcode) {
+    <div class="barcode-row">
+      <span class="barcode-value">{{ barcode }}</span>
+      <button type="button" class="btn btn-outline btn-sm" (click)="remove(barcode)" [attr.aria-label]="'Quitar ' + barcode">
+        Quitar
+      </button>
+    </div>
+  }
+
+  <div class="barcode-add">
+    <input
+      id="productBarcode"
+      type="text"
+      inputmode="numeric"
+      maxlength="13"
+      class="form-control"
+      autocomplete="off"
+      [value]="typed()"
+      (input)="typed.set($any($event.target).value)"
+      (keydown.enter)="addTyped($event)" />
+    <button type="button" class="btn btn-outline" [disabled]="!canAdd()" (click)="addTyped()">Agregar</button>
+  </div>
+</div>

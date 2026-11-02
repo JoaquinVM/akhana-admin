@@ -124,6 +124,13 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.PRODUCTS }
       },
       {
+        path: 'products/barcodes',
+        // CAT-10: long work done in batches, in its own page
+        loadComponent: () => import('./pages/products/barcode-loading/barcode-loading.component').then(m => m.BarcodeLoadingComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.PRODUCTS }
+      },
+      {
         path: 'categories',
         component: CategoriesComponent,
         canActivate: [permissionGuard],

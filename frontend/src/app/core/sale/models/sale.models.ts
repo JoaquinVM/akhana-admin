@@ -34,6 +34,8 @@ export interface SaleItemRequest {
   // POS-11: typed name and price, only for special products
   freeName?: string | null;
   freePrice?: number | null;
+  // POS-15: at least one read of this line was a scan; only for measuring
+  scanned?: boolean;
 }
 
 export interface SaleDetailRequest {

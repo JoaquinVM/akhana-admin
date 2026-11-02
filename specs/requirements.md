@@ -14,18 +14,18 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
-| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11, CAT-12 | ✅ Completo | CAT-12 sin desplegar: probar con una foto real con GPS y revisar la regla de ciclo de vida del bucket de B2 | `product-import.md`, `product-presentations.md`, `product-photos.md` |
+| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | CAT-12 sin desplegar: probar con una foto real con GPS y revisar la regla de ciclo de vida del bucket de B2 | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
-| POS y ventas | POS-01 a POS-14 | ✅ Completo | — | `sales.md` |
+| POS y ventas | POS-01 a POS-15 | ✅ Completo | — | `sales.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y el celular | `deploy.md` |
-| Inventario | INV, CAT-05, CAT-09, CAT-10, CON-04, COM-10 | V2 | — | — |
+| Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
 
@@ -62,7 +62,7 @@ Entra en la V1:
 - Dos roles: operador y administrador.
 - Migración de productos, saldos y todos los datos de las dos planillas desde su primer registro.
 
-No entra en la V1: stock y kardex, conteo físico, variantes de producto, lector de códigos e impresora de tickets, facturación y varias tiendas.
+No entra en la V1: stock y kardex, conteo físico, variantes de producto, impresora de tickets (POS-16), facturación y varias tiendas.
 
 ### 2.2 Roles
 
@@ -111,9 +111,9 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **CAT-08** · V1 — Productos vendidos por peso (frutos secos y Granel, P-31): cada producto indica si se vende por unidad o por kilo; por kilo, el precio es Bs por kilo y la cantidad son kilos con hasta 3 decimales en ventas, compras y consumos. Un producto por unidad solo acepta cantidades enteras.
 - **CAT-11** · V1 — Presentaciones de productos por peso: hasta 6 por producto, con nombre, peso fijo y precio fijo opcional (sin él, peso × precio por kilo). El costo siempre es peso × costo por kilo. El POS y Consumos ofrecen las presentaciones y «Otro peso»; los reportes suman kilos. Detalle en `product-presentations.md`.
 - **CAT-12** · V1 — Cada producto admite una foto, que quien tiene acceso a Productos sube, cambia o quita. Se guarda reducida y sin metadatos; cambiarla o quitarla conserva el archivo anterior (RG-01). El listado filtra los productos sin foto. Detalle en `product-photos.md`.
+- **CAT-10** · V1 — Un producto por unidad puede tener hasta 5 códigos de barras de fábrica (EAN-8, UPC-A o EAN-13), únicos entre productos. Se cargan desde Productos, con una lista de los que faltan, de más a menos vendidos. Quien tiene acceso a Productos los agrega o los quita, y queda quién y cuándo. Detalle en `barcodes.md`.
 - **CAT-05** · V2 — Cada producto indica si controla stock (sí/no), para admitir servicios o ítems sin inventario.
 - **CAT-09** · V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33).
-- **CAT-10** · V2 — Código de barras por producto y lectura con lector en el POS; impresión de ticket (P-11).
 
 ### 3.3 Compras (pedidos) · V1
 
@@ -179,7 +179,7 @@ Detalle en `cash.md`.
 
 Detalle en `sales.md`.
 
-- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno.
+- **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno. También encuentran el código de barras, solo cuando está completo y es exacto.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
@@ -193,6 +193,8 @@ Detalle en `sales.md`.
 - **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, mostrando antes la utilidad que tendrá la línea, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
 - **POS-13** Venta de productos de terceros (hoy, de Mami): producto especial con su dueña (DEU-01); el costo de la línea es igual al precio y cada venta suma a la deuda con ella, que se le paga con «Pago a tercero» (DEU-03). Los reportes la muestran aparte, fuera de las ventas y la utilidad de la tienda.
 - **POS-14** En el POS, vaciar la cantidad de una línea o escribir 0 no la quita; al salir del campo vuelve a la última cantidad válida. La línea se quita con el − al llegar a 0 o con su X.
+- **POS-15** En la pantalla de venta, un escaneo con el lector USB agrega el producto por coincidencia exacta, esté donde esté el cursor y sin cambiar ningún campo. Un código desconocido solo avisa. Detalle en `barcodes.md`.
+- **POS-16** · V2 — Impresión de ticket de venta.
 
 ### 3.8 Dinero (finanzas) · V1
 
@@ -302,7 +304,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-03 | ¿Se vende por peso? | Sí: V1 (CAT-08, POS-10). |
 | P-04 | ¿Hay variantes? | Sí; se agrupan en la V2 (CAT-09). |
 | P-05 | ¿Se controla lote o vencimiento? | No. |
-| P-11 | ¿Lector de código de barras o impresora de tickets? | No en la V1; sí en la V2 (CAT-10). |
+| P-11 | ¿Lector de código de barras o impresora de tickets? | Lector USB sí, antes de la V2 (CAT-10, POS-15). Ticket en la V2 (POS-16). |
 | P-14 | ¿El POS debe funcionar sin internet? | No. |
 | P-15 | ¿Qué roles hay? | Operador y Administrador (tabla 2.2). |
 | P-16 | ¿Se migran datos? | Sí: productos, saldos y todos los datos de las dos planillas desde su primer registro (FIN-11). |
@@ -347,6 +349,8 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-08). |
 | P-56 | ¿Se conserva el original de la foto? | No: hasta 1600 px y una miniatura, sin metadatos. |
 | P-57 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
+| P-58 | ¿Los productos por kilo y las presentaciones llevan código de barras? | Por ahora no; se buscan como hoy. |
+| P-59 | ¿Se asigna un código desconocido desde la caja? | No: la caja solo avisa, y se carga desde Productos. |
 
 ## 6. Hoja de ruta
 
@@ -357,7 +361,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 2. 🟡 **Fase 1 · V1** — Compras, deudas, consumos, venta por peso, caja, historial, reportes, importación y migración. Construida.
    - Compuerta: productos, saldos y todo el historial de las dos planillas migrados en producción.
 3. ❌ **Fase 2 · Dos semanas en paralelo con las planillas** — Cancelada por decisión de Joaquín: la tienda usa solo el sistema (P-53).
-4. **Fase 3 · V2: inventario** — INV-01 a INV-05, CAT-05, CAT-09, CAT-10, CON-04, COM-10, T-04. Resolver P-06, P-07, P-09, P-13 y P-33.
+4. **Fase 3 · V2: inventario** — INV-01 a INV-05, CAT-05, CAT-09, POS-16, CON-04, COM-10, T-04. Resolver P-06, P-07, P-09, P-13 y P-33.
    - Compuerta: un conteo físico completo cuadra con el sistema.
 5. **Fase 4 · V3: extensiones** — Facturación (P-10), clientes y crédito (P-12), varias tiendas o cajas (P-01), reportes avanzados.
 

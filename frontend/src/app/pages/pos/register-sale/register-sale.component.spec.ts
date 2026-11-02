@@ -542,4 +542,41 @@ describe('RegisterSaleComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-cash-day-mark').textContent).toContain('Día 28/10 · abierta el 30/10');
   });
+
+  describe('escaneo (POS-15)', () => {
+    it('agrega la línea y otro escaneo suma 1', () => {
+      component.onScanned({ product: mockProduct1, fromServer: false });
+      component.onScanned({ product: mockProduct1, fromServer: false });
+
+      expect(component.cartItems().length).toBe(1);
+      expect(component.cartItems()[0].quantity).toBe(2);
+    });
+
+    it('la línea enviada dice que entró por escaneo; la que entró con clic, no', () => {
+      component.onScanned({ product: mockProduct1, fromServer: false });
+      component.addToCart(mockProduct2);
+
+      const items = component.checkoutItems();
+      expect(items.find((it) => it.productId === mockProduct1.id)?.scanned).toBe(true);
+      expect(items.find((it) => it.productId === mockProduct2.id)?.scanned).toBeUndefined();
+    });
+
+    it('un producto traído del servidor entra también al catálogo, una sola vez', () => {
+      const recent = { ...mockProduct1, id: 'prod-new', code: 'P-NEW' };
+
+      component.onScanned({ product: recent, fromServer: true });
+      component.onScanned({ product: recent, fromServer: true });
+
+      expect(component.catalogProducts().filter((p) => p.id === 'prod-new').length).toBe(1);
+      expect(component.cartItems()[0].quantity).toBe(2);
+    });
+
+    it('en una venta al costo usa el precio al costo, como un clic', () => {
+      component.setAtCost(true);
+
+      component.onScanned({ product: mockProduct1, fromServer: false });
+
+      expect(component.cartItems()[0].unitPrice).toBe(mockProduct1.buyPrice);
+    });
+  });
 });
