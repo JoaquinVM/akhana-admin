@@ -270,8 +270,8 @@ no lo muestran.
   a la izquierda y «Bs 60,00/kg» a la derecha. A 720 px o menos, el precio va debajo del texto.
 - **Cuando** se agrega una línea **entonces** la columna «Precio de venta», después de «Subtotal», separada con una línea
   y resaltada, muestra el precio de una unidad o un kilo sin multiplicar por la cantidad: «Bs 15,00» o «Bs 60,00/kg». Un
-  producto creado desde la línea muestra el precio con que se creó. La unidad va debajo de la cantidad, para que las
-  casillas de esa columna queden alineadas entre filas.
+  producto creado desde la línea muestra el precio con que se creó. La unidad va al lado de la cantidad, con ancho
+  fijo para que las casillas de esa columna queden alineadas entre filas (COM-14).
 - **Cuando** se cambia el costo de la línea o se elige otro precio en la alerta **entonces** la columna sigue en el precio
   actual hasta guardar; el otro pedido que se abra después ya muestra el nuevo.
 - **Cuando** se edita un pedido **entonces** cada línea muestra el precio actual del catálogo, que puede ser distinto del
@@ -298,8 +298,9 @@ del POS. Producto por unidad: Té verde. Producto por kilo: Nueces.
 - **Cuando** se vacía el campo o se escribe 0 **entonces** la línea no se quita, el − queda deshabilitado y el + sigue
   desde 0; registrar con cantidad 0 lo rechaza el servidor (COM-02).
 - **Cuando** una línea registrada cambia de cantidad con los botones **entonces** conserva su `itemId` (COM-11).
-- Cantidad, costo de envío y monto pagado no muestran las flechitas del navegador; el costo unitario, el costo y el
-  precio de «Producto nuevo» y el precio «Otro» de la alerta de costo las conservan. Pruebas en
+- Cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador; el costo y el precio
+  de «Producto nuevo» y el precio «Otro» de la alerta de costo las conservan. La unidad (u o kg) va al lado del control,
+  en la misma línea. Pruebas en
   `purchase-form-modal.component.spec.ts` y `quantity-stepper.component.spec.ts`.
 
 ## Día de los pagos (CAJ-11)
