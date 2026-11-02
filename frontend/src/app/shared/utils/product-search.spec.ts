@@ -69,4 +69,33 @@ describe('stopImplicitSubmit', () => {
     expect(stopImplicitSubmit(area)).toBe(false);
     expect(area.defaultPrevented).toBe(false);
   });
+
+  describe('código de barras (POS-01, CAT-10)', () => {
+    const scanned = { code: 'NEF-SHA', name: 'Shampoo', barcodes: ['7791234567898', '0036000291452'] };
+    const other = { code: 'NEF-CRE', name: 'Crema', barcodes: ['4006381333931'] };
+    const list = [other, scanned];
+
+    it('el código completo encuentra su producto', () => {
+      expect(searchProducts('7791234567898', list)).toEqual([scanned]);
+    });
+
+    it('un UPC-A de 12 dígitos es el mismo código que el guardado con 13', () => {
+      expect(searchProducts('036000291452', list)).toEqual([scanned]);
+      expect(productForEnter('036000291452', list, [])).toBe(scanned);
+    });
+
+    it('parte del número no coincide', () => {
+      expect(searchProducts('77912345', list)).toEqual([]);
+      expect(searchProducts('779123456789', list)).toEqual([]);
+    });
+
+    it('un número parecido no coincide', () => {
+      expect(searchProducts('7791234567899', list)).toEqual([]);
+      expect(productForEnter('7791234567899', list, [])).toBeNull();
+    });
+
+    it('Enter agrega el producto del código completo', () => {
+      expect(productForEnter('7791234567898', list, searchProducts('7791234567898', list))).toBe(scanned);
+    });
+  });
 });

@@ -8,7 +8,6 @@ import { SuppliersComponent } from './pages/suppliers/suppliers.component';
 import { PurchasesComponent } from './pages/purchases/purchases.component';
 import { CategoriesComponent } from './pages/categories/categories.component';
 import { TagsComponent } from './pages/tags/tags.component';
-import { ProductsComponent } from './pages/products/products.component';
 import { PosComponent } from './pages/pos/pos.component';
 import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
 import { FinanceSummaryComponent } from './pages/finances/summary/finance-summary.component';
@@ -119,7 +118,15 @@ export const routes: Routes = [
       },
       {
         path: 'products',
-        component: ProductsComponent,
+        // Loaded on demand so the first load stays inside its budget
+        loadComponent: () => import('./pages/products/products.component').then(m => m.ProductsComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.PRODUCTS }
+      },
+      {
+        path: 'products/barcodes',
+        // CAT-10: long work done in batches, in its own page
+        loadComponent: () => import('./pages/products/barcode-loading/barcode-loading.component').then(m => m.BarcodeLoadingComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.PRODUCTS }
       },

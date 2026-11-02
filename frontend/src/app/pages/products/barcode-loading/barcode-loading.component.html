@@ -1,0 +1,92 @@
+<div class="barcode-loading-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span class="breadcrumb-item">Catálogo</span>
+        <span class="breadcrumb-separator">/</span>
+        <a class="breadcrumb-link" routerLink="/products">Productos</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Cargar códigos</span>
+      </nav>
+      <h1 class="page-title">Cargar códigos</h1>
+      <p class="page-subtitle">Los productos sin código de barras, de más a menos vendidos.</p>
+    </div>
+    @if (!isLoading() && !loadError()) {
+      <span class="pending-count">Faltan {{ pending().length }}</span>
+    }
+  </header>
+
+  @if (isLoading()) {
+    <p class="state-text">Cargando...</p>
+  } @else if (loadError(); as message) {
+    <p class="error-text" role="alert">{{ message }}</p>
+  } @else if (pending().length === 0) {
+    <p class="state-text">No quedan productos por revisar.</p>
+  } @else {
+    <div class="loading-grid">
+      <section class="pending-list" aria-label="Productos sin código">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Buscar por nombre o código..."
+          aria-label="Buscar en la lista"
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value)" />
+        <ul>
+          @for (product of visible(); track product.id) {
+            <li>
+              <button
+                type="button"
+                class="pending-row"
+                [class.selected]="product.id === selectedId()"
+                (click)="select(product)">
+                <span class="pending-name">{{ product.name }}</span>
+                <span class="pending-code">{{ product.code }}</span>
+              </button>
+            </li>
+          } @empty {
+            <li class="state-text">Sin resultados.</li>
+          }
+        </ul>
+      </section>
+
+      @if (selected(); as product) {
+        <section class="selected-card" aria-label="Producto elegido">
+          <h2 class="selected-name">{{ product.name }}</h2>
+          <dl class="selected-data">
+            <dt>Código</dt>
+            <dd>{{ product.code }}</dd>
+            <dt>Proveedor</dt>
+            <dd>{{ product.supplierName || '—' }}</dd>
+            <dt>Precio</dt>
+            <dd>Bs {{ product.sellPrice | number:'1.2-2' }}</dd>
+          </dl>
+
+          <label class="form-label" for="loadBarcode">Código de barras</label>
+          <input
+            id="loadBarcode"
+            type="text"
+            inputmode="numeric"
+            maxlength="13"
+            class="form-control"
+            autocomplete="off"
+            placeholder="Escanea o escribe el código"
+            [value]="barcode()"
+            (input)="barcode.set($any($event.target).value)" />
+
+          @if (error(); as message) {
+            <p class="error-text" role="alert">{{ message }}</p>
+          }
+
+          <div class="selected-actions">
+            <button type="button" class="btn btn-primary" [disabled]="!canSave()" (click)="saveAndContinue()">
+              Guardar y seguir
+            </button>
+            <button type="button" class="btn btn-outline" [disabled]="isSaving()" (click)="markNoBarcode()">No trae</button>
+            <button type="button" class="btn btn-outline" [disabled]="isSaving()" (click)="skip()">Saltar</button>
+          </div>
+        </section>
+      }
+    </div>
+  }
+</div>

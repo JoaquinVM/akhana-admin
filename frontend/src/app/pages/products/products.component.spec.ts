@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ProductsComponent } from './products.component';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
@@ -179,6 +180,7 @@ describe('ProductsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
       providers: [
+        provideRouter([]),
         { provide: ProductService, useValue: mockProductService },
         { provide: CategoryService, useValue: mockCategoryService },
         { provide: SupplierService, useValue: mockSupplierService },
@@ -510,5 +512,56 @@ describe('ProductsComponent', () => {
     component.searchTerm.set('producto 1');
     fixture.detectChanges();
     expect(component.visibleCount()).toBe(100);
+  });
+
+  describe('códigos de barras (CAT-10)', () => {
+    const EAN = '7791234567898';
+
+    it('sin cambios en los códigos no los envía, y el servidor los conserva', () => {
+      mockProductService.updateProduct.mockReturnValue(of(mockProducts[0]));
+      component.openEditModal({ ...mockProducts[0], barcodes: [EAN] });
+      component.productForm.patchValue({ name: 'Otro nombre' });
+
+      component.saveProduct();
+
+      expect(mockProductService.updateProduct.mock.calls[0][1].barcodes).toBeUndefined();
+    });
+
+    it('un código agregado o quitado cuenta como cambio y va con la lista completa', () => {
+      mockProductService.updateProduct.mockReturnValue(of(mockProducts[0]));
+      component.openEditModal({ ...mockProducts[0], barcodes: [EAN] });
+      expect(component.hasFormChanges()).toBe(false);
+
+      component.barcodes.set([EAN, '4006381333931']);
+
+      expect(component.hasFormChanges()).toBe(true);
+      component.saveProduct();
+      expect(mockProductService.updateProduct.mock.calls[0][1].barcodes).toEqual([EAN, '4006381333931']);
+    });
+
+    it('un producto por kilo sin códigos no muestra la sección; con códigos, sí, para poder quitarlos', () => {
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [] });
+      expect(component.showBarcodes()).toBe(false);
+
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [EAN] });
+      expect(component.showBarcodes()).toBe(true);
+    });
+
+    it('un producto especial no muestra la sección', () => {
+      component.openEditModal({ ...mockProducts[0], specialType: 'UNIDENTIFIED' });
+
+      expect(component.showBarcodes()).toBe(false);
+    });
+
+    it('quitar la marca «No trae» actualiza el producto', () => {
+      mockProductService.clearNoBarcode = vi.fn().mockReturnValue(of({ ...mockProducts[0], noBarcode: false }));
+      component.openEditModal({ ...mockProducts[0], noBarcode: true });
+      expect(component.formNoBarcode()).toBe(true);
+
+      component.clearNoBarcodeMark();
+
+      expect(mockProductService.clearNoBarcode).toHaveBeenCalledWith(mockProducts[0].id);
+      expect(component.formNoBarcode()).toBe(false);
+    });
   });
 });
