@@ -65,3 +65,6 @@ yarn-error.log*
 *.secret
 *.pem
 *.key
+
+# --- Product photos in development (CAT-12) ---
+backend/data/
