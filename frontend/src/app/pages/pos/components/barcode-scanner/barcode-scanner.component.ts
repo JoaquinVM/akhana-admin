@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Product } from '../../../../core/product/models/product.models';
 import { ProductService } from '../../../../core/product/product.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
-import { canonicalBarcode } from '../../../../shared/utils/barcode';
+import { canonicalBarcode, looksLikeBarcode } from '../../../../shared/utils/barcode';
 import { ScanCapture } from '../../../../shared/utils/barcode-scan';
 import { scanWarningBeep } from '../../../../shared/utils/scan-beep';
 
@@ -66,6 +66,11 @@ export class BarcodeScannerComponent implements OnInit {
     const known = this.byBarcode().get(canonicalBarcode(code));
     if (known) {
       this.scanned.emit({ product: known, fromServer: false });
+      return;
+    }
+    // A label with letters or symbols is no code of ours, and some of them make the server refuse the whole request
+    if (!looksLikeBarcode(code)) {
+      this.warn(unknownBarcodeMessage(code));
       return;
     }
     this.productService.getProductByBarcode(code).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

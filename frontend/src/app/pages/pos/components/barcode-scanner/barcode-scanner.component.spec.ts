@@ -109,6 +109,14 @@ describe('BarcodeScannerComponent (POS-15)', () => {
     expect(unknownBarcodeMessage(EAN)).toBe(`El código ${EAN} no está registrado. Búscalo por nombre o cárgalo en Productos.`);
   });
 
+  it.each(['AB%12', 'A;B12', 'A/B12', 'A1B2C3'])('una lectura que no es un código (%s) avisa sin consultar al servidor', (code) => {
+    scan(code);
+
+    expect(products.getProductByBarcode).not.toHaveBeenCalled();
+    expect(scanned).toEqual([]);
+    expect(toastError).toHaveBeenCalledWith(unknownBarcodeMessage(code));
+  });
+
   it('un error de red no se informa como código no registrado', () => {
     products.getProductByBarcode.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
 

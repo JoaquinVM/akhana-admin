@@ -19,8 +19,9 @@ export class ScanCapture {
   private held = '';
   private lastKeyAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  // Date fields and selects cannot be written back: their keys go through, and a scan puts back the value they had
-  private passThrough: { field: PassThroughField; value: string } | null = null;
+  // Date fields and selects cannot be written back: their keys go through, what they announce waits for the end of the
+  // burst, and a scan puts back the value they had without anybody having seen the change
+  private passThrough: { field: PassThroughField; value: string; withheld: string[] } | null = null;
   private swallowEnterUntil = -1;
   // Fields can act on the release of Enter too, so each stopped Enter also stops its keyup
   private enterUpsToStop = 0;
@@ -39,6 +40,8 @@ export class ScanCapture {
     this.window.addEventListener('keydown', this.onKeydown, true);
     this.window.addEventListener('keyup', this.onKeyup, true);
     this.window.addEventListener('mousedown', this.release, true);
+    this.window.addEventListener('input', this.onFieldChange, true);
+    this.window.addEventListener('change', this.onFieldChange, true);
   }
 
   uninstall(): void {
@@ -46,6 +49,8 @@ export class ScanCapture {
     this.window.removeEventListener('keydown', this.onKeydown, true);
     this.window.removeEventListener('keyup', this.onKeyup, true);
     this.window.removeEventListener('mousedown', this.release, true);
+    this.window.removeEventListener('input', this.onFieldChange, true);
+    this.window.removeEventListener('change', this.onFieldChange, true);
   }
 
   private readonly onKeydown = (event: KeyboardEvent): void => {
@@ -56,12 +61,14 @@ export class ScanCapture {
       return;
     }
     if (event.key === 'Enter' && this.isScanEnd(event)) {
-      const code = this.passThrough ? '' : this.held;
-      this.restorePassThrough();
+      const code = this.held;
+      if (this.passThrough) {
+        this.passThrough.field.value = this.passThrough.value;
+      }
       this.blockEnter(event);
       this.clear();
       this.swallowEnterUntil = event.timeStamp + SCAN_MAX_KEY_GAP_MS;
-      if (code) this.onScan(code);
+      this.onScan(code);
       return;
     }
     // A reader that ends with CR and LF sends two Enter
@@ -80,6 +87,13 @@ export class ScanCapture {
     if (event.key === 'Enter' && this.enterUpsToStop > 0) {
       this.enterUpsToStop--;
       this.block(event);
+    }
+  };
+
+  private readonly onFieldChange = (event: Event): void => {
+    if (this.passThrough && event.target === this.passThrough.field) {
+      this.passThrough.withheld.push(event.type);
+      event.stopImmediatePropagation();
     }
   };
 
@@ -120,8 +134,12 @@ export class ScanCapture {
 
   private readonly release = (): void => {
     const text = this.passThrough ? '' : this.held;
+    const passed = this.passThrough;
     this.clear();
     if (text) this.writeBack(text);
+    for (const type of passed?.withheld ?? []) {
+      passed!.field.dispatchEvent(new Event(type, { bubbles: true }));
+    }
   };
 
   private clear(): void {
@@ -133,19 +151,11 @@ export class ScanCapture {
     }
   }
 
-  private focusedPassThroughField(): { field: PassThroughField; value: string } | null {
+  private focusedPassThroughField(): { field: PassThroughField; value: string; withheld: string[] } | null {
     const active = this.document.activeElement;
     const passes = active instanceof HTMLSelectElement
       || (active instanceof HTMLInputElement && NOT_REPLAYABLE_TYPES.has(active.type));
-    return passes ? { field: active as PassThroughField, value: (active as PassThroughField).value } : null;
-  }
-
-  private restorePassThrough(): void {
-    if (!this.passThrough) return;
-    const { field, value } = this.passThrough;
-    field.value = value;
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return passes ? { field: active as PassThroughField, value: (active as PassThroughField).value, withheld: [] } : null;
   }
 
   private focusedTextField(): HTMLInputElement | HTMLTextAreaElement | null {

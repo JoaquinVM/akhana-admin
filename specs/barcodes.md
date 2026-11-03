@@ -35,7 +35,12 @@ Vale para la pantalla de venta (`/pos/sale`) con la caja abierta.
 ### Escaneo o teclado
 
 - **Cuando** una persona escribe dígitos a mano en cualquier campo **entonces** se escriben como hoy: solo cuenta como
-  escaneo lo que llega a la velocidad de un lector y termina en Enter.
+  escaneo lo que llega a la velocidad de un lector y termina en Enter. En la pantalla de venta, en `/pos`, en la carga de
+  códigos y con el formulario de Productos abierto, lo tecleado aparece hasta 60 ms tarde.
+- **Cuando** llega una lectura con letras o símbolos, o de un código que no es válido, **entonces** no escribe en ningún
+  campo, no envía nada y solo avisa.
+- **Cuando** se escanea con el foco en una lista o una fecha **entonces** ese campo y lo que depende de él quedan como
+  estaban, y la lectura cuenta como cualquier otra.
 - **Cuando** una etiqueta no se puede leer y se escribe su código completo en el buscador **entonces** el producto aparece
   y Enter lo agrega (POS-01). Un código de barras nunca coincide por parecido ni por parte del número.
 - **Cuando** se confirma la venta **entonces** cada línea guarda si al menos una lectura fue por escaneo, solo para medir el

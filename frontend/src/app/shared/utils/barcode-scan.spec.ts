@@ -243,7 +243,7 @@ describe('ScanCapture (POS-15)', () => {
     checkbox.remove();
   });
 
-  it('en una lista las teclas pasan, y un escaneo le devuelve su valor y detiene su Enter', () => {
+  it('en una lista las teclas pasan, y un escaneo le devuelve su valor, se entrega y nadie ve el cambio', () => {
     const select = document.createElement('select');
     select.innerHTML = '<option value="UNIT">Unidad</option><option value="KILOGRAM">Kilo</option>';
     document.body.appendChild(select);
@@ -254,12 +254,35 @@ describe('ScanCapture (POS-15)', () => {
     expect(press(select, 'K').defaultPrevented).toBe(false);
     now += 5;
     select.value = 'KILOGRAM';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
     type(select, '1234', 5);
     const enter = press(select, 'Enter');
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
 
     expect(enter.defaultPrevented).toBe(true);
     expect(select.value).toBe('UNIT');
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(scans).toEqual(['K1234']);
+    select.remove();
+  });
+
+  it('una tecla que elige una opción de la lista avisa su cambio al terminar la ráfaga', () => {
+    const select = document.createElement('select');
+    select.innerHTML = '<option value="UNIT">Unidad</option><option value="KILOGRAM">Kilo</option>';
+    document.body.appendChild(select);
+    select.focus();
+    const onChange = vi.fn();
+    select.addEventListener('change', onChange);
+
+    press(select, 'K');
+    select.value = 'KILOGRAM';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(onChange).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
+
+    expect(select.value).toBe('KILOGRAM');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(scans).toEqual([]);
     select.remove();
   });
 
@@ -331,13 +354,15 @@ describe('ScanCapture (POS-15)', () => {
     expect(digit.defaultPrevented).toBe(false);
     // What the browser does with the digits of a date field
     date.value = '2024-07-07';
+    date.dispatchEvent(new Event('input', { bubbles: true }));
     type(date, '123456', 10);
     const enter = press(date, 'Enter');
+    vi.advanceTimersByTime(SCAN_MAX_KEY_GAP_MS);
 
     expect(enter.defaultPrevented).toBe(true);
     expect(date.value).toBe('2026-11-02');
-    expect(onInput).toHaveBeenCalled();
-    expect(scans).toEqual([]);
+    expect(onInput).not.toHaveBeenCalled();
+    expect(scans).toEqual(['2123456']);
     expect(execCommand).not.toHaveBeenCalled();
     date.remove();
   });
