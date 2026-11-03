@@ -1311,6 +1311,58 @@ describe('PurchaseFormModalComponent', () => {
       expect(form.shippingAccountId()).toBe('');
     });
 
+    describe('CA-12: proveedor elegido a mano', () => {
+      const pending = { id: 'pur-7', purchaseNumber: 'PED-000007', purchaseDate: '2026-11-01', itemsTotal: 205.2, costToConfirm: true };
+
+      it('ofrece el pedido pendiente, no registra hasta decidir, y completar lo entrega', () => {
+        purchaseService.getPendingDelivery = vi.fn().mockReturnValue(of([pending]));
+        const form = open(read({ source: 'PHOTO', supplierId: null, supplierText: 'Savia Herbolaria' }));
+        const completed = vi.fn();
+        form.completePending.subscribe(completed);
+
+        form.onSupplierChange('sup-1');
+        expect(purchaseService.getPendingDelivery).toHaveBeenCalledWith('sup-1');
+        form.submit();
+        expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+        expect(form.formError()).toContain('pedidos pendientes');
+
+        form.completePending.emit('pur-7');
+        expect(completed).toHaveBeenCalledWith('pur-7');
+      });
+
+      it('si es un pedido nuevo, sigue como entregado', () => {
+        purchaseService.getPendingDelivery = vi.fn().mockReturnValue(of([pending]));
+        const form = open(read({ source: 'PHOTO', supplierId: null }));
+        form.onSupplierChange('sup-1');
+        form.declinePending();
+        form.submit();
+        expect(purchaseService.registerPurchase.mock.calls[0][0].deliveryStatus).toBe('ENTREGADO');
+      });
+
+      it('otro proveedor sin pendientes quita la oferta', () => {
+        purchaseService.getPendingDelivery = vi.fn().mockReturnValueOnce(of([pending])).mockReturnValueOnce(of([]));
+        const form = open(read({ source: 'PHOTO', supplierId: null }));
+        form.onSupplierChange('sup-1');
+        form.onSupplierChange('sup-2');
+        expect(form.pendingOffer()).toEqual([]);
+      });
+
+      it('mientras revisa no registra', () => {
+        purchaseService.getPendingDelivery = vi.fn().mockReturnValue(new Subject());
+        const form = open(read({ source: 'PHOTO', supplierId: null }));
+        form.onSupplierChange('sup-1');
+        form.submit();
+        expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+      });
+
+      it('un texto no pregunta: el pedido recién se está haciendo', () => {
+        purchaseService.getPendingDelivery = vi.fn();
+        const form = open(read({ supplierId: null }));
+        form.onSupplierChange('sup-1');
+        expect(purchaseService.getPendingDelivery).not.toHaveBeenCalled();
+      });
+    });
+
     it('sin lectura el formulario sigue igual', () => {
       const form = open(null);
       form.addProduct(tea);

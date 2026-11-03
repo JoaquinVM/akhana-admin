@@ -203,7 +203,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
             unitCost = line.unitCost().setScale(2, RoundingMode.HALF_UP);
         } else if (line.lineAmount() != null && line.lineAmount().signum() >= 0 && validQuantity) {
             unitCost = line.lineAmount().divide(quantity, 2, RoundingMode.HALF_UP);
-            costNote = "Calculado: importe Bs " + StoreFormat.money(line.lineAmount()) + " ÷ " + quantity.toPlainString() + ".";
+            costNote = "Calculado: importe " + StoreFormat.money(line.lineAmount()) + " ÷ " + quantity.toPlainString() + ".";
         } else {
             unitCost = null;
             costNote = line.note() != null ? line.note() : NO_COST_NOTE;
@@ -279,8 +279,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
             return List.of();
         }
         return purchaseRepository.findPendingDelivery(supplierId).stream()
-            .map(purchase -> new PurchaseDraftResponse.PendingPurchase(purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getPurchaseDate(), purchase.getItemsTotal(), Boolean.TRUE.equals(purchase.getCostToConfirm())))
+            .map(PurchaseDraftResponse.PendingPurchase::from)
             .toList();
     }
 

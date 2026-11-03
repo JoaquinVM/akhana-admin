@@ -231,6 +231,17 @@ export class PurchasesComponent implements OnInit {
     }
   }
 
+  // CA-12: the form was a new purchase; the same reading and photo now complete the pending one
+  onCompletePending(purchaseId: string): void {
+    const draft = this.formDraft();
+    if (!draft) {
+      return;
+    }
+    const file = this.formPhoto();
+    this.isFormOpen.set(false);
+    this.onDraftRead({ draft, file, completePurchaseId: purchaseId });
+  }
+
   onFillByHand(): void {
     const arrivalOf = this.readingFor();
     this.readingMode.set(null);

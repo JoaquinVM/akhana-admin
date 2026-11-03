@@ -114,6 +114,14 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<PurchaseDraftResponse.PendingPurchase> getPendingDelivery(UUID supplierId) {
+        return purchaseRepository.findPendingDelivery(supplierId).stream()
+            .map(PurchaseDraftResponse.PendingPurchase::from)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PurchaseResponse getPurchaseById(UUID id) {
         Purchase purchase = purchaseRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + id));

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.Purchase;
 import com.akhana.akhana_admin.model.PurchaseReadingSource;
 
 import java.math.BigDecimal;
@@ -40,5 +41,10 @@ public record PurchaseDraftResponse(
     public record ProductSuggestion(UUID id, String code, String name, String supplierName) {}
 
     public record PendingPurchase(UUID id, String purchaseNumber, LocalDate purchaseDate, BigDecimal itemsTotal,
-                                  boolean costToConfirm) {}
+                                  boolean costToConfirm) {
+        public static PendingPurchase from(Purchase purchase) {
+            return new PendingPurchase(purchase.getId(), purchase.getPurchaseNumber(), purchase.getPurchaseDate(),
+                purchase.getItemsTotal(), Boolean.TRUE.equals(purchase.getCostToConfirm()));
+        }
+    }
 }

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   Payables,
   PaymentAccount,
+  PendingPurchase,
   PriceSuggestion,
   Purchase,
   PurchaseDeliveryRequest,
@@ -55,6 +56,11 @@ export class PurchaseService {
 
   registerPayment(purchaseId: string, request: PurchasePaymentRequest): Observable<Purchase> {
     return this.http.post<Purchase>(`${this.apiUrl}/${purchaseId}/payments`, request);
+  }
+
+  // CA-12: purchases of this supplier still waiting for delivery
+  getPendingDelivery(supplierId: string): Observable<PendingPurchase[]> {
+    return this.http.get<PendingPurchase[]>(`${this.apiUrl}/pending-delivery`, { params: new HttpParams().set('supplierId', supplierId) });
   }
 
   getPayables(supplierId: string | null = null): Observable<Payables> {

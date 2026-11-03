@@ -1361,4 +1361,16 @@ class PurchaseServiceTest {
             .hasMessage(PurchaseServiceImpl.READING_ONLY_ON_ARRIVAL);
         assertThat(purchase.getCostToConfirm()).isTrue();
     }
+
+    @Test
+    @DisplayName("CA-12: lista los pedidos del proveedor con la entrega pendiente, para la factura sin proveedor reconocido")
+    void getPendingDelivery_listsThePurchasesOfTheSupplier() {
+        Purchase pending = toConfirm();
+        when(purchaseRepository.findPendingDelivery(supplier.getId())).thenReturn(List.of(pending));
+
+        assertThat(purchaseService.getPendingDelivery(supplier.getId())).singleElement().satisfies(p -> {
+            assertThat(p.id()).isEqualTo(pending.getId());
+            assertThat(p.costToConfirm()).isTrue();
+        });
+    }
 }

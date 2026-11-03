@@ -16,6 +16,7 @@ import {
   DeliveryStatus,
   DeliveryType,
   PaymentAccount,
+  PendingPurchase,
   PriceSuggestion,
   Purchase,
   PurchaseDraft,
@@ -107,6 +108,8 @@ export class PurchaseFormModalComponent {
   arrival = input<boolean>(false);
 
   saved = output<Purchase>();
+  // CA-12: this invoice completes a pending purchase instead of being a new one
+  completePending = output<string>();
   close = output<void>();
 
   supplierId = signal<string>('');
@@ -146,6 +149,9 @@ export class PurchaseFormModalComponent {
   // CA-19: the note says it is paid, and nobody has said where the money came from
   paidProposal = signal<boolean>(false);
   private draftKeys = 0;
+  // CA-12: an invoice whose supplier was chosen by hand: its pending purchases are offered first, and block the button
+  pendingOffer = signal<PendingPurchase[]>([]);
+  isCheckingPending = signal<boolean>(false);
 
   readonly maxDate = todayIso();
 
@@ -249,6 +255,8 @@ export class PurchaseFormModalComponent {
     this.unresolvedLines.set([]);
     this.resolvingLine.set(null);
     this.paidProposal.set(false);
+    this.pendingOffer.set([]);
+    this.isCheckingPending.set(false);
     const purchase = this.purchase();
     if (purchase) {
       this.fillFrom(purchase);
@@ -430,6 +438,35 @@ export class PurchaseFormModalComponent {
       this.resolvingLine.set(line);
       this.patchNewProduct({ name: line.text, buyPrice: line.unitCost });
     }
+  }
+
+  // CA-12: with the supplier read, the reading already offered its pending purchases; chosen by hand, it is asked here
+  onSupplierChange(supplierId: string): void {
+    this.supplierId.set(supplierId);
+    this.pendingOffer.set([]);
+    if (this.isEdit() || this.draft()?.source !== 'PHOTO' || !supplierId) {
+      this.isCheckingPending.set(false);
+      return;
+    }
+    this.isCheckingPending.set(true);
+    this.purchaseService.getPendingDelivery(supplierId).subscribe({
+      next: pending => {
+        if (this.supplierId() === supplierId) {
+          this.pendingOffer.set(pending);
+          this.isCheckingPending.set(false);
+        }
+      },
+      // Nothing to offer is not a reason to stop registering; the list of Pedidos still shows them
+      error: () => {
+        if (this.supplierId() === supplierId) {
+          this.isCheckingPending.set(false);
+        }
+      }
+    });
+  }
+
+  declinePending(): void {
+    this.pendingOffer.set([]);
   }
 
   dismissPaidProposal(): void {
@@ -695,6 +732,14 @@ export class PurchaseFormModalComponent {
   submit(): void {
     if (!this.supplierId()) {
       this.formError.set('Elija el proveedor del pedido.');
+      return;
+    }
+    if (this.isCheckingPending()) {
+      this.formError.set('Revisando los pedidos pendientes del proveedor. Intente de nuevo.');
+      return;
+    }
+    if (this.pendingOffer().length > 0) {
+      this.formError.set('Este proveedor tiene pedidos pendientes: diga si esta factura completa uno.');
       return;
     }
     if (this.unresolvedLines().length > 0) {
