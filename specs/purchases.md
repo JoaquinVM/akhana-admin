@@ -412,7 +412,7 @@ precios reales con foto o a mano. Una compra sin texto entra por foto como pedid
 | ID | Cuando… | Entonces… |
 | --- | --- | --- |
 | CA-01 | Se pega un texto con «2 jamaica 130ml» | El formulario abre con la línea, cantidad 2 y el producto; no se creó ningún pedido |
-| CA-02 | La línea coincide con un producto | Queda elegido con su costo del sistema, y el pedido sale con «costo por confirmar» |
+| CA-02 | La línea coincide claramente con un producto | Queda elegido con su costo del sistema, y el pedido sale con «costo por confirmar». Claro es: tiene todas las palabras, a lo sumo en plural, con el tamaño exacto, y es el único o el nombre exacto, entre los del proveedor si se conoce. Lo demás solo se sugiere. Cada línea muestra lo leído |
 | CA-03 | Hay varias coincidencias o ninguna | Muestra sugerencias, buscador, «Crear producto» y «Quitar línea»; no se registra hasta resolverla. Si ningún producto tiene todas las palabras, sugiere los que tienen más, y nunca elige uno solo por eso |
 | CA-04 | El texto dice «4 a 5» o «Blanco» sin número | Propone 4 y 1, resaltados con el texto original |
 | CA-05 | El texto trae título de grupo: «Cepillos: 2 Amarillo» | La línea lleva el grupo: «Cepillos Amarillo» (medición previa) |
@@ -468,10 +468,10 @@ antes de leer en los tres mensajes que no lo nombran. Fotos y tiempo siguen sin 
 
 | Texto | Líneas | Elegido solo | Entre sugerencias | Sin el producto |
 | --- | --- | --- | --- | --- |
-| Belén | 9 | 7 | 2 | 0 |
+| Belén | 9 | 6 | 3 | 0 |
 | Sativa | 22 | 21 | 1 | 0 |
 | Paititi | 4 | 0 | 4 | 0 |
-| Mono | 6 | 6 | 0 | 0 |
+| Mono | 6 | 5 | 1 | 0 |
 | Boni | 10 | 2 | 8 | 0 |
 
 - Cantidades con número claro: 46 de 46. Las 5 líneas sin número proponen 1, resaltadas.

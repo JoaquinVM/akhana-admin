@@ -241,27 +241,20 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
         return own;
     }
 
-    // Only when it is clear which one (CA-02): the only match, the exact name, or the only one of the supplier
+    // Only when it is clear which one (CA-02): the only match or the exact name, among the supplier's products if it is
+    // known. A product of another supplier, a typo or a size that is not there are suggestions: a person chooses
     private static Product chosenProduct(List<ProductTextMatcher.Match> ranked, UUID supplierId) {
-        if (ranked.isEmpty()) {
-            return null;
+        List<ProductTextMatcher.Match> eligible = ranked.stream()
+            .filter(ProductTextMatcher.Match::clear)
+            .filter(match -> supplierId == null || isFrom(match.product(), supplierId))
+            .toList();
+        if (eligible.size() == 1) {
+            return eligible.get(0).product();
         }
-        if (ranked.size() == 1) {
-            return ranked.get(0).product();
-        }
-        List<ProductTextMatcher.Match> exact = ranked.stream()
+        List<ProductTextMatcher.Match> exact = eligible.stream()
             .filter(match -> match.score() >= ProductTextMatcher.EXACT_SCORE)
             .toList();
-        if (exact.size() == 1) {
-            return exact.get(0).product();
-        }
-        if (supplierId != null) {
-            List<ProductTextMatcher.Match> own = ranked.stream().filter(match -> isFrom(match.product(), supplierId)).toList();
-            if (own.size() == 1) {
-                return own.get(0).product();
-            }
-        }
-        return null;
+        return exact.size() == 1 ? exact.get(0).product() : null;
     }
 
     private static boolean isFrom(Product product, UUID supplierId) {

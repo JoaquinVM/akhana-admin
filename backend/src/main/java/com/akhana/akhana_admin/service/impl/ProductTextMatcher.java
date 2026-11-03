@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
 // COM-21: the same search as the product box of the POS (POS-01, shared/utils/product-search.ts), on the server so the
 // catalog never leaves it. Barcodes are not looked at: a supplier's text does not carry them.
@@ -18,7 +19,10 @@ final class ProductTextMatcher {
     private static final int MIN_PARTIAL_WORD = 3;
     private static final Set<String> STOP_WORDS = Set.of("con", "del", "las", "los", "para", "por", "una", "uno", "unos", "unas");
 
-    record Match(Product product, int score) {}
+    // clear: every word is there, at most in plural. With typos or missing words it can only be a suggestion
+    record Match(Product product, int score, boolean clear) {}
+
+    private enum Tolerance { NONE, PLURALS, TYPOS }
 
     private ProductTextMatcher() {}
 
@@ -36,8 +40,13 @@ final class ProductTextMatcher {
         if (tokens.isEmpty()) {
             return List.of();
         }
-        List<Match> exact = rank(normalized, tokens, products, false);
-        return exact.isEmpty() ? rank(normalized, tokens, products, true) : exact;
+        for (Tolerance tolerance : Tolerance.values()) {
+            List<Match> matches = rank(normalized, tokens, products, tolerance);
+            if (!matches.isEmpty()) {
+                return matches;
+            }
+        }
+        return List.of();
     }
 
     /**
@@ -75,7 +84,7 @@ final class ProductTextMatcher {
         partial.sort(Comparator.comparingInt(Partial::words).reversed()
             .thenComparing(Comparator.comparingInt(Partial::score).reversed())
             .thenComparing(match -> normalize(match.product().getName())));
-        return partial.stream().map(match -> new Match(match.product(), match.score())).toList();
+        return partial.stream().map(match -> new Match(match.product(), match.score(), false)).toList();
     }
 
     private static boolean hasDigits(String token) {
@@ -86,12 +95,12 @@ final class ProductTextMatcher {
         return token.length() >= MIN_PARTIAL_WORD && !hasDigits(token) && !STOP_WORDS.contains(token);
     }
 
-    private static List<Match> rank(String term, List<String> tokens, List<Product> products, boolean similar) {
+    private static List<Match> rank(String term, List<String> tokens, List<Product> products, Tolerance tolerance) {
         List<Match> matches = new ArrayList<>();
         for (Product product : products) {
-            int score = productScore(term, tokens, product, similar);
+            int score = productScore(term, tokens, product, tolerance);
             if (score > 0) {
-                matches.add(new Match(product, score));
+                matches.add(new Match(product, score, tolerance != Tolerance.TYPOS));
             }
         }
         matches.sort(Comparator.comparingInt(Match::score).reversed()
@@ -99,7 +108,7 @@ final class ProductTextMatcher {
         return matches;
     }
 
-    private static int productScore(String term, List<String> tokens, Product product, boolean similar) {
+    private static int productScore(String term, List<String> tokens, Product product, Tolerance tolerance) {
         String code = normalize(product.getCode());
         String name = normalize(product.getName());
         List<String> nameWords = words(name);
@@ -108,7 +117,12 @@ final class ProductTextMatcher {
         List<String> otherWords = words(other);
         int score = 0;
         for (String token : tokens) {
-            int value = tokenScore(token, code, name, nameWords, other, otherWords, similar);
+            int value = tokenScore(token, code, name, nameWords, other, otherWords, tolerance == Tolerance.TYPOS);
+            if (value == 0 && tolerance == Tolerance.PLURALS) {
+                for (String singular : singulars(token)) {
+                    value = Math.max(value, tokenScore(singular, code, name, nameWords, other, otherWords, false));
+                }
+            }
             if (value == 0) {
                 return 0;
             }
@@ -126,6 +140,10 @@ final class ProductTextMatcher {
 
     private static int tokenScore(String token, String code, String name, List<String> nameWords, String other,
                                   List<String> otherWords, boolean similar) {
+        // A size is exact: 250ml is not 200ml, and 50ml is not inside 250ml
+        if (hasDigits(token)) {
+            return Stream.concat(nameWords.stream(), words(code).stream()).anyMatch(word -> sameSize(token, word)) ? 50 : 0;
+        }
         if (code.startsWith(token)) return 60;
         if (nameWords.stream().anyMatch(word -> word.startsWith(token))) return 50;
         if (code.contains(token)) return 40;
@@ -136,6 +154,20 @@ final class ProductTextMatcher {
         if (similarWord(token, nameWords)) return 10;
         if (similarWord(token, otherWords)) return 5;
         return 0;
+    }
+
+    // The written size may leave out the unit: 500 is 500gr, but never 5000gr
+    private static boolean sameSize(String token, String word) {
+        return word.startsWith(token)
+            && (word.length() == token.length() || !Character.isDigit(word.charAt(token.length())));
+    }
+
+    private static List<String> singulars(String token) {
+        if (!token.endsWith("s") || token.length() < MIN_PARTIAL_WORD + 1) {
+            return List.of();
+        }
+        String withoutS = token.substring(0, token.length() - 1);
+        return token.endsWith("es") ? List.of(withoutS, token.substring(0, token.length() - 2)) : List.of(withoutS);
     }
 
     private static List<String> words(String text) {
