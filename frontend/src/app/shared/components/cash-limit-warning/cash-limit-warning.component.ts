@@ -38,7 +38,7 @@ export class CashLimitWarningComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // The expected cash changes with each sale or expense: it is fetched when the form opens. Without an open session there is no warning.
+    // The expected cash changes with each sale or expense: it is fetched when this warning appears. Without an open session there is no warning.
     this.cashService.getCurrentSession().subscribe({ error: () => undefined });
   }
 }

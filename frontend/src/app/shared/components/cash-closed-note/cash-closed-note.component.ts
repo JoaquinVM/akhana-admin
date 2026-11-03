@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { CashService } from '../../../core/cash/cash.service';
 
 /**
@@ -13,9 +13,18 @@ import { CashService } from '../../../core/cash/cash.service';
 })
 export class CashClosedNoteComponent implements OnInit {
   private readonly cashService = inject(CashService);
+  private removed = false;
 
-  readonly closed = signal<boolean>(false);
+  // A form with several notes passes what the last answer said, so all of them agree
+  readonly closedInForm = input<boolean | null>(null);
   readonly closedChange = output<boolean>();
+
+  private readonly answered = signal<boolean>(false);
+  readonly closed = computed(() => this.closedInForm() ?? this.answered());
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => (this.removed = true));
+  }
 
   ngOnInit(): void {
     this.cashService.getCurrentSession().subscribe({
@@ -24,8 +33,12 @@ export class CashClosedNoteComponent implements OnInit {
     });
   }
 
+  // The query is not cancelled, so CashService finishes its state; a late answer no longer speaks for this list
   private setClosed(closed: boolean): void {
-    this.closed.set(closed);
+    if (this.removed) {
+      return;
+    }
+    this.answered.set(closed);
     this.closedChange.emit(closed);
   }
 }

@@ -239,7 +239,7 @@
             }
           </select>
           @if (shipsFromCash()) {
-            <app-cash-closed-note (closedChange)="shippingCashClosed.set($event)" />
+            <app-cash-closed-note [closedInForm]="cashClosed()" (closedChange)="cashClosed.set($event)" />
           }
         </div>
       }
@@ -314,7 +314,7 @@
           <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
         }
         @if (paysFromCash()) {
-          <app-cash-closed-note (closedChange)="paymentCashClosed.set($event)" />
+          <app-cash-closed-note [closedInForm]="cashClosed()" (closedChange)="cashClosed.set($event)" />
         }
       </div>
       @if (initialPaymentSource()) {

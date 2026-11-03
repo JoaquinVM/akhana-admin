@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { CashClosedNoteComponent } from './cash-closed-note.component';
 import { CashService } from '../../../core/cash/cash.service';
@@ -39,6 +39,29 @@ describe('CashClosedNoteComponent', () => {
     mockCashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
     failed.detectChanges();
     expect(failedEmitted).toEqual([false]);
+  });
+
+  it('muestra lo que le pasa el formulario, aunque su propia consulta diga otra cosa', () => {
+    mockCashService.getCurrentSession.mockReturnValue(of(null));
+    fixture.componentRef.setInput('closedInForm', false);
+    fixture.detectChanges();
+    expect(note()).toBeNull();
+
+    fixture.componentRef.setInput('closedInForm', true);
+    fixture.detectChanges();
+    expect(note()).not.toBeNull();
+  });
+
+  it('una respuesta que llega después de quitar la nota no se avisa al formulario', () => {
+    const answer = new Subject<any>();
+    const emitted: boolean[] = [];
+    mockCashService.getCurrentSession.mockReturnValue(answer);
+    fixture.componentInstance.closedChange.subscribe(closed => emitted.push(closed));
+    fixture.detectChanges();
+
+    fixture.destroy();
+    answer.next(null);
+    expect(emitted).toEqual([]);
   });
 
   it('no avisa con la caja abierta', () => {

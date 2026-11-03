@@ -1090,6 +1090,44 @@ describe('PurchaseFormModalComponent', () => {
         expect(saveButton().disabled).toBe(false);
       });
 
+      it('la lista de envío muestra la nota con la caja cerrada, y no con la caja abierta ni con error', async () => {
+        const shippingNote = (): Element | null =>
+          fixture.nativeElement.querySelector('#purchase-shipping-account').parentElement.querySelector('.cash-closed-note');
+        closedCash();
+        await fill({ shipFrom: CAJA, ship: 25 });
+        expect(shippingNote()!.textContent).toContain('La caja está cerrada. Ábrala y vuelva a elegir Caja.');
+
+        cashService.getCurrentSession.mockReturnValue(of({ id: 's1', expectedCash: 300 }));
+        await fill({ shipFrom: BISA, ship: 25 });
+        await fill({ shipFrom: CAJA, ship: 25 });
+        expect(shippingNote()).toBeNull();
+        expect(saveButton().disabled).toBe(false);
+
+        cashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+        await fill({ shipFrom: BISA, ship: 25 });
+        await fill({ shipFrom: CAJA, ship: 25 });
+        expect(shippingNote()).toBeNull();
+        expect(saveButton().disabled).toBe(false);
+      });
+
+      it('con pago y envío en Caja, volver a elegir una sola lista con la caja abierta libera las dos', async () => {
+        closedCash();
+        await fill({ payFrom: fromCaja, pay: 290, shipFrom: CAJA, ship: 25 });
+        expect(fixture.nativeElement.querySelectorAll('.cash-closed-note').length).toBe(2);
+        expect(saveButton().disabled).toBe(true);
+
+        cashService.getCurrentSession.mockReturnValue(of({ id: 's1', expectedCash: 300 }));
+        cashService.currentSession.set({ id: 's1', expectedCash: 300 });
+        component.initialPaymentSource.set('account:' + BISA);
+        await render();
+        component.initialPaymentSource.set(fromCaja);
+        await render();
+
+        expect(note()).toBeNull();
+        expect(saveButton().disabled).toBe(false);
+        expect(text(warning())).toContain('El pago y el envío suman Bs 315.00');
+      });
+
       it('si falla la consulta no bloquea', async () => {
         cashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
         await fill({ payFrom: fromCaja, pay: 10 });
@@ -1110,8 +1148,11 @@ describe('PurchaseFormModalComponent', () => {
         await render();
         expect(saveButton().disabled).toBe(false);
 
+        expect(note()).toBeNull();
+
         component.shippingCost.set(30);
         await render();
+        expect(note()).not.toBeNull();
         expect(saveButton().disabled).toBe(true);
       });
 
