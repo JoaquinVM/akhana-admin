@@ -99,7 +99,7 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
 - **Lector:** tiene que funcionar como teclado USB y terminar cada lectura con Enter.
 - **Ventana abierta:** se detecta con `[aria-modal="true"]`, que tienen todas las ventanas de la app.
 - **Catálogo cargado:** un código movido o un producto inactivado en otra PC sigue resolviendo como antes hasta recargar el catálogo, y eso pasa al volver a entrar a la venta. Joaquín lo aceptó: «Aceptarlo así».
-- **Formulario abierto:** guardar envía la lista completa de códigos. Un código agregado en otra PC mientras el formulario estaba abierto queda desactivado, a nombre de quien guardó y sin aviso. Joaquín lo aceptó: «aceptala asi».
+- **Formulario abierto:** si la lista de códigos cambió, guardar la envía completa, y un código agregado en otra PC mientras el formulario estaba abierto queda desactivado, a nombre de quien guardó y sin aviso. Joaquín lo aceptó: «aceptala asi». Si la lista no cambió, no se envía y ese código se conserva.
 - **Fuera de la venta y de Productos:** en Compras y Consumos el lector escribe como un teclado.
 - **Datos:** migración `V27__product_barcodes.sql`. UPC-A se guarda con 13 dígitos. La validación y la forma canónica viven
   en el servidor (`BarcodeFormat`).
