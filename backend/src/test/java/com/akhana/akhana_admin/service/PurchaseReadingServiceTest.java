@@ -100,7 +100,7 @@ class PurchaseReadingServiceTest {
     void textFillsTheLineWithTheSystemCostAndCreatesNoPurchase() {
         textAnswers(purchase(null, textLine("jamaica 130ml", "2", "2", false)));
 
-        PurchaseDraftResponse draft = service.readText("2 jamaica 130ml", "ana");
+        PurchaseDraftResponse draft = service.readText("2 jamaica 130ml", null, "ana");
 
         PurchaseDraftResponse.Line line = draft.lines().get(0);
         assertThat(line.quantity()).isEqualByComparingTo("2");
@@ -114,7 +114,7 @@ class PurchaseReadingServiceTest {
     void severalMatchesAreSuggestedAndLeftWithoutProductOrCost() {
         textAnswers(purchase(null, textLine("cepillo", "1", "1", false)));
 
-        PurchaseDraftResponse.Line line = service.readText("1 cepillo", "ana").lines().get(0);
+        PurchaseDraftResponse.Line line = service.readText("1 cepillo", null, "ana").lines().get(0);
 
         assertThat(line.productId()).isNull();
         assertThat(line.unitCost()).isNull();
@@ -126,7 +126,7 @@ class PurchaseReadingServiceTest {
     void noMatchLeavesNoSuggestionForTheSearchBox() {
         textAnswers(purchase(null, textLine("xyzzy", "1", "1", false)));
 
-        PurchaseDraftResponse.Line line = service.readText("1 xyzzy", "ana").lines().get(0);
+        PurchaseDraftResponse.Line line = service.readText("1 xyzzy", null, "ana").lines().get(0);
 
         assertThat(line.productId()).isNull();
         assertThat(line.suggestions()).isEmpty();
@@ -136,7 +136,7 @@ class PurchaseReadingServiceTest {
     void theOnlyMatchOfTheSupplierIsChosen() {
         textAnswers(purchase("Flora", textLine("cepillo", "1", "1", false)));
 
-        PurchaseDraftResponse draft = service.readText("Flora: 1 cepillo", "ana");
+        PurchaseDraftResponse draft = service.readText("Flora: 1 cepillo", null, "ana");
 
         assertThat(draft.supplierId()).isEqualTo(flora.getId());
         assertThat(draft.lines().get(0).productId()).isEqualTo(cepilloAzul.getId());
@@ -146,7 +146,7 @@ class PurchaseReadingServiceTest {
     void aMissingQuantityProposesOneAsDoubtful() {
         textAnswers(purchase(null, textLine("jamaica", null, null, false)));
 
-        PurchaseDraftResponse.Line line = service.readText("jamaica", "ana").lines().get(0);
+        PurchaseDraftResponse.Line line = service.readText("jamaica", null, "ana").lines().get(0);
 
         assertThat(line.quantity()).isEqualByComparingTo("1");
         assertThat(line.quantityDoubtful()).isTrue();
@@ -156,7 +156,7 @@ class PurchaseReadingServiceTest {
     void aRangeKeepsTheWrittenTextToHighlightIt() {
         textAnswers(purchase(null, textLine("jamaica", "4", "4 a 5", true)));
 
-        PurchaseDraftResponse.Line line = service.readText("4 a 5 jamaica", "ana").lines().get(0);
+        PurchaseDraftResponse.Line line = service.readText("4 a 5 jamaica", null, "ana").lines().get(0);
 
         assertThat(line.quantity()).isEqualByComparingTo("4");
         assertThat(line.quantityDoubtful()).isTrue();
@@ -167,7 +167,7 @@ class PurchaseReadingServiceTest {
     void severalSuppliersFillNothingButTheCallCounts() {
         textAnswers(new ReadPurchase(null, true, false, false, List.of(textLine("jamaica", "1", "1", false)), null, null));
 
-        assertThatThrownBy(() -> service.readText("Flora: 1. Granel: 2", "ana"))
+        assertThatThrownBy(() -> service.readText("Flora: 1. Granel: 2", null, "ana"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(PurchaseReadingService.ONE_SUPPLIER);
         verify(readingRepository).save(any());
@@ -176,10 +176,10 @@ class PurchaseReadingServiceTest {
     @Test
     void anUnnamedOrUnknownSupplierStaysEmpty() {
         textAnswers(purchase(null, textLine("jamaica", "1", "1", false)));
-        assertThat(service.readText("1 jamaica", "ana").supplierId()).isNull();
+        assertThat(service.readText("1 jamaica", null, "ana").supplierId()).isNull();
 
         textAnswers(purchase("Nadie Conocido", textLine("jamaica", "1", "1", false)));
-        assertThat(service.readText("1 jamaica", "ana").supplierId()).isNull();
+        assertThat(service.readText("1 jamaica", null, "ana").supplierId()).isNull();
     }
 
     @Test
@@ -187,7 +187,7 @@ class PurchaseReadingServiceTest {
         textAnswers(purchase(null, new ReadLine("jamaica 130ml", new BigDecimal("2"), "2", false,
             new BigDecimal("99.00"), new BigDecimal("198.00"), null)));
 
-        assertThat(service.readText("2 jamaica a 99", "ana").lines().get(0).unitCost()).isEqualByComparingTo("12.50");
+        assertThat(service.readText("2 jamaica a 99", null, "ana").lines().get(0).unitCost()).isEqualByComparingTo("12.50");
     }
 
     @Test
@@ -261,7 +261,7 @@ class PurchaseReadingServiceTest {
     void aFailureSaysSoCreatesNothingAndStillCountsTheCall() {
         when(reader.readText(any())).thenReturn(ReadOutcome.failed(null, null));
 
-        assertThatThrownBy(() -> service.readText("2 jamaica", "ana"))
+        assertThatThrownBy(() -> service.readText("2 jamaica", null, "ana"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage(PurchaseReadingService.READ_FAILED);
 
@@ -276,7 +276,7 @@ class PurchaseReadingServiceTest {
     void anAnswerWithoutLinesIsAFailure() {
         textAnswers(purchase(null));
 
-        assertThatThrownBy(() -> service.readText("hola", "ana")).hasMessage(PurchaseReadingService.READ_FAILED);
+        assertThatThrownBy(() -> service.readText("hola", null, "ana")).hasMessage(PurchaseReadingService.READ_FAILED);
     }
 
     @Test
@@ -284,7 +284,7 @@ class PurchaseReadingServiceTest {
         when(reader.readText(any())).thenReturn(new ReadOutcome(
             purchase(null, textLine("jamaica", "1", "1", false)), "{}", 1001L, 333L));
 
-        service.readText("1 jamaica", "ana");
+        service.readText("1 jamaica", null, "ana");
 
         ArgumentCaptor<PurchaseReading> saved = ArgumentCaptor.forClass(PurchaseReading.class);
         verify(readingRepository).save(saved.capture());
@@ -298,7 +298,7 @@ class PurchaseReadingServiceTest {
     void atTheCapNothingIsCalled() {
         when(readingRepository.sumCostBetween(any(), any())).thenReturn(new BigDecimal("10.00"));
 
-        assertThatThrownBy(() -> service.readText("2 jamaica", "ana")).hasMessage(PurchaseReadingService.CAP_REACHED);
+        assertThatThrownBy(() -> service.readText("2 jamaica", null, "ana")).hasMessage(PurchaseReadingService.CAP_REACHED);
         assertThatThrownBy(() -> service.readPhoto(new byte[] {9}, "ana")).hasMessage(PurchaseReadingService.CAP_REACHED);
         verifyNoInteractions(photoProcessor);
         verify(reader, never()).readText(any());
@@ -308,7 +308,7 @@ class PurchaseReadingServiceTest {
     void withoutTheKeyNothingIsCalled() {
         when(reader.isConfigured()).thenReturn(false);
 
-        assertThatThrownBy(() -> service.readText("2 jamaica", "ana")).hasMessage(PurchaseReadingService.NOT_CONFIGURED);
+        assertThatThrownBy(() -> service.readText("2 jamaica", null, "ana")).hasMessage(PurchaseReadingService.NOT_CONFIGURED);
         verify(reader, never()).readText(any());
     }
 
@@ -324,5 +324,91 @@ class PurchaseReadingServiceTest {
         assertThat(admin.capReached()).isFalse();
         assertThat(operator.spentUsd()).isNull();
         assertThat(operator.capUsd()).isNull();
+    }
+
+    @Test
+    void theChosenSupplierStandsAndItsOnlyMatchIsChosen() {
+        when(supplierRepository.findById(flora.getId())).thenReturn(java.util.Optional.of(flora));
+        textAnswers(purchase("Granel", textLine("cepillo", "1", "1", false)));
+
+        PurchaseDraftResponse draft = service.readText("1 cepillo", flora.getId(), "ana");
+
+        assertThat(draft.supplierId()).isEqualTo(flora.getId());
+        assertThat(draft.lines().get(0).productId()).isEqualTo(cepilloAzul.getId());
+    }
+
+    @Test
+    void anInactiveChosenSupplierIsRejectedBeforeSpending() {
+        other.setStatus(SupplierStatus.INACTIVO);
+        when(supplierRepository.findById(other.getId())).thenReturn(java.util.Optional.of(other));
+
+        assertThatThrownBy(() -> service.readText("1 cepillo", other.getId(), "ana"))
+            .isInstanceOf(IllegalArgumentException.class);
+        verify(reader, never()).readText(any());
+    }
+
+    @Test
+    void missingWordsSuggestButNeverChoose() {
+        Product barra100 = product("Barra de Chocolate 100 gramos 100% Cacao", "B100", "20.00", flora);
+        Product barra70 = product("Barra de Chocolate 100 gramos 70% Cacao", "B70", "20.00", flora);
+        Product otra = product("Barra de Cereal", "CER", "5.00", other);
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(List.of(otra, barra70, barra100));
+        textAnswers(purchase(null, textLine("barra de 100 grs de 100%", "3", "3", false)));
+
+        PurchaseDraftResponse.Line line = service.readText("3 barra de 100 grs de 100%", null, "ana").lines().get(0);
+
+        assertThat(line.productId()).isNull();
+        assertThat(line.unitCost()).isNull();
+        assertThat(line.suggestions()).extracting(PurchaseDraftResponse.ProductSuggestion::name)
+            .startsWith("Barra de Chocolate 100 gramos 100% Cacao");
+    }
+
+    @Test
+    void shortNumbersRankThePartialSuggestions() {
+        List<Product> bars = new java.util.ArrayList<>();
+        for (String name : List.of("100 gramos 100%", "100 gramos 70%", "100 gramos 99%", "100 gramos surtido",
+                "67 gramos 100%", "67 gramos 70%", "67 gramos 99%")) {
+            bars.add(product("Barra de Chocolate " + name, name, "20.00", flora));
+        }
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(bars);
+        textAnswers(purchase(null, textLine("barra de 67 grs de 70%", "1", "1", false)));
+
+        PurchaseDraftResponse.Line line = service.readText("1 barra de 67 grs de 70%", null, "ana").lines().get(0);
+
+        assertThat(line.productId()).isNull();
+        assertThat(line.suggestions().get(0).name()).isEqualTo("Barra de Chocolate 67 gramos 70%");
+    }
+
+    @Test
+    void aSingleProductWithSomeOfTheWordsIsStillNotChosen() {
+        textAnswers(purchase(null, textLine("jamaica morada especial", "1", "1", false)));
+
+        PurchaseDraftResponse.Line line = service.readText("1 jamaica morada especial", null, "ana").lines().get(0);
+
+        assertThat(line.productId()).isNull();
+        assertThat(line.suggestions()).extracting(PurchaseDraftResponse.ProductSuggestion::name).containsExactly("Jamaica 130ml");
+    }
+
+    @Test
+    void onlyNumbersDoNotMakeASuggestion() {
+        textAnswers(purchase(null, textLine("xyzzy 130ml 100", "1", "1", false)));
+        Product numbered = product("Aceite 100", "ACE", "5.00", flora);
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(List.of(numbered));
+
+        assertThat(service.readText("1 cosa 100", null, "ana").lines().get(0).suggestions()).isEmpty();
+    }
+
+    @Test
+    void theSupplierProductsComeFirstAmongPartialSuggestions() {
+        Product cremaBoni = product("Crema Dental Menta", "CDM", "9.00", flora);
+        Product menta = product("Te de Menta", "TEM", "3.00", other);
+        when(supplierRepository.findById(flora.getId())).thenReturn(java.util.Optional.of(flora));
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(List.of(menta, cremaBoni));
+        textAnswers(purchase(null, textLine("pastas mentas", "6", "6", false)));
+
+        PurchaseDraftResponse.Line line = service.readText("6 pastas mentas", flora.getId(), "ana").lines().get(0);
+
+        assertThat(line.productId()).isNull();
+        assertThat(line.suggestions().get(0).name()).isEqualTo("Crema Dental Menta");
     }
 }

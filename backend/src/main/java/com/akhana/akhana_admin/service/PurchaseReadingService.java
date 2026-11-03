@@ -3,6 +3,8 @@ package com.akhana.akhana_admin.service;
 import com.akhana.akhana_admin.dto.PurchaseDraftResponse;
 import com.akhana.akhana_admin.dto.PurchaseReadingStatusResponse;
 
+import java.util.UUID;
+
 public interface PurchaseReadingService {
 
     String NOT_CONFIGURED = "La lectura con IA no está configurada. Puedes llenar el pedido a mano.";
@@ -12,7 +14,8 @@ public interface PurchaseReadingService {
 
     PurchaseReadingStatusResponse getStatus(boolean includeSpend);
 
-    PurchaseDraftResponse readText(String text, String username);
+    // supplierId: the supplier the person chose before reading; null leaves it to what the message says
+    PurchaseDraftResponse readText(String text, UUID supplierId, String username);
 
     PurchaseDraftResponse readPhoto(byte[] content, String username);
 }

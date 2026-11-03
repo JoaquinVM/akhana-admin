@@ -26,6 +26,10 @@
       </ul>
       <button type="button" class="btn btn-primary" (click)="choose(null)">No, es un pedido nuevo</button>
     } @else if (mode() === 'TEXT') {
+      <label class="form-label" for="reading-supplier">Proveedor (opcional)</label>
+      <app-search-select inputId="reading-supplier" name="readingSupplier" placeholder="Seleccione…"
+                         [options]="supplierOptions()"
+                         [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event ?? '')" />
       <label class="form-label" for="reading-text">Texto del pedido</label>
       <textarea id="reading-text" class="form-control reading-text" rows="8" maxlength="5000" name="readingText"
                 [disabled]="isReading()"

@@ -16,8 +16,9 @@ export class PurchaseReadingService {
     return this.http.get<PurchaseReadingStatus>(`${this.apiUrl}/readings/status`);
   }
 
-  readText(text: string): Observable<PurchaseDraft> {
-    return this.http.post<PurchaseDraft>(`${this.apiUrl}/readings/text`, { text });
+  // supplierId: the supplier the person already knows it is for
+  readText(text: string, supplierId: string | null = null): Observable<PurchaseDraft> {
+    return this.http.post<PurchaseDraft>(`${this.apiUrl}/readings/text`, { text, supplierId });
   }
 
   readPhoto(file: File): Observable<PurchaseDraft> {

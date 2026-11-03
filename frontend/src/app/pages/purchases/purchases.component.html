@@ -180,6 +180,7 @@
   <app-purchase-reading-modal
     [mode]="readingMode()"
     [forPurchase]="readingFor()"
+    [suppliers]="suppliers()"
     (draftRead)="onDraftRead($event)"
     (fillByHand)="onFillByHand()"
     (close)="closeReading()" />
