@@ -23,7 +23,22 @@ describe('CashClosedNoteComponent', () => {
   it('avisa si el servidor responde que no hay caja abierta', () => {
     mockCashService.getCurrentSession.mockReturnValue(of(null));
     fixture.detectChanges();
-    expect(note().nativeElement.textContent).toContain('La caja está cerrada. Para usar Caja, ábrala primero.');
+    expect(note().nativeElement.textContent).toContain('La caja está cerrada. Ábrala y vuelva a elegir Caja.');
+  });
+
+  it('dice al formulario si la caja está cerrada, y un error no cuenta como cerrada', () => {
+    const emitted: boolean[] = [];
+    fixture.componentInstance.closedChange.subscribe(closed => emitted.push(closed));
+    mockCashService.getCurrentSession.mockReturnValue(of(null));
+    fixture.detectChanges();
+    expect(emitted).toEqual([true]);
+
+    const failed = TestBed.createComponent(CashClosedNoteComponent);
+    const failedEmitted: boolean[] = [];
+    failed.componentInstance.closedChange.subscribe(closed => failedEmitted.push(closed));
+    mockCashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+    failed.detectChanges();
+    expect(failedEmitted).toEqual([false]);
   });
 
   it('no avisa con la caja abierta', () => {

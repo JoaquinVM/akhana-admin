@@ -92,7 +92,7 @@
               }
             </select>
             @if (repaysFromCash()) {
-              <app-cash-closed-note />
+              <app-cash-closed-note (closedChange)="cashClosed.set($event)" />
             }
           </div>
           <div class="form-group">
@@ -119,7 +119,7 @@
           </div>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" [disabled]="isRepaying()">
+          <button type="submit" class="btn btn-primary" [disabled]="isRepaying() || (repaysFromCash() && cashClosed())">
             {{ isRepaying() ? 'Registrando…' : 'Registrar devolución' }}
           </button>
         </div>
