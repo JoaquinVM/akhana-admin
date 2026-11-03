@@ -191,7 +191,7 @@
   font-family: var(--font-body);
   font-size: 0.75rem;
   color: #64748b;
-  max-width: 240px;
+  max-width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -238,7 +238,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  max-width: 180px;
+  max-width: 260px;
+  margin-top: 0.2rem;
 }
 
 .tag-pill {
@@ -253,6 +254,13 @@
   background-color: #ffffff;
   border: 1px solid;
   white-space: nowrap;
+}
+
+.classification-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
 }
 
 .supplier-text {
@@ -316,15 +324,34 @@
   white-space: nowrap;
 }
 
+/* The actions stay in view while the table scrolls with a mouse; phones keep the whole width for the data */
+@media (min-width: 769px) {
+  .table .col-actions {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    box-shadow: -1px 0 0 var(--border-light);
+  }
+
+  .table tbody .col-actions {
+    background-color: var(--bg-surface);
+  }
+
+  .table thead .col-actions,
+  .table tbody tr:hover .col-actions {
+    background-color: #f8fafc;
+  }
+}
+
 /* Compact products table */
 .table thead th,
 :host .table thead th {
-  padding: 0.75rem 0.875rem;
+  padding: 0.75rem 0.625rem;
 }
 
 .table tbody td,
 :host .table tbody td {
-  padding: 0.625rem 0.875rem;
+  padding: 0.625rem;
 }
 
 .profit-cell {

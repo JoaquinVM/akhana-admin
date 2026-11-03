@@ -136,20 +136,18 @@
           <tr>
             <th scope="col" style="width: 72px">Foto</th>
             <th scope="col" style="width: 100px">Código</th>
-            <th scope="col" style="min-width: 160px">Nombre</th>
-            <th scope="col" style="width: 135px">Categoría</th>
-            <th scope="col" style="width: 130px">Proveedor</th>
-            <th scope="col" style="min-width: 130px">Etiquetas</th>
+            <th scope="col" style="min-width: 200px">Nombre</th>
+            <th scope="col" style="width: 140px; white-space: normal">Categoría y proveedor</th>
             <th scope="col" style="width: 145px; text-align: right">Precios</th>
             <th scope="col" style="width: 115px; text-align: right">Utilidad</th>
             <th scope="col" style="width: 85px; text-align: center">Estado</th>
-            <th scope="col" style="width: 110px; text-align: right">Acciones</th>
+            <th scope="col" class="col-actions" style="width: 110px; text-align: right">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @if (isLoading()) {
             <tr>
-              <td colspan="10">
+              <td colspan="8">
                 <div class="table-state-container">
                   <div class="spinner-large"></div>
                   <p>Cargando catálogo de productos...</p>
@@ -158,7 +156,7 @@
             </tr>
           } @else if (filteredProducts().length === 0) {
             <tr>
-              <td colspan="10">
+              <td colspan="8">
                 <div class="table-empty">
                   <div class="table-empty-icon"><app-icon name="inbox" /></div>
                   <h4 class="table-empty-title">No se encontraron productos</h4>
@@ -194,29 +192,25 @@
                     @if (product.description) {
                       <span class="product-description">{{ product.description }}</span>
                     }
+                    @if (product.tags && product.tags.length > 0) {
+                      <div class="tags-cell-container">
+                        @for (t of product.tags; track t.id) {
+                          <span class="tag-pill" [style.borderColor]="t.color" [style.color]="t.color">
+                            <span class="color-dot-mini" [style.backgroundColor]="t.color"></span>
+                            {{ t.name }}
+                          </span>
+                        }
+                      </div>
+                    }
                   </div>
                 </td>
                 <td>
-                  <span class="category-color-pill">
-                    <span class="color-dot" [style.backgroundColor]="product.categoryColor"></span>
-                    <span class="pill-text">{{ product.categoryName }}</span>
-                  </span>
-                </td>
-                <td>
-                  <span class="supplier-text">{{ product.supplierName }}</span>
-                </td>
-                <td>
-                  <div class="tags-cell-container">
-                    @if (!product.tags || product.tags.length === 0) {
-                      <span class="text-muted">—</span>
-                    } @else {
-                      @for (t of product.tags; track t.id) {
-                        <span class="tag-pill" [style.borderColor]="t.color" [style.color]="t.color">
-                          <span class="color-dot-mini" [style.backgroundColor]="t.color"></span>
-                          {{ t.name }}
-                        </span>
-                      }
-                    }
+                  <div class="classification-cell">
+                    <span class="category-color-pill">
+                      <span class="color-dot" [style.backgroundColor]="product.categoryColor"></span>
+                      <span class="pill-text">{{ product.categoryName }}</span>
+                    </span>
+                    <span class="supplier-text">{{ product.supplierName }}</span>
                   </div>
                 </td>
                 <td style="text-align: right">
@@ -255,7 +249,7 @@
                     <span class="status-badge badge-deleted">Eliminado</span>
                   }
                 </td>
-                <td style="text-align: right">
+                <td class="col-actions" style="text-align: right">
                   <div class="table-actions" style="justify-content: flex-end">
                     <!-- Audit option for every status -->
                     <button
