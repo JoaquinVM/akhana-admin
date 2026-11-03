@@ -54,3 +54,12 @@
 .pay-POR_PAGAR { background: #fee2e2; color: #b91c1c; }
 .pay-CONSIGNACION { background: #ede9fe; color: #6d28d9; }
 .pay-A_CUENTA { background: #fef3c7; color: #a16207; }
+
+/* COM-22 */
+.cost-to-confirm-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 0.25rem;
+  background: var(--warning-bg, #fff8e1);
+  color: var(--warning-text, #8a6100);
+}

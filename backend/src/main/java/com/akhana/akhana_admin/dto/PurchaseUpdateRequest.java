@@ -47,5 +47,18 @@ public record PurchaseUpdateRequest(
 
     @NotBlank(message = "El motivo del cambio es obligatorio.")
     @Size(max = 500, message = "El motivo del cambio no puede exceder 500 caracteres.")
-    String reason
-) {}
+    String reason,
+
+    // COM-22: the goods arrived: it ends delivered, with the real costs and without «costo por confirmar»
+    Boolean arrival,
+
+    // COM-24: the photo reading used to fill the arrival, if any
+    UUID readingId
+) {
+    public PurchaseUpdateRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
+                                 UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
+                                 DeliveryStatus deliveryStatus, LocalDate deliveryDate, String reason) {
+        this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
+            deliveryStatus, deliveryDate, reason, null, null);
+    }
+}

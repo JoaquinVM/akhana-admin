@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { PurchaseDetailModalComponent } from './purchase-detail-modal.component';
+import { PurchaseReadingService } from '../../../../core/purchase/purchase-reading.service';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { CashService } from '../../../../core/cash/cash.service';
 import { Purchase, PurchasePayment } from '../../../../core/purchase/models/purchase.models';
@@ -40,6 +41,7 @@ describe('PurchaseDetailModalComponent', () => {
       imports: [PurchaseDetailModalComponent],
       providers: [
         { provide: PurchaseService, useValue: purchaseService },
+        { provide: PurchaseReadingService, useValue: { getPhotoImage: vi.fn(), uploadPhoto: vi.fn() } },
         { provide: CashService, useValue: { currentSession: signal<any>(null), getCurrentSession: cashSession } }
       ]
     }).compileComponents();
@@ -235,6 +237,40 @@ describe('PurchaseDetailModalComponent', () => {
       cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
       choose('account:acc-caja');
       expect(note()).toBeNull();
+    });
+  });
+
+  describe('COM-22: costo por confirmar', () => {
+    function showToConfirm(extra: object = {}): void {
+      purchaseService.getPurchaseById.mockReturnValue(of({ ...basePurchase, costToConfirm: true, ...extra }));
+      fixture.componentRef.setInput('purchaseId', 'other-id');
+      fixture.detectChanges();
+    }
+
+    it('avisa que el monto es estimado y ofrece la llegada con foto o a mano', () => {
+      const arrived = vi.fn();
+      component.arrived.subscribe(arrived);
+      fixture.componentRef.setInput('readingAvailable', true);
+      showToConfirm();
+
+      expect(fixture.nativeElement.textContent).toContain('Costo por confirmar');
+      expect(fixture.nativeElement.textContent).toContain('Total líneas (estimado)');
+      const buttons = fixture.nativeElement.querySelectorAll('.arrival-actions button');
+      buttons[0].click();
+      expect(arrived.mock.calls[0][0].withPhoto).toBe(true);
+      buttons[1].click();
+      expect(arrived.mock.calls[1][0].withPhoto).toBe(false);
+    });
+
+    it('CA-25: al llegar al tope solo queda a mano', () => {
+      fixture.componentRef.setInput('readingAvailable', false);
+      showToConfirm();
+      expect(fixture.nativeElement.querySelectorAll('.arrival-actions button').length).toBe(1);
+    });
+
+    it('un pedido anulado no ofrece la llegada', () => {
+      showToConfirm({ status: 'ANULADO' });
+      expect(fixture.nativeElement.querySelector('.arrival-actions')).toBeNull();
     });
   });
 });

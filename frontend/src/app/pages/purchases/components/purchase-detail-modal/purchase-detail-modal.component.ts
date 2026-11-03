@@ -6,6 +6,7 @@ import { operationDayLabel, storeToday } from '../../../../shared/utils/store-da
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
+import { PurchasePhotoPanelComponent } from '../purchase-photo-panel/purchase-photo-panel.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import {
   DELIVERY_STATUS_LABELS,
@@ -28,7 +29,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-purchase-detail-modal',
   standalone: true,
-  imports: [StoreDayPipe, CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
+  imports: [StoreDayPipe, CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent, CashClosedNoteComponent, PurchasePhotoPanelComponent],
   templateUrl: './purchase-detail-modal.component.html',
   styleUrls: ['./purchase-detail-modal.component.css']
 })
@@ -43,11 +44,15 @@ export class PurchaseDetailModalComponent {
   accounts = input<PaymentAccount[]>([]);
   // Active people who can pay a purchase for the business (DEU-02)
   creditors = input<Creditor[]>([]);
+  // COM-25: the arrival can start from a photo while reading is on
+  readingAvailable = input<boolean>(false);
 
   // Emits the updated purchase after a payment, a delivery change or a void, to refresh the list
   updated = output<Purchase>();
   // COM-11: opens the purchase form to edit this purchase
   edit = output<Purchase>();
+  // COM-22: the goods arrived; the real costs are registered with a photo or by hand
+  arrived = output<{ purchase: Purchase; withPhoto: boolean }>();
   close = output<void>();
 
   purchase = signal<Purchase | null>(null);
@@ -158,6 +163,13 @@ export class PurchaseDetailModalComponent {
         this.isLoading.set(false);
       }
     });
+  }
+
+  reload(): void {
+    const id = this.purchaseId();
+    if (id) {
+      this.load(id);
+    }
   }
 
   private resetPaymentForm(purchase: Purchase): void {

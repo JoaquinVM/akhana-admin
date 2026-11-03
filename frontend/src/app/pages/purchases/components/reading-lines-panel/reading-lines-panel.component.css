@@ -1,0 +1,59 @@
+.unresolved {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--warning-border, #f0c36d);
+  border-radius: 0.5rem;
+  background: var(--warning-bg, #fff8e1);
+}
+
+.unresolved-title,
+.unresolved-text {
+  margin: 0;
+}
+
+.unresolved-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unresolved-flag {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--warning-text, #8a6100);
+}
+
+.suggestions,
+.unresolved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.suggestions .btn {
+  height: auto;
+  white-space: normal;
+  text-align: left;
+}
+
+.results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0.375rem;
+  background: var(--surface, #fff);
+}
+
+.result {
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

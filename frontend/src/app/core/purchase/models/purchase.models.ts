@@ -97,6 +97,10 @@ export interface Purchase {
   revisions: PurchaseRevision[];
   // FIN-11: migrated from the spreadsheet; only takes payments while it has a balance
   historical?: boolean;
+  // COM-22: its costs are the system's until the real ones are registered; the amount is an estimate
+  costToConfirm?: boolean;
+  // COM-23: the active invoice photo; only in the detail
+  photoId?: string | null;
 }
 
 // COM-12: who edited a purchase, when, why and what changed
@@ -132,11 +136,67 @@ export interface PurchaseRequest {
   deliveryDate: string | null;
   // Optional first payment, from an account or made by a person (COM-05, DEU-02)
   initialPayment: PurchasePaymentRequest | null;
+  // COM-20: the reading this purchase comes from
+  readingId?: string;
 }
 
 // COM-11: the whole purchase as it should be, without payments, with a mandatory reason
 export interface PurchaseUpdateRequest extends Omit<PurchaseRequest, 'initialPayment'> {
   reason: string;
+  // COM-22: the goods arrived: it ends delivered and without «costo por confirmar»
+  arrival?: boolean;
+}
+
+// COM-20: what a reading proposes for the form; a person corrects and registers it
+export type PurchaseReadingSource = 'TEXT' | 'PHOTO';
+
+export interface PurchaseDraftSuggestion {
+  id: string;
+  code: string;
+  name: string;
+  supplierName: string | null;
+}
+
+export interface PurchaseDraftLine {
+  text: string;
+  quantity: number;
+  quantityDoubtful: boolean;
+  quantityText: string | null;
+  // Null: the person chooses it among the suggestions or with the search box (CA-03)
+  productId: string | null;
+  suggestions: PurchaseDraftSuggestion[];
+  // Null: it has to be filled before registering (CA-15)
+  unitCost: number | null;
+  costNote: string | null;
+}
+
+export interface PendingPurchase {
+  id: string;
+  purchaseNumber: string;
+  purchaseDate: string;
+  itemsTotal: number;
+  costToConfirm: boolean;
+}
+
+export interface PurchaseDraft {
+  readingId: string;
+  source: PurchaseReadingSource;
+  supplierId: string | null;
+  supplierText: string | null;
+  reviewAll: boolean;
+  paidNote: boolean;
+  lines: PurchaseDraftLine[];
+  shippingCost: number | null;
+  readTotal: number | null;
+  pendingPurchases: PendingPurchase[];
+}
+
+// COM-25: the spend comes only for an administrator
+export interface PurchaseReadingStatus {
+  configured: boolean;
+  capReached: boolean;
+  spentUsd: number | null;
+  capUsd: number | null;
 }
 
 export interface PurchaseDeliveryRequest {

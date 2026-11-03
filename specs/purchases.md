@@ -400,3 +400,65 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
   Pruebas en `purchase-form-modal.component.spec.ts` y `purchase-detail-modal.component.spec.ts`; verificado en el
   navegador con la base local (edición con línea nueva, cantidad, envío rehecho y rechazo por total menor a lo pagado).
 - [x] COM-13: precio de venta en el buscador y en la tabla de `purchase-form-modal`, solo frontend.
+- [x] COM-20 a COM-25: lectura desde foto o texto. Migración `V28__purchase_readings.sql`, `PurchaseReadingService`,
+  `OpenAiPurchaseReader`, `ProductTextMatcher`, `PurchasePhotoService`; pantalla en `purchase-reading-modal`,
+  `reading-lines-panel`, `reading-notice` y `purchase-photo-panel`. Falta la medición previa.
+
+## COM-20 a COM-25 · Pedido desde foto o texto
+
+Flujo normal: al pedir se pega el WhatsApp y queda un pedido pendiente con costos del sistema; al llegar, se registran los
+precios reales con foto o a mano. Una compra sin texto entra por foto como pedido entregado. Decisiones en P-60 a P-62.
+
+| ID | Cuando… | Entonces… |
+| --- | --- | --- |
+| CA-01 | Se pega un texto con «2 jamaica 130ml» | El formulario abre con la línea, cantidad 2 y el producto; no se creó ningún pedido |
+| CA-02 | La línea coincide con un producto | Queda elegido con su costo del sistema, y el pedido sale con «costo por confirmar» |
+| CA-03 | Hay varias coincidencias o ninguna | Muestra sugerencias, buscador, «Crear producto» y «Quitar línea»; no se registra hasta resolverla |
+| CA-04 | El texto dice «4 a 5» o «Blanco» sin número | Propone 4 y 1, resaltados con el texto original |
+| CA-05 | El texto trae título de grupo: «Cepillos: 2 Amarillo» | La línea lleva el grupo: «Cepillos Amarillo» (medición previa) |
+| CA-06 | El texto parece traer varios proveedores | Avisa «Pega un proveedor por vez.» y no llena nada |
+| CA-07 | El texto no dice el proveedor | Queda vacío y hay que elegirlo; si lo dice, se empareja con los activos |
+| CA-08 | Se registra un pedido desde texto | Entrega pendiente; en Pedidos y Por pagar se ve «costo por confirmar» y el monto como estimado |
+| CA-09 | En un pedido por confirmar se pulsa «Llegó la mercadería, con foto» | La foto llena cantidades y costos sobre ese pedido; lo que no está en la factura queda señalado, no se quita solo. Al confirmar se edita (COM-11) con motivo «Llegó la mercadería», queda entregado y sin la marca |
+| CA-10 | Se pulsa «Llegó la mercadería, a mano» | Se editan a mano, con el mismo resultado. Una edición normal o cambiar solo la entrega no quitan la marca |
+| CA-11 | Un costo real difiere del registrado | Aparece la alerta y el precio sugerido de COM-03; los pagos respetan COM-12 |
+| CA-12 | Se usa Desde foto y hay un pedido pendiente de ese proveedor | Primero ofrece completarlo; si no, sigue como pedido nuevo |
+| CA-13 | Foto sin pedido pendiente | Pedido nuevo con entrega entregado y los costos de la factura |
+| CA-14 | La foto no trae costo por unidad, pero sí el importe | Costo = importe ÷ cantidad, HALF_UP, con un mensaje del cálculo |
+| CA-15 | No se puede saber el costo | Queda en blanco con el mensaje del cálculo; no se registra hasta llenarlo |
+| CA-16 | Hay una marca de repetido («〃») | La línea usa el texto de la línea de arriba (medición previa) |
+| CA-17 | Hay líneas o totales tachados | Se usa lo vigente (medición previa) |
+| CA-18 | La suma de líneas y envío no da el total leído | Avisa la diferencia, sin bloquear; solo con todas las líneas y costos llenos |
+| CA-19 | La nota dice «Cancelado» | Pide elegir el origen del pago inicial, con el monto de COM-19; «No se pagó» quita la propuesta. Al completar un pedido existente, solo avisa: el pago va desde el detalle |
+| CA-20 | La factura trae envío | Propone el monto, con cuenta vacía (P-24) |
+| CA-21 | Se registra un pedido con foto | La foto se sube después de registrar, queda reducida, sin metadatos, visible en el detalle con el mismo permiso y en la copia fuera del VPS. Si falla la subida, el pedido sigue registrado y el detalle permite agregarla |
+| CA-22 | La foto queda sin registrar | Solo pasó por memoria: no queda guardada |
+| CA-23 | La foto no es JPEG, PNG ni WebP, o pesa de más | Mensaje de CAT-12, sin llamar a OpenAI. El navegador convierte a JPEG lo que puede abrir, como HEIC en iPhone |
+| CA-24 | OpenAI falla, tarda o responde algo inválido | «No se pudo leer. Puedes intentar de nuevo o llenarlo a mano.»; conserva el texto, no crea nada, sin reintentos |
+| CA-25 | El gasto del mes llega a US$10 | Botones apagados con «Se llegó al tope de este mes»; el administrador ve el gasto |
+| CA-26 | Un usuario sin `PURCHASES` llama a estas rutas | 403 |
+| CA-27 | Se revisa el código y los registros | La clave no está en el repo, el navegador ni los registros; las llamadas van con `store: false` |
+| CA-28 | Se abre en un teléfono de 375 × 812 | Tomar foto, pegar texto, revisar y confirmar sin desplazamiento horizontal |
+
+Notas de implementación:
+
+- `POST /api/purchases/readings/text` y `/photo` responden un borrador; `GET /readings/status` dice si está encendido y, al
+  administrador, el gasto. La foto y su lectura se enlazan con `readingId` al registrar o al llegar; una lectura va con un solo pedido.
+- A OpenAI va la foto ya reducida de CAT-12, sin metadatos. Las instrucciones están en `resources/purchase-reading/`; cambiarlas
+  obliga a repetir la medición.
+- El gasto sale del uso que informa cada respuesta, a los precios de `application.properties`, redondeado hacia arriba. Una
+  llamada que no informa uso cuenta US$0,01. Al cambiar de modelo hay que actualizar esos precios.
+- Los archivos de la foto de factura viven en el volumen de las fotos de productos, con nombres únicos del servidor, y usan su misma copia.
+
+### Medición previa a producción
+
+Con la instrucción congelada y una copia de la tabla de datos correctos guardada antes de medir; Joaquín corrige esos datos
+antes de correrla. Si algo no cumple, se le presenta antes de publicar.
+
+| Qué se mide | Con qué | Umbral |
+| --- | --- | --- |
+| Cantidades con número claro | Los 5 textos reales de Joaquín y otros que sume | ≥ 95 % de líneas |
+| Producto correcto entre las sugerencias | Esos textos y las 22 fotos, contra el catálogo real | ≥ 80 % de líneas |
+| Cantidades, costos y totales en fotos | Las 17 fotos medidas de la prueba 012 | Al menos 67 de 69 líneas y 17 de 17 totales |
+| Reglas nuevas | Marcas de repetido, importe visible | Se informa cada caso |
+| Tiempo: borrador corregido contra tipeado | 3 pedidos reales, incluida la nota de pan | Más rápido en al menos 2 de 3 |

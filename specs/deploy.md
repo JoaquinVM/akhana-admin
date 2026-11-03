@@ -116,6 +116,7 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 | `DB_PASSWORD` | Nuevo, 32+ caracteres |
 | `DB_URL` | `jdbc:postgresql://db:5432/akhana` (lo fija el compose) |
 | `JWT_SECRET` | Nuevo, `openssl rand -hex 32` |
+| `OPENAI_API_KEY` | La crea Joaquín en OpenAI; opcional (COM-20) |
 | `JWT_EXPIRATION` | `12h` |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Primer admin; cambia la contraseña al entrar (USR-06) |
 | `FORWARD_HEADERS_STRATEGY` | `native` |
@@ -307,7 +308,13 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
   2. En la Mac, sin acceso al VPS, se baja ese respaldo con `rclone` y las claves del gestor, se restaura en el
      Postgres local, el backend arranca contra él y los reportes del mes muestran los mismos totales que producción.
 
-## NF-08 · Fotos de productos
+## COM-20 · Lectura de pedidos con OpenAI
+
+`OPENAI_API_KEY` va en el `.env` del VPS; sin ella, Desde foto y Desde texto no aparecen y Admin arranca igual. El VPS solo
+necesita salida a `api.openai.com`: no se abre ningún puerto. `OPENAI_MODEL` cambia el modelo, y sus precios se actualizan en
+`application.properties` (COM-25).
+
+## NF-08 · Fotos de productos y de facturas
 
 Las fotos viven en el volumen `product_photos`, montado en `api` (`PRODUCT_PHOTOS_DIR=/data/product-photos`); detalle en
 `product-photos.md`. No requieren cambios en el `.env` ni en rclone: la copia va en `${BACKUP_REMOTE}product-photos/`, cifrada

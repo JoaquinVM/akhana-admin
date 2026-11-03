@@ -16,6 +16,19 @@
           <span>Pedido anulado por {{ p.voidedBy }} el {{ p.voidedAt | date:'dd/MM/yyyy HH:mm' }}: {{ p.voidReason }}</span>
         </div>
       }
+      @if (p.costToConfirm && p.status !== 'ANULADO') {
+        <div class="alert alert-warning cost-to-confirm" role="alert">
+          <span>Costo por confirmar: los costos son los del sistema y el monto es estimado hasta registrar los precios reales.</span>
+          @if (isEditable()) {
+            <div class="arrival-actions">
+              @if (readingAvailable()) {
+                <button type="button" class="btn btn-primary btn-sm" (click)="arrived.emit({ purchase: p, withPhoto: true })">Llegó la mercadería, con foto</button>
+              }
+              <button type="button" class="btn btn-outline btn-sm" (click)="arrived.emit({ purchase: p, withPhoto: false })">Llegó la mercadería, a mano</button>
+            </div>
+          }
+        </div>
+      }
       <div class="summary-grid">
         <div><span class="label">Estado de pago</span>
           @if (p.status === 'ANULADO') {
@@ -24,7 +37,7 @@
             <span class="status-badge" [ngClass]="'pay-' + p.paymentStatus">{{ statusLabel(p.paymentStatus) }}</span>
           }
         </div>
-        <div><span class="label">Total líneas</span><strong>Bs {{ p.itemsTotal | number:'1.2-2' }}</strong></div>
+        <div><span class="label">Total líneas{{ p.costToConfirm ? ' (estimado)' : '' }}</span><strong>Bs {{ p.itemsTotal | number:'1.2-2' }}</strong></div>
         <div><span class="label">Envío</span><strong>Bs {{ p.shippingCost | number:'1.2-2' }}</strong>
           @if (p.shippingAccountName) { <span class="hint">desde {{ p.shippingAccountName }}</span> }
         </div>
@@ -41,6 +54,12 @@
       @if (p.comment) {
         <p class="comment">{{ p.comment }}</p>
       }
+
+      <app-purchase-photo-panel
+        [purchaseId]="p.id"
+        [photoId]="p.photoId ?? null"
+        [editable]="isEditable()"
+        (changed)="reload()" />
 
       <h4 class="section-title">Entrega</h4>
       @if (isEditingDelivery()) {

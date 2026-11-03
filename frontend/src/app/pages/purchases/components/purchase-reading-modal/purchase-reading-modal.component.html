@@ -1,0 +1,51 @@
+<app-modal
+  [isOpen]="!!mode()"
+  [title]="title()"
+  [subtitle]="mode() === 'TEXT' ? 'Pega el mensaje que le mandaste al proveedor. Revisas todo antes de registrar.' : 'Toma o elige la foto de la factura. Revisas todo antes de registrar.'"
+  size="md"
+  [closeOnBackdrop]="false"
+  [closeOnEscape]="false"
+  (close)="onClose()">
+
+  <div class="reading">
+    @if (errorMessage()) {
+      <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+    }
+
+    @if (pendingChoice(); as choice) {
+      <p>Hay pedidos de este proveedor con la entrega pendiente. ¿Esta factura completa uno?</p>
+      <ul class="pending-list">
+        @for (pending of choice.draft.pendingPurchases; track pending.id) {
+          <li>
+            <button type="button" class="btn btn-outline pending-item" (click)="choose(pending.id)">
+              <strong>Completar {{ pending.purchaseNumber }}</strong>
+              <span>{{ pending.purchaseDate | storeDay }} · Bs {{ pending.itemsTotal | number:'1.2-2' }}{{ pending.costToConfirm ? ' (estimado)' : '' }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+      <button type="button" class="btn btn-primary" (click)="choose(null)">No, es un pedido nuevo</button>
+    } @else if (mode() === 'TEXT') {
+      <label class="form-label" for="reading-text">Texto del pedido</label>
+      <textarea id="reading-text" class="form-control reading-text" rows="8" maxlength="5000" name="readingText"
+                [disabled]="isReading()"
+                [ngModel]="text()" (ngModelChange)="text.set($event)"></textarea>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" [disabled]="isReading()" (click)="onClose()">Cancelar</button>
+        <button type="button" class="btn btn-outline" [disabled]="isReading()" (click)="fillByHand.emit()">Llenar a mano</button>
+        <button type="button" class="btn btn-primary" [disabled]="isReading()" (click)="readText()">
+          {{ isReading() ? 'Leyendo…' : 'Leer texto' }}
+        </button>
+      </div>
+    } @else {
+      <label class="btn btn-primary photo-button" [class.disabled]="isReading()">
+        {{ isReading() ? 'Leyendo la factura…' : 'Tomar o elegir foto' }}
+        <input type="file" class="photo-input" accept="image/*" [disabled]="isReading()" (change)="onFile($event)" />
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" [disabled]="isReading()" (click)="onClose()">Cancelar</button>
+        <button type="button" class="btn btn-outline" [disabled]="isReading()" (click)="fillByHand.emit()">Llenar a mano</button>
+      </div>
+    }
+  </div>
+</app-modal>

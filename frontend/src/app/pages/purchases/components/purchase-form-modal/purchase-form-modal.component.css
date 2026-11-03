@@ -266,3 +266,64 @@ app-quantity-stepper {
   border-color: rgba(245, 184, 0, 0.35);
   color: var(--color-warning);
 }
+
+/* COM-20: what the reading asks to review */
+.line-doubtful {
+  background: var(--warning-bg, #fff8e1);
+}
+
+.line-flag {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--warning-text, #8a6100);
+  text-align: left;
+}
+
+/* CA-28: on a phone each line is a card, so nothing scrolls sideways */
+@media (max-width: 600px) {
+  .lines-header {
+    flex-wrap: wrap;
+  }
+
+  .lines-header .product-search {
+    order: 3;
+    flex: 1 0 100%;
+  }
+
+  .table-responsive {
+    overflow-x: visible;
+  }
+
+  .lines-table thead,
+  .line-sell-price-header {
+    display: none;
+  }
+
+  .lines-table,
+  .lines-table tbody,
+  .lines-table tr,
+  .lines-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .lines-table tr {
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    padding: 0.5rem 0;
+  }
+
+  .lines-table td {
+    border: none;
+    padding: 0.25rem 0;
+  }
+
+  .lines-table td[data-label]:not([data-label='Producto'])::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    text-align: left;
+  }
+}

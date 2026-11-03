@@ -1,0 +1,16 @@
+.reading-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.reading-source {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.paid-proposal {
+  flex-wrap: wrap;
+}

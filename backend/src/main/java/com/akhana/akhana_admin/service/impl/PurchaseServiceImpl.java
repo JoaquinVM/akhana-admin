@@ -44,6 +44,12 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String REPEATED_LINE = "La línea de '%s' está repetida.";
     static final String TOTAL_BELOW_PAID = "El total del pedido (%s) no puede ser menor a lo pagado (%s); anule primero el pago.";
     static final String CLOSED_SESSION_SHIPPING = "El envío se pagó en una caja cerrada; no se puede cambiar.";
+    static final String ARRIVAL_REASON = "Llegó la mercadería";
+    public static final String ARRIVAL_NOT_DELIVERED = "Cuando llega la mercadería, el pedido queda entregado.";
+    public static final String ARRIVAL_READING_NOT_PHOTO = "Los precios reales se leen de una foto, no de un texto.";
+    public static final String TEXT_STAYS_PENDING = "Un pedido desde texto queda con entrega pendiente hasta que llegue la mercadería.";
+    public static final String READING_ONLY_ON_ARRIVAL = "Una lectura solo se usa al registrar un pedido o cuando llega la mercadería.";
+    public static final String READING_NOT_USABLE = "Esta lectura ya no se puede usar. Vuelve a leer el texto o la foto.";
 
     private final PurchaseRepository purchaseRepository;
     private final SupplierRepository supplierRepository;
@@ -55,6 +61,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
     private final CreditorRepository creditorRepository;
+    private final PurchaseReadingRepository purchaseReadingRepository;
+    private final PurchasePhotoRepository purchasePhotoRepository;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -122,7 +130,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             .or(() -> shipping.isEmpty() ? Optional.empty() : Optional.of(shipping.get(shipping.size() - 1)))
             .map(FinancialTransaction::getSourceAccount)
             .orElse(null);
-        return PurchaseResponse.detail(purchase, shippingAccount);
+        UUID photoId = purchasePhotoRepository.findByPurchaseIdAndActiveTrue(id).map(PurchasePhoto::getId).orElse(null);
+        return PurchaseResponse.detail(purchase, shippingAccount, photoId);
     }
 
     @Override
@@ -134,6 +143,13 @@ public class PurchaseServiceImpl implements PurchaseService {
             .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + request.supplierId()));
         if (supplier.getStatus() != SupplierStatus.ACTIVO) {
             throw new IllegalArgumentException("El proveedor '" + supplier.getName() + "' no está activo.");
+        }
+
+        // COM-22: the server decides what a purchase from a text is, not the screen
+        PurchaseReading reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
+        boolean fromText = reading != null && reading.getSource() == PurchaseReadingSource.TEXT;
+        if (fromText && request.deliveryStatus() == DeliveryStatus.ENTREGADO) {
+            throw new IllegalArgumentException(TEXT_STAYS_PENDING);
         }
 
         LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
@@ -203,6 +219,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             .paidAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
             .consignment(Boolean.TRUE.equals(request.consignment()))
             .comment(request.comment() != null && !request.comment().isBlank() ? request.comment().trim() : null)
+            .costToConfirm(fromText)
             .deliveryType(delivery.type())
             .deliveryStatus(delivery.status())
             .deliveryDate(delivery.date())
@@ -212,6 +229,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         items.forEach(item -> item.setPurchase(purchase));
         purchase.setItems(items);
         Purchase saved = purchaseRepository.save(purchase);
+        if (reading != null) {
+            reading.setPurchaseId(saved.getId());
+        }
 
         for (CostUpdate update : costUpdates) {
             applyCostUpdate(update, saved.getId(), username, now);
@@ -236,12 +256,20 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (request.reason() == null || request.reason().isBlank()) {
             throw new IllegalArgumentException(EDIT_REASON_REQUIRED);
         }
-        String reason = request.reason().trim();
+        // COM-22: the arrival has its own reason, and it is the only edit that ends «costo por confirmar»
+        boolean arrival = Boolean.TRUE.equals(request.arrival());
+        String reason = arrival ? ARRIVAL_REASON : request.reason().trim();
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException(NO_ITEMS);
         }
+        if (arrival && request.deliveryStatus() != DeliveryStatus.ENTREGADO) {
+            throw new IllegalArgumentException(ARRIVAL_NOT_DELIVERED);
+        }
+        if (!arrival && request.readingId() != null) {
+            throw new IllegalArgumentException(READING_ONLY_ON_ARRIVAL);
+        }
 
-        // Lock order: purchase, then cash session, then accounts (T-14)
+        // Lock order: purchase, then the reading, then cash session, then accounts (T-14)
         Purchase purchase = lockPurchase(purchaseId);
         if (purchase.getStatus() == PurchaseStatus.ANULADO) {
             throw new IllegalStateException(VOIDED_PURCHASE);
@@ -249,7 +277,14 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (purchase.isHistorical()) {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
+        PurchaseReading reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
+        if (reading != null && reading.getSource() != PurchaseReadingSource.PHOTO) {
+            throw new IllegalArgumentException(ARRIVAL_READING_NOT_PHOTO);
+        }
         List<String> changes = new ArrayList<>();
+        if (arrival && Boolean.TRUE.equals(purchase.getCostToConfirm())) {
+            changes.add("Costos confirmados");
+        }
 
         // Header, validated as when registering (COM-02, COM-07)
         Supplier supplier = purchase.getSupplier();
@@ -425,6 +460,12 @@ public class PurchaseServiceImpl implements PurchaseService {
             .revisedBy(username)
             .revisedAt(now)
             .build());
+        if (arrival) {
+            purchase.setCostToConfirm(false);
+        }
+        if (reading != null) {
+            reading.setPurchaseId(purchaseId);
+        }
         purchase.setUpdatedBy(username);
         purchase.setUpdatedAt(now);
         purchaseRepository.save(purchase);
@@ -788,6 +829,16 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalStateException("Ya se devolvió a " + creditor.getName()
                 + " parte de este pago; anule primero la devolución.");
         }
+    }
+
+    // COM-24: a reading goes with one purchase; a failed one has nothing to compare
+    private PurchaseReading lockUnusedReading(UUID readingId) {
+        PurchaseReading reading = purchaseReadingRepository.findByIdForUpdate(readingId)
+            .orElseThrow(() -> new IllegalArgumentException(READING_NOT_USABLE));
+        if (reading.getStatus() != PurchaseReadingStatus.READ || reading.getPurchaseId() != null) {
+            throw new IllegalArgumentException(READING_NOT_USABLE);
+        }
+        return reading;
     }
 
     private Purchase lockPurchase(UUID purchaseId) {

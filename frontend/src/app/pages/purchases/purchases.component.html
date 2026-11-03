@@ -10,6 +10,10 @@
       <p class="page-subtitle">Compras a proveedores, envío y pagos</p>
     </div>
     <div class="header-actions">
+      @if (readingStatus()?.configured) {
+        <button type="button" class="btn btn-outline" [disabled]="readingStatus()!.capReached" (click)="openReading('PHOTO')">Desde foto</button>
+        <button type="button" class="btn btn-outline" [disabled]="readingStatus()!.capReached" (click)="openReading('TEXT')">Desde texto</button>
+      }
       <button type="button" class="btn btn-primary btn-add" (click)="openForm()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -22,6 +26,14 @@
 
   @if (errorMessage()) {
     <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+  }
+  @if (readingStatus(); as status) {
+    @if (status.configured && status.capReached) {
+      <div class="alert alert-warning" role="status"><span>Se llegó al tope de este mes: Desde foto y Desde texto vuelven el mes que viene. El pedido a mano sigue igual.</span></div>
+    }
+    @if (status.configured && status.spentUsd !== null) {
+      <p class="reading-spend">Lectura con IA este mes: US$ {{ status.spentUsd | number:'1.2-2' }} de US$ {{ status.capUsd | number:'1.2-2' }}</p>
+    }
   }
 
   <div class="view-tabs" role="tablist" aria-label="Vista de compras">
@@ -96,7 +108,12 @@
                 <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
                 <td>{{ purchase.purchaseDate | storeDay }}</td>
                 <td>{{ purchase.supplierName }}</td>
-                <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
+                <td class="text-right">
+                  Bs {{ purchase.itemsTotal | number:'1.2-2' }}
+                  @if (purchase.costToConfirm && purchase.status !== 'ANULADO') {
+                    <span class="status-badge cost-to-confirm-badge">Estimado · costo por confirmar</span>
+                  }
+                </td>
                 <td class="text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
                 <td class="text-right">Bs {{ purchase.balance | number:'1.2-2' }}</td>
@@ -154,14 +171,25 @@
     [accounts]="accounts()"
     [creditors]="creditors()"
     [purchase]="editPurchase()"
+    [draft]="formDraft()"
+    [arrival]="formArrival()"
     (saved)="onPurchaseSaved($event)"
     (close)="closeForm()" />
+
+  <app-purchase-reading-modal
+    [mode]="readingMode()"
+    [forPurchase]="readingFor()"
+    (draftRead)="onDraftRead($event)"
+    (fillByHand)="onFillByHand()"
+    (close)="closeReading()" />
 
   <app-purchase-detail-modal
     [purchaseId]="detailPurchaseId()"
     [accounts]="accounts()"
     [creditors]="creditors()"
+    [readingAvailable]="!!readingStatus()?.configured && !readingStatus()?.capReached"
     (updated)="onUpdated($event)"
     (edit)="openEdit($event)"
+    (arrived)="onArrived($event)"
     (close)="detailPurchaseId.set(null)" />
 </div>

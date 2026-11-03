@@ -68,14 +68,17 @@ UNION ALL SELECT 'Pedidos', count(*)::text FROM purchases
 UNION ALL SELECT 'Cajas', count(*)::text FROM cash_sessions
 UNION ALL SELECT 'Última venta', coalesce(max(created_at)::text, '-') FROM sales"
 
-# Writes the photo files registered in a database; a backup from before the photos has none
+# Writes the photo files registered in a database, of products and of invoices; an older backup may not have the tables
 list_photo_files() {
-    local db=$1 target=$2 has_table
+    local db=$1 target=$2 table has_table
     : > "$target"
-    has_table=$(psql_db "$db" -c "SELECT to_regclass('public.product_photos') IS NOT NULL")
-    if [[ $has_table == t ]]; then
-        psql_db "$db" -c "SELECT file_name FROM product_photos UNION SELECT thumbnail_file_name FROM product_photos" | sort > "$target"
-    fi
+    for table in product_photos purchase_photos; do
+        has_table=$(psql_db "$db" -c "SELECT to_regclass('public.$table') IS NOT NULL")
+        if [[ $has_table == t ]]; then
+            psql_db "$db" -c "SELECT file_name FROM $table UNION SELECT thumbnail_file_name FROM $table" >> "$target"
+        fi
+    done
+    sort -o "$target" "$target"
 }
 
 # Every registered photo must be in the remote, and a sample must decrypt to the same bytes as the volume (NF-08).

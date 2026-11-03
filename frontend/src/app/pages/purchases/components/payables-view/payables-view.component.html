@@ -30,9 +30,14 @@
           <tbody>
             @for (purchase of group.purchases; track purchase.id) {
               <tr>
-                <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
+                <td>
+                  <span class="purchase-number">{{ purchase.purchaseNumber }}</span>
+                  @if (purchase.costToConfirm) {
+                    <span class="status-badge cost-to-confirm-badge">Costo por confirmar</span>
+                  }
+                </td>
                 <td>{{ purchase.purchaseDate | storeDay }}</td>
-                <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ purchase.itemsTotal | number:'1.2-2' }}{{ purchase.costToConfirm ? ' (estimado)' : '' }}</td>
                 <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
                 <td class="text-right"><strong>Bs {{ purchase.balance | number:'1.2-2' }}</strong></td>
                 <td><span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span></td>

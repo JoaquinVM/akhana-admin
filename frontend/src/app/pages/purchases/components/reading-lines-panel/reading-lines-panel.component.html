@@ -1,0 +1,37 @@
+<section class="unresolved" aria-label="Líneas leídas sin producto">
+  <h5 class="unresolved-title">Elija el producto de estas líneas</h5>
+  @for (line of lines(); track line; let i = $index) {
+    <div class="unresolved-line">
+      <p class="unresolved-text">
+        <strong>{{ line.quantity }} × {{ line.text }}</strong>
+        @if (line.quantityDoubtful) {
+          <span class="unresolved-flag">Revise la cantidad: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
+        }
+        @if (line.costNote) {
+          <span class="unresolved-flag">{{ line.costNote }}</span>
+        }
+      </p>
+      @if (suggestions(line).length > 0) {
+        <div class="suggestions">
+          @for (product of suggestions(line); track product.id) {
+            <button type="button" class="btn btn-outline btn-sm" (click)="pick(i, product)">{{ product.name }}</button>
+          }
+        </div>
+      }
+      <input type="text" class="form-control" placeholder="Buscar otro producto…" aria-label="Buscar producto para esta línea"
+             [name]="'unresolved-search-' + i"
+             [ngModel]="searchLine() === i ? searchTerm() : ''" (ngModelChange)="onSearch(i, $event)" />
+      @if (searchLine() === i && results().length > 0) {
+        <ul class="results">
+          @for (product of results(); track product.id) {
+            <li><button type="button" class="result" (click)="pick(i, product)">{{ product.name }} · {{ product.code }}</button></li>
+          }
+        </ul>
+      }
+      <div class="unresolved-actions">
+        <button type="button" class="btn btn-ghost btn-sm" (click)="create.emit(i)">Crear producto</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="remove(i)">Quitar línea</button>
+      </div>
+    </div>
+  }
+</section>

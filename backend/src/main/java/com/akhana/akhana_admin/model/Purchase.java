@@ -66,6 +66,11 @@ public class Purchase {
     @Column(length = 500)
     private String comment;
 
+    // COM-22: from a text, its costs are the system's until the real ones are registered; the amount is an estimate
+    @Column(name = "cost_to_confirm", nullable = false)
+    @Builder.Default
+    private Boolean costToConfirm = false;
+
     // COM-07: while pending the date is the expected one; once delivered, the delivery date
     @Enumerated(EnumType.STRING)
     @Column(name = "delivery_type", nullable = false, length = 20)

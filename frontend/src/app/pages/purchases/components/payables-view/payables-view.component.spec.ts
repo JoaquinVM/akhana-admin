@@ -54,4 +54,19 @@ describe('PayablesViewComponent', () => {
     (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
     expect(open).toHaveBeenCalledWith(purchase);
   });
+
+  it('CA-08: el pedido por confirmar se ve como estimado', () => {
+    const payable = {
+      id: 'pur-9', purchaseNumber: 'PED-000009', purchaseDate: '2026-11-01', itemsTotal: 118, paidAmount: 0, balance: 118,
+      paymentStatus: 'POR_PAGAR', costToConfirm: true
+    };
+    purchaseService.getPayables.mockReturnValue(of({
+      totalBalance: 118, suppliers: [{ supplierId: 's', supplierName: 'Flora', balance: 118, purchases: [payable] }]
+    }));
+    fixture.componentRef.setInput('refreshKey', 99);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Costo por confirmar');
+    expect(text).toContain('(estimado)');
+  });
 });

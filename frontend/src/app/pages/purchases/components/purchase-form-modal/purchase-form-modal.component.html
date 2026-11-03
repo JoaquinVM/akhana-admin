@@ -1,7 +1,9 @@
 <app-modal
   [isOpen]="isOpen()"
-  [title]="isEdit() ? 'Editar pedido ' + purchase()!.purchaseNumber : 'Nuevo pedido'"
-  [subtitle]="isEdit()
+  [title]="arrival() ? 'Llegó la mercadería · ' + purchase()!.purchaseNumber : isEdit() ? 'Editar pedido ' + purchase()!.purchaseNumber : 'Nuevo pedido'"
+  [subtitle]="arrival()
+    ? 'Registre lo que vino y sus costos reales. El pedido queda entregado y sin «costo por confirmar».'
+    : isEdit()
     ? 'Agregue lo que llegó sin pedirse, cambie cantidades o costos y quite lo que faltó. Los pagos se registran y anulan desde el detalle.'
     : 'Proveedor, líneas, envío y un pago inicial opcional; los demás pagos se registran desde el detalle.'"
   size="xl"
@@ -12,6 +14,16 @@
   <form class="purchase-form" (ngSubmit)="submit()" (keydown.enter)="onFormEnter($event)">
     @if (formError()) {
       <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
+    }
+
+    @if (draft(); as read) {
+      <app-reading-notice
+        [draft]="read"
+        [totalAmount]="totalAmount()"
+        [linesComplete]="linesComplete()"
+        [paidProposal]="paidProposal()"
+        [isEdit]="isEdit()"
+        (dismissPaid)="dismissPaidProposal()" />
     }
 
     <div class="form-grid form-grid-3">
@@ -121,6 +133,15 @@
       </div>
     }
 
+    @if (unresolvedLines().length > 0) {
+      <app-reading-lines-panel
+        [lines]="unresolvedLines()"
+        [products]="products()"
+        (choose)="resolveLine($event.index, $event.product)"
+        (create)="createForUnresolved($event)"
+        (discard)="discardUnresolved($event)" />
+    }
+
     <div class="table-responsive">
       <table class="table lines-table">
         <thead>
@@ -134,13 +155,16 @@
           </tr>
         </thead>
         <tbody>
-          @for (line of lines(); track line.itemId ?? line.product.id; let i = $index) {
+          @for (line of lines(); track line.itemId ?? line.draftKey ?? line.product.id; let i = $index) {
             <tr>
-              <td>
+              <td data-label="Producto">
                 <span class="line-name">{{ line.product.name }}</span>
                 <span class="line-code">{{ line.product.code }}</span>
+                @if (line.notInInvoice) {
+                  <span class="line-flag">No está en la factura: quítela si no llegó.</span>
+                }
               </td>
-              <td class="text-right">
+              <td class="text-right" data-label="Cantidad" [class.line-doubtful]="line.quantityDoubtful">
                 <app-quantity-stepper
                   [quantity]="line.quantity"
                   [weight]="isWeighted(line.product)"
@@ -149,13 +173,19 @@
                   (decrement)="decrementQuantity(i)"
                   (quantityChange)="onQuantityChange(i, $event)" />
                 <span class="unit-hint">{{ isWeighted(line.product) ? 'kg' : 'u' }}</span>
+                @if (line.quantityDoubtful) {
+                  <span class="line-flag">Revise: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
+                }
               </td>
-              <td class="text-right">
+              <td class="text-right" data-label="Costo unitario (Bs)" [class.line-doubtful]="line.costMissing">
                 <input type="number" class="form-control input-number no-spinner" [name]="'cost-' + i" step="0.01" min="0"
-                       [ngModel]="line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
+                       [ngModel]="line.costMissing ? null : line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
+                @if (line.costNote) {
+                  <span class="line-flag">{{ line.costNote }}</span>
+                }
               </td>
-              <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
-              <td class="text-right line-sell-price">
+              <td class="text-right" data-label="Subtotal">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
+              <td class="text-right line-sell-price" data-label="Precio de venta">
                 @if (referenceSellPrice(line) !== null) {
                   Bs {{ referenceSellPrice(line) | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}
                 } @else {
@@ -270,12 +300,15 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="purchase-delivery-status">Estado de entrega</label>
-        <select id="purchase-delivery-status" class="form-control" name="deliveryStatus"
+        <select id="purchase-delivery-status" class="form-control" name="deliveryStatus" [disabled]="deliveryLocked()"
                 [ngModel]="deliveryStatus()" (ngModelChange)="deliveryStatus.set($event)">
           @for (option of deliveryStatuses; track option[0]) {
             <option [value]="option[0]">{{ option[1] }}</option>
           }
         </select>
+        @if (draft()?.source === 'TEXT' && !isEdit()) {
+          <span class="form-hint">Queda pendiente, con costo por confirmar, hasta que llegue la mercadería.</span>
+        }
       </div>
       <div class="form-group">
         <label class="form-label" for="purchase-delivery-date">
@@ -330,7 +363,7 @@
     } @else {
       <div class="form-group">
         <label class="form-label" for="purchase-edit-reason">Motivo del cambio <span class="required-mark">*</span></label>
-        <input id="purchase-edit-reason" class="form-control" name="reason" maxlength="500"
+        <input id="purchase-edit-reason" class="form-control" name="reason" maxlength="500" [readonly]="arrival()"
                placeholder="Ej.: llegó 1 caja que no se pidió, faltó la miel"
                [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
         @if (purchase()!.paidAmount > 0) {
@@ -352,7 +385,9 @@
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" (click)="onClose()" [disabled]="isSubmitting()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || blockedByClosedCash()">
-        @if (isEdit()) {
+        @if (arrival()) {
+          {{ isSubmitting() ? 'Guardando…' : 'Confirmar lo que llegó' }}
+        } @else if (isEdit()) {
           {{ isSubmitting() ? 'Guardando…' : 'Guardar cambios' }}
         } @else {
           {{ isSubmitting() ? 'Registrando…' : 'Registrar pedido' }}

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -18,6 +18,8 @@ import {
   PaymentAccount,
   PriceSuggestion,
   Purchase,
+  PurchaseDraft,
+  PurchaseDraftLine,
   PurchaseItemRequest,
   PurchasePaymentRequest,
   PurchaseRequest,
@@ -31,6 +33,8 @@ import { IconComponent } from '../../../../shared/components/icon/icon.component
 import { QuantityStepperComponent, WEIGHT_STEP_KG } from '../../../../shared/components/quantity-stepper/quantity-stepper.component';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
 import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
+import { ReadingLinesPanelComponent } from '../reading-lines-panel/reading-lines-panel.component';
+import { ReadingNoticeComponent } from '../reading-notice/reading-notice.component';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -45,7 +49,18 @@ export interface PurchaseLineDraft {
   suggestion: PriceSuggestion | null;
   // COM-11: the purchase line it edits; absent for a new line
   itemId?: string | null;
+  // COM-20: what the reading says about this line, to review it
+  fromReading?: boolean;
+  draftKey?: string;
+  quantityDoubtful?: boolean;
+  quantityText?: string | null;
+  costMissing?: boolean;
+  costNote?: string | null;
+  notInInvoice?: boolean;
 }
+
+// COM-22: the reason the server stores for an arrival
+export const ARRIVAL_REASON = 'Llegó la mercadería';
 
 export interface NewProductDraft {
   code: string;
@@ -69,7 +84,7 @@ export function todayIso(): string {
 @Component({
   selector: 'app-purchase-form-modal',
   standalone: true,
-  imports: [IconComponent, QuantityStepperComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
+  imports: [IconComponent, QuantityStepperComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent, CashLimitWarningComponent, CashClosedNoteComponent, ReadingLinesPanelComponent, ReadingNoticeComponent],
   templateUrl: './purchase-form-modal.component.html',
   styleUrls: ['./purchase-form-modal.component.css']
 })
@@ -86,6 +101,10 @@ export class PurchaseFormModalComponent {
   creditors = input<Creditor[]>([]);
   // COM-11: the purchase to edit; null registers a new one
   purchase = input<Purchase | null>(null);
+  // COM-20: what a reading proposes; the form opens filled and nothing is registered until its button
+  draft = input<PurchaseDraft | null>(null);
+  // COM-22: the goods of this purchase arrived: it ends delivered, with its real costs
+  arrival = input<boolean>(false);
 
   saved = output<Purchase>();
   close = output<void>();
@@ -120,6 +139,13 @@ export class PurchaseFormModalComponent {
 
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+
+  // COM-20: lines of the reading without a product yet (CA-03); they block the button
+  unresolvedLines = signal<PurchaseDraftLine[]>([]);
+  private resolvingLine = signal<PurchaseDraftLine | null>(null);
+  // CA-19: the note says it is paid, and nobody has said where the money came from
+  paidProposal = signal<boolean>(false);
+  private draftKeys = 0;
 
   readonly maxDate = todayIso();
 
@@ -156,6 +182,10 @@ export class PurchaseFormModalComponent {
   needsShippingAccount = computed(() => (Number(this.shippingCost()) || 0) > 0);
 
   isEdit = computed(() => this.purchase() !== null);
+  // COM-22: a text stays pending and an arrival ends delivered, whatever the form says
+  deliveryLocked = computed(() => this.arrival() || (!this.isEdit() && this.draft()?.source === 'TEXT'));
+  // CA-18: the difference with the invoice only means something once every line has its cost
+  linesComplete = computed(() => this.unresolvedLines().length === 0 && !this.lines().some(line => line.costMissing));
   // COM-12: a different shipping (amount or account) voids its expense and records a new one
   shippingChanged = computed(() => {
     const purchase = this.purchase();
@@ -202,8 +232,10 @@ export class PurchaseFormModalComponent {
   constructor() {
     effect(() => {
       if (this.isOpen()) {
-        this.reset();
-        this.loadProducts();
+        untracked(() => {
+          this.reset();
+          this.loadProducts();
+        });
       }
     });
   }
@@ -214,9 +246,18 @@ export class PurchaseFormModalComponent {
 
   private reset(): void {
     this.cashClosed.set(false);
+    this.unresolvedLines.set([]);
+    this.resolvingLine.set(null);
+    this.paidProposal.set(false);
     const purchase = this.purchase();
     if (purchase) {
       this.fillFrom(purchase);
+      if (this.arrival()) {
+        // Without a date the server takes today; the expected date may be in the future
+        this.deliveryDate.set(purchase.deliveryStatus === 'ENTREGADO' ? purchase.deliveryDate ?? '' : '');
+        this.deliveryStatus.set('ENTREGADO');
+        this.reason.set(ARRIVAL_REASON);
+      }
       return;
     }
     this.supplierId.set('');
@@ -292,9 +333,107 @@ export class PurchaseFormModalComponent {
           const product = byId.get(line.product.id);
           return product ? { ...line, product } : line;
         }));
+        this.applyDraft();
       },
       error: () => this.formError.set('No se pudo cargar el catálogo de productos.')
     });
+  }
+
+  // COM-20: runs once the catalog is here, because the lines of the form need its products
+  private applyDraft(): void {
+    const draft = this.draft();
+    if (!draft) {
+      return;
+    }
+    if (!this.isEdit()) {
+      this.supplierId.set(draft.supplierId ?? '');
+      this.deliveryStatus.set(draft.source === 'TEXT' ? 'PENDIENTE' : 'ENTREGADO');
+      this.paidProposal.set(draft.paidNote);
+    }
+    if (draft.shippingCost !== null) {
+      this.shippingCost.set(draft.shippingCost);
+      // CA-20: the invoice says how much, not which account paid it
+      if (round2(draft.shippingCost) !== round2(this.purchase()?.shippingCost ?? 0)) {
+        this.shippingAccountId.set('');
+      }
+    }
+    const byId = new Map(this.products().map(product => [product.id, product]));
+    const unresolved: PurchaseDraftLine[] = [];
+    for (const line of draft.lines) {
+      const product = line.productId ? byId.get(line.productId) : undefined;
+      if (product) {
+        this.placeReadLine(line, product);
+      } else {
+        unresolved.push(line);
+      }
+    }
+    this.unresolvedLines.set(unresolved);
+    // CA-09: what the purchase had and the invoice does not may not have arrived: it is pointed out, not removed
+    if (this.arrival()) {
+      this.lines.update(lines => lines.map(line => line.fromReading ? line : { ...line, notInInvoice: true }));
+    }
+  }
+
+  private placeReadLine(line: PurchaseDraftLine, product: Product): void {
+    const unitCost = line.unitCost ?? (this.draft()?.source === 'TEXT' ? product.buyPrice : null);
+    const read = {
+      quantity: line.quantity,
+      unitCost: unitCost ?? 0,
+      fromReading: true,
+      quantityDoubtful: line.quantityDoubtful,
+      quantityText: line.quantityText,
+      costMissing: unitCost === null,
+      costNote: line.costNote,
+      notInInvoice: false
+    };
+    const lines = this.lines();
+    const unread = lines.findIndex(l => l.product.id === product.id && !l.fromReading);
+    if (unread >= 0) {
+      this.updateLine(unread, read);
+      return;
+    }
+    const sameCost = lines.findIndex(l => l.product.id === product.id && l.unitCost === read.unitCost);
+    if (sameCost >= 0) {
+      const current = lines[sameCost];
+      this.updateLine(sameCost, {
+        quantity: current.quantity + read.quantity,
+        quantityDoubtful: current.quantityDoubtful || read.quantityDoubtful
+      });
+      return;
+    }
+    this.lines.update(list => [...list, {
+      ...read,
+      product,
+      updateCost: false,
+      priceChoice: 'SUGGESTED',
+      customPrice: null,
+      suggestion: null,
+      draftKey: `read-${this.draftKeys++}`
+    }]);
+  }
+
+  // CA-03: the person says which product the line is
+  resolveLine(index: number, product: Product): void {
+    const line = this.unresolvedLines()[index];
+    this.placeReadLine(line, product);
+    this.unresolvedLines.update(lines => lines.filter((_, i) => i !== index));
+  }
+
+  discardUnresolved(index: number): void {
+    this.unresolvedLines.update(lines => lines.filter((_, i) => i !== index));
+  }
+
+  createForUnresolved(index: number): void {
+    const line = this.unresolvedLines()[index];
+    this.openNewProduct();
+    if (this.showNewProduct()) {
+      this.resolvingLine.set(line);
+      this.patchNewProduct({ name: line.text, buyPrice: line.unitCost });
+    }
+  }
+
+  dismissPaidProposal(): void {
+    this.paidProposal.set(false);
   }
 
   isWeighted(product: Product): boolean {
@@ -323,7 +462,7 @@ export class PurchaseFormModalComponent {
 
   // COM-03: alert when the line cost differs from the registered cost
   costDiffers(line: PurchaseLineDraft): boolean {
-    return round2(Number(line.unitCost) || 0) !== round2(line.product.buyPrice);
+    return !line.costMissing && round2(Number(line.unitCost) || 0) !== round2(line.product.buyPrice);
   }
 
   // Enter never submits the form (only its button does); in the product search it adds the product typed
@@ -367,7 +506,7 @@ export class PurchaseFormModalComponent {
   }
 
   onQuantityChange(index: number, value: number | string): void {
-    this.updateLine(index, { quantity: Number(value) || 0 });
+    this.updateLine(index, { quantity: Number(value) || 0, quantityDoubtful: false });
   }
 
   // COM-14: 1 by unit or 100 g by kilo, as in the POS
@@ -387,18 +526,20 @@ export class PurchaseFormModalComponent {
 
   incrementQuantity(index: number): void {
     const line = this.lines()[index];
-    this.updateLine(index, { quantity: this.quantityAfterStep(line, this.quantityStep(line)) });
+    this.updateLine(index, { quantity: this.quantityAfterStep(line, this.quantityStep(line)), quantityDoubtful: false });
   }
 
   decrementQuantity(index: number): void {
     const line = this.lines()[index];
     if (this.canDecrement(line)) {
-      this.updateLine(index, { quantity: this.quantityAfterStep(line, -this.quantityStep(line)) });
+      this.updateLine(index, { quantity: this.quantityAfterStep(line, -this.quantityStep(line)), quantityDoubtful: false });
     }
   }
 
   onCostChange(index: number, value: number | string): void {
-    this.updateLine(index, { unitCost: Number(value) || 0, suggestion: null });
+    // CA-15: a cost the reading could not know is not filled by emptying the field
+    const empty = value === null || value === '';
+    this.updateLine(index, { unitCost: Number(value) || 0, suggestion: null, costMissing: empty && !!this.lines()[index].fromReading });
     const line = this.lines()[index];
     if (line.updateCost && this.costDiffers(line)) {
       this.loadSuggestion(index);
@@ -485,7 +626,14 @@ export class PurchaseFormModalComponent {
     }).subscribe({
       next: product => {
         this.products.update(list => [...list, product]);
-        this.addProduct(product);
+        const resolving = this.resolvingLine();
+        const unresolvedIndex = resolving ? this.unresolvedLines().indexOf(resolving) : -1;
+        if (unresolvedIndex >= 0) {
+          this.resolveLine(unresolvedIndex, product);
+        } else {
+          this.addProduct(product);
+        }
+        this.resolvingLine.set(null);
         this.showNewProduct.set(false);
         this.isCreatingProduct.set(false);
       },
@@ -525,14 +673,15 @@ export class PurchaseFormModalComponent {
       deliveryType: this.deliveryType(),
       deliveryStatus: this.deliveryStatus(),
       deliveryDate: this.deliveryDate() || null,
-      initialPayment: this.buildInitialPayment()
+      initialPayment: this.buildInitialPayment(),
+      ...(this.draft() ? { readingId: this.draft()!.readingId } : {})
     };
   }
 
   // COM-11: the same purchase without the first payment, with the reason
   buildUpdateRequest(): PurchaseUpdateRequest {
     const { initialPayment: _, ...request } = this.buildRequest();
-    return { ...request, reason: this.reason().trim() };
+    return { ...request, reason: this.reason().trim(), ...(this.arrival() ? { arrival: true } : {}) };
   }
 
   private buildInitialPayment(): PurchasePaymentRequest | null {
@@ -546,6 +695,19 @@ export class PurchaseFormModalComponent {
   submit(): void {
     if (!this.supplierId()) {
       this.formError.set('Elija el proveedor del pedido.');
+      return;
+    }
+    if (this.unresolvedLines().length > 0) {
+      this.formError.set('Elija el producto de las líneas leídas, o quítelas.');
+      return;
+    }
+    const noCost = this.lines().find(line => line.costMissing);
+    if (noCost) {
+      this.formError.set(`Llene el costo de ${noCost.product.name}.`);
+      return;
+    }
+    if (this.paidProposal() && !this.isEdit() && !this.initialPaymentSource()) {
+      this.formError.set('La nota dice que está pagado: elija de dónde salió el dinero, o quite la propuesta.');
       return;
     }
     if (this.lines().length === 0) {

@@ -42,6 +42,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       FORWARD_HEADERS_STRATEGY: native
       PRODUCT_PHOTOS_DIR: /data/product-photos
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.1-terra}
       TZ: ${TZ:-America/La_Paz}
     volumes:
       - product_photos:/data/product-photos
