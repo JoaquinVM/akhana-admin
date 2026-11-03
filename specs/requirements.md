@@ -15,7 +15,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-25 | ✅ Completo | COM-20 a COM-25 sin publicar: falta la medición previa y la clave de OpenAI en el VPS | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-25 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
@@ -392,7 +392,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] COM-20: antes de publicar, correr la medición previa de `purchases.md` con los textos y las fotos que corrija Joaquín, y dejar `OPENAI_API_KEY` en el `.env` del VPS.
+- [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
 - [ ] Instalar Tailscale en la PC de caja y en los teléfonos que usarán la app (`deploy.md`, `mobile.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
