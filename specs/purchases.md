@@ -400,7 +400,7 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
   Pruebas en `purchase-form-modal.component.spec.ts` y `purchase-detail-modal.component.spec.ts`; verificado en el
   navegador con la base local (edición con línea nueva, cantidad, envío rehecho y rechazo por total menor a lo pagado).
 - [x] COM-13: precio de venta en el buscador y en la tabla de `purchase-form-modal`, solo frontend.
-- [x] COM-20 a COM-25: lectura desde foto o texto. Migración `V28__purchase_readings.sql`, `PurchaseReadingService`,
+- [x] COM-20 a COM-25: lectura desde foto o texto. Migración `V29__purchase_readings.sql`, `PurchaseReadingService`,
   `OpenAiPurchaseReader`, `ProductTextMatcher`, `PurchasePhotoService`; pantalla en `purchase-reading-modal`,
   `reading-lines-panel`, `reading-notice` y `purchase-photo-panel`. Falta la medición previa.
 
