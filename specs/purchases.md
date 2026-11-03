@@ -462,3 +462,19 @@ antes de correrla. Si algo no cumple, se le presenta antes de publicar.
 | Cantidades, costos y totales en fotos | Las 17 fotos medidas de la prueba 012 | Al menos 67 de 69 líneas y 17 de 17 totales |
 | Reglas nuevas | Marcas de repetido, importe visible | Se informa cada caso |
 | Tiempo: borrador corregido contra tipeado | 3 pedidos reales, incluida la nota de pan | Más rápido en al menos 2 de 3 |
+
+Resultado con textos, sobre el catálogo de la base local (847 productos), con la instrucción sin cambios y el proveedor elegido
+antes de leer en los tres mensajes que no lo nombran. Fotos y tiempo siguen sin medir.
+
+| Texto | Líneas | Elegido solo | Entre sugerencias | Sin el producto |
+| --- | --- | --- | --- | --- |
+| Belén | 9 | 7 | 2 | 0 |
+| Sativa | 22 | 21 | 1 | 0 |
+| Paititi | 4 | 0 | 4 | 0 |
+| Mono | 6 | 6 | 0 | 0 |
+| Boni | 10 | 2 | 8 | 0 |
+
+- Cantidades con número claro: 46 de 46. Las 5 líneas sin número proponen 1, resaltadas.
+- Producto correcto entre las sugerencias: 51 de 51, según el criterio del agente; falta que Joaquín lo confirme. Con el buscador
+  solo y sin elegir proveedor había dado 38 de 51 (75 %).
+- Ningún producto elegido solo fue incorrecto.
