@@ -1,8 +1,17 @@
-import { Component, DOCUMENT } from '@angular/core';
+import { Component, DOCUMENT, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withNavigationErrorHandler } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { of } from 'rxjs';
 import { ScreenLoadNoticeComponent } from './screen-load-notice.component';
 import { isScreenLoadFailure, reportScreenLoadFailure } from './screen-load-notice.service';
+import { CashService } from '../../../core/cash/cash.service';
+import { CustomerService } from '../../../core/debt/customer.service';
+import { Product } from '../../../core/product/models/product.models';
+import { ProductService } from '../../../core/product/product.service';
+import { QuickProductService } from '../../../core/quick-product/quick-product.service';
+import { SaleService } from '../../../core/sale/sale.service';
+import { RegisterSaleComponent } from '../../../pages/pos/register-sale/register-sale.component';
 
 @Component({ template: '' })
 class ScreenStub {}
@@ -69,13 +78,6 @@ describe('ScreenLoadNoticeComponent (NF-10)', () => {
     expect(assign).toHaveBeenCalledWith('/products');
   });
 
-  it('CA-07: no recarga hasta que se toca Actualizar', async () => {
-    const { router, text } = await setup();
-    await router.navigateByUrl('/products').catch(() => undefined);
-    text();
-    expect(assign).not.toHaveBeenCalled();
-  });
-
   it('el aviso se va al cerrarlo o al entrar a otra pantalla', async () => {
     const { fixture, router, text } = await setup();
     await router.navigateByUrl('/products').catch(() => undefined);
@@ -93,5 +95,59 @@ describe('ScreenLoadNoticeComponent (NF-10)', () => {
     const { router, text } = await setup();
     await router.navigateByUrl(url).catch(() => undefined);
     expect(text()).not.toContain('No se pudo abrir');
+  });
+});
+
+describe('ScreenLoadNotice con la venta abierta (CA-07)', () => {
+  const product = { id: 'prod-1', code: 'P001', name: 'Té Verde Matcha', sellPrice: 20, saleUnit: 'UNIT', status: 'ACTIVO', tags: [] } as unknown as Product;
+  const location = { assign: vi.fn(), reload: vi.fn(), replace: vi.fn(), href: 'http://localhost/pos/sale' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('location', location);
+    vi.stubGlobal('document', new Proxy(document, {
+      get: (target, key) => key === 'location' ? location : Reflect.get(target, key, target)
+    }));
+    TestBed.configureTestingModule({
+      imports: [ScreenLoadNoticeComponent],
+      providers: [
+        provideRouter([
+          { path: 'pos/sale', component: RegisterSaleComponent },
+          { path: 'products', loadComponent: () => Promise.reject(new TypeError('Failed to fetch dynamically imported module')) }
+        ], withNavigationErrorHandler(reportScreenLoadFailure)),
+        { provide: DOCUMENT, useFactory: () => document },
+        { provide: CashService, useValue: { currentSession: signal(null), getCurrentSession: () => of({ status: 'ABIERTA' }) } },
+        { provide: ProductService, useValue: { getProducts: () => of([product]) } },
+        { provide: QuickProductService, useValue: { groups: signal([]), loadGroups: () => of([]) } },
+        { provide: SaleService, useValue: {} },
+        { provide: CustomerService, useValue: { getCustomers: () => of([]) } }
+      ]
+    });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('el carrito sigue igual y nada recarga hasta tocar Actualizar', async () => {
+    const harness = await RouterTestingHarness.create('/pos/sale');
+    const sale = harness.routeDebugElement!.componentInstance as RegisterSaleComponent;
+    sale.addToCart(product);
+    sale.addToCart(product);
+    const cart = sale.cartItems();
+    const notice = TestBed.createComponent(ScreenLoadNoticeComponent);
+
+    await TestBed.inject(Router).navigateByUrl('/products').catch(() => undefined);
+    harness.detectChanges();
+    notice.detectChanges();
+
+    expect(notice.nativeElement.textContent).toContain('No se pudo abrir esta pantalla');
+    expect(TestBed.inject(Router).url).toBe('/pos/sale');
+    expect(harness.routeDebugElement!.componentInstance).toBe(sale);
+    expect(sale.cartItems()).toBe(cart);
+    expect(sale.cartItems()[0].quantity).toBe(2);
+    expect(harness.routeNativeElement!.textContent).toContain(product.name);
+    expect(location.reload).not.toHaveBeenCalled();
+    expect(location.assign).not.toHaveBeenCalled();
+    expect(location.replace).not.toHaveBeenCalled();
+    expect(location.href).toBe('http://localhost/pos/sale');
   });
 });
