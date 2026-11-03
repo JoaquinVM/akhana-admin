@@ -8,12 +8,15 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 // COM-21: the same search as the product box of the POS (POS-01, shared/utils/product-search.ts), on the server so the
 // catalog never leaves it. Barcodes are not looked at: a supplier's text does not carry them.
 final class ProductTextMatcher {
 
     static final int EXACT_SCORE = 500;
+    private static final int MIN_PARTIAL_WORD = 3;
+    private static final Set<String> STOP_WORDS = Set.of("con", "del", "las", "los", "para", "por", "una", "uno", "unos", "unas");
 
     record Match(Product product, int score) {}
 
@@ -35,6 +38,52 @@ final class ProductTextMatcher {
         }
         List<Match> exact = rank(normalized, tokens, products, false);
         return exact.isEmpty() ? rank(normalized, tokens, products, true) : exact;
+    }
+
+    /**
+     * COM-21: when no product has every word, the ones with the most of them, to suggest and never to choose: «100 grs»
+     * still finds «100 gramos». Sizes rank the results («67», «70», «2L») but alone do not make a match, or they would
+     * bring half the catalog.
+     */
+    static List<Match> searchPartial(String term, List<Product> products) {
+        List<String> tokens = words(normalize(term));
+        List<String> meaningful = tokens.stream().filter(token -> hasDigits(token) || isWord(token)).toList();
+        if (meaningful.stream().noneMatch(ProductTextMatcher::isWord)) {
+            return List.of();
+        }
+        record Partial(Product product, int words, int score) {}
+        List<Partial> partial = new ArrayList<>();
+        for (Product product : products) {
+            String code = normalize(product.getCode());
+            String name = normalize(product.getName());
+            List<String> nameWords = words(name);
+            int found = 0;
+            int score = 0;
+            boolean withWord = false;
+            for (String token : meaningful) {
+                int value = tokenScore(token, code, name, nameWords, "", List.of(), true);
+                if (value > 0) {
+                    found++;
+                    score += value;
+                    withWord |= isWord(token);
+                }
+            }
+            if (withWord) {
+                partial.add(new Partial(product, found, score));
+            }
+        }
+        partial.sort(Comparator.comparingInt(Partial::words).reversed()
+            .thenComparing(Comparator.comparingInt(Partial::score).reversed())
+            .thenComparing(match -> normalize(match.product().getName())));
+        return partial.stream().map(match -> new Match(match.product(), match.score())).toList();
+    }
+
+    private static boolean hasDigits(String token) {
+        return token.chars().anyMatch(Character::isDigit);
+    }
+
+    private static boolean isWord(String token) {
+        return token.length() >= MIN_PARTIAL_WORD && !hasDigits(token) && !STOP_WORDS.contains(token);
     }
 
     private static List<Match> rank(String term, List<String> tokens, List<Product> products, boolean similar) {

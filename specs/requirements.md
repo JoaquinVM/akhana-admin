@@ -136,7 +136,7 @@ Detalle en `purchases.md`.
 - **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador.
 - **COM-19** · V1 — Al registrar un pedido, elegir el origen del pago inicial llena el monto con la suma de las líneas, y la sigue mientras no se escriba otro monto. El envío se sigue pagando aparte (P-24).
 - **COM-20** · V1 — Desde el texto de WhatsApp o la foto de una factura, el servidor pide la lectura a OpenAI y abre el formulario de pedido lleno; nada se registra hasta que una persona lo confirma. La clave solo vive en el servidor; sin ella, Desde foto y Desde texto no aparecen. Mismo permiso que Compras (P-60).
-- **COM-21** · V1 — Las líneas leídas se emparejan en el servidor con el mismo buscador del POS (POS-01), sin enviar el catálogo a OpenAI. Si no es claro el producto, se elige entre las sugerencias, se busca, se crea o se quita la línea.
+- **COM-21** · V1 — Las líneas leídas se emparejan en el servidor con el mismo buscador del POS (POS-01), sin enviar el catálogo a OpenAI, y con los productos del proveedor primero; en Desde texto se puede elegir el proveedor antes de leer. Si ningún producto tiene todas las palabras, sugiere los que tienen más, sin elegir ninguno. Si no es claro el producto, se elige entre las sugerencias, se busca, se crea o se quita la línea (P-63).
 - **COM-22** · V1 — Un pedido desde texto usa los costos del sistema, queda con entrega pendiente y «costo por confirmar», con su monto como estimado en Pedidos y Por pagar, hasta pulsar «Llegó la mercadería» y registrar lo que vino y sus precios reales, con foto o a mano (COM-11, COM-12). Una foto sin pedido pendiente crea un pedido entregado; con un pedido pendiente de ese proveedor, primero ofrece completarlo (P-61).
 - **COM-23** · V1 — La foto de una factura se guarda reducida con su pedido, sin metadatos, una por pedido, con copia diaria fuera del VPS (NF-08). Una foto sin registrar no se guarda.
 - **COM-24** · V1 — Se guarda con el pedido lo que leyó la IA, para compararlo con lo confirmado.
@@ -373,6 +373,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-60 | ¿Qué IA lee los pedidos? | OpenAI con `gpt-6.1-terra`, sin que entrene con los datos; los nombres en fotos y textos pueden salir. Lo leído siempre es un borrador. |
 | P-61 | ¿Cómo entran el texto y la foto? | Texto al pedir: pedido pendiente con costos del sistema. Foto al llegar: precios reales. Foto sin pedido: pedido entregado. Un proveedor por mensaje. |
 | P-62 | ¿Qué propone con datos dudosos? | Cantidad «4 a 5»: el menor; sin número: 1, ambas resaltadas. «Cancelado»: el pago, con origen vacío. Costo desconocido: en blanco, con el cálculo en un mensaje. |
+| P-63 | ¿Y si el mensaje no usa las palabras del catálogo? | Se sugieren los productos con más palabras en común, sin elegir ninguno; la medición con 5 textos reales dio 75 % con el buscador solo. |
 
 ## 6. Hoja de ruta
 

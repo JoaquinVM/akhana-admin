@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.dto.PurchaseDraftResponse;
 import com.akhana.akhana_admin.dto.PurchaseReadingStatusResponse;
+import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.PurchaseReadingRepository;
@@ -78,13 +79,15 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
     }
 
     @Override
-    public PurchaseDraftResponse readText(String text, String username) {
+    public PurchaseDraftResponse readText(String text, UUID supplierId, String username) {
+        // A wrong supplier is rejected before spending on the call
+        com.akhana.akhana_admin.model.Supplier chosen = supplierId != null ? activeSupplier(supplierId) : null;
         ensureCanRead();
         Saved saved = call(PurchaseReadingSource.TEXT, () -> reader.readText(text), username);
         if (saved.purchase().multipleSuppliers()) {
             throw new IllegalArgumentException(ONE_SUPPLIER);
         }
-        return draft(saved);
+        return draft(saved, chosen);
     }
 
     @Override
@@ -93,7 +96,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
         ensureCanRead();
         byte[] reduced = photoProcessor.process(content).image();
         Saved saved = call(PurchaseReadingSource.PHOTO, () -> reader.readPhoto(reduced), username);
-        return draft(saved);
+        return draft(saved, null);
     }
 
     private record Saved(PurchaseReading reading, ReadPurchase purchase) {}
@@ -152,10 +155,20 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
             month.plusMonths(1).atDay(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant());
     }
 
-    private PurchaseDraftResponse draft(Saved saved) {
+    private com.akhana.akhana_admin.model.Supplier activeSupplier(UUID supplierId) {
+        com.akhana.akhana_admin.model.Supplier supplier = supplierRepository.findById(supplierId)
+            .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + supplierId));
+        if (supplier.getStatus() != SupplierStatus.ACTIVO) {
+            throw new IllegalArgumentException("El proveedor '" + supplier.getName() + "' no está activo.");
+        }
+        return supplier;
+    }
+
+    private PurchaseDraftResponse draft(Saved saved, com.akhana.akhana_admin.model.Supplier chosen) {
         ReadPurchase read = saved.purchase();
         PurchaseReadingSource source = saved.reading().getSource();
-        com.akhana.akhana_admin.model.Supplier supplier = matchSupplier(read.supplier());
+        // What the person chose stands over what the message seems to say
+        com.akhana.akhana_admin.model.Supplier supplier = chosen != null ? chosen : matchSupplier(read.supplier());
         UUID supplierId = supplier != null ? supplier.getId() : null;
         List<Product> catalog = productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO).stream()
             .filter(product -> !product.isSpecial())
@@ -188,7 +201,10 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
 
         List<ProductTextMatcher.Match> ranked = rankForSupplier(ProductTextMatcher.search(text, catalog), supplierId);
         Product product = chosenProduct(ranked, supplierId);
-        List<PurchaseDraftResponse.ProductSuggestion> suggestions = product != null ? List.of() : ranked.stream()
+        // Missing words only ever suggest: a person chooses (COM-21)
+        List<ProductTextMatcher.Match> candidates = !ranked.isEmpty() ? ranked
+            : rankForSupplier(ProductTextMatcher.searchPartial(text, catalog), supplierId);
+        List<PurchaseDraftResponse.ProductSuggestion> suggestions = product != null ? List.of() : candidates.stream()
             .limit(MAX_SUGGESTIONS)
             .map(match -> new PurchaseDraftResponse.ProductSuggestion(match.product().getId(), match.product().getCode(),
                 match.product().getName(), match.product().getSupplier() != null ? match.product().getSupplier().getName() : null))

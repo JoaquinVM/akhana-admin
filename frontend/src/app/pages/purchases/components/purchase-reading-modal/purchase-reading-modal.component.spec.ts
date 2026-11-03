@@ -38,8 +38,21 @@ describe('PurchaseReadingModalComponent', () => {
     readingService.readText.mockReturnValue(of(draft()));
     component.text.set(' 2 jamaica ');
     component.readText();
-    expect(readingService.readText).toHaveBeenCalledWith('2 jamaica');
+    expect(readingService.readText).toHaveBeenCalledWith('2 jamaica', null);
     expect(read).toHaveBeenCalledWith({ draft: draft(), file: null, completePurchaseId: null });
+  });
+
+  it('COM-21: envía el proveedor elegido, y solo ofrece los activos', () => {
+    readingService.readText.mockReturnValue(of(draft()));
+    fixture.componentRef.setInput('suppliers', [
+      { id: 'sup-1', name: 'Boni', code: 'BO', status: 'ACTIVO' },
+      { id: 'sup-2', name: 'Viejo', code: 'VI', status: 'INACTIVO' }
+    ]);
+    expect(component.supplierOptions().map(o => o.value)).toEqual(['sup-1']);
+    component.supplierId.set('sup-1');
+    component.text.set('6 carbon');
+    component.readText();
+    expect(readingService.readText).toHaveBeenCalledWith('6 carbon', 'sup-1');
   });
 
   it('CA-24: si falla conserva el texto y muestra el mensaje', () => {

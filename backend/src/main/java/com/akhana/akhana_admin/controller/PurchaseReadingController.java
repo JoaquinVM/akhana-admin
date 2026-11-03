@@ -34,7 +34,7 @@ public class PurchaseReadingController {
     @PostMapping("/text")
     public ResponseEntity<PurchaseDraftResponse> readText(@Valid @RequestBody PurchaseTextReadingRequest request,
                                                           Authentication authentication) {
-        return ResponseEntity.ok(readingService.readText(request.text(), extractUsername(authentication)));
+        return ResponseEntity.ok(readingService.readText(request.text(), request.supplierId(), extractUsername(authentication)));
     }
 
     @PostMapping("/photo")
