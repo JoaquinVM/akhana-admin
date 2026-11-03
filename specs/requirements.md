@@ -25,7 +25,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Sin publicar; probar en teléfonos reales la instalación, la zona segura del iPhone y Tailscale apagado | `mobile.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y los teléfonos | `deploy.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y los teléfonos | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -290,6 +290,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
 - **NF-08** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
 - **NF-09** Mientras lo escrito en un campo numérico todavía no es un número, el sistema no reescribe el campo. Un separador al comienzo vale como `0.`: `,50` y `.50` son 0,50.
+- **NF-10** Si una pantalla no se puede cargar, en la app o en el navegador, el sistema lo avisa y ofrece actualizar. La persona sigue en la pantalla en que estaba, con lo que haya escrito.
 
 ## 5. Preguntas
 

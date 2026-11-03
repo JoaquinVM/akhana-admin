@@ -1,10 +1,11 @@
 import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners, provideEnvironmentInitializer } from '@angular/core';
 import { DATE_PIPE_DEFAULT_OPTIONS } from '@angular/common';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { reportScreenLoadFailure } from './shared/components/screen-load-notice/screen-load-notice.service';
 import { STORE_LOCALE, STORE_TIMEZONE } from './shared/utils/money';
 import { installNumberInputComma } from './shared/utils/number-input-comma';
 import { installNumberInputGuard } from './shared/utils/number-input-guard';
@@ -17,7 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideEnvironmentInitializer(installNumberInputComma),
     provideEnvironmentInitializer(installNumberInputGuard),
-    provideRouter(routes),
+    provideRouter(routes, withNavigationErrorHandler(reportScreenLoadFailure)),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: STORE_LOCALE },
     { provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: { timezone: STORE_TIMEZONE } }

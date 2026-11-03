@@ -371,6 +371,63 @@ describe('DashboardComponent instalado (MOV-02)', () => {
     }
   });
 
+  it.each([
+    ['al entrar', (c: DashboardComponent) => c.ngOnInit()],
+    ['al elegir un período', (c: DashboardComponent) => c.selectPeriod('WEEK')],
+    ['al cambiar el rango', (c: DashboardComponent) => c.onFromDate('2026-10-01')]
+  ])('CA-11: instalada, si la API no responde en 10 s %s avisa qué revisar, sin recargar', (_, act) => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, getDashboard } = create(true);
+      const component = fixture.componentInstance;
+      const reload = vi.spyOn(component, 'reloadPage').mockImplementation(() => undefined);
+      getDashboard.mockReturnValue(new Subject<Dashboard>());
+      act(component);
+      vi.advanceTimersByTime(9999);
+      expect(component.errorMessage()).toBeNull();
+      expect(component.isLoading()).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(component.errorMessage()).toBe('No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.');
+      expect(component.isLoading()).toBe(false);
+      expect(reload).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('CA-12: instalada, la respuesta que llega antes de los 10 s se ve sin aviso', () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, getDashboard } = create(true);
+      const component = fixture.componentInstance;
+      const answer = new Subject<Dashboard>();
+      getDashboard.mockReturnValue(answer);
+      component.selectPeriod('WEEK');
+      vi.advanceTimersByTime(9999);
+      answer.next(dashboard);
+      vi.advanceTimersByTime(1);
+      expect(component.dashboard()).toEqual(dashboard);
+      expect(component.errorMessage()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('CA-13: en el navegador sigue sin límite de tiempo', () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, getDashboard } = create(false);
+      const component = fixture.componentInstance;
+      getDashboard.mockReturnValue(new Subject<Dashboard>());
+      component.selectPeriod('WEEK');
+      vi.advanceTimersByTime(60000);
+      expect(component.errorMessage()).toBeNull();
+      expect(component.isLoading()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('MOV-03: instalada, sin conexión al cargar dice qué revisar; en el navegador sigue el mensaje de siempre', () => {
     const installed = create(true);
     installed.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));

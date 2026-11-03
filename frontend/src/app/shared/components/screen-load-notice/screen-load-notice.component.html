@@ -1,0 +1,9 @@
+@if (notice.requestedUrl()) {
+  <div class="screen-load-notice" role="alert">
+    <span class="notice-text">No se pudo abrir esta pantalla. Puede haber una versión nueva o un problema de conexión.</span>
+    <button type="button" class="btn btn-primary" (click)="notice.update()">Actualizar</button>
+    <button type="button" class="notice-close" aria-label="Cerrar aviso" (click)="notice.dismiss()">
+      <app-icon name="close" />
+    </button>
+  </div>
+}

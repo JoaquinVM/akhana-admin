@@ -23,7 +23,7 @@ const CHART_TOP = 12;
 const CHART_BOTTOM = 188;
 // The server cannot be reached: no network, Tailscale off or a gateway error (MOV-03, like public/sw.js)
 const CONNECTION_ERRORS = [0, 502, 503, 504];
-const RESUME_TIMEOUT_MS = 10000;
+const CONNECTION_TIMEOUT_MS = 10000;
 const CONNECTION_MESSAGE = 'No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.';
 
 function isConnectionError(err: unknown): boolean {
@@ -207,7 +207,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.hoverIndex.set(null);
     const request: Observable<Dashboard> =
       this.dashboardService.getDashboard({ from: this.fromDate() || null, to: this.toDate() || null });
-    this.loadSubscription = (resuming ? request.pipe(timeout(RESUME_TIMEOUT_MS)) : request).subscribe({
+    this.loadSubscription = (this.installed ? request.pipe(timeout(CONNECTION_TIMEOUT_MS)) : request).subscribe({
       next: dashboard => {
         this.dashboard.set(dashboard);
         this.fromDate.set(dashboard.from);
