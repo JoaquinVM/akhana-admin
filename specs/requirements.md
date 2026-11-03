@@ -14,7 +14,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
-| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11, CAT-12 | ✅ Completo | CAT-12 sin desplegar: probar con una foto real con GPS y revisar la regla de ciclo de vida del bucket de B2 | `product-import.md`, `product-presentations.md`, `product-photos.md` |
+| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |

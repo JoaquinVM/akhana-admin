@@ -470,3 +470,6 @@ real en el VPS.
 - Tercera corrida, por nginx y con el jar final: un EXIF de 9,5 MB con etiquetas solapadas en PNG, WebP y JPEG se guardó en menos de
   0,2 s; un WebP de 10 MB con 312.500 frames se rechazó en 0,14 s; sin `OutOfMemoryError` ni reinicios, y el catálogo siguió
   respondiendo en 12 ms. Flyway quedó en 26 sobre `main` con las migraciones de caja.
+- En el VPS, con `v1.7.0` y una foto subida (2-11-2026): `backup.sh` y `restore.sh --check latest` pasaron contra el volumen real y
+  B2, con la foto y su miniatura en el remoto y coincidiendo con el volumen. Los nombres se ven cifrados en el panel de B2.
+  `restore.sh --photos` no se ha corrido en el VPS.

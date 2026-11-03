@@ -126,5 +126,5 @@ aceptar HEIC.
 - [x] Migración, modelo, procesador, almacenamiento, servicio y rutas, con pruebas contra PostgreSQL.
 - [x] Sección «Foto», miniaturas y filtro «Sin foto» en Productos, con pruebas Vitest.
 - [x] Respaldo, restauración, nginx y compose (`specs/deploy.md`, NF-08).
-- [ ] Probar una foto real del celular con GPS y dejarlo anotado aquí.
-- [ ] Antes de publicar: revisar que el bucket de B2 no tenga una regla de ciclo de vida que expire archivos.
+- [x] Probar una foto real del celular con GPS: en producción, el original traía ubicación y la descarga no; la foto se ve bien.
+- [x] Revisar la regla de ciclo de vida del bucket de B2: guarda versiones anteriores por 30 días y no expira archivos vigentes.
