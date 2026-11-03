@@ -757,6 +757,12 @@
   font-size: 0.8rem;
 }
 
+.alert-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .alert-warning {
   justify-content: space-between;
   background-color: var(--color-warning-bg);

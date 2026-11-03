@@ -95,6 +95,19 @@ public class Product {
     @Formula("(SELECT pp.id FROM product_photos pp WHERE pp.product_id = id AND pp.active)")
     private UUID activePhotoId;
 
+    // CAT-10: factory barcodes, active and removed; batch-loaded like the presentations
+    @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @BatchSize(size = 100)
+    @Builder.Default
+    private List<ProductBarcode> barcodes = new ArrayList<>();
+
+    // CAT-10: «No trae», checked and without a factory barcode
+    @Column(name = "no_barcode_marked_by", length = 100)
+    private String noBarcodeMarkedBy;
+
+    @Column(name = "no_barcode_marked_at")
+    private Instant noBarcodeMarkedAt;
+
     // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;

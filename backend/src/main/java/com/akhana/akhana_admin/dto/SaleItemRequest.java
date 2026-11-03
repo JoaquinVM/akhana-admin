@@ -25,7 +25,10 @@ public record SaleItemRequest(
     // POS-11: name and price typed in the POS, required for special products and rejected for the others
     String freeName,
 
-    BigDecimal freePrice
+    BigDecimal freePrice,
+
+    // POS-15: at least one read of this line was a scan; only for measuring
+    Boolean scanned
 ) {
     public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit) {
         this(productId, quantity, discountPerUnit, null);
@@ -33,5 +36,10 @@ public record SaleItemRequest(
 
     public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit, UUID presentationId) {
         this(productId, quantity, discountPerUnit, presentationId, null, null);
+    }
+
+    public SaleItemRequest(UUID productId, BigDecimal quantity, BigDecimal discountPerUnit, UUID presentationId,
+                           String freeName, BigDecimal freePrice) {
+        this(productId, quantity, discountPerUnit, presentationId, freeName, freePrice, null);
     }
 }

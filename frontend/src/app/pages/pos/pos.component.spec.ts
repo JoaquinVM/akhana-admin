@@ -548,4 +548,18 @@ describe('PosComponent', () => {
 
     expect(component.openError()).toBeNull();
   });
+
+  // POS-15: 13 digits and Enter must not reach the money forms of this screen, such as the opening of the cash
+  it('un escaneo se descarta y su Enter no llega a ningún formulario', () => {
+    let time = 1000;
+    let last!: KeyboardEvent;
+    for (const key of [...'7791234567898', 'Enter']) {
+      last = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      time += 10;
+      Object.defineProperty(last, 'timeStamp', { value: time });
+      document.body.dispatchEvent(last);
+    }
+
+    expect(last.defaultPrevented).toBe(true);
+  });
 });

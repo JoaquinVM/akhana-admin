@@ -70,6 +70,18 @@ export interface Product {
   ownerCreditorName?: string | null;
   // CAT-12: reference to the active photo; the image is requested apart
   photoId?: string | null;
+  // CAT-10: active barcodes, and whether it is marked «No trae»
+  barcodes?: string[];
+  noBarcode?: boolean;
+}
+
+// CAT-10: a row of «Cargar códigos», most sold first
+export interface BarcodePendingProduct {
+  id: string;
+  code: string;
+  name: string;
+  supplierName: string | null;
+  sellPrice: number;
 }
 
 export interface ProductRequest {
@@ -88,6 +100,8 @@ export interface ProductRequest {
   // POS-11: chosen on create and never changed; a third-party one requires an owner (POS-13)
   specialType?: ProductSpecialType | null;
   ownerCreditorId?: string | null;
+  // CAT-10: the full list; without it the server keeps the barcodes
+  barcodes?: string[];
 }
 
 // CAT-11: marking a product by kilo proposes these, without fixed price

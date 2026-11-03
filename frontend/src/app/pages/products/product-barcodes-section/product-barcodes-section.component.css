@@ -1,0 +1,32 @@
+.barcodes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-muted-sm {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.barcode-row,
+.no-barcode-mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.barcode-value {
+  font-family: var(--font-mono);
+}
+
+.barcode-add {
+  display: flex;
+  gap: 8px;
+}
+
+.barcode-add .form-control {
+  flex: 1;
+  min-width: 0;
+}

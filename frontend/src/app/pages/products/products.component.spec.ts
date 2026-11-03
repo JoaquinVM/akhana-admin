@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { formatBs } from '../../shared/utils/money';
 import { ProductsComponent } from './products.component';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
@@ -15,6 +18,10 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
 describe('ProductsComponent', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   let component: ProductsComponent;
   let fixture: ComponentFixture<ProductsComponent>;
   let mockProductService: any;
@@ -190,6 +197,7 @@ describe('ProductsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProductsComponent],
       providers: [
+        provideRouter([]),
         { provide: ProductService, useValue: mockProductService },
         { provide: ProductPhotoService, useValue: mockPhotoService },
         { provide: CategoryService, useValue: mockCategoryService },
@@ -619,6 +627,187 @@ describe('ProductsComponent', () => {
 
       expect(component.isDiscardConfirmOpen()).toBe(false);
       expect(component.isFormModalOpen()).toBe(false);
+    });
+  });
+
+  describe('códigos de barras (CAT-10)', () => {
+    const EAN = '7791234567898';
+
+    const scan = (code: string): KeyboardEvent => {
+      let time = 1000;
+      let last!: KeyboardEvent;
+      for (const key of [...code, 'Enter']) {
+        last = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        time += 10;
+        Object.defineProperty(last, 'timeStamp', { value: time });
+        document.body.dispatchEvent(last);
+      }
+      return last;
+    };
+
+    it('un código sin guardar pone nombre y precio en el encabezado y lleva a la vista la sección', async () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      fixture.detectChanges();
+      const generic = component.formSubtitle();
+      const { name, sellPrice } = component.productForm.value;
+
+      scan(EAN);
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(generic).not.toContain(name);
+      expect(component.formSubtitle()).toBe(`${name} · ${formatBs(Number(sellPrice))}`);
+      expect(document.querySelector('.modal-subtitle')?.textContent).toContain(name);
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    });
+
+    it('un escaneo va a la lista y su Enter no envía el formulario', () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan(EAN);
+      scan(EAN);
+
+      expect(component.barcodes()).toEqual([EAN]);
+      expect(enter.defaultPrevented).toBe(true);
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('en un producto que no admite códigos, un escaneo avisa, no escribe y no guarda', () => {
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan(EAN);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('una etiqueta con letras avisa, no se agrega y no guarda', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+
+      const enter = scan('A1B2C3');
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('El código de barras no es válido.');
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('al elegir un tipo especial, los códigos de la lista se quitan', () => {
+      component.openCreateModal();
+      component.barcodes.set([EAN]);
+
+      component.productForm.patchValue({ specialType: 'UNIDENTIFIED' });
+
+      expect(component.barcodes()).toEqual([]);
+    });
+
+    it('un error al guardar se lleva a la vista, porque el formulario quedó abajo', async () => {
+      mockProductService.updateProduct.mockReturnValue(
+        throwError(() => ({ error: { message: 'El código ya es de Shampoo (SHA).' } }))
+      );
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.barcodes.set([EAN]);
+      vi.mocked(Element.prototype.scrollIntoView).mockClear();
+
+      component.saveProduct();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      const shown = vi.mocked(Element.prototype.scrollIntoView).mock.instances as unknown as Element[];
+      expect(shown.some((element) => element.textContent?.includes('El código ya es de Shampoo (SHA).'))).toBe(true);
+    });
+
+    it('con otra confirmación abierta sobre el formulario, un escaneo avisa y no agrega', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      fixture.detectChanges();
+      const confirmation = document.createElement('div');
+      confirmation.setAttribute('aria-modal', 'true');
+      document.body.appendChild(confirmation);
+
+      scan(EAN);
+      confirmation.remove();
+
+      expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('Cierra esta ventana para escanear.');
+    });
+
+    it('con «Descartar cambios» abierta, un escaneo avisa, no escribe, no agrega y no guarda', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.isDiscardConfirmOpen.set(true);
+      TestBed.tick();
+
+      const enter = scan(EAN);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('Cierra esta ventana para escanear.');
+      expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+    });
+
+    it('con el formulario cerrado no escucha al lector', () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.closeFormModal();
+      TestBed.tick();
+
+      expect(scan(EAN).defaultPrevented).toBe(false);
+    });
+
+    it('sin cambios en los códigos no los envía, y el servidor los conserva', () => {
+      mockProductService.updateProduct.mockReturnValue(of(mockProducts[0]));
+      component.openEditModal({ ...mockProducts[0], barcodes: [EAN] });
+      component.productForm.patchValue({ name: 'Otro nombre' });
+
+      component.saveProduct();
+
+      expect(mockProductService.updateProduct.mock.calls[0][1].barcodes).toBeUndefined();
+    });
+
+    it('un código agregado o quitado cuenta como cambio y va con la lista completa', () => {
+      mockProductService.updateProduct.mockReturnValue(of(mockProducts[0]));
+      component.openEditModal({ ...mockProducts[0], barcodes: [EAN] });
+      expect(component.hasFormChanges()).toBe(false);
+
+      component.barcodes.set([EAN, '4006381333931']);
+
+      expect(component.hasFormChanges()).toBe(true);
+      component.saveProduct();
+      expect(mockProductService.updateProduct.mock.calls[0][1].barcodes).toEqual([EAN, '4006381333931']);
+    });
+
+    it('un producto por kilo sin códigos no muestra la sección; con códigos, sí, para poder quitarlos', () => {
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [] });
+      expect(component.showBarcodes()).toBe(false);
+
+      component.openEditModal({ ...mockProducts[0], saleUnit: 'KILOGRAM', barcodes: [EAN] });
+      expect(component.showBarcodes()).toBe(true);
+    });
+
+    it('un producto especial no muestra la sección', () => {
+      component.openEditModal({ ...mockProducts[0], specialType: 'UNIDENTIFIED' });
+
+      expect(component.showBarcodes()).toBe(false);
+    });
+
+    it('quitar la marca «No trae» actualiza el producto', () => {
+      mockProductService.clearNoBarcode = vi.fn().mockReturnValue(of({ ...mockProducts[0], noBarcode: false }));
+      component.openEditModal({ ...mockProducts[0], noBarcode: true });
+      expect(component.formNoBarcode()).toBe(true);
+
+      component.clearNoBarcodeMark();
+
+      expect(mockProductService.clearNoBarcode).toHaveBeenCalledWith(mockProducts[0].id);
+      expect(component.formNoBarcode()).toBe(false);
     });
   });
 });

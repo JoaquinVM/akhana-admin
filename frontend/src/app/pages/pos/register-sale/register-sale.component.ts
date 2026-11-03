@@ -43,6 +43,7 @@ export type { CartItem } from './cart-item';
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
 
 import { CashDayMarkComponent } from '../../../shared/components/cash-day-mark/cash-day-mark.component';
+import { BarcodeScannerComponent, ScannedProduct } from '../components/barcode-scanner/barcode-scanner.component';
 
 @Component({
   selector: 'app-register-sale',
@@ -57,7 +58,8 @@ import { CashDayMarkComponent } from '../../../shared/components/cash-day-mark/c
     PresentationPickerComponent,
     FreeLineFormComponent,
     PosFeedbackBannerComponent,
-    CashDayMarkComponent
+    CashDayMarkComponent,
+    BarcodeScannerComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -146,7 +148,8 @@ export class RegisterSaleComponent implements OnInit {
           productId: it.product.id,
           quantity: it.quantity,
           discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined,
-          presentationId: it.presentation?.id
+          presentationId: it.presentation?.id,
+          scanned: it.scanned || undefined
         });
   });
 
@@ -209,6 +212,16 @@ export class RegisterSaleComponent implements OnInit {
       return;
     }
     this.addLine(product, null);
+  }
+
+  // POS-15: goes through the same path as a click, so at-cost sales and repeated lines stay the same
+  onScanned({ product, fromServer }: ScannedProduct): void {
+    if (fromServer && !this.catalogProducts().some((p) => p.id === product.id)) {
+      this.catalogProducts.update((products) => [...products, product]);
+    }
+    this.addToCart(product);
+    const key = cartKey(product, null);
+    this.cartItems.update((items) => items.map((it) => it.key === key ? { ...it, scanned: true } : it));
   }
 
   onPresentationPicked(presentation: ProductPresentation | null): void {

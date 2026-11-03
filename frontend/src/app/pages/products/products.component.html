@@ -11,6 +11,7 @@
       <p class="page-subtitle">Gestión integral de artículos, márgenes comerciales, categorías y etiquetas.</p>
     </div>
     <div class="header-actions">
+      <a class="btn btn-outline" routerLink="/products/barcodes">Cargar códigos</a>
       <button type="button" class="btn btn-outline" (click)="isImportModalOpen.set(true)">Importar</button>
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
@@ -320,13 +321,13 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar producto' : 'Nuevo producto'"
-    [subtitle]="isEditing() ? 'Modifica los datos del producto seleccionado' : 'Ingresa la información comercial y características del nuevo producto'"
+    [subtitle]="formSubtitle()"
     [closeOnBackdrop]="false"
     size="lg"
     (close)="attemptCloseForm()">
 
     @if (formError()) {
-      <div class="alert alert-danger" role="alert" style="margin-bottom: 1rem">
+      <div class="alert alert-danger form-error" role="alert" style="margin-bottom: 1rem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
@@ -773,6 +774,16 @@
           placeholder="Características, presentación o notas del producto...">
         </textarea>
       </div>
+
+      <!-- Barcodes of the product (CAT-10) -->
+      @if (showBarcodes()) {
+        <app-product-barcodes-section
+          [barcodes]="barcodes()"
+          [modified]="barcodesModified()"
+          [noBarcode]="formNoBarcode()"
+          (barcodesChange)="barcodes.set($event)"
+          (clearMark)="clearNoBarcodeMark()" />
+      }
 
       <div modal-footer class="form-actions">
         <button type="button" class="btn btn-outline" (click)="attemptCloseForm()" [disabled]="isSubmitting()">

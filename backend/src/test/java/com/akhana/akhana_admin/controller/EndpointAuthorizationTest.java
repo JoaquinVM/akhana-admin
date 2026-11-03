@@ -61,6 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialSummaryController.class,
         FinancialTransactionController.class,
         MigrationController.class,
+        ProductBarcodeController.class,
         ProductController.class,
         ProductImportController.class,
         ProductPhotoController.class,
@@ -164,6 +165,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private FinancialSummaryService financialSummaryService;
     @MockitoBean private FinancialTransactionService financialTransactionService;
     @MockitoBean private MigrationService migrationService;
+    @MockitoBean private ProductBarcodeService productBarcodeService;
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private ProductPhotoService productPhotoService;
@@ -224,6 +226,12 @@ class EndpointAuthorizationTest {
                 both(put, "/api/products/" + ID, PRODUCT),
                 both(patch, "/api/products/" + ID + "/status?status=INACTIVO", null),
                 both(delete, "/api/products/" + ID, null),
+                // CAT-10, POS-15: barcodes
+                both(get, "/api/products/by-barcode/7791234567898", null),
+                both(get, "/api/products/barcode-pending", null),
+                both(post, "/api/products/" + ID + "/barcodes", "{\"barcode\":\"7791234567898\"}"),
+                both(put, "/api/products/" + ID + "/no-barcode", null),
+                both(delete, "/api/products/" + ID + "/no-barcode", null),
                 // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
                 both(post, "/api/products/import/preview", XLSX_FILE),
                 both(post, "/api/products/import", XLSX_FILE),

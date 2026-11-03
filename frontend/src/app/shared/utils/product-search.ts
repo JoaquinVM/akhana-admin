@@ -1,3 +1,5 @@
+import { canonicalBarcode, looksLikeBarcode } from './barcode';
+
 // Fields a product search looks at; only code and name are required so lighter product shapes can be searched
 export interface SearchableProduct {
   code: string;
@@ -5,6 +7,8 @@ export interface SearchableProduct {
   supplierName?: string | null;
   categoryName?: string | null;
   tags?: { name: string }[] | null;
+  // CAT-10: only ever matched whole, never by part or by similarity
+  barcodes?: string[] | null;
 }
 
 // Lowercase without accents, so "Kéfir" and "kefir" are the same
@@ -117,6 +121,22 @@ function productScore(term: string, tokens: string[], product: SearchableProduct
  * No cap: the caller shows all of them.
  */
 export function searchProducts<T extends SearchableProduct>(term: string, products: T[]): T[] {
+  const byBarcode = productByBarcode(term, products);
+  if (byBarcode) {
+    return [byBarcode, ...rankProducts(term, products).filter((p) => p !== byBarcode)];
+  }
+  return rankProducts(term, products);
+}
+
+function productByBarcode<T extends { barcodes?: string[] | null }>(term: string, products: T[]): T | undefined {
+  if (!looksLikeBarcode(term)) {
+    return undefined;
+  }
+  const code = canonicalBarcode(term);
+  return products.find((p) => p.barcodes?.includes(code));
+}
+
+function rankProducts<T extends SearchableProduct>(term: string, products: T[]): T[] {
   const normalized = normalizeSearchText(term);
   const tokens = words(normalized);
   if (tokens.length === 0) {
@@ -133,12 +153,14 @@ export function searchProducts<T extends SearchableProduct>(term: string, produc
 
 // The product an Enter in a search box adds: the one whose code is the text typed (without case or accents), or the
 // only match; null when it is not clear which one, so nothing is added by mistake (POS-01)
-export function productForEnter<T extends { code: string }>(term: string, products: T[], matches: T[]): T | null {
+export function productForEnter<T extends { code: string; barcodes?: string[] | null }>(term: string, products: T[], matches: T[]): T | null {
   const typed = normalizeSearchText(term);
   if (!typed) {
     return null;
   }
-  return products.find((p) => normalizeSearchText(p.code) === typed) ?? (matches.length === 1 ? matches[0] : null);
+  return products.find((p) => normalizeSearchText(p.code) === typed)
+    ?? productByBarcode(term, products)
+    ?? (matches.length === 1 ? matches[0] : null);
 }
 
 /**

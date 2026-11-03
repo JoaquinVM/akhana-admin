@@ -53,7 +53,10 @@ public record ProductRequest(
     // POS-11: null for a normal product; set on create only, the owner is required for THIRD_PARTY (POS-13)
     ProductSpecialType specialType,
 
-    UUID ownerCreditorId
+    UUID ownerCreditorId,
+
+    // CAT-10: the whole list; null keeps the current barcodes
+    List<String> barcodes
 ) {
     public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
                           List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
@@ -66,5 +69,13 @@ public record ProductRequest(
                           SaleUnit saleUnit, List<ProductPresentationRequest> presentations) {
         this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit,
             presentations, null, null);
+    }
+
+    public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
+                          List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
+                          SaleUnit saleUnit, List<ProductPresentationRequest> presentations,
+                          ProductSpecialType specialType, UUID ownerCreditorId) {
+        this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit,
+            presentations, specialType, ownerCreditorId, null);
     }
 }

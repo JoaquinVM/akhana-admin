@@ -1,6 +1,7 @@
-import { Component, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
+import { Component, DOCUMENT, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   Product,
@@ -26,8 +27,12 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
 import { ProductPhotoSectionComponent } from './product-photo-section/product-photo-section.component';
 import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-thumb.component';
+import { ProductBarcodesSectionComponent } from './product-barcodes-section/product-barcodes-section.component';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
+import { canonicalBarcode, looksLikeBarcode } from '../../shared/utils/barcode';
+import { formatBs } from '../../shared/utils/money';
+import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -61,13 +66,16 @@ export const PRODUCTS_PAGE_SIZE = 100;
     ModalComponent,
     ProductImportModalComponent,
     ProductPhotoSectionComponent,
-    ProductPhotoThumbComponent
+    ProductPhotoThumbComponent,
+    ProductBarcodesSectionComponent,
+    RouterLink
   ],
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.css']
 })
 export class ProductsComponent implements OnInit {
   private readonly toast = inject(ToastService);
+  private readonly document = inject(DOCUMENT);
   private readonly productService = inject(ProductService);
   private readonly categoryService = inject(CategoryService);
   private readonly supplierService = inject(SupplierService);
@@ -108,6 +116,11 @@ export class ProductsComponent implements OnInit {
   private originalPresentations = signal<string>('[]');
   saveWarnings = signal<string[]>([]);
   readonly maxActivePresentations = MAX_ACTIVE_PRESENTATIONS;
+
+  // CAT-10: barcodes of the product in the form
+  barcodes = signal<string[]>([]);
+  private originalBarcodes = signal<string[]>([]);
+  formNoBarcode = signal<boolean>(false);
 
   // Custom select dropdowns in the form
   isCategoryDropdownOpen = signal<boolean>(false);
@@ -295,7 +308,8 @@ export class ProductsComponent implements OnInit {
            this.isFieldModified('sellPrice') ||
            this.isFieldModified('status') ||
            this.isFieldModified('saleUnit') ||
-           this.presentationsModified();
+           this.presentationsModified() ||
+           this.barcodesModified();
   });
 
   isKilogramForm = computed<boolean>(() => {
@@ -308,6 +322,77 @@ export class ProductsComponent implements OnInit {
   presentationsModified = computed<boolean>(() =>
     this.isEditing() && JSON.stringify(this.presentations()) !== this.originalPresentations()
   );
+
+  barcodesModified = computed<boolean>(() =>
+    JSON.stringify(this.barcodes()) !== JSON.stringify(this.originalBarcodes())
+  );
+
+  // CAT-10: the section is the last of the form, so the fixed header says which product the code is being saved on
+  formSubtitle = computed<string>(() => {
+    this.formVersion();
+    const name = (this.productForm.get('name')?.value ?? '').toString().trim();
+    if (this.barcodesModified() && name) {
+      const price = this.productForm.get('sellPrice')?.value;
+      return price === null || price === undefined || price === '' ? name : `${name} · ${formatBs(Number(price))}`;
+    }
+    return this.isEditing()
+      ? 'Modifica los datos del producto seleccionado'
+      : 'Ingresa la información comercial y características del nuevo producto';
+  });
+
+  // CAT-10: a product by kilo with codes still shows them, so they can be removed before saving it as kilo
+  showBarcodes = computed<boolean>(() => {
+    this.formVersion();
+    return !this.isSpecialForm() && (!this.isKilogramForm() || this.barcodes().length > 0);
+  });
+
+  // CAT-10: on the whole open form, so a scan never writes in another field or saves it, whatever the product is
+  private readonly barcodeCapture = effect((onCleanup) => {
+    if (!this.isFormModalOpen()) return;
+    const capture = new ScanCapture(this.document, (code) => this.onBarcodeScanned(code));
+    capture.install();
+    onCleanup(() => capture.uninstall());
+  });
+
+  // The barcode section leaves the form scrolled to its end, and the error is at its start
+  private readonly showFormError = effect(() => {
+    if (this.formError()) {
+      setTimeout(() => this.document.querySelector('.form-error')?.scrollIntoView({ block: 'nearest' }));
+    }
+  });
+
+  private onBarcodeScanned(code: string): void {
+    // A confirmation over the form does not take the focus, so the capture has to stay on while it is open
+    if (this.document.querySelectorAll('[aria-modal="true"]').length > 1) {
+      this.toast.error('Cierra esta ventana para escanear.');
+      return;
+    }
+    if (!this.showBarcodes()) {
+      this.toast.error('Este producto no admite código de barras.');
+      return;
+    }
+    if (!looksLikeBarcode(code)) {
+      this.toast.error('El código de barras no es válido.');
+      return;
+    }
+    const barcode = canonicalBarcode(code);
+    if (!this.barcodes().includes(barcode)) {
+      this.barcodes.update((list) => [...list, barcode]);
+    }
+    setTimeout(() => this.document.querySelector('.barcodes-section')?.scrollIntoView({ block: 'nearest' }));
+  }
+
+  clearNoBarcodeMark(): void {
+    const id = this.selectedProductId();
+    if (!id) return;
+    this.productService.clearNoBarcode(id).subscribe({
+      next: (updated) => {
+        this.formNoBarcode.set(false);
+        this.products.update(prev => prev.map(p => p.id === updated.id ? updated : p));
+      },
+      error: (err) => this.formError.set(err.error?.message || 'No se pudo quitar la marca.')
+    });
+  }
 
   ngOnInit(): void {
     this.productForm.valueChanges
@@ -341,6 +426,7 @@ export class ProductsComponent implements OnInit {
       this.productForm.patchValue({ buyPrice: 0, sellPrice: 0, saleUnit: 'UNIT' }, { emitEvent: false });
       sell?.setValidators([Validators.required, Validators.min(0)]);
       this.presentations.set([]);
+      this.barcodes.set([]);
     } else {
       sell?.setValidators([Validators.required, Validators.min(0.01)]);
     }
@@ -519,6 +605,9 @@ export class ProductsComponent implements OnInit {
     });
     this.presentations.set([]);
     this.originalPresentations.set('[]');
+    this.barcodes.set([]);
+    this.originalBarcodes.set([]);
+    this.formNoBarcode.set(false);
     this.formVersion.update(v => v + 1);
     this.isFormModalOpen.set(true);
   }
@@ -555,6 +644,9 @@ export class ProductsComponent implements OnInit {
     }));
     this.presentations.set(drafts);
     this.originalPresentations.set(JSON.stringify(drafts));
+    this.barcodes.set(product.barcodes ?? []);
+    this.originalBarcodes.set(product.barcodes ?? []);
+    this.formNoBarcode.set(!!product.noBarcode);
     this.originalFormValues.set(initialData);
     this.productForm.reset(initialData);
     this.formVersion.update(v => v + 1);
@@ -611,6 +703,9 @@ export class ProductsComponent implements OnInit {
     });
     this.presentations.set([]);
     this.originalPresentations.set('[]');
+    this.barcodes.set([]);
+    this.originalBarcodes.set([]);
+    this.formNoBarcode.set(false);
     this.formVersion.update(v => v + 1);
   }
 
@@ -641,7 +736,8 @@ export class ProductsComponent implements OnInit {
       saleUnit: val.saleUnit,
       presentations: val.saleUnit === 'KILOGRAM' && !val.specialType ? this.presentationRequests() : undefined,
       specialType: val.specialType || null,
-      ownerCreditorId: val.specialType === 'THIRD_PARTY' ? val.ownerCreditorId : null
+      ownerCreditorId: val.specialType === 'THIRD_PARTY' ? val.ownerCreditorId : null,
+      barcodes: this.barcodesModified() ? this.barcodes() : undefined
     };
     this.saveWarnings.set([]);
 

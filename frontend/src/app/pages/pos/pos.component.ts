@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, DOCUMENT, DestroyRef, OnInit, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { CashService } from '../../core/cash/cash.service';
 import { SaleService } from '../../core/sale/sale.service';
@@ -17,6 +17,7 @@ import { PosKpisComponent } from './components/pos-kpis/pos-kpis.component';
 import { SaleDetailModalComponent } from '../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
 import { FinancialTransaction } from '../../core/finance/models/finance.models';
+import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { formatBs } from '../../shared/utils/money';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
@@ -44,6 +45,8 @@ import { SessionTransactionsComponent } from './components/session-transactions/
 })
 export class PosComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
   readonly cashService = inject(CashService);
   private readonly saleService = inject(SaleService);
   private readonly transactionService = inject(FinancialTransactionService);
@@ -85,6 +88,11 @@ export class PosComponent implements OnInit {
   expectedCashInDrawer = computed(() => Number(this.cashService.currentSession()?.expectedCash) || 0);
 
   ngOnInit(): void {
+    // POS-15: this screen sells nothing by scan, but a scan must not reach the money forms it opens
+    const capture = new ScanCapture(this.document, () => undefined);
+    capture.install();
+    this.destroyRef.onDestroy(() => capture.uninstall());
+
     this.checkNavigationState();
     this.loadCurrentSession();
   }

@@ -73,6 +73,11 @@ public class SaleItem {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
 
+    // POS-15: only to measure the use of the reader; it never changes an amount and is not in the responses
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private boolean scanned = false;
+
     // POS-11: free line of a special product, with the name typed in the POS (kept after an assignment)
     @Enumerated(EnumType.STRING)
     @Column(name = "free_line_type", length = 20, updatable = false)

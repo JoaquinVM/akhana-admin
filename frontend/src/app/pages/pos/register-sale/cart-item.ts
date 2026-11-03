@@ -12,6 +12,8 @@ export interface CartItem {
   subtotal: number;
   // POS-11: free line of a special product, with its typed name; each one is its own line
   freeName?: string | null;
+  // POS-15: at least one read of this line was a scan
+  scanned?: boolean;
 }
 
 export function isWeightedProduct(product: Product): boolean {

@@ -41,6 +41,11 @@
   }
 
   <!-- Sale and checkout two-column layout -->
+  <app-barcode-scanner
+    [products]="catalogProducts()"
+    [sessionOpen]="!!cashService.currentSession()"
+    (scanned)="onScanned($event)" />
+
   <div class="sale-workspace-grid">
     <!-- Left column: catalog and quick products -->
     <app-sale-catalog

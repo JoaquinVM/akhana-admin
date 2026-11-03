@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Product, ProductRequest, ProductStatus } from './models/product.models';
+import { BarcodePendingProduct, Product, ProductRequest, ProductStatus } from './models/product.models';
 import { ProductImportResult } from './models/product-import.models';
 
 @Injectable({
@@ -42,6 +42,28 @@ export class ProductService {
 
   deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // POS-15: 404 when no product has this barcode
+  getProductByBarcode(barcode: string): Observable<Product> {
+    return this.http.get<Product>(`${this.apiUrl}/by-barcode/${encodeURIComponent(barcode)}`);
+  }
+
+  // CAT-10
+  getBarcodePending(): Observable<BarcodePendingProduct[]> {
+    return this.http.get<BarcodePendingProduct[]>(`${this.apiUrl}/barcode-pending`);
+  }
+
+  addBarcode(id: string, barcode: string): Observable<Product> {
+    return this.http.post<Product>(`${this.apiUrl}/${id}/barcodes`, { barcode });
+  }
+
+  markNoBarcode(id: string): Observable<Product> {
+    return this.http.put<Product>(`${this.apiUrl}/${id}/no-barcode`, null);
+  }
+
+  clearNoBarcode(id: string): Observable<Product> {
+    return this.http.delete<Product>(`${this.apiUrl}/${id}/no-barcode`);
   }
 
   // CAT-06: Revisar validates without saving; Importar validates the same file again and saves
