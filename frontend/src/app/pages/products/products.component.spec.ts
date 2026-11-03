@@ -575,6 +575,7 @@ describe('ProductsComponent', () => {
       native.querySelectorAll('tbody tr').forEach((row) => {
         expect(row.querySelector('td:last-child')?.classList).toContain('col-actions');
       });
+    });
 
     it('el filtro «En la web sin foto» deja solo lo marcado que no puede salir (CAT-13)', () => {
       component.products.set(withPhoto().map((p) => ({ ...p, webPublished: true })));
