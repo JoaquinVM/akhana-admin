@@ -239,7 +239,7 @@
             }
           </select>
           @if (shipsFromCash()) {
-            <app-cash-closed-note />
+            <app-cash-closed-note (closedChange)="shippingCashClosed.set($event)" />
           }
         </div>
       }
@@ -314,7 +314,7 @@
           <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
         }
         @if (paysFromCash()) {
-          <app-cash-closed-note />
+          <app-cash-closed-note (closedChange)="paymentCashClosed.set($event)" />
         }
       </div>
       @if (initialPaymentSource()) {
@@ -351,7 +351,7 @@
 
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" (click)="onClose()" [disabled]="isSubmitting()">Cancelar</button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || blockedByClosedCash()">
         @if (isEdit()) {
           {{ isSubmitting() ? 'Guardando…' : 'Guardar cambios' }}
         } @else {

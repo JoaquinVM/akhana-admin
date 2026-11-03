@@ -161,8 +161,10 @@ El aviso va en su propia fila, antes de los totales, y nunca bloquea. Con efecti
 - **Cuando** se edita un pedido sin cambiar el envío **entonces** no hay aviso. Si pasa de otra cuenta a Caja se compara el
   envío completo; si ya era de Caja, solo la diferencia, porque COM-12 anula el anterior.
 - La opción dice «Caja», sin «(caja abierta)», en las listas del formulario y del detalle. **Cuando** se elige y el servidor
-  responde que no hay caja abierta **entonces** debajo aparece «La caja está cerrada. Para usar Caja, ábrala primero.»; un
-  fallo de la consulta no la muestra. El rechazo al registrar sigue siendo el del servidor y no se pierde lo escrito.
+  responde que no hay caja abierta **entonces** debajo aparece «La caja está cerrada. Ábrala y vuelva a elegir Caja.» y se
+  desactiva el botón de guardar, hasta elegir otra cuenta o volver a elegir Caja con la caja ya abierta; al editar, solo si el
+  envío cambia. Un fallo de la consulta no muestra la nota ni bloquea. Si aun así llega al servidor con la caja cerrada, el
+  rechazo es el de COM-06 y no se pierde lo escrito.
 - Pruebas en `purchase-form-modal.component.spec.ts`, `purchase-detail-modal.component.spec.ts`,
   `cash-limit-warning.component.spec.ts` y `cash-closed-note.component.spec.ts`.
 

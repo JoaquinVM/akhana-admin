@@ -1044,17 +1044,75 @@ describe('PurchaseFormModalComponent', () => {
         expect(optionTexts('#purchase-shipping-account')).toContain('Caja');
       });
 
-      it('con la caja cerrada muestra la nota bajo la lista elegida y deja registrar', async () => {
+      const saveButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('.purchase-form button[type=submit]');
+      const closedCash = (): void => {
         cashService.getCurrentSession.mockReturnValue(of(null));
         cashService.currentSession.set(null);
-        component.supplierId.set('sup-1');
-        component.addProduct(tea);
+      };
+
+      it('con la caja cerrada muestra la nota bajo la lista elegida y desactiva el botón', async () => {
+        closedCash();
         await fill({ payFrom: fromCaja, pay: 10 });
         expect(fixture.nativeElement.querySelector('#purchase-initial-source').parentElement.querySelector('.cash-closed-note'))
           .not.toBeNull();
+        expect(saveButton().disabled).toBe(true);
+      });
 
-        component.submit();
-        expect(purchaseService.registerPurchase).toHaveBeenCalled();
+      it('también desactiva el botón si solo el envío sale de Caja', async () => {
+        closedCash();
+        await fill({ shipFrom: CAJA, ship: 25 });
+        expect(saveButton().disabled).toBe(true);
+      });
+
+      it('al elegir otra cuenta el botón se activa, sin perder lo escrito', async () => {
+        closedCash();
+        component.supplierId.set('sup-1');
+        component.addProduct(tea);
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(saveButton().disabled).toBe(true);
+
+        component.initialPaymentSource.set('account:' + BISA);
+        await render();
+        expect(saveButton().disabled).toBe(false);
+        expect(component.lines().length).toBe(1);
+        expect(component.initialPaymentAmount()).toBe(10);
+      });
+
+      it('al volver a elegir Caja consulta otra vez y, con la caja ya abierta, activa el botón', async () => {
+        closedCash();
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(saveButton().disabled).toBe(true);
+
+        cashService.getCurrentSession.mockReturnValue(of({ id: 's1', expectedCash: 300 }));
+        await fill({ payFrom: 'account:' + BISA, pay: 10 });
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(note()).toBeNull();
+        expect(saveButton().disabled).toBe(false);
+      });
+
+      it('si falla la consulta no bloquea', async () => {
+        cashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(saveButton().disabled).toBe(false);
+      });
+
+      it('al editar, un envío de Caja sin cambios no bloquea', async () => {
+        closedCash();
+        fixture.componentRef.setInput('accounts', accounts);
+        fixture.componentRef.setInput('isOpen', false);
+        fixture.componentRef.setInput('purchase', {
+          id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', purchaseDate: '2026-10-20', consignment: false,
+          comment: null, deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE', deliveryDate: null, items: [], paidAmount: 0,
+          shippingAccountName: 'Caja', shippingCost: 25, shippingAccountId: CAJA
+        } as unknown as Purchase);
+        fixture.detectChanges();
+        fixture.componentRef.setInput('isOpen', true);
+        await render();
+        expect(saveButton().disabled).toBe(false);
+
+        component.shippingCost.set(30);
+        await render();
+        expect(saveButton().disabled).toBe(true);
       });
 
       it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', async () => {

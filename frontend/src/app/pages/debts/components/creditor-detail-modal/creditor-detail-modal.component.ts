@@ -44,6 +44,8 @@ export class CreditorDetailModalComponent {
 
   repaymentAccountId = signal<string>('');
   repaysFromCash = computed(() => !!this.accounts().find((a) => a.id === this.repaymentAccountId())?.cashAccount);
+  // What the note learned from the server; only counts while Caja is chosen
+  cashClosed = signal<boolean>(false);
   repaymentAmount = signal<number | null>(null);
   repaymentComment = signal<string>('');
   repaymentConcept = signal<CreditorRepaymentConcept>('PURCHASE');

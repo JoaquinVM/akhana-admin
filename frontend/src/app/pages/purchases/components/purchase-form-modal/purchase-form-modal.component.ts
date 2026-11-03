@@ -179,6 +179,11 @@ export class PurchaseFormModalComponent {
   shipsFromCash = computed(() => this.needsShippingAccount() && this.isCashAccount(this.shippingAccountId())
     && (!this.isEdit() || this.shippingChanged()));
   leavesCash = computed(() => this.paysFromCash() || this.shipsFromCash());
+  // What each list's note learned from the server; only counts while that list is on Caja
+  paymentCashClosed = signal<boolean>(false);
+  shippingCashClosed = signal<boolean>(false);
+  blockedByClosedCash = computed(() => (this.paysFromCash() && this.paymentCashClosed())
+    || (this.shipsFromCash() && this.shippingCashClosed()));
   private cashPayment = computed(() => this.paysFromCash() ? Number(this.initialPaymentValue()) || 0 : 0);
   // COM-12 voids the shipping it replaces: if that one was from Caja, only the difference leaves
   private cashShipping = computed(() => {

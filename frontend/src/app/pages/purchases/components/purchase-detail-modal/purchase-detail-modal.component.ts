@@ -123,6 +123,8 @@ export class PurchaseDetailModalComponent {
   // A payment made by a person moves no money: the note goes on the account movement
   paysFromAccount = computed(() => this.paymentSource().startsWith('account:'));
   paysFromCash = computed(() => !!this.accounts().find((a) => 'account:' + a.id === this.paymentSource())?.cashAccount);
+  // What the note learned from the server; only counts while Caja is chosen
+  cashClosed = signal<boolean>(false);
 
   sourceName(payment: PurchasePayment): string {
     return paymentSourceName(payment);

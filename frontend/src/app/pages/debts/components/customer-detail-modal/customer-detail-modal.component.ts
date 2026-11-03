@@ -54,6 +54,8 @@ export class CustomerDetailModalComponent {
   // DEU-06: collections go only into Caja (with an open session) or the QR account
   collectionAccounts = computed(() => this.accounts().filter(a => a.cashAccount || a.qrAccount));
   collectsToCash = computed(() => !!this.accounts().find(a => a.id === this.collectionAccountId())?.cashAccount);
+  // What the note learned from the server; only counts while Caja is chosen
+  cashClosed = signal<boolean>(false);
 
   voidMessage = computed(() => {
     const target = this.voidTarget();

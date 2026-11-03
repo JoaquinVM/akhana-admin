@@ -174,6 +174,7 @@ describe('PurchaseDetailModalComponent', () => {
 
   describe('CAJ-03: Caja sin «(caja abierta)»', () => {
     const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
+    const saveButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('#payment-account').closest('form').querySelector('button[type=submit]');
     const choose = (value: string): void => {
       const select: HTMLSelectElement = fixture.nativeElement.querySelector('#payment-account');
       select.value = value;
@@ -196,7 +197,29 @@ describe('PurchaseDetailModalComponent', () => {
     it('con la caja cerrada muestra la nota al elegir Caja', () => {
       cashSession.mockReturnValue(of(null));
       choose('account:acc-caja');
-      expect(note()!.textContent).toContain('La caja está cerrada. Para usar Caja, ábrala primero.');
+      expect(note()!.textContent).toContain('La caja está cerrada. Ábrala y vuelva a elegir Caja.');
+      expect(saveButton().disabled).toBe(true);
+
+      choose('account:acc-efe');
+      expect(saveButton().disabled).toBe(false);
+    });
+
+    it('al volver a elegir Caja consulta otra vez y, con la caja ya abierta, activa el botón', () => {
+      cashSession.mockReturnValue(of(null));
+      choose('account:acc-caja');
+      expect(saveButton().disabled).toBe(true);
+
+      choose('');
+      cashSession.mockReturnValue(of({ id: 's1', expectedCash: 1000 }));
+      choose('account:acc-caja');
+      expect(note()).toBeNull();
+      expect(saveButton().disabled).toBe(false);
+    });
+
+    it('si falla la consulta no bloquea', () => {
+      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      choose('account:acc-caja');
+      expect(saveButton().disabled).toBe(false);
     });
 
     it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', () => {
