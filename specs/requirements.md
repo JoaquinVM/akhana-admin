@@ -23,7 +23,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
-| Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487` | `migration.md` |
+| Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Sin publicar; probar en teléfonos reales la instalación, la zona segura del iPhone y Tailscale apagado | `mobile.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y los teléfonos | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
@@ -212,7 +212,7 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 - **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04).
 - **FIN-09** Resumen con saldo por cuenta y saldo consolidado.
 - **FIN-10** Reportes (solo Administrador): ventas por día; ventas, cantidad y utilidad por proveedor y mes; movimientos por categoría y mes; totales de ventas y utilidad por mes; consumos al costo. Cada uno exportable a Excel. Detalle en `reports.md`.
-- **FIN-11** Migración histórica, una sola vez, de todos los datos de las dos planillas (ventas, movimientos, cierres de caja, pedidos con líneas, pagos y entrega, y consumos) desde su primer registro. Entran marcados «Histórico», de solo lectura, alimentan los reportes y no alteran saldos ni cajas; los saldos de hoy entran como saldo al corte (FIN-01). Cada día de Ventas es una venta histórica (P-32). Detalle en `migration.md`.
+- **FIN-11** Migración histórica, una sola vez, de todos los datos de las dos planillas (ventas, movimientos, cierres de caja, pedidos con líneas, pagos y entrega, y consumos) desde su primer registro. Entran marcados «Histórico», de solo lectura, alimentan los reportes y no alteran saldos ni cajas; los saldos de hoy entran como saldo al corte (FIN-01). Cada día de Ventas es una venta histórica (P-32). Única corrección posterior: tres ingresos de la caja #142 que eran parte de su sobrante. Detalle en `migration.md`.
 
 ### 3.9 Usuarios y permisos · V1
 

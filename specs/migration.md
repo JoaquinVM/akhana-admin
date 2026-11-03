@@ -293,6 +293,12 @@ coincidan (tarea abajo). Los pagos de pedidos nuevos sí quedan vinculados a su 
 - La hoja Conteo no tiene fechas: las cajas históricas no tienen cortes.
 - Las ventas y movimientos históricos no se vinculan a la caja histórica: la caja se guarda con los montos de la
   planilla.
+- Corrección de la caja #142 (23-10-2026, decidida por el dueño, migración `V28__cash_session_142_other_incomes.sql`):
+  faltaban tres «Otro Ingreso» de Tia Neida (Bs 161, 84 y 80) que eran parte del sobrante. Entran como movimientos
+  históricos del día; el «Sobrante» de Bs 780,40 se anula con motivo y se reemplaza por uno de Bs 455,40. La caja queda
+  con otros ingresos 904,00, esperado 7.182,50 y diferencia 455,40. Caja final, total de ingresos del día y saldos no
+  cambian. Solo se aplica si la caja y sus movimientos conservan los montos importados. Pruebas en
+  `CashSession142IncomesMigrationIntegrationTest`.
 
 ## FIN-11 · Pedidos
 
