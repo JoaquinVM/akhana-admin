@@ -1260,6 +1260,14 @@ describe('PurchaseFormModalComponent', () => {
       expect(purchaseService.registerPurchase).toHaveBeenCalledTimes(1);
     });
 
+    it('COM-21: muestra lo leído y avisa si el producto es de otro proveedor', () => {
+      const form = open(read({ lines: [readLine({ text: 'te verde' })], supplierId: 'sup-1' }));
+      expect(form.lines()[0].readText).toBe('te verde');
+      expect(form.fromOtherSupplier(form.lines()[0])).toBe(false);
+      form.onSupplierChange('sup-9');
+      expect(form.fromOtherSupplier(form.lines()[0])).toBe(true);
+    });
+
     it('CA-04: la cantidad dudosa se resalta y deja de estarlo al corregirla', () => {
       const form = open(read({ lines: [readLine({ quantity: 4, quantityDoubtful: true, quantityText: '4 a 5' })] }));
       expect(form.lines()[0].quantityDoubtful).toBe(true);

@@ -172,6 +172,12 @@
               <td data-label="Producto">
                 <span class="line-name">{{ line.product.name }}</span>
                 <span class="line-code">{{ line.product.code }}</span>
+                @if (line.readText) {
+                  <span class="line-read">Leído: «{{ line.readText }}»</span>
+                }
+                @if (fromOtherSupplier(line)) {
+                  <span class="line-flag">Este producto es de {{ line.product.supplierName }}, no del proveedor del pedido.</span>
+                }
                 @if (line.notInInvoice) {
                   <span class="line-flag">No está en la factura: quítela si no llegó.</span>
                 }

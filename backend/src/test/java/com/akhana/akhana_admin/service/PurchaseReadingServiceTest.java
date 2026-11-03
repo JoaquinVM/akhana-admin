@@ -379,6 +379,56 @@ class PurchaseReadingServiceTest {
         assertThat(line.suggestions().get(0).name()).isEqualTo("Barra de Chocolate 67 gramos 70%");
     }
 
+    private PurchaseDraftResponse.Line readLine(String text, UUID supplierId) {
+        textAnswers(purchase(null, textLine(text, "1", "1", false)));
+        return service.readText("1 " + text, supplierId, "ana").lines().get(0);
+    }
+
+    @Test
+    void aSizeThatIsNotThereIsNeverChosen() {
+        Product aceite = product("Aceite de coco 200ml", "ACE", "43.00", flora);
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(List.of(aceite));
+
+        for (String text : List.of("Aceite de coco 250ml", "Aceite de coco 20ml", "Aceite de coco 2000ml")) {
+            PurchaseDraftResponse.Line line = readLine(text, null);
+            assertThat(line.productId()).as(text).isNull();
+            assertThat(line.unitCost()).as(text).isNull();
+            assertThat(line.suggestions()).as(text).extracting(PurchaseDraftResponse.ProductSuggestion::name)
+                .containsExactly("Aceite de coco 200ml");
+        }
+    }
+
+    @Test
+    void theSameSizeIsChosenWithOrWithoutItsUnit() {
+        Product aceite = product("Aceite de coco 200ml", "ACE", "43.00", flora);
+        when(productRepository.findByStatusNotOrderByNameAsc(ProductStatus.ELIMINADO)).thenReturn(List.of(aceite));
+
+        assertThat(readLine("aceite coco 200ml", null).productId()).isEqualTo(aceite.getId());
+        assertThat(readLine("aceite coco 200", null).productId()).isEqualTo(aceite.getId());
+    }
+
+    @Test
+    void aPluralIsClearButATypoOnlySuggests() {
+        assertThat(readLine("jamaicas 130ml", null).productId()).isEqualTo(jamaica.getId());
+
+        PurchaseDraftResponse.Line typo = readLine("jamiaca 130ml", null);
+        assertThat(typo.productId()).isNull();
+        assertThat(typo.suggestions()).extracting(PurchaseDraftResponse.ProductSuggestion::name).containsExactly("Jamaica 130ml");
+    }
+
+    @Test
+    void withAKnownSupplierAProductOfAnotherIsOnlySuggested() {
+        when(supplierRepository.findById(other.getId())).thenReturn(java.util.Optional.of(other));
+
+        PurchaseDraftResponse.Line onlyMatch = readLine("jamaica 130ml", other.getId());
+        assertThat(onlyMatch.productId()).isNull();
+        assertThat(onlyMatch.unitCost()).isNull();
+        assertThat(onlyMatch.suggestions()).extracting(PurchaseDraftResponse.ProductSuggestion::name).containsExactly("Jamaica 130ml");
+
+        PurchaseDraftResponse.Line exactName = readLine("Cepillo Azul", other.getId());
+        assertThat(exactName.productId()).isNull();
+    }
+
     @Test
     void aSingleProductWithSomeOfTheWordsIsStillNotChosen() {
         textAnswers(purchase(null, textLine("jamaica morada especial", "1", "1", false)));

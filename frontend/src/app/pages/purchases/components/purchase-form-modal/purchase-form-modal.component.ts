@@ -53,6 +53,8 @@ export interface PurchaseLineDraft {
   // COM-20: what the reading says about this line, to review it
   fromReading?: boolean;
   draftKey?: string;
+  // What the reading says, to compare it with the product in the line
+  readText?: string;
   quantityDoubtful?: boolean;
   quantityText?: string | null;
   costMissing?: boolean;
@@ -388,6 +390,7 @@ export class PurchaseFormModalComponent {
       quantity: line.quantity,
       unitCost: unitCost ?? 0,
       fromReading: true,
+      readText: line.text,
       quantityDoubtful: line.quantityDoubtful,
       quantityText: line.quantityText,
       costMissing: unitCost === null,
@@ -418,6 +421,11 @@ export class PurchaseFormModalComponent {
       suggestion: null,
       draftKey: `read-${this.draftKeys++}`
     }]);
+  }
+
+  // COM-21: the person chose the supplier or changed it, and this product is another one's
+  fromOtherSupplier(line: PurchaseLineDraft): boolean {
+    return !!line.fromReading && !!this.supplierId() && !!line.product.supplierId && line.product.supplierId !== this.supplierId();
   }
 
   // CA-03: the person says which product the line is
