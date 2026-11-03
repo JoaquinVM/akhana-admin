@@ -65,6 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ProductController.class,
         ProductImportController.class,
         ProductPhotoController.class,
+        PurchasePhotoController.class,
+        PurchaseReadingController.class,
         PurchaseController.class,
         QuickProductController.class,
         ReportController.class,
@@ -170,6 +172,8 @@ class EndpointAuthorizationTest {
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private ProductPhotoService productPhotoService;
     @MockitoBean private PurchaseService purchaseService;
+    @MockitoBean private PurchasePhotoService purchasePhotoService;
+    @MockitoBean private PurchaseReadingService purchaseReadingService;
     @MockitoBean private QuickProductService quickProductService;
     @MockitoBean private DashboardService dashboardService;
     @MockitoBean private ReportService reportService;
@@ -273,6 +277,12 @@ class EndpointAuthorizationTest {
                 both(get, "/api/purchases/price-suggestion?productId=" + ID + "&newCost=12.30", null),
                 both(get, "/api/purchases/payables", null),
                 both(put, "/api/purchases/" + ID + "/delivery", PURCHASE_DELIVERY),
+                both(get, "/api/purchases/readings/status", null),
+                both(post, "/api/purchases/readings/text", "{\"text\":\"2 jamaica\"}"),
+                both(post, "/api/purchases/readings/photo", XLSX_FILE),
+                both(post, "/api/purchases/" + ID + "/photo", XLSX_FILE),
+                both(get, "/api/purchases/" + ID + "/photo/" + ID + "/image", null),
+                both(get, "/api/purchases/" + ID + "/photo/" + ID + "/thumbnail", null),
                 both(post, "/api/purchases/" + ID + "/void", VOID_PURCHASE),
                 both(post, "/api/purchases/" + ID + "/payments/" + ID + "/void", VOID_PURCHASE),
                 // Deudas con personas

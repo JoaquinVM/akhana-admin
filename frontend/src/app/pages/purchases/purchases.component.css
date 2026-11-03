@@ -158,3 +158,19 @@
   opacity: 0.6;
   transition: opacity 0.15s ease;
 }
+
+/* COM-25 */
+.reading-spend {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #6b7280);
+}
+
+/* COM-22 */
+.cost-to-confirm-badge {
+  display: block;
+  width: fit-content;
+  margin: 0.25rem 0 0 auto;
+  background: var(--warning-bg, #fff8e1);
+  color: var(--warning-text, #8a6100);
+}

@@ -42,5 +42,15 @@ public record PurchaseRequest(
     LocalDate deliveryDate,
 
     // Optional first payment, from an account or a person, saved with the purchase (COM-05, DEU-02)
-    @Valid PurchasePaymentRequest initialPayment
-) {}
+    @Valid PurchasePaymentRequest initialPayment,
+
+    // COM-20: the reading this purchase comes from, if any
+    UUID readingId
+) {
+    public PurchaseRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
+                           UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
+                           DeliveryStatus deliveryStatus, LocalDate deliveryDate, PurchasePaymentRequest initialPayment) {
+        this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
+            deliveryStatus, deliveryDate, initialPayment, null);
+    }
+}

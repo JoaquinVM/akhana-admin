@@ -1,0 +1,28 @@
+.photo-link {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.invoice-photo {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 0.375rem;
+}
+
+.photo-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.photo-button.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

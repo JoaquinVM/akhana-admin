@@ -1,0 +1,17 @@
+@if (photoId() || editable()) {
+  <h4 class="section-title">Foto de la factura</h4>
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+  @if (url(); as src) {
+    <a [href]="src" target="_blank" rel="noopener" class="photo-link">
+      <img class="invoice-photo" [src]="src" alt="Foto de la factura" />
+    </a>
+  }
+  @if (editable()) {
+    <label class="btn btn-outline btn-sm photo-button" [class.disabled]="isUploading()">
+      {{ isUploading() ? 'Guardando…' : photoId() ? 'Cambiar foto' : 'Agregar foto' }}
+      <input type="file" class="photo-input" accept="image/*" [disabled]="isUploading()" (change)="onFile($event)" />
+    </label>
+  }
+}

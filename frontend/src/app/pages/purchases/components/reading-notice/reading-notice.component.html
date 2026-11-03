@@ -1,0 +1,22 @@
+<div class="reading-notice">
+  <p class="reading-source">Leído con IA: revise antes de registrar.</p>
+  @if (draft().reviewAll) {
+    <div class="alert alert-warning" role="status"><span>Es una nota suelta: revise todas las líneas, cantidades y costos.</span></div>
+  }
+  @if (draft().supplierText && !draft().supplierId && !isEdit()) {
+    <div class="alert alert-warning" role="status"><span>La lectura dice «{{ draft().supplierText }}», que no coincide con un proveedor activo: elíjalo.</span></div>
+  }
+  @if (difference(); as diff) {
+    <div class="alert alert-warning" role="status">
+      <span>El pedido suma Bs {{ totalAmount() | number:'1.2-2' }} y la factura dice Bs {{ draft().readTotal | number:'1.2-2' }}: hay una diferencia de Bs {{ (diff < 0 ? -diff : diff) | number:'1.2-2' }}.</span>
+    </div>
+  }
+  @if (draft().paidNote && isEdit()) {
+    <div class="alert alert-warning" role="status"><span>La nota dice que está pagado. Registre el pago desde el detalle, eligiendo de dónde salió el dinero.</span></div>
+  } @else if (paidProposal()) {
+    <div class="alert alert-warning paid-proposal" role="status">
+      <span>La nota dice que está pagado. En «Pago inicial», elija la caja, la cuenta o la persona que pagó.</span>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="dismissPaid.emit()">No se pagó</button>
+    </div>
+  }
+</div>

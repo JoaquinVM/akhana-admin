@@ -6,7 +6,7 @@ import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
 import { Product } from '../../../../core/product/models/product.models';
-import { Purchase } from '../../../../core/purchase/models/purchase.models';
+import { Purchase, PurchaseDraft, PurchaseDraftLine } from '../../../../core/purchase/models/purchase.models';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { CashService } from '../../../../core/cash/cash.service';
 
@@ -1182,6 +1182,175 @@ describe('PurchaseFormModalComponent', () => {
         expect(component.lines().length).toBe(1);
         expect(component.initialPaymentSource()).toBe(fromCaja);
       });
+    });
+  });
+
+  describe('COM-20: desde una lectura', () => {
+    const readLine = (overrides: Partial<PurchaseDraftLine>): PurchaseDraftLine => ({
+      text: 'te verde', quantity: 2, quantityDoubtful: false, quantityText: '2', productId: 'p-1', suggestions: [],
+      unitCost: 10, costNote: null, ...overrides
+    });
+    const read = (overrides: Partial<PurchaseDraft>): PurchaseDraft => ({
+      readingId: 'read-1', source: 'TEXT', supplierId: 'sup-1', supplierText: null, reviewAll: false, paidNote: false,
+      lines: [readLine({})], shippingCost: null, readTotal: null, pendingPurchases: [], ...overrides
+    });
+    const toConfirm = {
+      id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', purchaseDate: '2026-11-01', consignment: false,
+      comment: null, shippingCost: 0, shippingAccountId: null, deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE',
+      deliveryDate: '2099-01-01', paidAmount: 0, costToConfirm: true,
+      items: [
+        { id: 'it-1', productId: 'p-1', productCode: 'TE-1', productName: 'Té verde', saleUnit: 'UNIT', quantity: 2, unitCost: 10 },
+        { id: 'it-2', productId: 'p-2', productCode: 'NUE-1', productName: 'Nueces', saleUnit: 'KILOGRAM', quantity: 1, unitCost: 40 }
+      ]
+    } as unknown as Purchase;
+
+    function open(draft: PurchaseDraft | null, purchase: Purchase | null = null, arrival = false): PurchaseFormModalComponent {
+      const opened = TestBed.createComponent(PurchaseFormModalComponent);
+      opened.componentRef.setInput('draft', draft);
+      opened.componentRef.setInput('purchase', purchase);
+      opened.componentRef.setInput('arrival', arrival);
+      opened.componentRef.setInput('isOpen', true);
+      opened.detectChanges();
+      return opened.componentInstance;
+    }
+
+    it('CA-01: abre lleno y no registra nada hasta su botón', () => {
+      const form = open(read({}));
+
+      expect(form.supplierId()).toBe('sup-1');
+      expect(form.lines().map(l => [l.product.id, l.quantity, l.unitCost])).toEqual([['p-1', 2, 10]]);
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+
+      form.submit();
+      expect(purchaseService.registerPurchase.mock.calls[0][0].readingId).toBe('read-1');
+    });
+
+    it('CA-08: un texto queda pendiente y su entrega no se puede cambiar', () => {
+      const form = open(read({}));
+      expect(form.deliveryStatus()).toBe('PENDIENTE');
+      expect(form.deliveryLocked()).toBe(true);
+    });
+
+    it('CA-13: una foto sin pedido pendiente queda entregada', () => {
+      const form = open(read({ source: 'PHOTO' }));
+      expect(form.deliveryStatus()).toBe('ENTREGADO');
+      expect(form.deliveryLocked()).toBe(false);
+    });
+
+    it('CA-03: una línea sin producto no se registra hasta resolverla', () => {
+      const form = open(read({ lines: [readLine({ productId: null, unitCost: null, text: 'te', suggestions: [] })] }));
+
+      expect(form.unresolvedLines().length).toBe(1);
+      form.submit();
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+      expect(form.formError()).toContain('Elija el producto');
+
+      form.resolveLine(0, tea);
+      expect(form.unresolvedLines().length).toBe(0);
+      // A text has no cost: the system's stands
+      expect(form.lines()[0].unitCost).toBe(10);
+      form.submit();
+      expect(purchaseService.registerPurchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('CA-03: quitar una línea leída también la resuelve', () => {
+      const form = open(read({ lines: [readLine({}), readLine({ productId: null, text: 'hola' })] }));
+      form.discardUnresolved(0);
+      form.submit();
+      expect(purchaseService.registerPurchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('CA-04: la cantidad dudosa se resalta y deja de estarlo al corregirla', () => {
+      const form = open(read({ lines: [readLine({ quantity: 4, quantityDoubtful: true, quantityText: '4 a 5' })] }));
+      expect(form.lines()[0].quantityDoubtful).toBe(true);
+      expect(form.lines()[0].quantityText).toBe('4 a 5');
+      form.onQuantityChange(0, 5);
+      expect(form.lines()[0].quantityDoubtful).toBe(false);
+    });
+
+    it('CA-15: un costo en blanco no se registra hasta llenarlo, y vaciarlo no lo llena', () => {
+      const form = open(read({ source: 'PHOTO', lines: [readLine({ unitCost: null, costNote: '200 ÷ 25 = 8' })] }));
+
+      expect(form.lines()[0].costMissing).toBe(true);
+      expect(form.costDiffers(form.lines()[0])).toBe(false);
+      form.submit();
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+      expect(form.formError()).toContain('Llene el costo');
+
+      form.onCostChange(0, 8);
+      form.onCostChange(0, '');
+      form.submit();
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+
+      form.onCostChange(0, 8);
+      form.submit();
+      expect(purchaseService.registerPurchase.mock.calls[0][0].items[0].unitCost).toBe(8);
+    });
+
+    it('CA-11: un costo real distinto muestra la alerta de COM-03', () => {
+      const form = open(read({ source: 'PHOTO', lines: [readLine({ unitCost: 12 })] }));
+      expect(form.costDiffers(form.lines()[0])).toBe(true);
+    });
+
+    it('CA-19: «Cancelado» pide el origen del pago, y se puede quitar la propuesta', () => {
+      const form = open(read({ source: 'PHOTO', paidNote: true }));
+
+      form.submit();
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+      expect(form.formError()).toContain('de dónde salió');
+      expect(form.buildRequest().initialPayment).toBeNull();
+
+      form.dismissPaidProposal();
+      form.submit();
+      expect(purchaseService.registerPurchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('CA-20: propone el envío con la cuenta vacía', () => {
+      const form = open(read({ source: 'PHOTO', shippingCost: 25 }));
+      expect(form.shippingCost()).toBe(25);
+      expect(form.shippingAccountId()).toBe('');
+    });
+
+    it('sin lectura el formulario sigue igual', () => {
+      const form = open(null);
+      form.addProduct(tea);
+      form.supplierId.set('sup-1');
+      expect(form.buildRequest().readingId).toBeUndefined();
+      expect(form.deliveryLocked()).toBe(false);
+    });
+
+    it('CA-09: la foto llena lo que vino sobre el pedido y señala lo que no está en la factura', () => {
+      const form = open(read({ source: 'PHOTO', lines: [readLine({ quantity: 3, unitCost: 12 })] }), toConfirm, true);
+
+      expect(form.lines().map(l => [l.itemId, l.quantity, l.unitCost, !!l.notInInvoice])).toEqual([
+        ['it-1', 3, 12, false],
+        ['it-2', 1, 40, true]
+      ]);
+      expect(form.deliveryStatus()).toBe('ENTREGADO');
+      expect(form.deliveryDate()).toBe('');
+
+      form.submit();
+      expect(purchaseService.updatePurchase).toHaveBeenCalledWith('pur-7', expect.objectContaining({
+        arrival: true, reason: 'Llegó la mercadería', readingId: 'read-1', deliveryStatus: 'ENTREGADO'
+      }));
+    });
+
+    it('CA-10: sin foto, se confirma a mano con el mismo resultado', () => {
+      const form = open(null, toConfirm, true);
+      expect(form.lines().some(l => l.notInInvoice)).toBe(false);
+
+      form.submit();
+      const request = purchaseService.updatePurchase.mock.calls[0][1];
+      expect(request.arrival).toBe(true);
+      expect(request.reason).toBe('Llegó la mercadería');
+      expect(request.readingId).toBeUndefined();
+    });
+
+    it('una edición normal no es una llegada', () => {
+      const form = open(null, toConfirm, false);
+      form.reason.set('Cambió');
+      form.submit();
+      expect(purchaseService.updatePurchase.mock.calls[0][1].arrival).toBeUndefined();
     });
   });
 });

@@ -15,7 +15,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 | ✅ Completo | — | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-25 | ✅ Completo | COM-20 a COM-25 sin publicar: falta la medición previa y la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
@@ -135,6 +135,12 @@ Detalle en `purchases.md`.
 - **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
 - **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador.
 - **COM-19** · V1 — Al registrar un pedido, elegir el origen del pago inicial llena el monto con la suma de las líneas, y la sigue mientras no se escriba otro monto. El envío se sigue pagando aparte (P-24).
+- **COM-20** · V1 — Desde el texto de WhatsApp o la foto de una factura, el servidor pide la lectura a OpenAI y abre el formulario de pedido lleno; nada se registra hasta que una persona lo confirma. La clave solo vive en el servidor; sin ella, Desde foto y Desde texto no aparecen. Mismo permiso que Compras (P-60).
+- **COM-21** · V1 — Las líneas leídas se emparejan en el servidor con el mismo buscador del POS (POS-01), sin enviar el catálogo a OpenAI. Si no es claro el producto, se elige entre las sugerencias, se busca, se crea o se quita la línea.
+- **COM-22** · V1 — Un pedido desde texto usa los costos del sistema, queda con entrega pendiente y «costo por confirmar», con su monto como estimado en Pedidos y Por pagar, hasta pulsar «Llegó la mercadería» y registrar lo que vino y sus precios reales, con foto o a mano (COM-11, COM-12). Una foto sin pedido pendiente crea un pedido entregado; con un pedido pendiente de ese proveedor, primero ofrece completarlo (P-61).
+- **COM-23** · V1 — La foto de una factura se guarda reducida con su pedido, sin metadatos, una por pedido, con copia diaria fuera del VPS (NF-08). Una foto sin registrar no se guarda.
+- **COM-24** · V1 — Se guarda con el pedido lo que leyó la IA, para compararlo con lo confirmado.
+- **COM-25** · V1 — Tope de US$10 al mes, contando también las lecturas fallidas. Al llegar, Desde foto y Desde texto se apagan hasta el mes siguiente y el formulario a mano sigue igual. El administrador ve el gasto del mes.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 
@@ -288,7 +294,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
 - **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
-- **NF-08** Las fotos se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
+- **NF-08** Las fotos, de productos y de facturas, se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
 - **NF-09** Mientras lo escrito en un campo numérico todavía no es un número, el sistema no reescribe el campo. Un separador al comienzo vale como `0.`: `,50` y `.50` son 0,50.
 - **NF-10** Si una pantalla no se puede cargar, en la app o en el navegador, el sistema lo avisa y ofrece actualizar. La persona sigue en la pantalla en que estaba, con lo que haya escrito.
 
@@ -364,6 +370,9 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-57 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
 | P-58 | ¿Los productos por kilo y las presentaciones llevan código de barras? | Por ahora no; se buscan como hoy. |
 | P-59 | ¿Se asigna un código desconocido desde la caja? | No: la caja solo avisa, y se carga desde Productos. |
+| P-60 | ¿Qué IA lee los pedidos? | OpenAI con `gpt-6.1-terra`, sin que entrene con los datos; los nombres en fotos y textos pueden salir. Lo leído siempre es un borrador. |
+| P-61 | ¿Cómo entran el texto y la foto? | Texto al pedir: pedido pendiente con costos del sistema. Foto al llegar: precios reales. Foto sin pedido: pedido entregado. Un proveedor por mensaje. |
+| P-62 | ¿Qué propone con datos dudosos? | Cantidad «4 a 5»: el menor; sin número: 1, ambas resaltadas. «Cancelado»: el pago, con origen vacío. Costo desconocido: en blanco, con el cálculo en un mensaje. |
 
 ## 6. Hoja de ruta
 
@@ -382,6 +391,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
+- [ ] COM-20: antes de publicar, correr la medición previa de `purchases.md` con los textos y las fotos que corrija Joaquín, y dejar `OPENAI_API_KEY` en el `.env` del VPS.
 - [ ] Instalar Tailscale en la PC de caja y en los teléfonos que usarán la app (`deploy.md`, `mobile.md`).
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).

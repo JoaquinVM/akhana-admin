@@ -53,6 +53,8 @@ class PurchaseServiceTest {
     @Mock private FinancialCategoryRepository financialCategoryRepository;
     @Mock private FinancialTransactionRepository financialTransactionRepository;
     @Mock private CreditorRepository creditorRepository;
+    @Mock private PurchaseReadingRepository purchaseReadingRepository;
+    @Mock private PurchasePhotoRepository purchasePhotoRepository;
 
     private PurchaseServiceImpl purchaseService;
 
@@ -70,7 +72,8 @@ class PurchaseServiceTest {
     void setUp() {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
-            financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository);
+            financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
+            purchaseReadingRepository, purchasePhotoRepository);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -1187,5 +1190,175 @@ class PurchaseServiceTest {
         assertThat(res.itemsTotal()).isEqualByComparingTo("348.00");
         assertThat(res.revisions().get(0).changes()).contains("Costo de Té verde: Bs 10,00 → Bs 12,00",
             "Producto Té verde: costo Bs 10,00 → Bs 12,00, precio Bs 15,00 → Bs 18,00");
+    }
+
+    // --- COM-22, COM-24: a purchase from a reading ---
+
+    private PurchaseReading reading(PurchaseReadingSource source) {
+        PurchaseReading reading = PurchaseReading.builder().id(UUID.randomUUID()).source(source)
+            .status(PurchaseReadingStatus.READ).model("gpt-6.1-terra").costUsd(new BigDecimal("0.001000")).build();
+        when(purchaseReadingRepository.findByIdForUpdate(reading.getId())).thenReturn(Optional.of(reading));
+        return reading;
+    }
+
+    private PurchaseRequest fromReading(PurchaseReading reading, DeliveryStatus status) {
+        return new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "2", "10.00")), null, null, false, null,
+            null, status, null, null, reading.getId());
+    }
+
+    private PurchaseUpdateRequest arrival(Purchase purchase, List<PurchaseItemRequest> items, DeliveryStatus status, UUID readingId) {
+        return new PurchaseUpdateRequest(purchase.getSupplier().getId(), purchase.getPurchaseDate(), items,
+            BigDecimal.ZERO, null, false, null, purchase.getDeliveryType(), status, null, "Llegó", true, readingId);
+    }
+
+    private Purchase toConfirm() {
+        Purchase purchase = editablePurchase("0.00");
+        purchase.setDeliveryStatus(DeliveryStatus.PENDIENTE);
+        purchase.setDeliveryDate(null);
+        purchase.setCostToConfirm(true);
+        return purchase;
+    }
+
+    @Test
+    @DisplayName("COM-22: un pedido desde texto queda pendiente, con costo por confirmar y su lectura enlazada")
+    void registerPurchase_fromTextIsPendingAndToConfirm() {
+        PurchaseReading reading = reading(PurchaseReadingSource.TEXT);
+
+        PurchaseResponse res = purchaseService.registerPurchase(fromReading(reading, null), "operator");
+
+        assertThat(res.costToConfirm()).isTrue();
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.PENDIENTE);
+        assertThat(reading.getPurchaseId()).isEqualTo(res.id());
+    }
+
+    @Test
+    @DisplayName("COM-22: un pedido desde texto no se registra como entregado")
+    void registerPurchase_fromTextCannotBeDelivered() {
+        PurchaseReading reading = reading(PurchaseReadingSource.TEXT);
+
+        assertThatThrownBy(() -> purchaseService.registerPurchase(fromReading(reading, DeliveryStatus.ENTREGADO), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage(PurchaseServiceImpl.TEXT_STAYS_PENDING);
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CA-13: un pedido desde foto queda entregado y sin costo por confirmar")
+    void registerPurchase_fromPhotoIsNotToConfirm() {
+        PurchaseReading reading = reading(PurchaseReadingSource.PHOTO);
+
+        PurchaseResponse res = purchaseService.registerPurchase(fromReading(reading, DeliveryStatus.ENTREGADO), "operator");
+
+        assertThat(res.costToConfirm()).isFalse();
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.ENTREGADO);
+        assertThat(reading.getPurchaseId()).isEqualTo(res.id());
+    }
+
+    @Test
+    @DisplayName("COM-24: una lectura fallida, ya usada o que no existe no se enlaza")
+    void registerPurchase_unusableReadings() {
+        PurchaseReading used = reading(PurchaseReadingSource.TEXT);
+        used.setPurchaseId(UUID.randomUUID());
+        PurchaseReading failed = reading(PurchaseReadingSource.TEXT);
+        failed.setStatus(PurchaseReadingStatus.FAILED);
+        PurchaseReading unknown = PurchaseReading.builder().id(UUID.randomUUID()).build();
+
+        for (PurchaseReading reading : List.of(used, failed, unknown)) {
+            assertThatThrownBy(() -> purchaseService.registerPurchase(fromReading(reading, null), "operator"))
+                .hasMessage(PurchaseServiceImpl.READING_NOT_USABLE);
+        }
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CA-09: al llegar la mercadería queda entregado, con los costos reales, sin la marca y con el motivo fijo")
+    void updatePurchase_arrivalConfirmsTheCost() {
+        Purchase purchase = toConfirm();
+        PurchaseReading reading = reading(PurchaseReadingSource.PHOTO);
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), arrival(purchase, List.of(
+            kept(nutsLine, "1.5", "40.00"), kept(teaLine, "20", "12.00")), DeliveryStatus.ENTREGADO, reading.getId()), "operator");
+
+        assertThat(res.costToConfirm()).isFalse();
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.ENTREGADO);
+        assertThat(res.deliveryDate()).isEqualTo(TODAY);
+        assertThat(res.itemsTotal()).isEqualByComparingTo("300.00");
+        assertThat(teaLine.getUnitCost()).isEqualByComparingTo("12.00");
+        assertThat(res.revisions().get(0).reason()).isEqualTo("Llegó la mercadería");
+        assertThat(res.revisions().get(0).changes()).contains("Costos confirmados", "Costo de Té verde: Bs 10,00 → Bs 12,00");
+        assertThat(reading.getPurchaseId()).isEqualTo(purchase.getId());
+    }
+
+    @Test
+    @DisplayName("CA-10: sin foto, a mano y con los mismos costos, también quita la marca")
+    void updatePurchase_arrivalByHandWithTheSameCosts() {
+        Purchase purchase = toConfirm();
+
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), arrival(purchase, List.of(
+            kept(nutsLine, "1.5", "40.00"), kept(teaLine, "24", "10.00")), DeliveryStatus.ENTREGADO, null), "operator");
+
+        assertThat(res.costToConfirm()).isFalse();
+        assertThat(res.deliveryStatus()).isEqualTo(DeliveryStatus.ENTREGADO);
+    }
+
+    @Test
+    @DisplayName("CA-10: con la entrega ya marcada, confirmar los costos es un cambio y quita la marca")
+    void updatePurchase_arrivalOfAlreadyDelivered() {
+        Purchase purchase = toConfirm();
+        purchase.setDeliveryStatus(DeliveryStatus.ENTREGADO);
+        purchase.setDeliveryDate(TODAY);
+
+        PurchaseUpdateRequest request = new PurchaseUpdateRequest(purchase.getSupplier().getId(), purchase.getPurchaseDate(),
+            List.of(kept(nutsLine, "1.5", "40.00"), kept(teaLine, "24", "10.00")), BigDecimal.ZERO, null, false, null,
+            purchase.getDeliveryType(), DeliveryStatus.ENTREGADO, TODAY, "Llegó", true, null);
+
+        assertThat(purchaseService.updatePurchase(purchase.getId(), request, "operator").costToConfirm()).isFalse();
+    }
+
+    @Test
+    @DisplayName("COM-22: una edición normal, o marcar la entrega, no quita el costo por confirmar")
+    void updatePurchase_normalEditKeepsTheMark() {
+        Purchase purchase = toConfirm();
+
+        PurchaseResponse edited = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40.00"), kept(teaLine, "20", "12.00")), "0", null, "Cambió el pedido"), "operator");
+        assertThat(edited.costToConfirm()).isTrue();
+
+        PurchaseResponse delivered = purchaseService.updateDelivery(purchase.getId(),
+            new PurchaseDeliveryRequest(DeliveryType.EN_TIENDA, DeliveryStatus.ENTREGADO, null), "operator");
+        assertThat(delivered.costToConfirm()).isTrue();
+    }
+
+    @Test
+    @DisplayName("CA-11: al llegar sigue valiendo COM-12: el total no queda menor a lo pagado")
+    void updatePurchase_arrivalRespectsPayments() {
+        Purchase purchase = toConfirm();
+        purchase.setPaidAmount(new BigDecimal("300.00"));
+
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), arrival(purchase, List.of(
+            kept(nutsLine, "1.5", "40.00"), kept(teaLine, "24", "5.00")), DeliveryStatus.ENTREGADO, null), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("anule primero el pago");
+        assertThat(purchase.getCostToConfirm()).isTrue();
+    }
+
+    @Test
+    @DisplayName("COM-22: la llegada exige entregado y una lectura de foto; una edición normal no lleva lectura")
+    void updatePurchase_arrivalRejections() {
+        Purchase purchase = toConfirm();
+        List<PurchaseItemRequest> items = List.of(kept(nutsLine, "1.5", "40.00"), kept(teaLine, "24", "10.00"));
+        PurchaseReading text = reading(PurchaseReadingSource.TEXT);
+
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            arrival(purchase, items, DeliveryStatus.PENDIENTE, null), "operator"))
+            .hasMessage(PurchaseServiceImpl.ARRIVAL_NOT_DELIVERED);
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
+            arrival(purchase, items, DeliveryStatus.ENTREGADO, text.getId()), "operator"))
+            .hasMessage(PurchaseServiceImpl.ARRIVAL_READING_NOT_PHOTO);
+        PurchaseUpdateRequest normalWithReading = new PurchaseUpdateRequest(purchase.getSupplier().getId(), purchase.getPurchaseDate(),
+            items, BigDecimal.ZERO, null, false, null, purchase.getDeliveryType(), DeliveryStatus.PENDIENTE, null, "Otro", false, text.getId());
+        assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), normalWithReading, "operator"))
+            .hasMessage(PurchaseServiceImpl.READING_ONLY_ON_ARRIVAL);
+        assertThat(purchase.getCostToConfirm()).isTrue();
     }
 }

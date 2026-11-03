@@ -49,26 +49,35 @@ public record PurchaseResponse(
     // COM-12: edits, the most recent first
     List<PurchaseRevisionResponse> revisions,
     // FIN-11: migrated from the spreadsheet; it only accepts new payments
-    boolean historical
+    boolean historical,
+    // COM-22: its costs are the system's until the real ones are registered, and its amount is an estimate
+    boolean costToConfirm,
+    // COM-23: the active invoice photo; only in the detail
+    UUID photoId
 ) {
     public static PurchaseResponse summary(Purchase purchase) {
-        return of(purchase, null, List.of(), List.of(), List.of());
+        return of(purchase, null, List.of(), List.of(), List.of(), null);
     }
 
     public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount) {
+        return detail(purchase, shippingAccount, null);
+    }
+
+    public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount, UUID photoId) {
         return of(
             purchase,
             shippingAccount,
             // Lines removed while editing are only in the revisions (COM-11)
             purchase.getItems().stream().filter(item -> !item.isRemoved()).map(PurchaseItemResponse::fromEntity).toList(),
             purchase.getPayments().stream().map(PurchasePaymentResponse::fromEntity).toList(),
-            purchase.getRevisions().stream().map(PurchaseRevisionResponse::fromEntity).toList()
+            purchase.getRevisions().stream().map(PurchaseRevisionResponse::fromEntity).toList(),
+            photoId
         );
     }
 
     private static PurchaseResponse of(Purchase purchase, FinancialAccount shippingAccount,
                                        List<PurchaseItemResponse> items, List<PurchasePaymentResponse> payments,
-                                       List<PurchaseRevisionResponse> revisions) {
+                                       List<PurchaseRevisionResponse> revisions, UUID photoId) {
         return new PurchaseResponse(
             purchase.getId(),
             purchase.getPurchaseNumber(),
@@ -99,7 +108,9 @@ public record PurchaseResponse(
             items,
             payments,
             revisions,
-            purchase.isHistorical()
+            purchase.isHistorical(),
+            Boolean.TRUE.equals(purchase.getCostToConfirm()),
+            photoId
         );
     }
 }
