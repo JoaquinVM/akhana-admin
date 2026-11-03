@@ -102,7 +102,8 @@ export class PurchaseFormModalComponent {
   deliveryDate = signal<string>('');
   // Optional first payment (COM-05, DEU-02): 'account:<id>' or 'creditor:<id>'; empty, no payment
   initialPaymentSource = signal<string>('');
-  initialPaymentAmount = signal<number | null>(null);
+  // COM-19: what was typed in the amount, null if it was emptied; undefined until someone types, and the lines total applies
+  initialPaymentAmount = signal<number | null | undefined>(undefined);
   lines = signal<PurchaseLineDraft[]>([]);
   // COM-11: every edit needs a reason
   reason = signal<string>('');
@@ -137,6 +138,19 @@ export class PurchaseFormModalComponent {
 
   itemsTotal = computed(() => round2(this.lines().reduce((sum, line) => sum + this.lineSubtotal(line), 0)));
   totalAmount = computed(() => round2(this.itemsTotal() + (Number(this.shippingCost()) || 0)));
+  // COM-19: the amount shown and sent: the typed one or, until someone types, the lines total (shipping is paid apart)
+  initialPaymentValue = computed<number | null>(() => {
+    const typed = this.initialPaymentAmount();
+    if (typed !== undefined) {
+      return typed;
+    }
+    return this.itemsTotal() > 0 ? this.itemsTotal() : null;
+  });
+  // The lines total reads 300.00 in the field; a typed amount stays as it was written
+  initialPaymentInput = computed<number | string | null>(() => {
+    const value = this.initialPaymentValue();
+    return this.initialPaymentAmount() === undefined && value !== null ? value.toFixed(2) : value;
+  });
   needsShippingAccount = computed(() => (Number(this.shippingCost()) || 0) > 0);
 
   isEdit = computed(() => this.purchase() !== null);
@@ -180,7 +194,7 @@ export class PurchaseFormModalComponent {
     this.deliveryStatus.set('PENDIENTE');
     this.deliveryDate.set('');
     this.initialPaymentSource.set('');
-    this.initialPaymentAmount.set(null);
+    this.initialPaymentAmount.set(undefined);
     this.lines.set([]);
     this.reason.set('');
     this.productSearch.set('');
@@ -203,7 +217,7 @@ export class PurchaseFormModalComponent {
     this.deliveryStatus.set(purchase.deliveryStatus);
     this.deliveryDate.set(purchase.deliveryDate ?? '');
     this.initialPaymentSource.set('');
-    this.initialPaymentAmount.set(null);
+    this.initialPaymentAmount.set(undefined);
     this.lines.set(purchase.items.map(item => ({
       product: {
         id: item.productId,
@@ -252,8 +266,19 @@ export class PurchaseFormModalComponent {
     return product.saleUnit === 'KILOGRAM';
   }
 
+  // COM-19: in whole numbers, so half a cent rounds up as on the server (scale 2 HALF_UP): 0.015 kg × 137.00 is 2.06
   lineSubtotal(line: PurchaseLineDraft): number {
-    return round2((Number(line.quantity) || 0) * (Number(line.unitCost) || 0));
+    const thousandths = Math.round((Number(line.quantity) || 0) * 1000);
+    const cents = Math.round((Number(line.unitCost) || 0) * 100);
+    return Math.floor((thousandths * cents + 500) / 1000) / 100;
+  }
+
+  // COM-19: going back to no payment forgets the typed amount; another source keeps it
+  onInitialSourceChange(source: string): void {
+    this.initialPaymentSource.set(source);
+    if (!source) {
+      this.initialPaymentAmount.set(undefined);
+    }
   }
 
   // COM-13: reference only; null while the catalog loads or if the product left it (deleted)
@@ -480,7 +505,7 @@ export class PurchaseFormModalComponent {
     if (!source) {
       return null;
     }
-    return { ...paymentSourceFields(source), amount: round2(Number(this.initialPaymentAmount()) || 0), notes: null };
+    return { ...paymentSourceFields(source), amount: round2(Number(this.initialPaymentValue()) || 0), notes: null };
   }
 
   submit(): void {
@@ -492,7 +517,7 @@ export class PurchaseFormModalComponent {
       this.formError.set('El pedido debe tener al menos una línea.');
       return;
     }
-    if (this.initialPaymentSource() && !(Number(this.initialPaymentAmount()) > 0)) {
+    if (this.initialPaymentSource() && !(Number(this.initialPaymentValue()) > 0)) {
       this.formError.set('Ingrese el monto del pago inicial.');
       return;
     }
