@@ -189,9 +189,6 @@
                         Especial · {{ product.specialType === 'THIRD_PARTY' ? 'de ' + product.ownerCreditorName : 'sin identificar' }}
                       </span>
                     }
-                    @if (product.description) {
-                      <span class="product-description">{{ product.description }}</span>
-                    }
                     @if (product.tags && product.tags.length > 0) {
                       <div class="tags-cell-container">
                         @for (t of product.tags; track t.id) {
