@@ -12,8 +12,8 @@ FROM eclipse-temurin:21-jre
 RUN useradd --system --uid 10001 --no-create-home akhana
 WORKDIR /app
 COPY --from=build /src/app.jar app.jar
-# A new named volume inherits this owner (product photos, CAT-12)
-RUN mkdir -p /data/product-photos && chown akhana:akhana /data/product-photos
+# A new named volume inherits this owner (product photos, CAT-12; public catalog, CAT-13)
+RUN mkdir -p /data/product-photos /data/web-catalog && chown akhana:akhana /data/product-photos /data/web-catalog
 USER akhana
 EXPOSE 8080
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=60"

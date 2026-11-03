@@ -71,7 +71,7 @@ fi
 log "Timers de respaldo, prueba de restauración y despliegue continuo"
 install -m 644 "$DEPLOY_DIR"/systemd/akhana-*.service "$DEPLOY_DIR"/systemd/akhana-*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now akhana-backup.timer akhana-restore-check.timer akhana-deploy.timer
+systemctl enable --now akhana-backup.timer akhana-restore-check.timer akhana-deploy.timer akhana-web-catalog.timer
 systemctl list-timers 'akhana-*' --no-pager
 
 cat <<'NEXT'

@@ -25,6 +25,8 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
+import { ProductWebHistoryComponent } from './product-web-history/product-web-history.component';
+import { ProductWebSectionComponent } from './product-web-section/product-web-section.component';
 import { ProductPhotoSectionComponent } from './product-photo-section/product-photo-section.component';
 import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-thumb.component';
 import { ProductBarcodesSectionComponent } from './product-barcodes-section/product-barcodes-section.component';
@@ -68,6 +70,8 @@ export const PRODUCTS_PAGE_SIZE = 100;
     ProductPhotoSectionComponent,
     ProductPhotoThumbComponent,
     ProductBarcodesSectionComponent,
+    ProductWebSectionComponent,
+    ProductWebHistoryComponent,
     RouterLink
   ],
   templateUrl: './products.component.html',
@@ -97,6 +101,8 @@ export class ProductsComponent implements OnInit {
   selectedStatusFilter = signal<ProductStatusFilter>('ACTIVE_INACTIVE');
   // CAT-12: combined with the status filter and the search
   onlyWithoutPhoto = signal<boolean>(false);
+  // CAT-13: marked for the web, but without the photo it needs to go out
+  onlyWebWithoutPhoto = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -139,6 +145,7 @@ export class ProductsComponent implements OnInit {
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
+  auditProductId = signal<string | null>(null);
 
   productForm: FormGroup = this.fb.group({
     code: ['', [Validators.required, Validators.maxLength(50)]],
@@ -209,6 +216,10 @@ export class ProductsComponent implements OnInit {
 
     if (this.onlyWithoutPhoto()) {
       list = list.filter(p => !p.photoId);
+    }
+
+    if (this.onlyWebWithoutPhoto()) {
+      list = list.filter(p => p.webPublished && !p.photoId);
     }
 
     // A search orders by relevance; without one, by name A-Z
@@ -663,6 +674,16 @@ export class ProductsComponent implements OnInit {
     this.products.update(list => list.map(p => (p.id === change.productId ? { ...p, photoId: change.photoId } : p)));
   }
 
+  // CAT-13: the product open in the form, whose mark saves on its own
+  selectedProduct = computed<Product | null>(() => {
+    const id = this.selectedProductId();
+    return this.products().find(p => p.id === id) ?? null;
+  });
+
+  onWebPublicationChange(change: Product): void {
+    this.products.update(list => list.map(p => (p.id === change.id ? { ...p, webPublished: change.webPublished } : p)));
+  }
+
   attemptCloseForm(): void {
     if (this.isSubmitting()) return;
 
@@ -863,6 +884,7 @@ export class ProductsComponent implements OnInit {
 
   openAuditModal(product: Product): void {
     this.auditModalSubtitle.set(`${product.code} - ${product.name}`);
+    this.auditProductId.set(product.id);
     this.selectedAuditData.set({
       createdBy: product.createdBy,
       createdAt: product.createdAt,

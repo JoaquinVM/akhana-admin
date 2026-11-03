@@ -168,6 +168,7 @@ describe('ProductsComponent', () => {
   beforeEach(async () => {
     mockProductService = {
       getProducts: vi.fn().mockReturnValue(of(mockProducts)),
+      getWebPublicationHistory: vi.fn().mockReturnValue(of([])),
       getProductById: vi.fn(),
       createProduct: vi.fn(),
       updateProduct: vi.fn(),
@@ -505,6 +506,16 @@ describe('ProductsComponent', () => {
     expect(component.products().find(p => p.id === 'prod-1')).toBeUndefined();
   });
 
+  it('la auditoría muestra el historial del catálogo web del producto (CAT-13)', () => {
+    component.openAuditModal(mockProducts[0]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-audit-modal app-product-web-history')).not.toBeNull();
+
+    component.closeAuditModal();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-product-web-history')).toBeNull();
+  });
+
   it('debe abrir el modal de auditoría con los datos del producto', () => {
     component.openAuditModal(mockProducts[0]);
 
@@ -575,6 +586,36 @@ describe('ProductsComponent', () => {
       native.querySelectorAll('tbody tr').forEach((row) => {
         expect(row.querySelector('td:last-child')?.classList).toContain('col-actions');
       });
+    });
+
+    it('el filtro «En la web sin foto» deja solo lo marcado que no puede salir (CAT-13)', () => {
+      component.products.set(withPhoto().map((p) => ({ ...p, webPublished: true })));
+      component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+      fixture.detectChanges();
+
+      const pill = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('.filter-pill'))
+        .find((button) => button.textContent?.includes('En la web sin foto'))!;
+      pill.click();
+      fixture.detectChanges();
+      expect(component.filteredProducts().map((p) => p.id)).toEqual(['prod-2']);
+
+      component.products.update((list) => list.map((p) => ({ ...p, webPublished: false })));
+      expect(component.filteredProducts()).toEqual([]);
+    });
+
+    it('la marca del catálogo web se ve solo al editar y actualiza el listado (CAT-13)', () => {
+      component.products.set(withPhoto());
+      component.openCreateModal();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-product-web-section')).toBeNull();
+      component.closeFormModal();
+
+      component.openEditModal(component.products()[0]);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-product-web-section')).not.toBeNull();
+
+      component.onWebPublicationChange({ ...component.products()[0], webPublished: true });
+      expect(component.products()[0].webPublished).toBe(true);
     });
 
     it('cada fila muestra su miniatura o «Sin foto»', () => {

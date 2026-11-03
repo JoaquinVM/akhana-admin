@@ -73,6 +73,8 @@ export interface Product {
   // CAT-10: active barcodes, and whether it is marked «No trae»
   barcodes?: string[];
   noBarcode?: boolean;
+  // CAT-13
+  webPublished?: boolean;
 }
 
 // CAT-10: a row of «Cargar códigos», most sold first
@@ -122,4 +124,11 @@ export function activePresentations(product: Product): ProductPresentation[] {
 export function presentationPrice(presentation: ProductPresentation, product: Product, atCost: boolean): number {
   if (atCost) return Math.round(presentation.weightKg * product.buyPrice * 100) / 100;
   return presentation.price;
+}
+
+// CAT-13
+export interface ProductWebPublicationChange {
+  published: boolean;
+  changedBy: string;
+  changedAt: string;
 }

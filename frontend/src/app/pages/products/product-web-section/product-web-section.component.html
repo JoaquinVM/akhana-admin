@@ -1,0 +1,22 @@
+<div class="form-group web-section">
+  <span class="form-label">Catálogo web</span>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <label class="web-section-check">
+    <input type="checkbox" [checked]="published()" [disabled]="isBusy()" (change)="toggle($event)" />
+    Publicar en la web
+  </label>
+
+  @if (published() && !hasPhoto()) {
+    <span class="text-muted-sm">Falta la foto: no se verá en la web hasta cargarla.</span>
+  } @else if (published() && !active()) {
+    <span class="text-muted-sm">Está inactivo: no se verá en la web hasta activarlo.</span>
+  } @else if (published()) {
+    <span class="text-muted-sm">Se verá en la web en menos de 15 minutos.</span>
+  } @else {
+    <span class="text-muted-sm">Sale en la web solo si está activo y tiene foto.</span>
+  }
+</div>

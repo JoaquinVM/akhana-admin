@@ -37,6 +37,15 @@ photos_dir() {
     fi
 }
 
+# Public copy of the catalog (CAT-13): the Docker volume, or WEB_CATALOG_SOURCE in local tests
+web_catalog_dir() {
+    if [[ -n ${WEB_CATALOG_SOURCE:-} ]]; then
+        echo "$WEB_CATALOG_SOURCE"
+    else
+        docker volume inspect --format '{{ .Mountpoint }}' "${COMPOSE_PROJECT}_web_catalog"
+    fi
+}
+
 compose() {
     docker compose -p "$COMPOSE_PROJECT" -f "$DEPLOY_DIR/docker-compose.prod.yml" --env-file "$ENV_FILE" "$@"
 }

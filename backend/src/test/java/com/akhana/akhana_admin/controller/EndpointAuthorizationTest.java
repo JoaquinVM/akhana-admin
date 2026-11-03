@@ -65,6 +65,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ProductController.class,
         ProductImportController.class,
         ProductPhotoController.class,
+        ProductWebPublicationController.class,
         PurchasePhotoController.class,
         PurchaseReadingController.class,
         PurchaseController.class,
@@ -171,6 +172,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private ProductPhotoService productPhotoService;
+    @MockitoBean private ProductWebPublicationService productWebPublicationService;
     @MockitoBean private PurchaseService purchaseService;
     @MockitoBean private PurchasePhotoService purchasePhotoService;
     @MockitoBean private PurchaseReadingService purchaseReadingService;
@@ -236,6 +238,10 @@ class EndpointAuthorizationTest {
                 both(post, "/api/products/" + ID + "/barcodes", "{\"barcode\":\"7791234567898\"}"),
                 both(put, "/api/products/" + ID + "/no-barcode", null),
                 both(delete, "/api/products/" + ID + "/no-barcode", null),
+                // Marca para el catálogo web con el permiso de la pantalla (CAT-13, P-33)
+                both(put, "/api/products/" + ID + "/web-publication", null),
+                both(delete, "/api/products/" + ID + "/web-publication", null),
+                both(get, "/api/products/" + ID + "/web-publication/history", null),
                 // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
                 both(post, "/api/products/import/preview", XLSX_FILE),
                 both(post, "/api/products/import", XLSX_FILE),

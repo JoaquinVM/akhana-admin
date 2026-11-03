@@ -47,6 +47,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Optional<Product> findFirstByOwnerCreditorIdAndStatusNot(UUID ownerCreditorId, ProductStatus status);
 
     // CAT-06: every code, deleted ones included, so the import never reuses one
+    // WEB-01: the photo is checked afterwards; presentations are batch-loaded (CAT-11)
+    @Query("SELECT p FROM Product p JOIN FETCH p.category " +
+           "WHERE p.webPublished = true AND p.status = :status AND p.specialType IS NULL " +
+           "ORDER BY p.name ASC")
+    List<Product> findWebPublishable(@Param("status") ProductStatus status);
+
     @Query("SELECT p.code FROM Product p")
     List<String> findAllCodes();
 

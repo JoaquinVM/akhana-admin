@@ -108,6 +108,11 @@ public class Product {
     @Column(name = "no_barcode_marked_at")
     private Instant noBarcodeMarkedAt;
 
+    // CAT-13: marked for the public catalog; who and when are in ProductWebPublicationChange
+    @Column(name = "web_published", nullable = false)
+    @Builder.Default
+    private boolean webPublished = false;
+
     // Audit fields
     @Column(name = "created_by", nullable = false, length = 100, updatable = false)
     private String createdBy;

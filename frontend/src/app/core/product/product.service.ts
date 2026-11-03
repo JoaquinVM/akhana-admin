@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { BarcodePendingProduct, Product, ProductRequest, ProductStatus } from './models/product.models';
+import { BarcodePendingProduct, Product, ProductRequest, ProductStatus, ProductWebPublicationChange } from './models/product.models';
 import { ProductImportResult } from './models/product-import.models';
 
 @Injectable({
@@ -64,6 +64,19 @@ export class ProductService {
 
   clearNoBarcode(id: string): Observable<Product> {
     return this.http.delete<Product>(`${this.apiUrl}/${id}/no-barcode`);
+  }
+
+  // CAT-13
+  markForWeb(id: string): Observable<Product> {
+    return this.http.put<Product>(`${this.apiUrl}/${id}/web-publication`, null);
+  }
+
+  unmarkForWeb(id: string): Observable<Product> {
+    return this.http.delete<Product>(`${this.apiUrl}/${id}/web-publication`);
+  }
+
+  getWebPublicationHistory(id: string): Observable<ProductWebPublicationChange[]> {
+    return this.http.get<ProductWebPublicationChange[]>(`${this.apiUrl}/${id}/web-publication/history`);
   }
 
   // CAT-06: Revisar validates without saving; Importar validates the same file again and saves
