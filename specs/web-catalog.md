@@ -9,6 +9,8 @@ reglas WEB-03 a WEB-09. Aquí está lo que Admin le entrega y cómo llega, sin a
   se guarda solo, como la foto. Al crear un producto no aparece.
 - **Cuando** se marca o se desmarca **entonces** queda una fila con quién y cuándo, generados por el servidor (RG-02).
   Repetir el mismo estado no agrega nada.
+- **Cuando** se abre la auditoría del producto **entonces** la sección «Catálogo web» lista cada cambio con quién y cuándo,
+  del más reciente al más antiguo, o «Nunca se marcó para la web.».
 - **Cuando** el producto es especial (POS-11, POS-13) o está eliminado **entonces** «Un producto especial no se publica en
   la web.» o «Un producto eliminado no se publica en la web.». Un especial no muestra la casilla.
 - **Cuando** el producto está marcado sin foto o inactivo **entonces** la casilla dice por qué todavía no sale.

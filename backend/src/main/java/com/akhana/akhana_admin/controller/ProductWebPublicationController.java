@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.controller;
 
 import com.akhana.akhana_admin.dto.ProductResponse;
+import com.akhana.akhana_admin.dto.ProductWebPublicationChangeResponse;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.ProductWebPublicationService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 // CAT-13: the Products screen permission (P-33)
@@ -28,6 +30,11 @@ public class ProductWebPublicationController {
     @DeleteMapping
     public ResponseEntity<ProductResponse> unmark(@PathVariable UUID id, Authentication authentication) {
         return ResponseEntity.ok(publicationService.unmark(id, username(authentication)));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<ProductWebPublicationChangeResponse>> history(@PathVariable UUID id) {
+        return ResponseEntity.ok(publicationService.history(id));
     }
 
     private String username(Authentication authentication) {

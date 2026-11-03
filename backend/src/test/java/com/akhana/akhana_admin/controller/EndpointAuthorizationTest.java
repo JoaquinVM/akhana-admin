@@ -241,6 +241,7 @@ class EndpointAuthorizationTest {
                 // Marca para el catálogo web con el permiso de la pantalla (CAT-13, P-33)
                 both(put, "/api/products/" + ID + "/web-publication", null),
                 both(delete, "/api/products/" + ID + "/web-publication", null),
+                both(get, "/api/products/" + ID + "/web-publication/history", null),
                 // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
                 both(post, "/api/products/import/preview", XLSX_FILE),
                 both(post, "/api/products/import", XLSX_FILE),

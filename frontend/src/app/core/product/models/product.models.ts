@@ -125,3 +125,10 @@ export function presentationPrice(presentation: ProductPresentation, product: Pr
   if (atCost) return Math.round(presentation.weightKg * product.buyPrice * 100) / 100;
   return presentation.price;
 }
+
+// CAT-13
+export interface ProductWebPublicationChange {
+  published: boolean;
+  changedBy: string;
+  changedAt: string;
+}

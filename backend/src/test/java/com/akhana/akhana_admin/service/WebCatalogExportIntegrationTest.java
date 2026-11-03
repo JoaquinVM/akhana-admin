@@ -1,9 +1,8 @@
 package com.akhana.akhana_admin.service;
 
 import com.akhana.akhana_admin.dto.ProductResponse;
+import com.akhana.akhana_admin.dto.ProductWebPublicationChangeResponse;
 import com.akhana.akhana_admin.model.ProductStatus;
-import com.akhana.akhana_admin.model.ProductWebPublicationChange;
-import com.akhana.akhana_admin.repository.ProductWebPublicationChangeRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,7 +54,6 @@ class WebCatalogExportIntegrationTest {
     @Autowired private ProductWebPublicationService publicationService;
     @Autowired private ProductPhotoService photoService;
     @Autowired private ProductService productService;
-    @Autowired private ProductWebPublicationChangeRepository changeRepository;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbc;
 
@@ -278,13 +276,13 @@ class WebCatalogExportIntegrationTest {
 
         assertThat(marked.webPublished()).isTrue();
         assertThat(unmarked.webPublished()).isFalse();
-        List<ProductWebPublicationChange> changes = changeRepository.findByProductIdOrderByChangedAtAsc(id);
+        List<ProductWebPublicationChangeResponse> changes = publicationService.history(id);
         assertThat(changes).hasSize(2);
-        assertThat(changes.get(0).isPublished()).isTrue();
-        assertThat(changes.get(0).getChangedBy()).isEqualTo("ana");
-        assertThat(changes.get(0).getChangedAt()).isNotNull();
-        assertThat(changes.get(1).isPublished()).isFalse();
-        assertThat(changes.get(1).getChangedBy()).isEqualTo("beto");
+        assertThat(changes.get(0).published()).isFalse();
+        assertThat(changes.get(0).changedBy()).isEqualTo("beto");
+        assertThat(changes.get(1).published()).isTrue();
+        assertThat(changes.get(1).changedBy()).isEqualTo("ana");
+        assertThat(changes.get(1).changedAt()).isNotNull();
     }
 
     @Test

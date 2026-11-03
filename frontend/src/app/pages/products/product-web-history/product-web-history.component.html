@@ -1,0 +1,19 @@
+<section class="web-history">
+  <h4>Catálogo web</h4>
+  @if (isLoading()) {
+    <p class="text-muted-sm">Cargando...</p>
+  } @else if (hasFailed()) {
+    <p class="text-muted-sm">No se pudo cargar el historial del catálogo web.</p>
+  } @else if (changes().length === 0) {
+    <p class="text-muted-sm">Nunca se marcó para la web.</p>
+  } @else {
+    <ul>
+      @for (change of changes(); track change.changedAt) {
+        <li>
+          <span class="web-history-action">{{ change.published ? 'Marcado para la web' : 'Desmarcado de la web' }}</span>
+          <span>{{ change.changedBy }} · {{ change.changedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

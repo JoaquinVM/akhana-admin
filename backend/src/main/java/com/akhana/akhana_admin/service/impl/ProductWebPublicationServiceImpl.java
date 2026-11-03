@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.dto.ProductResponse;
+import com.akhana.akhana_admin.dto.ProductWebPublicationChangeResponse;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.Product;
 import com.akhana.akhana_admin.model.ProductStatus;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 // CAT-13: marking is not publishing; the export also asks for an active product with a photo (WEB-01)
@@ -42,6 +44,14 @@ public class ProductWebPublicationServiceImpl implements ProductWebPublicationSe
     @Override
     public ProductResponse unmark(UUID productId, String username) {
         return change(findProduct(productId), false, username);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductWebPublicationChangeResponse> history(UUID productId) {
+        return changeRepository.findByProductIdOrderByChangedAtDesc(productId).stream()
+            .map(ProductWebPublicationChangeResponse::fromEntity)
+            .toList();
     }
 
     private Product findProduct(UUID productId) {

@@ -851,5 +851,9 @@
     [subtitle]="auditModalSubtitle()"
     [data]="selectedAuditData()"
     (close)="closeAuditModal()">
+    <!-- Who marked it for the web, loaded only when the audit opens (CAT-13) -->
+    @if (isAuditModalOpen() && auditProductId(); as productId) {
+      <app-product-web-history [productId]="productId" />
+    }
   </app-audit-modal>
 </div>

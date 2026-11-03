@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface ProductWebPublicationChangeRepository extends JpaRepository<ProductWebPublicationChange, UUID> {
 
-    List<ProductWebPublicationChange> findByProductIdOrderByChangedAtAsc(UUID productId);
+    List<ProductWebPublicationChange> findByProductIdOrderByChangedAtDesc(UUID productId);
 }

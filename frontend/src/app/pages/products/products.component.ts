@@ -25,6 +25,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ProductImportModalComponent } from './product-import-modal/product-import-modal.component';
+import { ProductWebHistoryComponent } from './product-web-history/product-web-history.component';
 import { ProductWebSectionComponent } from './product-web-section/product-web-section.component';
 import { ProductPhotoSectionComponent } from './product-photo-section/product-photo-section.component';
 import { ProductPhotoThumbComponent } from './product-photo-thumb/product-photo-thumb.component';
@@ -70,6 +71,7 @@ export const PRODUCTS_PAGE_SIZE = 100;
     ProductPhotoThumbComponent,
     ProductBarcodesSectionComponent,
     ProductWebSectionComponent,
+    ProductWebHistoryComponent,
     RouterLink
   ],
   templateUrl: './products.component.html',
@@ -143,6 +145,7 @@ export class ProductsComponent implements OnInit {
   isAuditModalOpen = signal<boolean>(false);
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
+  auditProductId = signal<string | null>(null);
 
   productForm: FormGroup = this.fb.group({
     code: ['', [Validators.required, Validators.maxLength(50)]],
@@ -881,6 +884,7 @@ export class ProductsComponent implements OnInit {
 
   openAuditModal(product: Product): void {
     this.auditModalSubtitle.set(`${product.code} - ${product.name}`);
+    this.auditProductId.set(product.id);
     this.selectedAuditData.set({
       createdBy: product.createdBy,
       createdAt: product.createdAt,

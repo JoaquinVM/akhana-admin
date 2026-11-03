@@ -168,6 +168,7 @@ describe('ProductsComponent', () => {
   beforeEach(async () => {
     mockProductService = {
       getProducts: vi.fn().mockReturnValue(of(mockProducts)),
+      getWebPublicationHistory: vi.fn().mockReturnValue(of([])),
       getProductById: vi.fn(),
       createProduct: vi.fn(),
       updateProduct: vi.fn(),
@@ -503,6 +504,16 @@ describe('ProductsComponent', () => {
     expect(mockProductService.deleteProduct).toHaveBeenCalledWith('prod-1');
     expect(component.isConfirmDeleteOpen()).toBe(false);
     expect(component.products().find(p => p.id === 'prod-1')).toBeUndefined();
+  });
+
+  it('la auditoría muestra el historial del catálogo web del producto (CAT-13)', () => {
+    component.openAuditModal(mockProducts[0]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-audit-modal app-product-web-history')).not.toBeNull();
+
+    component.closeAuditModal();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-product-web-history')).toBeNull();
   });
 
   it('debe abrir el modal de auditoría con los datos del producto', () => {
