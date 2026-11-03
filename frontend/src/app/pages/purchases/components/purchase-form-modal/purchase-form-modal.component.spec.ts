@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { PurchaseFormModalComponent, round2 } from './purchase-form-modal.component';
+import { PurchaseFormModalComponent, PurchaseLineDraft, round2 } from './purchase-form-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
@@ -521,6 +521,258 @@ describe('PurchaseFormModalComponent', () => {
       expect(el.querySelector('app-quantity-stepper .qty-input')).not.toBeNull();
       expect(el.querySelector('.lines-table input.input-number')!.classList).toContain('no-spinner');
       expect(steppers()[0].nextElementSibling!.classList).toContain('unit-hint');
+    });
+  });
+
+  describe('COM-19: el monto del pago inicial viene con la suma de las líneas', () => {
+    const amountInput = (): HTMLInputElement => fixture.nativeElement.querySelector('#purchase-initial-amount');
+    const hint = (): string => amountInput().parentElement!.querySelector('.form-hint')!.textContent!.trim();
+
+    const render = async (): Promise<void> => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    const type = async (value: string): Promise<void> => {
+      const input = amountInput();
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      await render();
+    };
+
+    // Lines of Bs 300.00 and shipping of Bs 25.00
+    const orderOf300 = (): void => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.updateLine(0, { quantity: 30 });
+      component.shippingCost.set(25);
+      component.shippingAccountId.set('acc-2');
+    };
+
+    it('al elegir el origen viene lleno con la suma de las líneas, sin el envío, y se envía eso', async () => {
+      orderOf300();
+      await render();
+      expect(amountInput()).toBeNull();
+
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      expect(amountInput().value).toBe('300.00');
+      expect(component.buildRequest().initialPayment).toEqual({ accountId: 'acc-1', creditorId: null, amount: 300, notes: null });
+      expect(component.buildRequest().shippingCost).toBe(25);
+    });
+
+    it('sin origen no se envía pago', async () => {
+      orderOf300();
+      await render();
+      expect(component.buildRequest().initialPayment).toBeNull();
+    });
+
+    it('si paga una persona viene igual y se envía con la persona', async () => {
+      orderOf300();
+      component.onInitialSourceChange('creditor:cre-1');
+      await render();
+
+      expect(amountInput().value).toBe('300.00');
+      expect(component.buildRequest().initialPayment).toEqual({ accountId: null, creditorId: 'cre-1', amount: 300, notes: null });
+    });
+
+    it('sin tocarlo sigue a las líneas y no al envío', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      component.addProduct(nuts);
+      component.updateLine(1, { quantity: 0.5 });
+      await render();
+      expect(amountInput().value).toBe('320.00');
+
+      component.incrementQuantity(0);
+      await render();
+      expect(amountInput().value).toBe('330.00');
+
+      component.onCostChange(0, 20);
+      await render();
+      expect(amountInput().value).toBe('640.00');
+
+      component.removeLine(1);
+      await render();
+      expect(amountInput().value).toBe('620.00');
+      expect(component.buildRequest().initialPayment?.amount).toBe(620);
+
+      component.shippingCost.set(90);
+      await render();
+      expect(amountInput().value).toBe('620.00');
+    });
+
+    it('sin líneas o con líneas en 0 queda vacío, nunca 0.00, y registrar pide el monto', async () => {
+      component.supplierId.set('sup-1');
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+      expect(amountInput().value).toBe('');
+
+      component.addProduct(tea);
+      component.onCostChange(0, 0);
+      await render();
+      expect(amountInput().value).toBe('');
+
+      component.submit();
+      expect(component.formError()).toBe('Ingrese el monto del pago inicial.');
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+
+      component.onCostChange(0, 10);
+      await render();
+      expect(amountInput().value).toBe('10.00');
+    });
+
+    it('al entrar al campo selecciona el contenido, y entrar sin escribir no cambia nada', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+      const select = vi.spyOn(amountInput(), 'select');
+
+      amountInput().dispatchEvent(new Event('focus'));
+      amountInput().dispatchEvent(new Event('blur'));
+      await render();
+      expect(select).toHaveBeenCalled();
+
+      component.incrementQuantity(0);
+      await render();
+      expect(amountInput().value).toBe('310.00');
+    });
+
+    it('lo escrito no cambia solo y la nota sigue con el total al día', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      await type('100');
+      component.incrementQuantity(0);
+      await render();
+
+      expect(amountInput().value).toBe('100');
+      expect(component.buildRequest().initialPayment?.amount).toBe(100);
+      expect(hint()).toContain('310.00');
+    });
+
+    it('un monto escrito igual al total tampoco sigue a las líneas', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      await type('300');
+      component.incrementQuantity(0);
+      await render();
+
+      expect(component.buildRequest().initialPayment?.amount).toBe(300);
+    });
+
+    it('vaciado queda vacío y registrar pide el monto', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      await type('');
+      component.incrementQuantity(0);
+      await render();
+
+      expect(amountInput().value).toBe('');
+      component.submit();
+      expect(component.formError()).toBe('Ingrese el monto del pago inicial.');
+      expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+    });
+
+    it('otro origen conserva el monto; volver a «Sin pago» lo olvida y viene lleno de nuevo', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+      await type('100');
+
+      component.onInitialSourceChange('creditor:cre-1');
+      await render();
+      expect(amountInput().value).toBe('100');
+
+      component.onInitialSourceChange('');
+      await render();
+      expect(amountInput()).toBeNull();
+
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+      expect(amountInput().value).toBe('300.00');
+    });
+
+    it('al volver a abrir no queda el monto escrito antes', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+      await type('100');
+
+      fixture.componentRef.setInput('isOpen', false);
+      await render();
+      fixture.componentRef.setInput('isOpen', true);
+      await render();
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      expect(amountInput().value).toBe('300.00');
+    });
+
+    it('si el servidor rechaza, se ve su mensaje y el formulario conserva todo', async () => {
+      const message = 'Los movimientos de la cuenta Caja requieren una caja abierta.';
+      purchaseService.registerPurchase.mockReturnValue(throwError(() => ({ error: { message } })));
+      orderOf300();
+      component.onInitialSourceChange('account:caja');
+      await render();
+
+      component.submit();
+      await render();
+
+      expect(component.formError()).toBe(message);
+      expect(component.lines().length).toBe(1);
+      expect(amountInput().value).toBe('300.00');
+    });
+
+    it('registrar sin tocarlo envía la suma', async () => {
+      orderOf300();
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      component.submit();
+
+      expect(purchaseService.registerPurchase.mock.calls[0][0].initialPayment.amount).toBe(300);
+    });
+
+    it.each([
+      [0.015, 137, 2.06],
+      [0.022, 112.5, 2.48],
+      [0.025, 170.6, 4.27],
+      [0.036, 138.75, 5],
+      [1.5, 40, 60]
+    ])('%s kg × Bs %s da Bs %s, igual que el servidor', async (quantity, unitCost, expected) => {
+      component.supplierId.set('sup-1');
+      component.addProduct(nuts);
+      component.updateLine(0, { quantity, unitCost });
+      component.onInitialSourceChange('account:acc-1');
+      await render();
+
+      expect(component.lineSubtotal(component.lines()[0])).toBe(expected);
+      expect(component.itemsTotal()).toBe(expected);
+      expect(component.buildRequest().initialPayment?.amount).toBe(expected);
+    });
+
+    it('el subtotal es el del redondeo HALF_UP exacto en cantidades con 3 decimales y costos con 2', () => {
+      const line = { product: nuts } as PurchaseLineDraft;
+      for (let thousandths = 1; thousandths <= 5000; thousandths += 1) {
+        for (let cents = 1; cents <= 20000; cents += 97) {
+          const exact = Number((BigInt(thousandths) * BigInt(cents) + 500n) / 1000n) / 100;
+          const subtotal = component.lineSubtotal({ ...line, quantity: thousandths / 1000, unitCost: cents / 100 });
+          if (subtotal !== exact) {
+            throw new Error(`${thousandths / 1000} × ${cents / 100}: ${subtotal} en vez de ${exact}`);
+          }
+        }
+      }
     });
   });
 

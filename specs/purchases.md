@@ -1,7 +1,7 @@
 # Compras (pedidos)
 
 Detalle del módulo Compras de la V1 (sección 3.3 de `specs/requirements.md`), con los mismos IDs.
-Alcance: COM-01 a COM-09, COM-11 a COM-14. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
+Alcance: COM-01 a COM-09, COM-11 a COM-14, COM-19. El pago hecho por una persona (origen «persona» de COM-05, que nace con DEU-01/DEU-02)
 queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
@@ -302,6 +302,28 @@ del POS. Producto por unidad: Té verde. Producto por kilo: Nueces.
   de «Producto nuevo» y el precio «Otro» de la alerta de costo las conservan. La unidad (u o kg) va al lado del control,
   en la misma línea. Pruebas en
   `purchase-form-modal.component.spec.ts` y `quantity-stepper.component.spec.ts`.
+
+## COM-19 · Monto del pago inicial
+
+Solo en el alta (editar no tiene pago inicial, COM-11, y el detalle ya propone el saldo). Pedido de ejemplo: líneas por
+Bs 300,00 y envío de Bs 25,00, que se sigue pagando aparte (P-24).
+
+- **Cuando** se elige una cuenta o una persona **entonces** el monto viene lleno con `300.00`.
+- **Cuando** se registra sin tocar el monto **entonces** se envían Bs 300,00 y el pedido queda Pagado.
+- **Cuando** el monto no se tocó y se agrega una línea de Bs 20,00 **entonces** pasa a `320.00`. Lo mismo al cambiar una
+  cantidad o un costo y al quitar una línea. Si cambia el envío, no cambia.
+- **Cuando** se elige el origen antes de agregar líneas, o las líneas suman 0 **entonces** el monto queda vacío, nunca
+  `0.00`, y registrar sin monto da «Ingrese el monto del pago inicial.»
+- **Cuando** se entra al campo **entonces** su contenido queda seleccionado: escribir `100` lo reemplaza.
+- **Cuando** se escribió un monto **entonces** ya no cambia solo, aunque cambien las líneas; la nota de debajo sigue con el
+  total al día. Si supera el total, el servidor lo rechaza (COM-05) y no se guarda nada.
+- **Cuando** se vacía el campo **entonces** queda vacío y registrar pide el monto.
+- **Cuando** se cambia de origen **entonces** el monto no cambia. **Cuando** se vuelve a «Sin pago por ahora» y se elige otra
+  vez un origen **entonces** viene lleno de nuevo con la suma.
+- **Cuando** una línea tiene 0,015 kg a Bs 137,00 **entonces** el subtotal, el total y el monto dicen Bs 2,06, como el
+  servidor (`BigDecimal` `HALF_UP`): la pantalla calculaba con decimales de JavaScript y podía quedar un centavo abajo.
+
+Pruebas en `purchase-form-modal.component.spec.ts`.
 
 ## Día de los pagos (CAJ-11)
 

@@ -14,8 +14,8 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
-| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | CAT-12 sin desplegar: probar con una foto real con GPS y revisar la regla de ciclo de vida del bucket de B2 | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14 | ✅ Completo | — | `purchases.md` |
+| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 | ✅ Completo | — | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
@@ -134,6 +134,7 @@ Detalle en `purchases.md`.
 - **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
 - **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
 - **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador.
+- **COM-19** · V1 — Al registrar un pedido, elegir el origen del pago inicial llena el monto con la suma de las líneas, y la sigue mientras no se escriba otro monto. El envío se sigue pagando aparte (P-24).
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 

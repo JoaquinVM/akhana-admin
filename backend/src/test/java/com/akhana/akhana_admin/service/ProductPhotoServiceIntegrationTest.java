@@ -193,9 +193,10 @@ class ProductPhotoServiceIntegrationTest {
             start.await();
             return photoService.upload(productId, content, null, "ana");
         };
-        ExecutorService pool = Executors.newFixedThreadPool(4);
+        // As many as the processor admits: a further one is rejected before it can conflict (ProductPhotoProcessorTest)
+        ExecutorService pool = Executors.newFixedThreadPool(3);
         List<Future<UUID>> futures = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             futures.add(pool.submit(upload));
         }
         start.countDown();
@@ -214,7 +215,7 @@ class ProductPhotoServiceIntegrationTest {
         pool.shutdown();
 
         assertThat(saved).isEqualTo(1);
-        assertThat(conflicts).isEqualTo(3);
+        assertThat(conflicts).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM product_photos WHERE product_id = ? AND active", Long.class, productId)).isEqualTo(1);
         assertThat(fileCount()).isEqualTo(filesBefore + 2);
     }
