@@ -402,7 +402,7 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
 - [x] COM-13: precio de venta en el buscador y en la tabla de `purchase-form-modal`, solo frontend.
 - [x] COM-20 a COM-25: lectura desde foto o texto. Migración `V29__purchase_readings.sql`, `PurchaseReadingService`,
   `OpenAiPurchaseReader`, `ProductTextMatcher`, `PurchasePhotoService`; pantalla en `purchase-reading-modal`,
-  `reading-lines-panel`, `reading-notice` y `purchase-photo-panel`. Falta la medición previa.
+  `reading-lines-panel`, `reading-notice` y `purchase-photo-panel`.
 
 ## COM-20 a COM-25 · Pedido desde foto o texto
 
@@ -461,7 +461,7 @@ antes de correrla. Si algo no cumple, se le presenta antes de publicar.
 | Producto correcto entre las sugerencias | Esos textos y las 22 fotos, contra el catálogo real | ≥ 80 % de líneas |
 | Cantidades, costos y totales en fotos | Las 17 fotos medidas de la prueba 012 | Al menos 67 de 69 líneas y 17 de 17 totales |
 | Reglas nuevas | Marcas de repetido, importe visible | Se informa cada caso |
-| Tiempo: borrador corregido contra tipeado | 3 pedidos reales, incluida la nota de pan | Más rápido en al menos 2 de 3 |
+| Tiempo: borrador corregido contra tipeado | Uso real | Joaquín decidió no cronometrarlo; se mira en la métrica a 30 días |
 
 Resultado con textos, sobre el catálogo de la base local (847 productos), con la instrucción sin cambios y el proveedor elegido
 antes de leer en los tres mensajes que no lo nombran. Fotos y tiempo siguen sin medir.
@@ -478,3 +478,12 @@ antes de leer en los tres mensajes que no lo nombran. Fotos y tiempo siguen sin 
 - Producto correcto entre las sugerencias: 51 de 51, según el criterio del agente; falta que Joaquín lo confirme. Con el buscador
   solo y sin elegir proveedor había dado 38 de 51 (75 %).
 - Ningún producto elegido solo fue incorrecto.
+
+Resultado con fotos: las 22 de la prueba 012, reducidas como en producción, con la instrucción sin cambios.
+
+- Cantidad y costo: 68 de 69 líneas en las 17 fotos medidas. La distinta es Maracuyá, con 42 escrito y 43 por el importe.
+- Totales 17 de 17 y envíos 17 de 17.
+- De las 80 líneas: 25 con producto elegido solo, 53 con sugerencias y 2 sin ninguna.
+- Producto correcto: unas 60 de 80 solo en fotos, y 111 de 131 (85 %) con los textos, según el criterio del agente. Faltan por confirmar
+  los 51 de texto y las 80 de foto. El proveedor no coincidió en 15 de las 22 fotos, y entonces sus productos no salen primero.
+- Gasto: unos US$0,005 por foto. Dos llamadas fallaron por red, con el mensaje correcto, y la tercera leyó bien.
