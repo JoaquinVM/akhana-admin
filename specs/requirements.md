@@ -19,7 +19,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
-| POS y ventas | POS-01 a POS-15 | ✅ Completo | — | `sales.md` |
+| POS y ventas | POS-01 a POS-15 | ✅ Completo | — | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |

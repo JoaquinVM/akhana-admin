@@ -51,11 +51,13 @@ Vale para la pantalla de venta (`/pos/sale`) con la caja abierta.
 Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de códigos.
 
 - **Cuando** se escanea o se escribe un código **entonces** queda en la lista del producto sin guardarse. Se guarda solo con
-  el botón, viendo el nombre y el precio del producto: el Enter del lector no guarda ni cierra nada.
+  el botón, viendo el nombre y el precio del producto: el Enter del lector no guarda ni cierra nada. En el formulario, la
+  sección de códigos es la última, después de Descripción, por pedido de Joaquín: un escaneo la lleva a la vista, y mientras
+  haya un código sin guardar el encabezado fijo muestra el nombre y el precio.
 - **Cuando** el código no tiene 8, 12 o 13 dígitos, o su dígito de control no coincide **entonces** «El código de barras
   no es válido.»
 - **Cuando** el código ya está en otro producto activo o inactivo **entonces** «El código ya es de <producto>
-  (<código>).» y no se guarda.
+  (<código>).» y no se guarda. Un mismo código nunca queda en dos productos.
 - **Cuando** se quiere guardar un sexto código **entonces** «Un producto admite hasta 5 códigos de barras.»
 - **Cuando** el producto se vende por kilo o es especial **entonces** el formulario no ofrece códigos y el servidor
   rechaza: «Este producto no admite código de barras.» Un escaneo en ese formulario muestra ese aviso, sin escribir en ningún campo ni guardar.
@@ -90,7 +92,7 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
   valor inicial, por confirmar con el lector real.
 - **Lector:** tiene que funcionar como teclado USB y terminar cada lectura con Enter.
 - **Ventana abierta:** se detecta con `[aria-modal="true"]`, que tienen todas las ventanas de la app.
-- **Catálogo cargado:** un código movido o un producto inactivado en otra PC sigue resolviendo como antes hasta recargar el catálogo, y eso pasa al volver a entrar a la venta.
+- **Catálogo cargado:** un código movido o un producto inactivado en otra PC sigue resolviendo como antes hasta recargar el catálogo, y eso pasa al volver a entrar a la venta. Joaquín lo aceptó: «Aceptarlo así».
 - **Fuera de la venta y de Productos:** en Compras y Consumos el lector escribe como un teclado.
 - **Datos:** migración `V27__product_barcodes.sql`. UPC-A se guarda con 13 dígitos. La validación y la forma canónica viven
   en el servidor (`BarcodeFormat`).

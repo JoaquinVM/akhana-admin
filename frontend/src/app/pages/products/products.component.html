@@ -321,7 +321,7 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar producto' : 'Nuevo producto'"
-    [subtitle]="isEditing() ? 'Modifica los datos del producto seleccionado' : 'Ingresa la información comercial y características del nuevo producto'"
+    [subtitle]="formSubtitle()"
     [closeOnBackdrop]="false"
     size="lg"
     (close)="attemptCloseForm()">

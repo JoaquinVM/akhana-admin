@@ -326,6 +326,19 @@ export class ProductsComponent implements OnInit {
     JSON.stringify(this.barcodes()) !== JSON.stringify(this.originalBarcodes())
   );
 
+  // CAT-10: the section is the last of the form, so the fixed header says which product the code is being saved on
+  formSubtitle = computed<string>(() => {
+    this.formVersion();
+    const name = (this.productForm.get('name')?.value ?? '').toString().trim();
+    if (this.barcodesModified() && name) {
+      const price = this.productForm.get('sellPrice')?.value;
+      return price === null || price === undefined || price === '' ? name : `${name} · Bs ${Number(price).toFixed(2)}`;
+    }
+    return this.isEditing()
+      ? 'Modifica los datos del producto seleccionado'
+      : 'Ingresa la información comercial y características del nuevo producto';
+  });
+
   // CAT-10: a product by kilo with codes still shows them, so they can be removed before saving it as kilo
   showBarcodes = computed<boolean>(() => {
     this.formVersion();
@@ -358,6 +371,7 @@ export class ProductsComponent implements OnInit {
     if (!this.barcodes().includes(barcode)) {
       this.barcodes.update((list) => [...list, barcode]);
     }
+    setTimeout(() => this.document.querySelector('.barcodes-section')?.scrollIntoView({ block: 'nearest' }));
   }
 
   clearNoBarcodeMark(): void {

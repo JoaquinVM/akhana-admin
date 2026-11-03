@@ -640,6 +640,27 @@ describe('ProductsComponent', () => {
       return last;
     };
 
+    beforeEach(() => {
+      Element.prototype.scrollIntoView = vi.fn();
+    });
+
+    it('un código sin guardar pone nombre y precio en el encabezado y lleva a la vista la sección', async () => {
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      fixture.detectChanges();
+      const generic = component.formSubtitle();
+      const { name, sellPrice } = component.productForm.value;
+
+      scan(EAN);
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(generic).not.toContain(name);
+      expect(component.formSubtitle()).toBe(`${name} · Bs ${Number(sellPrice).toFixed(2)}`);
+      expect(document.querySelector('.modal-subtitle')?.textContent).toContain(name);
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    });
+
     it('un escaneo va a la lista y su Enter no envía el formulario', () => {
       component.openEditModal({ ...mockProducts[0], barcodes: [] });
       TestBed.tick();
