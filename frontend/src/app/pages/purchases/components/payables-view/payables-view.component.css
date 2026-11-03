@@ -60,6 +60,6 @@
   display: block;
   width: fit-content;
   margin-top: 0.25rem;
-  background: var(--warning-bg, #fff8e1);
-  color: var(--warning-text, #8a6100);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }

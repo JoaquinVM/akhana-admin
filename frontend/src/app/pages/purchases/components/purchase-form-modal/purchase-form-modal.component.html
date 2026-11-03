@@ -31,7 +31,7 @@
         <label class="form-label" for="purchase-supplier">Proveedor <span class="required-mark">*</span></label>
         <app-search-select inputId="purchase-supplier" name="supplierId" placeholder="Seleccione…"
                            [options]="supplierOptions()"
-                           [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event ?? '')" />
+                           [ngModel]="supplierId()" (ngModelChange)="onSupplierChange($event ?? '')" />
       </div>
       <div class="form-group">
         <label class="form-label" for="purchase-date">Fecha del pedido</label>
@@ -47,6 +47,18 @@
         <span class="form-hint">Queda por pagar hasta registrar el pago.</span>
       </div>
     </div>
+
+    @if (pendingOffer().length > 0) {
+      <div class="alert alert-warning pending-offer" role="alert">
+        <span>Este proveedor tiene pedidos con la entrega pendiente. ¿Esta factura completa uno?</span>
+        @for (pending of pendingOffer(); track pending.id) {
+          <button type="button" class="btn btn-outline btn-sm" (click)="completePending.emit(pending.id)">
+            Completar {{ pending.purchaseNumber }} · Bs {{ pending.itemsTotal | number:'1.2-2' }}{{ pending.costToConfirm ? ' (estimado)' : '' }}
+          </button>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="declinePending()">No, es un pedido nuevo</button>
+      </div>
+    }
 
     <!-- Product search to add lines -->
     <div class="lines-header">

@@ -277,6 +277,7 @@ class EndpointAuthorizationTest {
                 both(get, "/api/purchases/price-suggestion?productId=" + ID + "&newCost=12.30", null),
                 both(get, "/api/purchases/payables", null),
                 both(put, "/api/purchases/" + ID + "/delivery", PURCHASE_DELIVERY),
+                both(get, "/api/purchases/pending-delivery?supplierId=" + ID, null),
                 both(get, "/api/purchases/readings/status", null),
                 both(post, "/api/purchases/readings/text", "{\"text\":\"2 jamaica\"}"),
                 both(post, "/api/purchases/readings/photo", XLSX_FILE),

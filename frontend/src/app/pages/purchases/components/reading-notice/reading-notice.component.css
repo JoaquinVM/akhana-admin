@@ -14,3 +14,11 @@
 .paid-proposal {
   flex-wrap: wrap;
 }
+
+.alert-warning {
+  display: flex;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}

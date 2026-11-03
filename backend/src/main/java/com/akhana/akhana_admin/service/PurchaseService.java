@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.PayablesResponse;
 import com.akhana.akhana_admin.dto.PaymentAccountResponse;
 import com.akhana.akhana_admin.dto.PriceSuggestionResponse;
 import com.akhana.akhana_admin.dto.PurchaseDeliveryRequest;
+import com.akhana.akhana_admin.dto.PurchaseDraftResponse;
 import com.akhana.akhana_admin.dto.PurchasePaymentRequest;
 import com.akhana.akhana_admin.dto.PurchaseRequest;
 import com.akhana.akhana_admin.dto.PurchaseResponse;
@@ -23,6 +24,9 @@ public interface PurchaseService {
                                         DeliveryStatus deliveryStatus, String search);
 
     PayablesResponse getPayables(UUID supplierId);
+
+    // CA-12: purchases of this supplier still waiting for delivery, which an invoice photo may complete
+    List<PurchaseDraftResponse.PendingPurchase> getPendingDelivery(UUID supplierId);
 
     PurchaseResponse getPurchaseById(UUID id);
 

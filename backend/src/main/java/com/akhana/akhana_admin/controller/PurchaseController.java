@@ -41,6 +41,11 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.getPayables(supplierId));
     }
 
+    @GetMapping("/pending-delivery")
+    public ResponseEntity<List<PurchaseDraftResponse.PendingPurchase>> getPendingDelivery(@RequestParam UUID supplierId) {
+        return ResponseEntity.ok(purchaseService.getPendingDelivery(supplierId));
+    }
+
     @GetMapping("/payment-accounts")
     public ResponseEntity<List<PaymentAccountResponse>> getPaymentAccounts() {
         return ResponseEntity.ok(purchaseService.getPaymentAccounts());

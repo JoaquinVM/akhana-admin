@@ -269,14 +269,14 @@ app-quantity-stepper {
 
 /* COM-20: what the reading asks to review */
 .line-doubtful {
-  background: var(--warning-bg, #fff8e1);
+  background: var(--color-warning-bg);
 }
 
 .line-flag {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.75rem;
-  color: var(--warning-text, #8a6100);
+  color: var(--color-warning);
   text-align: left;
 }
 
@@ -326,4 +326,17 @@ app-quantity-stepper {
     color: var(--text-muted, #6b7280);
     text-align: left;
   }
+}
+
+/* CA-12 */
+.pending-offer {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pending-offer .btn {
+  height: auto;
+  white-space: normal;
+  text-align: left;
 }

@@ -422,7 +422,7 @@ precios reales con foto o a mano. Una compra sin texto entra por foto como pedid
 | CA-09 | En un pedido por confirmar se pulsa «Llegó la mercadería, con foto» | La foto llena cantidades y costos sobre ese pedido; lo que no está en la factura queda señalado, no se quita solo. Al confirmar se edita (COM-11) con motivo «Llegó la mercadería», queda entregado y sin la marca |
 | CA-10 | Se pulsa «Llegó la mercadería, a mano» | Se editan a mano, con el mismo resultado. Una edición normal o cambiar solo la entrega no quitan la marca |
 | CA-11 | Un costo real difiere del registrado | Aparece la alerta y el precio sugerido de COM-03; los pagos respetan COM-12 |
-| CA-12 | Se usa Desde foto y hay un pedido pendiente de ese proveedor | Primero ofrece completarlo; si no, sigue como pedido nuevo |
+| CA-12 | Se usa Desde foto y hay un pedido pendiente de ese proveedor | Primero ofrece completarlo; si no, sigue como pedido nuevo. Si el proveedor leído no coincide y se elige a mano, el formulario hace la misma pregunta y no registra hasta responderla |
 | CA-13 | Foto sin pedido pendiente | Pedido nuevo con entrega entregado y los costos de la factura |
 | CA-14 | La foto no trae costo por unidad, pero sí el importe | Costo = importe ÷ cantidad, HALF_UP, con un mensaje del cálculo |
 | CA-15 | No se puede saber el costo | Queda en blanco con el mensaje del cálculo; no se registra hasta llenarlo |

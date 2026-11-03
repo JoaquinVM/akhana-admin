@@ -186,6 +186,17 @@ describe('PurchasesComponent', () => {
       expect(component.formDraft()).toEqual(draft);
     });
 
+    it('CA-12: desde el formulario, completar un pedido pendiente conserva la lectura y la foto', () => {
+      component.onDraftRead({ draft, file, completePurchaseId: null });
+      component.onCompletePending('pur-1');
+
+      expect(component.editPurchase()).toEqual(purchase);
+      expect(component.formArrival()).toBe(true);
+      expect(component.formDraft()).toEqual(draft);
+      component.onPurchaseSaved(purchase);
+      expect(readingService.uploadPhoto).toHaveBeenCalledWith('pur-1', file);
+    });
+
     it('CA-09: la llegada con foto lee sobre ese pedido; a mano abre el formulario sin lectura', () => {
       component.onArrived({ purchase, withPhoto: true });
       expect(component.readingMode()).toBe('PHOTO');
