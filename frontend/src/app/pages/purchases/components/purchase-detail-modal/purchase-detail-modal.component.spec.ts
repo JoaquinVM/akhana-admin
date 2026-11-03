@@ -1,7 +1,9 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { PurchaseDetailModalComponent } from './purchase-detail-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
+import { CashService } from '../../../../core/cash/cash.service';
 import { Purchase, PurchasePayment } from '../../../../core/purchase/models/purchase.models';
 
 const basePurchase: Purchase = {
@@ -22,7 +24,11 @@ describe('PurchaseDetailModalComponent', () => {
   let fixture: ComponentFixture<PurchaseDetailModalComponent>;
   let purchaseService: any;
 
+  const cashSession = vi.fn();
+
   beforeEach(async () => {
+    cashSession.mockReset();
+    cashSession.mockReturnValue(of({ id: 's1', expectedCash: 1000 }));
     purchaseService = {
       getPurchaseById: vi.fn().mockReturnValue(of(basePurchase)),
       registerPayment: vi.fn().mockReturnValue(of({ ...basePurchase, paidAmount: 100, balance: 200, paymentStatus: 'A_CUENTA' })),
@@ -32,7 +38,10 @@ describe('PurchaseDetailModalComponent', () => {
     };
     await TestBed.configureTestingModule({
       imports: [PurchaseDetailModalComponent],
-      providers: [{ provide: PurchaseService, useValue: purchaseService }]
+      providers: [
+        { provide: PurchaseService, useValue: purchaseService },
+        { provide: CashService, useValue: { currentSession: signal<any>(null), getCurrentSession: cashSession } }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PurchaseDetailModalComponent);
@@ -161,5 +170,48 @@ describe('PurchaseDetailModalComponent', () => {
       .find(b => b.textContent?.includes('Editar pedido')) as HTMLButtonElement;
     button.click();
     expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 'pur-1' }));
+  });
+
+  describe('CAJ-03: Caja sin «(caja abierta)»', () => {
+    const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
+    const choose = (value: string): void => {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('#payment-account');
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('accounts', [{ id: 'acc-caja', name: 'Caja', color: '#000', cashAccount: true, qrAccount: false }, { id: 'acc-efe', name: 'Bisa', color: '#000', cashAccount: false, qrAccount: false }]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('la opción no dice «(caja abierta)»', () => {
+      const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#payment-account option')).map(o => o.textContent!.trim());
+      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa']);
+    });
+
+    it('con la caja cerrada muestra la nota al elegir Caja', () => {
+      cashSession.mockReturnValue(of(null));
+      choose('account:acc-caja');
+      expect(note()!.textContent).toContain('La caja está cerrada. Para usar Caja, ábrala primero.');
+    });
+
+    it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', () => {
+      choose('account:acc-caja');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(of(null));
+      choose('account:acc-efe');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      choose('account:acc-caja');
+      expect(note()).toBeNull();
+    });
   });
 });

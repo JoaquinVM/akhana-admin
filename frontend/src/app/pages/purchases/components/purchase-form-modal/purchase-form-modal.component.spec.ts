@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
 import { PurchaseFormModalComponent, PurchaseLineDraft, round2 } from './purchase-form-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
@@ -7,6 +8,7 @@ import { CategoryService } from '../../../../core/category/category.service';
 import { Product } from '../../../../core/product/models/product.models';
 import { Purchase } from '../../../../core/purchase/models/purchase.models';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { CashService } from '../../../../core/cash/cash.service';
 
 function product(overrides: Partial<Product>): Product {
   return {
@@ -22,6 +24,7 @@ describe('PurchaseFormModalComponent', () => {
   let fixture: ComponentFixture<PurchaseFormModalComponent>;
   let purchaseService: any;
   let productService: any;
+  let cashService: any;
 
   const tea = product({});
   const nuts = product({ id: 'p-2', code: 'NUE-1', name: 'Nueces', saleUnit: 'KILOGRAM', buyPrice: 40, sellPrice: 60, supplierId: 'sup-2' });
@@ -39,9 +42,15 @@ describe('PurchaseFormModalComponent', () => {
       createProduct: vi.fn()
     };
 
+    cashService = {
+      currentSession: signal<any>({ id: 's1', expectedCash: 300 }),
+      getCurrentSession: vi.fn().mockReturnValue(of({ id: 's1', expectedCash: 300 }))
+    };
+
     await TestBed.configureTestingModule({
       imports: [PurchaseFormModalComponent],
       providers: [
+        { provide: CashService, useValue: cashService },
         { provide: PurchaseService, useValue: purchaseService },
         { provide: ProductService, useValue: productService },
         { provide: CategoryService, useValue: { getCategories: vi.fn().mockReturnValue(of([])) } }
@@ -864,6 +873,216 @@ describe('PurchaseFormModalComponent', () => {
       component.reason.set('Faltaron las nueces');
       component.submit();
       expect(component.formError()).toContain('anule primero el pago');
+    });
+  });
+
+  describe('CAJ-03: aviso de efectivo y Caja cerrada', () => {
+    const CAJA = 'acc-caja';
+    const BISA = 'acc-bisa';
+    const accounts = [
+      { id: BISA, name: 'Bisa', color: '#000', cashAccount: false, qrAccount: false },
+      { id: CAJA, name: 'Caja', color: '#000', cashAccount: true, qrAccount: false }
+    ];
+    const warning = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-limit-warning');
+    const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
+    const text = (el: HTMLElement | null): string => el!.textContent!.replace(/\s+/g, ' ').trim();
+
+    const render = async (): Promise<void> => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    // First payment and shipping as the form holds them; null means it does not apply
+    const fill = async (values: { payFrom?: string; pay?: number | null; shipFrom?: string; ship?: number }): Promise<void> => {
+      fixture.componentRef.setInput('accounts', accounts);
+      component.initialPaymentSource.set(values.payFrom ?? '');
+      component.initialPaymentAmount.set(values.pay);
+      component.shippingCost.set(values.ship ?? 0);
+      component.shippingAccountId.set(values.shipFrom ?? '');
+      await render();
+    };
+    const fromCaja = 'account:' + CAJA;
+
+    it('avisa si el pago desde Caja supera el esperado, y no si es exactamente el esperado', async () => {
+      await fill({ payFrom: fromCaja, pay: 300 });
+      expect(warning()).toBeNull();
+
+      await fill({ payFrom: fromCaja, pay: 300.01 });
+      expect(text(warning())).toContain('El monto supera el efectivo esperado en caja (Bs 300.00).');
+    });
+
+    it('nunca bloquea: el pedido se registra con el aviso a la vista', async () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.updateLine(0, { quantity: 40 });
+      await fill({ payFrom: fromCaja, pay: 400 });
+      expect(warning()).not.toBeNull();
+
+      component.submit();
+      expect(purchaseService.registerPurchase).toHaveBeenCalled();
+    });
+
+    it('avisa si solo el envío sale de Caja', async () => {
+      await fill({ payFrom: 'account:' + BISA, pay: 500, shipFrom: CAJA, ship: 300.01 });
+      expect(text(warning())).toContain('El monto supera el efectivo esperado');
+    });
+
+    it('un solo aviso con la suma si el pago y el envío salen de Caja', async () => {
+      await fill({ payFrom: fromCaja, pay: 290, shipFrom: CAJA, ship: 25 });
+      expect(fixture.nativeElement.querySelectorAll('.cash-limit-warning').length).toBe(1);
+      expect(text(warning())).toContain('El pago y el envío suman Bs 315.00 y superan el efectivo esperado en caja (Bs 300.00).');
+    });
+
+    it('no avisa si la suma no supera el esperado', async () => {
+      await fill({ payFrom: fromCaja, pay: 275, shipFrom: CAJA, ship: 25 });
+      expect(warning()).toBeNull();
+    });
+
+    it('solo cuenta lo que sale de Caja', async () => {
+      await fill({ payFrom: fromCaja, pay: 290, shipFrom: BISA, ship: 25 });
+      expect(warning()).toBeNull();
+      await fill({ payFrom: 'account:' + BISA, pay: 290, shipFrom: CAJA, ship: 25 });
+      expect(warning()).toBeNull();
+    });
+
+    it('no cuenta el pago de una persona ni «Sin pago por ahora»', async () => {
+      await fill({ payFrom: 'creditor:c-1', pay: 500, shipFrom: CAJA, ship: 25 });
+      expect(warning()).toBeNull();
+      await fill({ pay: 500, shipFrom: CAJA, ship: 25 });
+      expect(warning()).toBeNull();
+    });
+
+    it('un envío de 0 no cuenta aunque antes se haya elegido Caja', async () => {
+      await fill({ payFrom: fromCaja, pay: 300, shipFrom: CAJA, ship: 0 });
+      expect(warning()).toBeNull();
+      expect(component.shipsFromCash()).toBe(false);
+    });
+
+    it('se actualiza al cambiar el monto lleno por una línea (COM-19)', async () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.updateLine(0, { quantity: 30 });
+      await fill({ payFrom: fromCaja, pay: undefined });
+      expect(warning()).toBeNull();
+
+      component.updateLine(0, { quantity: 31 });
+      await render();
+      expect(warning()).not.toBeNull();
+    });
+
+    it('no avisa sin monto aunque el esperado sea negativo', async () => {
+      cashService.currentSession.set({ id: 's1', expectedCash: -50 });
+      await fill({ payFrom: fromCaja, pay: null });
+      expect(warning()).toBeNull();
+    });
+
+    it('sin caja abierta no hay aviso', async () => {
+      cashService.currentSession.set(null);
+      await fill({ payFrom: fromCaja, pay: 500 });
+      expect(warning()).toBeNull();
+    });
+
+    it('consulta el esperado al elegir Caja, no al abrir el formulario', async () => {
+      await fill({ payFrom: 'account:' + BISA, pay: 100 });
+      expect(cashService.getCurrentSession).not.toHaveBeenCalled();
+
+      await fill({ payFrom: fromCaja, pay: 100 });
+      expect(cashService.getCurrentSession).toHaveBeenCalled();
+    });
+
+    describe('al editar', () => {
+      const edit = async (previous: { shippingCost: number; shippingAccountId: string | null }): Promise<void> => {
+        cashService.currentSession.set({ id: 's1', expectedCash: 10 });
+        fixture.componentRef.setInput('accounts', accounts);
+        fixture.componentRef.setInput('isOpen', false);
+        fixture.componentRef.setInput('purchase', {
+          id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', purchaseDate: '2026-10-20', consignment: false,
+          comment: null, deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE', deliveryDate: null, items: [], paidAmount: 0,
+          shippingAccountName: 'Caja', ...previous
+        } as unknown as Purchase);
+        fixture.detectChanges();
+        fixture.componentRef.setInput('isOpen', true);
+        await render();
+      };
+
+      it('no avisa ni muestra la nota si el envío no cambia', async () => {
+        await edit({ shippingCost: 25, shippingAccountId: CAJA });
+        cashService.getCurrentSession.mockReturnValue(of(null));
+        await render();
+        expect(warning()).toBeNull();
+        expect(note()).toBeNull();
+      });
+
+      it('si el envío era de otra cuenta compara el envío nuevo completo', async () => {
+        await edit({ shippingCost: 25, shippingAccountId: BISA });
+        component.shippingAccountId.set(CAJA);
+        await render();
+        expect(warning()).not.toBeNull();
+      });
+
+      it('si el envío ya era de Caja compara solo la diferencia', async () => {
+        await edit({ shippingCost: 25, shippingAccountId: CAJA });
+        component.shippingCost.set(30);
+        await render();
+        expect(warning()).toBeNull();
+
+        component.shippingCost.set(40);
+        await render();
+        expect(component.cashOutflow()).toBe(15);
+        expect(warning()).not.toBeNull();
+      });
+    });
+
+    describe('Caja sin «(caja abierta)»', () => {
+      const optionTexts = (selector: string): string[] =>
+        Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll(selector + ' option')).map(o => o.textContent!.trim());
+
+      it('la opción dice Caja en las dos listas', async () => {
+        await fill({ ship: 25 });
+        expect(optionTexts('#purchase-initial-source')).toContain('Caja');
+        expect(optionTexts('#purchase-shipping-account')).toContain('Caja');
+      });
+
+      it('con la caja cerrada muestra la nota bajo la lista elegida y deja registrar', async () => {
+        cashService.getCurrentSession.mockReturnValue(of(null));
+        cashService.currentSession.set(null);
+        component.supplierId.set('sup-1');
+        component.addProduct(tea);
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(fixture.nativeElement.querySelector('#purchase-initial-source').parentElement.querySelector('.cash-closed-note'))
+          .not.toBeNull();
+
+        component.submit();
+        expect(purchaseService.registerPurchase).toHaveBeenCalled();
+      });
+
+      it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', async () => {
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(note()).toBeNull();
+
+        cashService.getCurrentSession.mockReturnValue(of(null));
+        await fill({ payFrom: 'account:' + BISA, pay: 10 });
+        expect(note()).toBeNull();
+
+        cashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+        await fill({ payFrom: fromCaja, pay: 10 });
+        expect(note()).toBeNull();
+      });
+
+      it('si el servidor rechaza porque la caja está cerrada, muestra su mensaje y no pierde lo escrito', async () => {
+        purchaseService.registerPurchase.mockReturnValue(throwError(() => ({
+          error: { message: 'Los movimientos de la cuenta Caja requieren una caja abierta.' }
+        })));
+        component.supplierId.set('sup-1');
+        component.addProduct(tea);
+        await fill({ payFrom: fromCaja, pay: 10 });
+
+        component.submit();
+        expect(component.formError()).toBe('Los movimientos de la cuenta Caja requieren una caja abierta.');
+        expect(component.lines().length).toBe(1);
+        expect(component.initialPaymentSource()).toBe(fromCaja);
+      });
     });
   });
 });

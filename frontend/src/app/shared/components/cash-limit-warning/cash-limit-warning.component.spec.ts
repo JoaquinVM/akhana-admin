@@ -37,6 +37,17 @@ describe('CashLimitWarningComponent', () => {
     expect(warning().nativeElement.textContent).toContain('120.50');
   });
 
+  it('con pago y envío dice la suma; sin eso el texto no cambia', () => {
+    fixture.componentRef.setInput('amount', 315);
+    fixture.detectChanges();
+    const text = () => warning().nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    expect(text()).toBe('El monto supera el efectivo esperado en caja (Bs 120.50). Verifique que haya ese dinero en la gaveta antes de registrarlo.');
+
+    fixture.componentRef.setInput('paymentAndShipping', true);
+    fixture.detectChanges();
+    expect(text()).toBe('El pago y el envío suman Bs 315.00 y superan el efectivo esperado en caja (Bs 120.50). Verifique que haya ese dinero en la gaveta antes de registrarlo.');
+  });
+
   it('no avisa si la salida no es de Caja o no hay caja abierta', () => {
     fixture.componentRef.setInput('amount', 500);
     fixture.componentRef.setInput('fromCash', false);

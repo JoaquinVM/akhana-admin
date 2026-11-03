@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal, untracked }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CustomerService } from '../../../../core/debt/customer.service';
 import { CustomerHistory, CustomerHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
@@ -13,7 +14,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-customer-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashClosedNoteComponent],
   templateUrl: './customer-detail-modal.component.html',
   styleUrls: ['./customer-detail-modal.component.css']
 })
@@ -52,6 +53,7 @@ export class CustomerDetailModalComponent {
   canCollect = computed(() => this.balance() > 0);
   // DEU-06: collections go only into Caja (with an open session) or the QR account
   collectionAccounts = computed(() => this.accounts().filter(a => a.cashAccount || a.qrAccount));
+  collectsToCash = computed(() => !!this.accounts().find(a => a.id === this.collectionAccountId())?.cashAccount);
 
   voidMessage = computed(() => {
     const target = this.voidTarget();

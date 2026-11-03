@@ -1,7 +1,9 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { CreditorDetailModalComponent } from './creditor-detail-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
+import { CashService } from '../../../../core/cash/cash.service';
 import { CreditorHistory, CreditorHistoryEntry } from '../../../../core/debt/models/debt.models';
 
 const repayment: CreditorHistoryEntry = {
@@ -27,7 +29,11 @@ describe('CreditorDetailModalComponent', () => {
   let fixture: ComponentFixture<CreditorDetailModalComponent>;
   let creditorService: any;
 
+  const cashSession = vi.fn();
+
   beforeEach(async () => {
+    cashSession.mockReset();
+    cashSession.mockReturnValue(of({ id: 's1', expectedCash: 1000 }));
     creditorService = {
       getHistory: vi.fn().mockReturnValue(of(history)),
       registerRepayment: vi.fn().mockReturnValue(of({ ...history, creditor: { ...history.creditor, debt: 0 } })),
@@ -35,7 +41,10 @@ describe('CreditorDetailModalComponent', () => {
     };
     await TestBed.configureTestingModule({
       imports: [CreditorDetailModalComponent],
-      providers: [{ provide: CreditorService, useValue: creditorService }]
+      providers: [
+        { provide: CreditorService, useValue: creditorService },
+        { provide: CashService, useValue: { currentSession: signal<any>(null), getCurrentSession: cashSession } }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(CreditorDetailModalComponent);
@@ -133,5 +142,48 @@ describe('CreditorDetailModalComponent', () => {
     component.confirmVoid('Error');
     expect(component.voidError()).toBe('La devolución se hizo en una caja cerrada; no se puede anular.');
     expect(component.voidTarget()).not.toBeNull();
+  });
+
+  describe('CAJ-03: Caja sin «(caja abierta)»', () => {
+    const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
+    const choose = (value: string): void => {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('#repayment-account');
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('accounts', [{ id: 'acc-caja', name: 'Caja', color: '#000', cashAccount: true, qrAccount: false }, { id: 'acc-efe', name: 'Bisa', color: '#000', cashAccount: false, qrAccount: false }]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('la opción no dice «(caja abierta)»', () => {
+      const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#repayment-account option')).map(o => o.textContent!.trim());
+      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa']);
+    });
+
+    it('con la caja cerrada muestra la nota al elegir Caja', () => {
+      cashSession.mockReturnValue(of(null));
+      choose('acc-caja');
+      expect(note()!.textContent).toContain('La caja está cerrada. Para usar Caja, ábrala primero.');
+    });
+
+    it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', () => {
+      choose('acc-caja');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(of(null));
+      choose('acc-efe');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      choose('acc-caja');
+      expect(note()).toBeNull();
+    });
   });
 });

@@ -202,7 +202,7 @@
                 <option value="">Seleccione…</option>
                 <optgroup label="Cuentas">
                   @for (account of accounts(); track account.id) {
-                    <option [value]="'account:' + account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : '' }}</option>
+                    <option [value]="'account:' + account.id">{{ account.name }}</option>
                   }
                 </optgroup>
                 @if (creditors().length > 0) {
@@ -215,6 +215,9 @@
               </select>
               @if (!paysFromAccount() && paymentSource()) {
                 <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
+              }
+              @if (paysFromCash()) {
+                <app-cash-closed-note />
               }
             </div>
             <div class="form-group">

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { operationDayLabel, storeToday } from '../../../../shared/utils/store-date';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
+import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 import { VoidReasonModalComponent } from '../void-reason-modal/void-reason-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import {
@@ -27,7 +28,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-purchase-detail-modal',
   standalone: true,
-  imports: [StoreDayPipe, CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
+  imports: [StoreDayPipe, CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
   templateUrl: './purchase-detail-modal.component.html',
   styleUrls: ['./purchase-detail-modal.component.css']
 })

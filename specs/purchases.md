@@ -146,6 +146,26 @@ cuenta de origen (Caja con la caja abierta, Bisa u otra cuenta activa).
   allí ni desde Finanzas: «Los movimientos de un pedido se gestionan desde Compras.» (se anulan con COM-09). Lo
   mismo para el gasto de envío.
 
+### Aviso de efectivo al registrar o editar un pedido (CAJ-03)
+
+El aviso va en su propia fila, antes de los totales, y nunca bloquea. Con efectivo esperado Bs 300,00:
+
+- **Cuando** el pago inicial o el envío salen de Caja y superan el esperado **entonces** aparece «El monto supera el
+  efectivo esperado en caja (Bs 300,00). Verifique que haya ese dinero en la gaveta antes de registrarlo.»; con Bs 300,00
+  exactos no hay aviso.
+- **Cuando** el pago es Bs 290,00 y el envío Bs 25,00, ambos desde Caja **entonces** hay un solo aviso: «El pago y el envío
+  suman Bs 315,00 y superan el efectivo esperado en caja (Bs 300,00). …»
+- **Cuando** una parte sale de otra cuenta, de una persona o el envío es 0 **entonces** esa parte no cuenta.
+- **Cuando** se elige Caja **entonces** el esperado se consulta en ese momento; sin caja abierta o si falla la consulta, no
+  hay aviso.
+- **Cuando** se edita un pedido sin cambiar el envío **entonces** no hay aviso. Si pasa de otra cuenta a Caja se compara el
+  envío completo; si ya era de Caja, solo la diferencia, porque COM-12 anula el anterior.
+- La opción dice «Caja», sin «(caja abierta)», en las listas del formulario y del detalle. **Cuando** se elige y el servidor
+  responde que no hay caja abierta **entonces** debajo aparece «La caja está cerrada. Para usar Caja, ábrala primero.»; un
+  fallo de la consulta no la muestra. El rechazo al registrar sigue siendo el del servidor y no se pierde lo escrito.
+- Pruebas en `purchase-form-modal.component.spec.ts`, `purchase-detail-modal.component.spec.ts`,
+  `cash-limit-warning.component.spec.ts` y `cash-closed-note.component.spec.ts`.
+
 ## COM-07 · Entrega
 
 Cada pedido tiene tipo de entrega (`EN_PUERTA` en puerta, `TERMINAL` en terminal, `EN_TIENDA` en tienda), estado
