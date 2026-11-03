@@ -31,6 +31,7 @@ import { ProductBarcodesSectionComponent } from './product-barcodes-section/prod
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { SearchSelectComponent, SearchSelectOption } from '../../shared/components/search-select/search-select.component';
 import { canonicalBarcode, looksLikeBarcode } from '../../shared/utils/barcode';
+import { formatBs } from '../../shared/utils/money';
 import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -332,7 +333,7 @@ export class ProductsComponent implements OnInit {
     const name = (this.productForm.get('name')?.value ?? '').toString().trim();
     if (this.barcodesModified() && name) {
       const price = this.productForm.get('sellPrice')?.value;
-      return price === null || price === undefined || price === '' ? name : `${name} · Bs ${Number(price).toFixed(2)}`;
+      return price === null || price === undefined || price === '' ? name : `${name} · ${formatBs(Number(price))}`;
     }
     return this.isEditing()
       ? 'Modifica los datos del producto seleccionado'
@@ -353,9 +354,16 @@ export class ProductsComponent implements OnInit {
     onCleanup(() => capture.uninstall());
   });
 
+  // The barcode section leaves the form scrolled to its end, and the error is at its start
+  private readonly showFormError = effect(() => {
+    if (this.formError()) {
+      setTimeout(() => this.document.querySelector('.form-error')?.scrollIntoView({ block: 'nearest' }));
+    }
+  });
+
   private onBarcodeScanned(code: string): void {
-    // The confirmation does not take the focus, so the capture has to stay on while it is open
-    if (this.isDiscardConfirmOpen()) {
+    // A confirmation over the form does not take the focus, so the capture has to stay on while it is open
+    if (this.document.querySelectorAll('[aria-modal="true"]').length > 1) {
       this.toast.error('Cierra esta ventana para escanear.');
       return;
     }

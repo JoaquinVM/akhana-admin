@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { formatBs } from '../../shared/utils/money';
 import { ProductsComponent } from './products.component';
 import { ProductService } from '../../core/product/product.service';
 import { CategoryService } from '../../core/category/category.service';
@@ -17,6 +18,10 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
 describe('ProductsComponent', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   let component: ProductsComponent;
   let fixture: ComponentFixture<ProductsComponent>;
   let mockProductService: any;
@@ -640,10 +645,6 @@ describe('ProductsComponent', () => {
       return last;
     };
 
-    beforeEach(() => {
-      Element.prototype.scrollIntoView = vi.fn();
-    });
-
     it('un código sin guardar pone nombre y precio en el encabezado y lleva a la vista la sección', async () => {
       component.openEditModal({ ...mockProducts[0], barcodes: [] });
       TestBed.tick();
@@ -656,7 +657,7 @@ describe('ProductsComponent', () => {
       await new Promise((resolve) => setTimeout(resolve));
 
       expect(generic).not.toContain(name);
-      expect(component.formSubtitle()).toBe(`${name} · Bs ${Number(sellPrice).toFixed(2)}`);
+      expect(component.formSubtitle()).toBe(`${name} · ${formatBs(Number(sellPrice))}`);
       expect(document.querySelector('.modal-subtitle')?.textContent).toContain(name);
       expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
     });
@@ -704,6 +705,38 @@ describe('ProductsComponent', () => {
       component.productForm.patchValue({ specialType: 'UNIDENTIFIED' });
 
       expect(component.barcodes()).toEqual([]);
+    });
+
+    it('un error al guardar se lleva a la vista, porque el formulario quedó abajo', async () => {
+      mockProductService.updateProduct.mockReturnValue(
+        throwError(() => ({ error: { message: 'El código ya es de Shampoo (SHA).' } }))
+      );
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      TestBed.tick();
+      component.barcodes.set([EAN]);
+      vi.mocked(Element.prototype.scrollIntoView).mockClear();
+
+      component.saveProduct();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      const shown = vi.mocked(Element.prototype.scrollIntoView).mock.instances as unknown as Element[];
+      expect(shown.some((element) => element.textContent?.includes('El código ya es de Shampoo (SHA).'))).toBe(true);
+    });
+
+    it('con otra confirmación abierta sobre el formulario, un escaneo avisa y no agrega', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
+      component.openEditModal({ ...mockProducts[0], barcodes: [] });
+      fixture.detectChanges();
+      const confirmation = document.createElement('div');
+      confirmation.setAttribute('aria-modal', 'true');
+      document.body.appendChild(confirmation);
+
+      scan(EAN);
+      confirmation.remove();
+
+      expect(component.barcodes()).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith('Cierra esta ventana para escanear.');
     });
 
     it('con «Descartar cambios» abierta, un escaneo avisa, no escribe, no agrega y no guarda', () => {

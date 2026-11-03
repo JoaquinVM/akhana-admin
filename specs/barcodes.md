@@ -54,6 +54,9 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
   el botón, viendo el nombre y el precio del producto: el Enter del lector no guarda ni cierra nada. En el formulario, la
   sección de códigos es la última, después de Descripción, por pedido de Joaquín: un escaneo la lleva a la vista, y mientras
   haya un código sin guardar el encabezado fijo muestra el nombre y el precio.
+- **Cuando** se agrega o se quita un código **entonces** queda quién y cuándo (auditoría del servidor).
+- **Cuando** el servidor rechaza un código al guardar **entonces** su mensaje se lleva a la vista, aunque el formulario esté
+  abajo.
 - **Cuando** el código no tiene 8, 12 o 13 dígitos, o su dígito de control no coincide **entonces** «El código de barras
   no es válido.»
 - **Cuando** el código ya está en otro producto activo o inactivo **entonces** «El código ya es de <producto>
@@ -76,7 +79,10 @@ Con el permiso `PRODUCTS`, en el formulario de un producto y en la carga de cód
   anuladas. A igual cantidad, por nombre. Se muestra «Faltan N». No se muestran montos ni cantidades vendidas.
 - **Cuando** se elige un producto **entonces** se ven su nombre, código actual, proveedor y precio, y se puede escanear.
 - **Cuando** se elige «Guardar y seguir» **entonces** se guarda el código y se pasa al siguiente de la lista.
-- **Cuando** se elige «No trae» **entonces** queda marcado, con quién y cuándo, y sale de la lista.
+- **Cuando** se elige «No trae» **entonces** queda marcado, con quién y cuándo, y sale de la lista. La pieza 034 parte de
+  esta marca.
+- **Cuando** el operador trabaja en la carga **entonces** el POS funciona igual: vender nunca exige que un producto tenga
+  código.
 - **Cuando** se elige «Saltar» **entonces** se pasa al siguiente y el producto sigue en la lista.
 - **Cuando** un producto marcado «No trae» recibe un código **entonces** se quita la marca. También se puede quitar a mano
   en su formulario, y entonces no queda historia de esa marca.
