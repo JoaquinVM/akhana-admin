@@ -163,7 +163,8 @@ El aviso va en su propia fila, antes de los totales, y nunca bloquea. Con efecti
 - La opción dice «Caja», sin «(caja abierta)», en las listas del formulario y del detalle. **Cuando** se elige y el servidor
   responde que no hay caja abierta **entonces** debajo aparece «La caja está cerrada. Ábrala y vuelva a elegir Caja.» y se
   desactiva el botón de guardar, hasta elegir otra cuenta o volver a elegir Caja con la caja ya abierta; al editar, solo si el
-  envío cambia. Un fallo de la consulta no muestra la nota ni bloquea. Si aun así llega al servidor con la caja cerrada, el
+  envío cambia. Con pago y envío en Caja, la última respuesta vale para las dos listas. Un fallo de la consulta no muestra la
+  nota ni bloquea. Si aun así llega al servidor con la caja cerrada, el
   rechazo es el de COM-06 y no se pierde lo escrito.
 - Pruebas en `purchase-form-modal.component.spec.ts`, `purchase-detail-modal.component.spec.ts`,
   `cash-limit-warning.component.spec.ts` y `cash-closed-note.component.spec.ts`.

@@ -179,11 +179,9 @@ export class PurchaseFormModalComponent {
   shipsFromCash = computed(() => this.needsShippingAccount() && this.isCashAccount(this.shippingAccountId())
     && (!this.isEdit() || this.shippingChanged()));
   leavesCash = computed(() => this.paysFromCash() || this.shipsFromCash());
-  // What each list's note learned from the server; only counts while that list is on Caja
-  paymentCashClosed = signal<boolean>(false);
-  shippingCashClosed = signal<boolean>(false);
-  blockedByClosedCash = computed(() => (this.paysFromCash() && this.paymentCashClosed())
-    || (this.shipsFromCash() && this.shippingCashClosed()));
+  // The server's last answer, from either list's note: the session is the same for both. Only counts while one is on Caja
+  cashClosed = signal<boolean>(false);
+  blockedByClosedCash = computed(() => this.leavesCash() && this.cashClosed());
   private cashPayment = computed(() => this.paysFromCash() ? Number(this.initialPaymentValue()) || 0 : 0);
   // COM-12 voids the shipping it replaces: if that one was from Caja, only the difference leaves
   private cashShipping = computed(() => {
@@ -215,6 +213,7 @@ export class PurchaseFormModalComponent {
   }
 
   private reset(): void {
+    this.cashClosed.set(false);
     const purchase = this.purchase();
     if (purchase) {
       this.fillFrom(purchase);
