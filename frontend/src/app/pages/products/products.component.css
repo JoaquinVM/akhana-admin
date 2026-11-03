@@ -187,16 +187,6 @@
   padding: 1px 8px;
 }
 
-.product-description {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  color: #64748b;
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .category-color-pill {
   display: inline-flex;
   align-items: center;
