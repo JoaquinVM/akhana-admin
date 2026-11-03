@@ -561,6 +561,22 @@ describe('ProductsComponent', () => {
       expect(component.filteredProducts()).toEqual([]);
     });
 
+    it('compacta la tabla: etiquetas bajo el nombre y proveedor bajo la categoría', () => {
+      component.products.set(withPhoto());
+      component.selectedStatusFilter.set('ACTIVE_INACTIVE');
+      fixture.detectChanges();
+
+      const native: HTMLElement = fixture.nativeElement;
+      expect(native.querySelectorAll('thead th').length).toBe(8);
+      expect(native.querySelector('.product-info .tags-cell-container')).not.toBeNull();
+      expect(native.querySelector('.classification-cell .category-color-pill')).not.toBeNull();
+      expect(native.querySelector('.classification-cell .supplier-text')).not.toBeNull();
+      expect(native.querySelector('thead th:last-child')?.classList).toContain('col-actions');
+      native.querySelectorAll('tbody tr').forEach((row) => {
+        expect(row.querySelector('td:last-child')?.classList).toContain('col-actions');
+      });
+    });
+
     it('cada fila muestra su miniatura o «Sin foto»', () => {
       component.products.set(withPhoto());
       component.selectedStatusFilter.set('ACTIVE_INACTIVE');
