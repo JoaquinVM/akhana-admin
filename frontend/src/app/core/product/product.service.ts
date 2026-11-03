@@ -66,6 +66,15 @@ export class ProductService {
     return this.http.delete<Product>(`${this.apiUrl}/${id}/no-barcode`);
   }
 
+  // CAT-13
+  markForWeb(id: string): Observable<Product> {
+    return this.http.put<Product>(`${this.apiUrl}/${id}/web-publication`, null);
+  }
+
+  unmarkForWeb(id: string): Observable<Product> {
+    return this.http.delete<Product>(`${this.apiUrl}/${id}/web-publication`);
+  }
+
   // CAT-06: Revisar validates without saving; Importar validates the same file again and saves
   previewImport(file: File): Observable<ProductImportResult> {
     return this.http.post<ProductImportResult>(`${this.apiUrl}/import/preview`, this.importForm(file));

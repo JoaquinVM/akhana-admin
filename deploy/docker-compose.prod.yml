@@ -42,11 +42,14 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       FORWARD_HEADERS_STRATEGY: native
       PRODUCT_PHOTOS_DIR: /data/product-photos
+      WEB_CATALOG_ENABLED: "true"
+      WEB_CATALOG_DIR: /data/web-catalog
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.1-terra}
       TZ: ${TZ:-America/La_Paz}
     volumes:
       - product_photos:/data/product-photos
+      - web_catalog:/data/web-catalog
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
       interval: 15s
@@ -76,3 +79,4 @@ services:
 volumes:
   db_data:
   product_photos:
+  web_catalog:

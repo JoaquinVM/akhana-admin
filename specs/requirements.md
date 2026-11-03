@@ -14,7 +14,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
-| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
+| Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10 a CAT-13 | ✅ Completo | CAT-13 sin desplegar; falta crear el bucket de R2 | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md`, `web-catalog.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-25 | ✅ Completo | COM-20 a COM-25 sin publicar: falta la medición previa y la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
@@ -112,6 +112,7 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **CAT-08** · V1 — Productos vendidos por peso (frutos secos y Granel, P-31): cada producto indica si se vende por unidad o por kilo; por kilo, el precio es Bs por kilo y la cantidad son kilos con hasta 3 decimales en ventas, compras y consumos. Un producto por unidad solo acepta cantidades enteras.
 - **CAT-11** · V1 — Presentaciones de productos por peso: hasta 6 por producto, con nombre, peso fijo y precio fijo opcional (sin él, peso × precio por kilo). El costo siempre es peso × costo por kilo. El POS y Consumos ofrecen las presentaciones y «Otro peso»; los reportes suman kilos. Detalle en `product-presentations.md`.
 - **CAT-12** · V1 — Cada producto admite una foto, que quien tiene acceso a Productos sube, cambia o quita. Se guarda reducida y sin metadatos; cambiarla o quitarla conserva el archivo anterior (RG-01). El listado filtra los productos sin foto. Detalle en `product-photos.md`.
+- **CAT-13** · V1 — Quien tiene acceso a Productos marca un producto para el catálogo web público, con quién y cuándo. Sale solo si está activo, marcado y con foto; un producto especial no se marca. Admin deja cada 5 minutos una copia con solo los campos públicos y el VPS la sube hacia afuera, sin abrirse a internet. La pantalla filtra los marcados sin foto. Detalle en `web-catalog.md`.
 - **CAT-10** · V1 — Un producto por unidad puede tener hasta 5 códigos de barras de fábrica (EAN-8, UPC-A o EAN-13), únicos entre productos. Se cargan desde Productos, con una lista de los que faltan, de más a menos vendidos. Quien tiene acceso a Productos los agrega o los quita, y queda quién y cuándo. Detalle en `barcodes.md`.
 - **CAT-05** · V2 — Cada producto indica si controla stock (sí/no), para admitir servicios o ítems sin inventario.
 - **CAT-09** · V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33).
@@ -367,7 +368,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-54 | ¿Cuántas fotos por producto? | Una; las presentaciones comparten la del producto (CAT-11, CAT-12). |
 | P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-08). |
 | P-56 | ¿Se conserva el original de la foto? | No: hasta 1600 px y una miniatura, sin metadatos. |
-| P-57 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
+| P-57 | ¿Cómo verá la web las fotos? | Admin copia las fotos de lo publicado a una carpeta aparte y el VPS las sube a Cloudflare R2; el VPS sigue cerrado (CAT-13). |
 | P-58 | ¿Los productos por kilo y las presentaciones llevan código de barras? | Por ahora no; se buscan como hoy. |
 | P-59 | ¿Se asigna un código desconocido desde la caja? | No: la caja solo avisa, y se carga desde Productos. |
 | P-60 | ¿Qué IA lee los pedidos? | OpenAI con `gpt-6.1-terra`, sin que entrene con los datos; los nombres en fotos y textos pueden salir. Lo leído siempre es un borrador. |

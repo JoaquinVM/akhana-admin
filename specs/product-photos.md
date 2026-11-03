@@ -1,8 +1,8 @@
 # Foto de productos
 
 Detalle de CAT-12 (sección 3.2 de `specs/requirements.md`); su respaldo, NF-08, está en `specs/deploy.md`. Cada producto
-admite una foto, que después usará Akhana Web. Aquí no se abre nada a internet: cómo llega a la web se decide en un
-trabajo de Akhana Web (P-57).
+admite una foto, que también usa el catálogo web. Aquí no se abre nada a internet: la copia pública está en
+`specs/web-catalog.md` (CAT-13, P-57).
 
 ## CAT-12 · Subir una foto
 

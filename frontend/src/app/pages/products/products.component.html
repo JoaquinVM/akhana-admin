@@ -71,6 +71,14 @@
         (click)="onlyWithoutPhoto.set(!onlyWithoutPhoto())">
         Sin foto
       </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="onlyWebWithoutPhoto()"
+        [attr.aria-pressed]="onlyWebWithoutPhoto()"
+        (click)="onlyWebWithoutPhoto.set(!onlyWebWithoutPhoto())">
+        En la web sin foto
+      </button>
     </div>
 
     <!-- Product search and counter (right) -->
@@ -595,6 +603,16 @@
         [productId]="isFormModalOpen() && isEditing() ? selectedProductId() : null"
         [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
         (photoChange)="onPhotoChange($event)" />
+
+      <!-- Mark for the public catalog (CAT-13); it also saves on its own -->
+      @if (isFormModalOpen() && isEditing() && !isSpecialForm() && selectedProduct(); as product) {
+        <app-product-web-section
+          [productId]="product.id"
+          [published]="!!product.webPublished"
+          [hasPhoto]="!!product.photoId"
+          [active]="product.status === 'ACTIVO'"
+          (publishedChange)="onWebPublicationChange($event)" />
+      }
 
       <!-- Presentations of the product by kilo (CAT-11) -->
       @if (isKilogramForm() && !isSpecialForm()) {

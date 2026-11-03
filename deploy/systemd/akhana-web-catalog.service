@@ -1,0 +1,9 @@
+[Unit]
+Description=Akhana Admin: upload the public catalog (CAT-13)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/akhana/app/deploy/publish-web-catalog.sh
