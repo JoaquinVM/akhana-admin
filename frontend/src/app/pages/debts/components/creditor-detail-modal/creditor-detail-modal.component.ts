@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
+import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
@@ -14,7 +15,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-creditor-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
   templateUrl: './creditor-detail-modal.component.html',
   styleUrls: ['./creditor-detail-modal.component.css']
 })

@@ -20,8 +20,10 @@ export class CashLimitWarningComponent implements OnInit {
   readonly amount = input<number | string | null | undefined>(null);
   /** False when the money does not leave Caja (another account or a person). */
   readonly fromCash = input<boolean>(true);
+  /** True when the amount adds a purchase's first payment and its shipping, both from Caja. */
+  readonly paymentAndShipping = input<boolean>(false);
 
-  private readonly amountValue = computed<number | null>(() => {
+  readonly amountValue = computed<number | null>(() => {
     const value = this.amount();
     const n = value === null || value === undefined || value === '' ? null : Number(value);
     return n !== null && !isNaN(n) ? n : null;

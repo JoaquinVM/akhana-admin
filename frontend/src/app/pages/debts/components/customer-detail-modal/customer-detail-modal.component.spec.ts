@@ -1,7 +1,9 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { CustomerDetailModalComponent } from './customer-detail-modal.component';
 import { CustomerService } from '../../../../core/debt/customer.service';
+import { CashService } from '../../../../core/cash/cash.service';
 import { CustomerHistory, CustomerHistoryEntry, DebtAccount } from '../../../../core/debt/models/debt.models';
 
 const collection: CustomerHistoryEntry = {
@@ -31,7 +33,11 @@ describe('CustomerDetailModalComponent', () => {
   let fixture: ComponentFixture<CustomerDetailModalComponent>;
   let customerService: any;
 
+  const cashSession = vi.fn();
+
   beforeEach(async () => {
+    cashSession.mockReset();
+    cashSession.mockReturnValue(of({ id: 's1', expectedCash: 1000 }));
     customerService = {
       getHistory: vi.fn().mockReturnValue(of(history)),
       registerCollection: vi.fn().mockReturnValue(of({ ...history, customer: { ...history.customer, balance: 0 } })),
@@ -39,7 +45,10 @@ describe('CustomerDetailModalComponent', () => {
     };
     await TestBed.configureTestingModule({
       imports: [CustomerDetailModalComponent],
-      providers: [{ provide: CustomerService, useValue: customerService }]
+      providers: [
+        { provide: CustomerService, useValue: customerService },
+        { provide: CashService, useValue: { currentSession: signal<any>(null), getCurrentSession: cashSession } }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(CustomerDetailModalComponent);
@@ -132,5 +141,48 @@ describe('CustomerDetailModalComponent', () => {
       .find(b => b.textContent?.includes('Ver venta')) as HTMLButtonElement;
     button.click();
     expect(opened).toHaveBeenCalledWith('sale-1');
+  });
+
+  describe('CAJ-03: Caja sin «(caja abierta)»', () => {
+    const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
+    const choose = (value: string): void => {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('#collection-account');
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('la opción no dice «(caja abierta)»', () => {
+      const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#collection-account option')).map(o => o.textContent!.trim());
+      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa (QR)']);
+    });
+
+    it('con la caja cerrada muestra la nota al elegir Caja', () => {
+      cashSession.mockReturnValue(of(null));
+      choose('acc-caja');
+      expect(note()!.textContent).toContain('La caja está cerrada. Para usar Caja, ábrala primero.');
+    });
+
+    it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', () => {
+      choose('acc-caja');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(of(null));
+      choose('acc-bisa');
+      expect(note()).toBeNull();
+
+      choose('');
+      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      choose('acc-caja');
+      expect(note()).toBeNull();
+    });
   });
 });

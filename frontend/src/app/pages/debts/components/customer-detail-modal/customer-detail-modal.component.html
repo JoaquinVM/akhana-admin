@@ -92,9 +92,12 @@
                     [ngModel]="collectionAccountId()" (ngModelChange)="collectionAccountId.set($event)">
               <option value="">Seleccione…</option>
               @for (account of collectionAccounts(); track account.id) {
-                <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? ' (caja abierta)' : ' (QR)' }}</option>
+                <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? '' : ' (QR)' }}</option>
               }
             </select>
+            @if (collectsToCash()) {
+              <app-cash-closed-note />
+            }
           </div>
           <div class="form-group">
             <label class="form-label" for="collection-amount">Monto (Bs) <span class="required-mark">*</span></label>

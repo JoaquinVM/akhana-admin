@@ -29,6 +29,8 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 import { SearchSelectComponent, SearchSelectOption } from '../../../../shared/components/search-select/search-select.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { QuantityStepperComponent, WEIGHT_STEP_KG } from '../../../../shared/components/quantity-stepper/quantity-stepper.component';
+import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
+import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -67,7 +69,7 @@ export function todayIso(): string {
 @Component({
   selector: 'app-purchase-form-modal',
   standalone: true,
-  imports: [IconComponent, QuantityStepperComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent],
+  imports: [IconComponent, QuantityStepperComponent, SearchSelectComponent, CommonModule, FormsModule, ModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
   templateUrl: './purchase-form-modal.component.html',
   styleUrls: ['./purchase-form-modal.component.css']
 })
@@ -164,6 +166,35 @@ export class PurchaseFormModalComponent {
     return shipping !== round2(purchase.shippingCost)
       || (shipping > 0 && this.shippingAccountId() !== (purchase.shippingAccountId ?? ''));
   });
+
+  // CAJ-03: what leaves Caja with this form
+  private isCashAccount(accountId: string | null | undefined): boolean {
+    return !!this.accounts().find(a => a.id === accountId)?.cashAccount;
+  }
+  paysFromCash = computed(() => {
+    const source = this.initialPaymentSource();
+    return source.startsWith('account:') && this.isCashAccount(source.slice('account:'.length));
+  });
+  // An edit that leaves the shipping as it was moves no money
+  shipsFromCash = computed(() => this.needsShippingAccount() && this.isCashAccount(this.shippingAccountId())
+    && (!this.isEdit() || this.shippingChanged()));
+  leavesCash = computed(() => this.paysFromCash() || this.shipsFromCash());
+  private cashPayment = computed(() => this.paysFromCash() ? Number(this.initialPaymentValue()) || 0 : 0);
+  // COM-12 voids the shipping it replaces: if that one was from Caja, only the difference leaves
+  private cashShipping = computed(() => {
+    if (!this.shipsFromCash()) {
+      return 0;
+    }
+    const purchase = this.purchase();
+    const replaced = purchase && this.isCashAccount(purchase.shippingAccountId) ? purchase.shippingCost : 0;
+    return Number(this.shippingCost()) - replaced;
+  });
+  // Null when nothing leaves: with a negative expected cash, 0 would still read as exceeding it
+  cashOutflow = computed<number | null>(() => {
+    const outflow = round2(this.cashPayment() + this.cashShipping());
+    return outflow > 0 ? outflow : null;
+  });
+  cashPaymentAndShipping = computed(() => this.cashPayment() > 0 && this.cashShipping() > 0);
 
   constructor() {
     effect(() => {

@@ -104,6 +104,9 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
   Pedido.» (validado en el servidor desde el 29-10-2026; antes solo se proponía).
 - **Cuando** la devolución sale de Caja y supera el efectivo esperado **entonces** el formulario lo avisa sin
   bloquear (CAJ-03).
+- **Cuando** se elige Caja y el servidor responde que no hay caja abierta **entonces** debajo de la lista aparece «La caja
+  está cerrada. Para usar Caja, ábrala primero.», sin bloquear; un fallo de la consulta no la muestra. Lo mismo al cobrar a
+  un cliente. Las listas dicen «Caja», sin «(caja abierta)» (CAJ-03).
 - **Cuando** se devuelve desde Caja **entonces** exige caja abierta («Los movimientos de la cuenta Caja
   requieren una caja abierta.»), el gasto se vincula a ella y baja el efectivo esperado (CAJ-03,
   `ExpectedCashCalculator`, como un gasto de Caja).
