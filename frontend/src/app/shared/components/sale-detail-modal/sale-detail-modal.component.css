@@ -12,6 +12,12 @@
   overflow-x: hidden;
 }
 
+.alert-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* Loading state */
 .modal-loading-state {
   display: flex;
