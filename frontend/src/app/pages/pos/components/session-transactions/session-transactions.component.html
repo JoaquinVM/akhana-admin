@@ -51,7 +51,11 @@
       </div>
       <span class="transactions-counter">
         @if (activeTab() === 'VENTAS') {
-          {{ sales().length }} ventas registradas
+          @if (loadFailed() && sales().length === 0) {
+            Sin datos
+          } @else {
+            {{ sales().length }} ventas registradas
+          }
         } @else if (activeTab() === 'MOVIMIENTOS') {
           {{ transfers().length }} ingresos y retiros
         } @else {
@@ -88,7 +92,12 @@
 
   @if (activeTab() === 'VENTAS') {
     <!-- SALES VIEW -->
-    @if (sales().length === 0) {
+    @if (loadFailed() && sales().length === 0) {
+      <div class="transactions-empty">
+        <h4>No se pudieron cargar las ventas de este turno</h4>
+        <p>Las ventas registradas siguen guardadas. Usa «Reintentar» cuando vuelva la conexión.</p>
+      </div>
+    } @else if (sales().length === 0) {
       <div class="transactions-empty">
         <div class="empty-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg">

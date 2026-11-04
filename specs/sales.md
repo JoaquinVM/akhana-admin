@@ -355,6 +355,11 @@ El sistema SHALL distinguir «no se pudo saber» de «no hay». Solo una respues
 - **AND** avisa que los montos pueden no estar al día y ofrece «Reintentar»
 - **AND** las ventas y los gastos de la sesión no se vacían
 
+#### Scenario: Volver al POS sin respuesta de la caja
+- **WHEN** se vuelve al POS desde la venta y la consulta de la caja falla por conexión
+- **THEN** igual se cargan las ventas y los gastos de la caja conocida
+- **AND** si tampoco cargan, dice que no se pudieron cargar y ofrece «Reintentar», sin decir que no hay ventas
+
 #### Scenario: Sin caja conocida y sin respuesta
 - **WHEN** el POS abre y la consulta de la caja falla por conexión
 - **THEN** dice que no pudo consultar la caja y ofrece «Reintentar», sin ofrecer «Abrir caja»

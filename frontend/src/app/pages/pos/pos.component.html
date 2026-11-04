@@ -14,7 +14,7 @@
           <app-cash-day-mark
             [operationDate]="cashService.currentSession()?.operationDate"
             [openedAt]="cashService.currentSession()?.openedAt" />
-        } @else {
+        } @else if (!cashService.sessionCheckFailed()) {
           <span class="status-badge badge-closed">Caja cerrada</span>
         }
       </div>
@@ -83,6 +83,10 @@
         <app-connection-notice
           message="No se pudo actualizar la caja: los montos pueden no estar al día. Puedes seguir vendiendo."
           (retry)="loadCurrentSession()" />
+      } @else if (transactionsLoadFailed()) {
+        <app-connection-notice
+          message="No se pudieron cargar las transacciones de la caja. Revisa la conexión."
+          (retry)="loadCurrentSession()" />
       }
 
       <!-- Live money KPI grid -->
@@ -97,6 +101,7 @@
         [expenses]="recentExpenses()"
         [transfers]="recentTransfers()"
         [canOperate]="cs.status === 'ABIERTA'"
+        [loadFailed]="transactionsLoadFailed()"
         (registerSale)="navigateToRegisterSale()"
         (registerExpense)="openCashExpenseModal()"
         (viewDetail)="openDetailModal($event)"

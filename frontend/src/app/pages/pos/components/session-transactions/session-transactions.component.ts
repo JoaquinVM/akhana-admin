@@ -22,6 +22,8 @@ export class SessionTransactionsComponent {
   readonly transfers = input<FinancialTransaction[]>([]);
   // Only an open session can void or register movements
   readonly canOperate = input<boolean>(false);
+  // POS-17: an empty list that could not be loaded does not mean there are no sales
+  readonly loadFailed = input<boolean>(false);
 
   readonly registerSale = output<void>();
   readonly registerExpense = output<void>();
