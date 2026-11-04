@@ -25,8 +25,6 @@ import { PosClosedStateComponent } from './components/pos-closed-state/pos-close
 import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
 import { ConnectionNoticeComponent } from '../../shared/components/connection-notice/connection-notice.component';
 
-export const TRANSACTIONS_NOT_UPDATED = 'No se pudieron actualizar las transacciones de la caja. Revisa la conexión.';
-
 @Component({
   selector: 'app-pos',
   standalone: true,
@@ -80,6 +78,11 @@ export class PosComponent implements OnInit {
   // Cash ins and outs of the session (CAJ-08)
   recentTransfers = signal<FinancialTransaction[]>([]);
 
+  // POS-17: what the lists show may be incomplete or empty because they could not be loaded
+  private salesLoadFailed = signal<boolean>(false);
+  private expensesLoadFailed = signal<boolean>(false);
+  transactionsLoadFailed = computed(() => this.salesLoadFailed() || this.expensesLoadFailed());
+
   // Expense totals (voided expenses do not count)
   activeExpenses = computed(() =>
     this.recentExpenses().filter((e) => e.status === 'ACTIVO')
@@ -121,9 +124,13 @@ export class PosComponent implements OnInit {
           this.recentTransfers.set([]);
         }
       },
-      // POS-17: without an answer the session is still the known one, and so is what it listed
+      // POS-17: without an answer the session is still the known one, and this screen may have just opened
       error: () => {
-        if (!this.cashService.currentSession()) {
+        const known = this.cashService.currentSession();
+        if (known) {
+          this.loadSalesForSession(known.id);
+          this.loadExpensesForSession(known.id);
+        } else {
           this.recentSales.set([]);
           this.recentExpenses.set([]);
           this.recentTransfers.set([]);
@@ -139,11 +146,12 @@ export class PosComponent implements OnInit {
         // The session links Caja expenses and transfers; each tab shows its own
         this.recentExpenses.set((movements || []).filter((m) => m.type === 'GASTO_MANUAL'));
         this.recentTransfers.set((movements || []).filter((m) => m.type === 'TRANSFERENCIA'));
+        this.expensesLoadFailed.set(false);
         this.isLoadingExpenses.set(false);
       },
       error: () => {
+        this.expensesLoadFailed.set(true);
         this.isLoadingExpenses.set(false);
-        this.showFeedback('error', TRANSACTIONS_NOT_UPDATED);
       }
     });
   }
@@ -158,11 +166,15 @@ export class PosComponent implements OnInit {
     this.saleService.getSalesBySession(sessionId).subscribe({
       next: (sales) => {
         this.recentSales.set(sales || []);
+        this.salesLoadFailed.set(false);
       },
       error: () => {
         this.cashService.getSessionDetail(sessionId).subscribe({
-          next: (detail) => this.recentSales.set(detail.sales || []),
-          error: () => this.showFeedback('error', TRANSACTIONS_NOT_UPDATED)
+          next: (detail) => {
+            this.recentSales.set(detail.sales || []);
+            this.salesLoadFailed.set(false);
+          },
+          error: () => this.salesLoadFailed.set(true)
         });
       }
     });

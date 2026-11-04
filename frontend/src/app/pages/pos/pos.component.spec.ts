@@ -613,7 +613,54 @@ describe('PosComponent', () => {
       mockTransactionService.getExpensesByCashSession.mockReturnValue(throwError(() => ({ status: 502 })));
       component.loadExpensesForSession('session-1');
       expect(component.recentExpenses()).toEqual([expense]);
-      expect(component.feedbackMessage()?.type).toBe('error');
+      expect(component.transactionsLoadFailed()).toBe(true);
+    });
+
+    const reopenWithoutAnswer = () => {
+      mockCashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      mockCashService.sessionCheckFailed.set(true);
+      fixture = TestBed.createComponent(PosComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    it('al volver al POS sin respuesta de la caja igual carga las ventas y los gastos', () => {
+      mockSaleService.getSalesBySession.mockClear();
+      mockTransactionService.getExpensesByCashSession.mockClear();
+      reopenWithoutAnswer();
+
+      expect(mockSaleService.getSalesBySession).toHaveBeenCalledWith(mockSession.id);
+      expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledWith(mockSession.id);
+      expect(component.recentSales()).toEqual([mockSale1]);
+      expect(page()).not.toContain('No hay ventas registradas');
+    });
+
+    it('al volver al POS con todo caído no dice que no hay ventas, y al reintentar las muestra', () => {
+      mockSaleService.getSalesBySession.mockReturnValue(throwError(() => ({ status: 0 })));
+      mockCashService.getSessionDetail.mockReturnValue(throwError(() => ({ status: 0 })));
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      reopenWithoutAnswer();
+
+      expect(page()).toContain('No se pudieron cargar las ventas');
+      expect(page()).not.toContain('No hay ventas registradas');
+      expect(page()).not.toContain('0 ventas registradas');
+
+      mockCashService.getCurrentSession.mockReturnValue(of(mockSession));
+      mockCashService.sessionCheckFailed.set(false);
+      mockSaleService.getSalesBySession.mockReturnValue(of([mockSale1]));
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(of([]));
+      component.loadCurrentSession();
+      fixture.detectChanges();
+
+      expect(component.transactionsLoadFailed()).toBe(false);
+      expect(page()).toContain('1 ventas registradas');
+    });
+
+    it('sin caja conocida y sin respuesta el encabezado no dice caja cerrada', () => {
+      mockCashService.currentSession.set(null);
+      mockCashService.sessionCheckFailed.set(true);
+      fixture.detectChanges();
+      expect(page()).not.toContain('Caja cerrada');
     });
   });
 });
