@@ -203,7 +203,7 @@ Detalle en `sales.md`.
 - **POS-14** En el POS, vaciar la cantidad de una línea o escribir 0 no la quita; al salir del campo vuelve a la última cantidad válida. La línea se quita con el − al llegar a 0 o con su X.
 - **POS-15** En la pantalla de venta, un escaneo con el lector USB agrega el producto por coincidencia exacta, esté donde esté el cursor y sin cambiar ningún campo. Un código desconocido solo avisa. Detalle en `barcodes.md`.
 - **POS-16** · V2 — Impresión de ticket de venta.
-- **POS-17** Con la conexión lenta o caída, el POS y la venta no confunden «no se pudo saber» con «no hay»: una falla de red o del servidor no da la caja por cerrada ni saca de la venta, y el catálogo y los productos rápidos dicen que están cargando o, si fallan, ofrecen reintentar. Lo que sí confirma el servidor manda: la caja cerrada se muestra cerrada, y el servidor valida la caja al vender y al anular.
+- **POS-17** Con la conexión lenta o caída, el POS y la venta no confunden «no se pudo saber» con «no hay»: una falla de red o del servidor no da la caja por cerrada ni saca de la venta, y el catálogo, los productos rápidos y las ventas, gastos e ingresos/retiros de la sesión dicen que están cargando o, si fallan, ofrecen reintentar. Lo que sí confirma el servidor manda: la caja cerrada se muestra cerrada, y el servidor valida la caja al vender y al anular.
 
 ### 3.8 Dinero (finanzas) · V1
 

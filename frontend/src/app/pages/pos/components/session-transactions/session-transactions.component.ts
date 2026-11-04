@@ -6,6 +6,7 @@ import { CashTransfersComponent } from '../cash-transfers/cash-transfers.compone
 import { CashExpensesComponent } from '../cash-expenses/cash-expenses.component';
 
 export type SessionTransactionsTab = 'VENTAS' | 'COMPRAS' | 'MOVIMIENTOS';
+export type SessionListState = 'loading' | 'ready' | 'failed';
 
 // Transactions of the open session: sales, purchases (Caja expenses) and cash ins/outs (CAJ-08).
 // The lists come from the POS; this card only picks the tab and forwards the actions.
@@ -22,8 +23,9 @@ export class SessionTransactionsComponent {
   readonly transfers = input<FinancialTransaction[]>([]);
   // Only an open session can void or register movements
   readonly canOperate = input<boolean>(false);
-  // POS-17: an empty list that could not be loaded does not mean there are no sales
-  readonly loadFailed = input<boolean>(false);
+  // POS-17: an empty list means "none" only once the server answered; expenses and transfers load together
+  readonly salesState = input<SessionListState>('ready');
+  readonly expensesState = input<SessionListState>('ready');
 
   readonly registerSale = output<void>();
   readonly registerExpense = output<void>();
@@ -36,6 +38,11 @@ export class SessionTransactionsComponent {
 
   // Voided expenses do not count as active
   activeExpensesCount = computed(() => this.expenses().filter((e) => e.status === 'ACTIVO').length);
+
+  // What each tab can say: a list with rows shows them, whatever the last load did
+  salesView = computed<SessionListState>(() => (this.sales().length > 0 ? 'ready' : this.salesState()));
+  expensesView = computed<SessionListState>(() => (this.expenses().length > 0 ? 'ready' : this.expensesState()));
+  transfersView = computed<SessionListState>(() => (this.transfers().length > 0 ? 'ready' : this.expensesState()));
 
   setActiveTab(tab: SessionTransactionsTab): void {
     this.activeTab.set(tab);

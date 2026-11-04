@@ -22,7 +22,10 @@ import { formatBs } from '../../shared/utils/money';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
 import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
-import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
+import {
+  SessionListState,
+  SessionTransactionsComponent
+} from './components/session-transactions/session-transactions.component';
 import { ConnectionNoticeComponent } from '../../shared/components/connection-notice/connection-notice.component';
 
 @Component({
@@ -73,15 +76,14 @@ export class PosComponent implements OnInit {
 
   // Purchases and expenses of the session
   recentExpenses = signal<FinancialTransaction[]>([]);
-  isLoadingExpenses = signal<boolean>(false);
 
   // Cash ins and outs of the session (CAJ-08)
   recentTransfers = signal<FinancialTransaction[]>([]);
 
-  // POS-17: what the lists show may be incomplete or empty because they could not be loaded
-  private salesLoadFailed = signal<boolean>(false);
-  private expensesLoadFailed = signal<boolean>(false);
-  transactionsLoadFailed = computed(() => this.salesLoadFailed() || this.expensesLoadFailed());
+  // POS-17: an empty list only means "none" once the server answered. Expenses and transfers share one request
+  salesState = signal<SessionListState>('loading');
+  expensesState = signal<SessionListState>('loading');
+  transactionsLoadFailed = computed(() => this.salesState() === 'failed' || this.expensesState() === 'failed');
 
   // Expense totals (voided expenses do not count)
   activeExpenses = computed(() =>
@@ -89,6 +91,10 @@ export class PosComponent implements OnInit {
   );
   totalExpensesAmount = computed(() =>
     this.activeExpenses().reduce((sum, e) => sum + e.amount, 0)
+  );
+  // POS-17: null while nothing is known, so the figure does not read as Bs 0
+  knownExpensesTotal = computed(() =>
+    this.expensesState() !== 'ready' && this.recentExpenses().length === 0 ? null : this.totalExpensesAmount()
   );
 
   // Expected cash in the drawer: computed by the server (CAJ-03: includes Caja expenses and transfers)
@@ -113,15 +119,17 @@ export class PosComponent implements OnInit {
   }
 
   loadCurrentSession(): void {
+    // POS-17: a retry says it is loading from the start; lists already answered just refresh in place
+    if (this.salesState() === 'failed') this.salesState.set('loading');
+    if (this.expensesState() === 'failed') this.expensesState.set('loading');
+
     this.cashService.getCurrentSession().subscribe({
       next: (session) => {
         if (session) {
           this.loadSalesForSession(session.id);
           this.loadExpensesForSession(session.id);
         } else {
-          this.recentSales.set([]);
-          this.recentExpenses.set([]);
-          this.recentTransfers.set([]);
+          this.clearSessionLists();
         }
       },
       // POS-17: without an answer the session is still the known one, and this screen may have just opened
@@ -131,28 +139,30 @@ export class PosComponent implements OnInit {
           this.loadSalesForSession(known.id);
           this.loadExpensesForSession(known.id);
         } else {
-          this.recentSales.set([]);
-          this.recentExpenses.set([]);
-          this.recentTransfers.set([]);
+          this.clearSessionLists();
         }
       }
     });
   }
 
+  // The next session starts unknown: its lists are loading, not empty
+  private clearSessionLists(): void {
+    this.recentSales.set([]);
+    this.recentExpenses.set([]);
+    this.recentTransfers.set([]);
+    this.salesState.set('loading');
+    this.expensesState.set('loading');
+  }
+
   loadExpensesForSession(sessionId: string): void {
-    this.isLoadingExpenses.set(true);
     this.transactionService.getExpensesByCashSession(sessionId).subscribe({
       next: (movements) => {
         // The session links Caja expenses and transfers; each tab shows its own
         this.recentExpenses.set((movements || []).filter((m) => m.type === 'GASTO_MANUAL'));
         this.recentTransfers.set((movements || []).filter((m) => m.type === 'TRANSFERENCIA'));
-        this.expensesLoadFailed.set(false);
-        this.isLoadingExpenses.set(false);
+        this.expensesState.set('ready');
       },
-      error: () => {
-        this.expensesLoadFailed.set(true);
-        this.isLoadingExpenses.set(false);
-      }
+      error: () => this.expensesState.set('failed')
     });
   }
 
@@ -166,15 +176,15 @@ export class PosComponent implements OnInit {
     this.saleService.getSalesBySession(sessionId).subscribe({
       next: (sales) => {
         this.recentSales.set(sales || []);
-        this.salesLoadFailed.set(false);
+        this.salesState.set('ready');
       },
       error: () => {
         this.cashService.getSessionDetail(sessionId).subscribe({
           next: (detail) => {
             this.recentSales.set(detail.sales || []);
-            this.salesLoadFailed.set(false);
+            this.salesState.set('ready');
           },
-          error: () => this.salesLoadFailed.set(true)
+          error: () => this.salesState.set('failed')
         });
       }
     });
@@ -301,9 +311,7 @@ export class PosComponent implements OnInit {
           ? 'con cuadre exacto'
           : `con ${diff > 0 ? 'sobrante' : 'faltante'} de ${formatBs(Math.abs(diff))}`;
         this.showFeedback('success', `Caja #${closedSession.sessionNumber} cerrada exitosamente (${diffText}).`);
-        this.recentSales.set([]);
-        this.recentExpenses.set([]);
-        this.recentTransfers.set([]);
+        this.clearSessionLists();
       },
       error: (err) => {
         this.isActionLoading.set(false);

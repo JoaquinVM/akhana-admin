@@ -360,6 +360,12 @@ El sistema SHALL distinguir «no se pudo saber» de «no hay». Solo una respues
 - **THEN** igual se cargan las ventas y los gastos de la caja conocida
 - **AND** si tampoco cargan, dice que no se pudieron cargar y ofrece «Reintentar», sin decir que no hay ventas
 
+#### Scenario: Ventas, gastos e ingresos/retiros sin respuesta todavía
+- **WHEN** las listas de la sesión aún cargan o fallan y no hay filas que mostrar
+- **THEN** cada pestaña dice que carga o que no pudo, sin decir que no hay y sin contadores en cero
+- **AND** el indicador «Gastos de caja» no muestra Bs 0,00
+- **AND** «no hay» aparece solo después de la respuesta del servidor, y un refresco no borra las filas ya cargadas
+
 #### Scenario: Sin caja conocida y sin respuesta
 - **WHEN** el POS abre y la consulta de la caja falla por conexión
 - **THEN** dice que no pudo consultar la caja y ofrece «Reintentar», sin ofrecer «Abrir caja»

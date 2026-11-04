@@ -12,7 +12,7 @@ import { CashSessionSummary } from '../../../../core/cash/models/cash.models';
 })
 export class PosKpisComponent {
   readonly session = input.required<CashSessionSummary>();
-  // Active cash expenses of the session (voided ones do not count)
-  readonly expensesTotal = input<number>(0);
+  // Active cash expenses of the session (voided ones do not count); null when not known yet (POS-17)
+  readonly expensesTotal = input<number | null>(0);
   readonly expectedCash = input<number>(0);
 }
