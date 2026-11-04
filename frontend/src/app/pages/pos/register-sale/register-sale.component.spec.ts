@@ -9,7 +9,7 @@ import { CustomerService } from '../../../core/debt/customer.service';
 import { CashSessionSummary, Sale } from '../../../core/cash/models/cash.models';
 import { Product } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
 
@@ -110,6 +110,8 @@ describe('RegisterSaleComponent', () => {
 
     mockQuickProductService = {
       groups: signal<QuickProductGroup[]>([mockGroup]),
+      isLoading: signal<boolean>(false),
+      loadFailed: signal<boolean>(false),
       loadGroups: vi.fn().mockReturnValue(of([mockGroup]))
     };
 
@@ -577,6 +579,58 @@ describe('RegisterSaleComponent', () => {
       component.onScanned({ product: mockProduct1, fromServer: false });
 
       expect(component.cartItems()[0].unitPrice).toBe(mockProduct1.buyPrice);
+    });
+  });
+
+  describe('POS-17: conexión lenta o caída', () => {
+    const product = (i: number) => ({ ...mockProduct1, id: `p${i}` });
+
+    it('una falla de red al consultar la caja no saca de la pantalla', () => {
+      mockCashService.getCurrentSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      (router.navigate as any).mockClear();
+      component.ngOnInit();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('una falla de red tardía no pierde el carrito', () => {
+      const answer = new Subject<any>();
+      mockCashService.getCurrentSession.mockReturnValue(answer);
+      (router.navigate as any).mockClear();
+      component.ngOnInit();
+      component.addToCart(mockProduct1);
+      answer.error({ status: 502 });
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(component.cartItems().length).toBe(1);
+    });
+
+    it('una caja cerrada confirmada sí vuelve al POS', () => {
+      mockCashService.getCurrentSession.mockReturnValue(of(null));
+      (router.navigate as any).mockClear();
+      component.ngOnInit();
+      expect(router.navigate).toHaveBeenCalledWith(['/pos']);
+    });
+
+    it('el catálogo avisa mientras carga y, si falla, se reintenta y carga', () => {
+      const answer = new Subject<Product[]>();
+      mockProductService.getProducts.mockReturnValue(answer);
+      component.loadCatalogProducts();
+      expect(component.isLoadingCatalog()).toBe(true);
+
+      answer.error({ status: 0 });
+      expect(component.isLoadingCatalog()).toBe(false);
+      expect(component.catalogLoadFailed()).toBe(true);
+
+      mockProductService.getProducts.mockReturnValue(of([product(1)]));
+      component.loadCatalogProducts();
+      expect(component.catalogLoadFailed()).toBe(false);
+      expect(component.catalogProducts().length).toBe(1);
+    });
+
+    it('una falla al reintentar no borra el catálogo ya cargado', () => {
+      mockProductService.getProducts.mockReturnValue(throwError(() => ({ status: 504 })));
+      const before = component.catalogProducts();
+      component.loadCatalogProducts();
+      expect(component.catalogProducts()).toEqual(before);
     });
   });
 });

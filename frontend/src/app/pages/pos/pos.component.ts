@@ -23,6 +23,9 @@ import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash
 import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
 import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
 import { SessionTransactionsComponent } from './components/session-transactions/session-transactions.component';
+import { ConnectionNoticeComponent } from '../../shared/components/connection-notice/connection-notice.component';
+
+export const TRANSACTIONS_NOT_UPDATED = 'No se pudieron actualizar las transacciones de la caja. Revisa la conexión.';
 
 @Component({
   selector: 'app-pos',
@@ -38,7 +41,8 @@ import { SessionTransactionsComponent } from './components/session-transactions/
     PosClosedStateComponent,
     SaleDetailModalComponent,
     SessionTransactionsComponent,
-    CashDayMarkComponent
+    CashDayMarkComponent,
+    ConnectionNoticeComponent
   ],
   templateUrl: './pos.component.html',
   styleUrls: ['./pos.component.css']
@@ -117,10 +121,13 @@ export class PosComponent implements OnInit {
           this.recentTransfers.set([]);
         }
       },
+      // POS-17: without an answer the session is still the known one, and so is what it listed
       error: () => {
-        this.recentSales.set([]);
-        this.recentExpenses.set([]);
-        this.recentTransfers.set([]);
+        if (!this.cashService.currentSession()) {
+          this.recentSales.set([]);
+          this.recentExpenses.set([]);
+          this.recentTransfers.set([]);
+        }
       }
     });
   }
@@ -135,9 +142,8 @@ export class PosComponent implements OnInit {
         this.isLoadingExpenses.set(false);
       },
       error: () => {
-        this.recentExpenses.set([]);
-        this.recentTransfers.set([]);
         this.isLoadingExpenses.set(false);
+        this.showFeedback('error', TRANSACTIONS_NOT_UPDATED);
       }
     });
   }
@@ -156,7 +162,7 @@ export class PosComponent implements OnInit {
       error: () => {
         this.cashService.getSessionDetail(sessionId).subscribe({
           next: (detail) => this.recentSales.set(detail.sales || []),
-          error: () => this.recentSales.set([])
+          error: () => this.showFeedback('error', TRANSACTIONS_NOT_UPDATED)
         });
       }
     });
@@ -218,7 +224,7 @@ export class PosComponent implements OnInit {
         const session = this.cashService.currentSession();
         if (session) {
           this.loadSalesForSession(session.id);
-          this.cashService.getCurrentSession().subscribe();
+          this.cashService.getCurrentSession().subscribe({ error: () => undefined });
         }
       },
       error: (err) => {

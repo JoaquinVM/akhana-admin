@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { CashService } from '../../../core/cash/cash.service';
+import { CashService, isConnectionFailure } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
 import { QuickProductService } from '../../../core/quick-product/quick-product.service';
 import { SaleService } from '../../../core/sale/sale.service';
@@ -75,6 +75,7 @@ export class RegisterSaleComponent implements OnInit {
   // Catalog and search state
   catalogProducts = signal<Product[]>([]);
   isLoadingCatalog = signal<boolean>(false);
+  catalogLoadFailed = signal<boolean>(false);
 
   // Quick products
   isConfigModalVisible = signal<boolean>(false);
@@ -161,27 +162,35 @@ export class RegisterSaleComponent implements OnInit {
           this.router.navigate(['/pos']);
         }
       },
-      error: () => {
-        this.router.navigate(['/pos']);
+      // POS-17: without an answer the cash may well be open, and the server checks it when selling
+      error: (error) => {
+        if (!isConnectionFailure(error)) {
+          this.router.navigate(['/pos']);
+        }
       }
     });
 
     this.loadCatalogProducts();
-    this.quickProductService.loadGroups().subscribe();
+    this.loadQuickGroups();
   }
 
   loadCatalogProducts(): void {
     this.isLoadingCatalog.set(true);
+    this.catalogLoadFailed.set(false);
     this.productService.getProducts(undefined, 'ACTIVO').subscribe({
       next: (products) => {
         this.catalogProducts.set(products);
         this.isLoadingCatalog.set(false);
       },
       error: () => {
-        this.catalogProducts.set([]);
+        this.catalogLoadFailed.set(true);
         this.isLoadingCatalog.set(false);
       }
     });
+  }
+
+  loadQuickGroups(): void {
+    this.quickProductService.loadGroups().subscribe({ error: () => undefined });
   }
 
   // Cart operations
@@ -502,7 +511,7 @@ export class RegisterSaleComponent implements OnInit {
       next: (sale) => {
         this.isSubmitting.set(false);
         this.isCheckoutModalOpen.set(false);
-        this.cashService.getCurrentSession().subscribe();
+        this.cashService.getCurrentSession().subscribe({ error: () => undefined });
         this.router.navigate(['/pos'], {
           state: {
             saleSuccessMessage: `Venta #${sale.saleNumber} registrada exitosamente.`

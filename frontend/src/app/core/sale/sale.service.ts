@@ -22,7 +22,7 @@ export class SaleService {
         next: (newSale) => {
           this.sales.update((current) => [newSale, ...current]);
           this.isLoading.set(false);
-          this.cashService.getCurrentSession().subscribe();
+          this.cashService.getCurrentSession().subscribe({ error: () => undefined });
         },
         error: () => this.isLoading.set(false)
       })
@@ -38,7 +38,7 @@ export class SaleService {
             current.map((s) => (s.id === saleId ? updatedSale : s))
           );
           this.isLoading.set(false);
-          this.cashService.getCurrentSession().subscribe();
+          this.cashService.getCurrentSession().subscribe({ error: () => undefined });
         },
         error: () => this.isLoading.set(false)
       })

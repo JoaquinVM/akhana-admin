@@ -41,6 +41,7 @@ describe('NavbarComponent', () => {
 
     const mockCashService = {
       currentSession: signal<any>(null),
+      sessionCheckFailed: signal(false),
       getCurrentSession: vi.fn().mockReturnValue(of(null))
     };
 
@@ -112,6 +113,11 @@ describe('NavbarComponent', () => {
     expect(items[1].nativeElement.textContent).toContain('Ventas');
     expect(items[2].nativeElement.textContent).toContain('Historial de cajas');
     expect(items[2].nativeElement.getAttribute('href')).toBe('/cash/history');
+  });
+
+  it('POS-17: sin respuesta del servidor no dice que la caja está cerrada', () => {
+    (component.cashService.sessionCheckFailed as any).set(true);
+    expect(component.getItemBadge({ label: 'POS', route: '/pos' })).toBeNull();
   });
 
   it('debe mostrar la etiqueta de estado dinámica para POS según sesión de caja', () => {

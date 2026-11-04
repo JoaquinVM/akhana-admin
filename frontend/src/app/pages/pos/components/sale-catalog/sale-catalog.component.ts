@@ -5,6 +5,7 @@ import { Product } from '../../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { QuickProductService } from '../../../../core/quick-product/quick-product.service';
 import { productForEnter, searchProducts } from '../../../../shared/utils/product-search';
+import { ConnectionNoticeComponent } from '../../../../shared/components/connection-notice/connection-notice.component';
 
 /**
  * Left column of the register-sale screen: product search (POS-01) and quick product groups (POS-02).
@@ -13,7 +14,7 @@ import { productForEnter, searchProducts } from '../../../../shared/utils/produc
 @Component({
   selector: 'app-sale-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConnectionNoticeComponent],
   templateUrl: './sale-catalog.component.html',
   styleUrls: ['./sale-catalog.component.css']
 })
@@ -22,9 +23,14 @@ export class SaleCatalogComponent {
 
   // Active products of the catalog
   readonly products = input<Product[]>([]);
+  // POS-17: while it loads or if it fails, finding nothing does not mean there is nothing
+  readonly catalogLoading = input<boolean>(false);
+  readonly catalogFailed = input<boolean>(false);
 
   readonly add = output<Product>();
   readonly configure = output<void>();
+  readonly retryCatalog = output<void>();
+  readonly retryQuickGroups = output<void>();
 
   readonly productSearchTerm = signal<string>('');
   readonly activeGroupId = signal<string | null>(null);

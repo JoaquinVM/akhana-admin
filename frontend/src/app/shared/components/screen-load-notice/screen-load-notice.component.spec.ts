@@ -118,7 +118,7 @@ describe('ScreenLoadNotice con la venta abierta (CA-07)', () => {
         { provide: DOCUMENT, useFactory: () => document },
         { provide: CashService, useValue: { currentSession: signal(null), getCurrentSession: () => of({ status: 'ABIERTA' }) } },
         { provide: ProductService, useValue: { getProducts: () => of([product]) } },
-        { provide: QuickProductService, useValue: { groups: signal([]), loadGroups: () => of([]) } },
+        { provide: QuickProductService, useValue: { groups: signal([]), isLoading: signal(false), loadFailed: signal(false), loadGroups: () => of([]) } },
         { provide: SaleService, useValue: {} },
         { provide: CustomerService, useValue: { getCustomers: () => of([]) } }
       ]

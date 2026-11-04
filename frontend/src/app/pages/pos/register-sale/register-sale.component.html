@@ -50,6 +50,10 @@
     <!-- Left column: catalog and quick products -->
     <app-sale-catalog
       [products]="catalogProducts()"
+      [catalogLoading]="isLoadingCatalog()"
+      [catalogFailed]="catalogLoadFailed()"
+      (retryCatalog)="loadCatalogProducts()"
+      (retryQuickGroups)="loadQuickGroups()"
       (add)="addToCart($event)"
       (configure)="openConfigModal()" />
 

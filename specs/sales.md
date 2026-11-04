@@ -346,6 +346,39 @@ El sistema SHALL ofrecer en `/sales` (permiso `SALES_HISTORY`) el historial de v
 
 ---
 
+### Requirement: Conexión lenta o caída en el POS (POS-17)
+El sistema SHALL distinguir «no se pudo saber» de «no hay». Solo una respuesta del servidor cambia lo que se sabe de la caja. El dinero no cambia: el servidor valida la caja al vender y al anular.
+
+#### Scenario: Anular y la consulta de la caja falla
+- **WHEN** se anula una venta y la consulta de la caja no recibe respuesta o el servidor falla (0 o 5xx)
+- **THEN** el POS sigue operando con la caja conocida y deja registrar la venta
+- **AND** avisa que los montos pueden no estar al día y ofrece «Reintentar»
+- **AND** las ventas y los gastos de la sesión no se vacían
+
+#### Scenario: Sin caja conocida y sin respuesta
+- **WHEN** el POS abre y la consulta de la caja falla por conexión
+- **THEN** dice que no pudo consultar la caja y ofrece «Reintentar», sin ofrecer «Abrir caja»
+
+#### Scenario: El servidor responde
+- **WHEN** el servidor responde que no hay caja (204) o rechaza la consulta (4xx)
+- **THEN** la caja queda cerrada, y en «Registrar venta» se vuelve al POS
+
+#### Scenario: Falla de conexión en «Registrar venta»
+- **WHEN** falla por conexión la consulta de la caja al abrir la pantalla
+- **THEN** la pantalla sigue abierta y el carrito se conserva
+
+#### Scenario: Catálogo lento
+- **WHEN** el catálogo aún no termina de cargar
+- **THEN** el buscador dice que está cargando y lo escrito da resultados solo al terminar
+
+#### Scenario: Grupos de productos rápidos lentos o caídos
+- **WHEN** los grupos aún cargan o fallan
+- **THEN** dice que cargan o ofrece «Reintentar», sin decir que no existen, y conserva los ya cargados
+
+#### Scenario: Catálogo caído
+- **WHEN** falla la carga del catálogo
+- **THEN** lo dice y ofrece «Reintentar»
+
 ## Línea libre, venta sin identificar y venta de terceros (POS-11 a POS-13)
 
 Spec del 27-10-2026, escrita con lo decidido al revisar la migración (P-42). Lo que el dueño no dijo y se resolvió

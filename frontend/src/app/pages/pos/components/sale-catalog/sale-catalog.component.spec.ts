@@ -8,6 +8,7 @@ import { QuickProductService } from '../../../../core/quick-product/quick-produc
 describe('SaleCatalogComponent', () => {
   let fixture: ComponentFixture<SaleCatalogComponent>;
   let component: SaleCatalogComponent;
+  let quickService: any;
 
   const tab100: any = { id: 'p1', code: 'PAT-TAB-PIS-100G', name: 'Tab s/Pistacho 100g', sellPrice: 32 };
   const tab50: any = { id: 'p2', code: 'PAT-TAB-PIS-50G', name: 'Tab s/Pistacho 50g', sellPrice: 19 };
@@ -18,16 +19,74 @@ describe('SaleCatalogComponent', () => {
       imports: [SaleCatalogComponent],
       providers: [{
         provide: QuickProductService,
-        useValue: { groups: signal([
-          { id: 'g1', name: 'Bebidas', products: [tab100] },
-          { id: 'g2', name: 'Frutos secos', products: [pistacho] }
-        ]) }
+        useValue: quickService = {
+          groups: signal<any[]>([
+            { id: 'g1', name: 'Bebidas', products: [tab100] },
+            { id: 'g2', name: 'Frutos secos', products: [pistacho] }
+          ]),
+          isLoading: signal(false),
+          loadFailed: signal(false)
+        }
       }]
     }).compileComponents();
     fixture = TestBed.createComponent(SaleCatalogComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('products', [tab100, tab50, pistacho]);
     fixture.detectChanges();
+  });
+
+  const text = (): string => fixture.nativeElement.textContent;
+  const NO_GROUPS = 'No existen grupos';
+
+  it('POS-17: mientras carga el catálogo lo dice, y lo buscado aparece solo al terminar', () => {
+    fixture.componentRef.setInput('products', []);
+    fixture.componentRef.setInput('catalogLoading', true);
+    component.productSearchTerm.set('pistacho');
+    fixture.detectChanges();
+    expect(text()).toContain('Cargando productos');
+    expect(fixture.debugElement.queryAll(By.css('.search-result-item')).length).toBe(0);
+
+    fixture.componentRef.setInput('products', [tab100, tab50, pistacho]);
+    fixture.componentRef.setInput('catalogLoading', false);
+    fixture.detectChanges();
+    expect(text()).not.toContain('Cargando productos');
+    expect(fixture.debugElement.queryAll(By.css('.search-result-item')).length).toBe(3);
+  });
+
+  it('POS-17: si el catálogo falla lo dice y ofrece reintentar', () => {
+    const retry = vi.fn();
+    component.retryCatalog.subscribe(retry);
+    fixture.componentRef.setInput('catalogFailed', true);
+    fixture.detectChanges();
+    expect(text()).toContain('No se pudieron cargar los productos');
+    fixture.nativeElement.querySelector('.search-box-card app-connection-notice button').click();
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('POS-17: mientras cargan los grupos no dice que no existen', () => {
+    quickService.groups.set([]);
+    quickService.isLoading.set(true);
+    fixture.detectChanges();
+    expect(text()).toContain('Cargando productos rápidos');
+    expect(text()).not.toContain(NO_GROUPS);
+  });
+
+  it('POS-17: si los grupos fallan ofrece reintentar y no dice que no existen', () => {
+    const retry = vi.fn();
+    component.retryQuickGroups.subscribe(retry);
+    quickService.groups.set([]);
+    quickService.loadFailed.set(true);
+    fixture.detectChanges();
+    expect(text()).toContain('No se pudieron cargar los productos rápidos');
+    expect(text()).not.toContain(NO_GROUPS);
+    fixture.nativeElement.querySelector('.quick-products-card app-connection-notice button').click();
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('POS-17: «No existen grupos» solo cuando el servidor respondió que no hay', () => {
+    quickService.groups.set([]);
+    fixture.detectChanges();
+    expect(text()).toContain(NO_GROUPS);
   });
 
   it('POS-01: busca por nombre o código y al elegir avisa y limpia el buscador', () => {
