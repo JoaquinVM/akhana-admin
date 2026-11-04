@@ -34,6 +34,22 @@ describe('QuickProductService', () => {
     httpTesting.verify();
   });
 
+  it('POS-17: si la carga falla lo avisa y no borra los grupos ya cargados', () => {
+    const groups = [{ id: 'g1', name: 'Bebidas', products: [] }] as any;
+    service.groups.set(groups);
+    service.loadGroups().subscribe({ error: () => undefined });
+    expect(service.isLoading()).toBe(true);
+    httpTesting.expectOne('/api/quick-products/groups').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    expect(service.groups()).toEqual(groups);
+    expect(service.loadFailed()).toBe(true);
+    expect(service.isLoading()).toBe(false);
+
+    service.loadGroups().subscribe();
+    expect(service.loadFailed()).toBe(false);
+    httpTesting.expectOne('/api/quick-products/groups').flush([]);
+    expect(service.groups()).toEqual([]);
+  });
+
   it('debe cargar grupos y seleccionar el primero por defecto', () => {
     service.loadGroups().subscribe((groups) => {
       expect(groups.length).toBe(1);

@@ -86,6 +86,50 @@ describe('CashService', () => {
     expect(service.isLoadingCurrent()).toBe(false);
   });
 
+  describe('POS-17: una falla de conexión no cierra la caja', () => {
+    const failCheck = (status: number) => {
+      service.getCurrentSession().subscribe({ error: () => undefined });
+      httpTesting.expectOne('/api/cash-sessions/current').flush(null, { status, statusText: 'Falla' });
+    };
+
+    it.each([0, 500, 502, 504])('con %i mantiene la caja conocida y lo avisa', (status) => {
+      service.currentSession.set(mockSession);
+      failCheck(status);
+      expect(service.currentSession()).toEqual(mockSession);
+      expect(service.sessionCheckFailed()).toBe(true);
+      expect(service.isLoadingCurrent()).toBe(false);
+    });
+
+    it('sin caja conocida tampoco la da por cerrada: avisa que no sabe', () => {
+      failCheck(503);
+      expect(service.currentSession()).toBeNull();
+      expect(service.sessionCheckFailed()).toBe(true);
+    });
+
+    it.each([401, 403, 404])('con %i el servidor respondió: queda cerrada', (status) => {
+      service.currentSession.set(mockSession);
+      failCheck(status);
+      expect(service.currentSession()).toBeNull();
+      expect(service.sessionCheckFailed()).toBe(false);
+    });
+
+    it('la siguiente respuesta quita el aviso, y dice la verdad si ya se cerró', () => {
+      service.currentSession.set(mockSession);
+      failCheck(502);
+      service.getCurrentSession().subscribe();
+      httpTesting.expectOne('/api/cash-sessions/current').flush(null, { status: 204, statusText: 'No Content' });
+      expect(service.currentSession()).toBeNull();
+      expect(service.sessionCheckFailed()).toBe(false);
+    });
+
+    it('abrir la caja quita el aviso', () => {
+      failCheck(502);
+      service.openSession({ openingAmount: 200 } as OpenCashRequest).subscribe();
+      httpTesting.expectOne('/api/cash-sessions/open').flush(mockSession);
+      expect(service.sessionCheckFailed()).toBe(false);
+    });
+  });
+
   it('debe abrir una nueva sesión y actualizar currentSession', () => {
     const request: OpenCashRequest = { openingAmount: 200.0, openingComment: 'Inicio turno' };
 

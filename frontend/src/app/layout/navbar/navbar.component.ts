@@ -51,13 +51,16 @@ export class NavbarComponent implements OnInit {
     // Load the shared cash session state for the POS badge
     this.cashService.getCurrentSession().subscribe({
       error: () => {
-        // On error or without an open session, currentSession stays null (closed)
+        // CashService keeps the state; the badge says nothing while it does not know (POS-17)
       }
     });
   }
 
   getItemBadge(item: NavItem): string | null {
     if (item.route === '/pos') {
+      if (this.cashService.sessionCheckFailed() && !this.isCashOpen()) {
+        return null;
+      }
       return this.isCashOpen() ? 'Abierta' : 'Cerrada';
     }
     return item.badge || null;

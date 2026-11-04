@@ -1,0 +1,14 @@
+.connection-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-lg);
+  color: #92400e;
+  font-size: 0.8125rem;
+}

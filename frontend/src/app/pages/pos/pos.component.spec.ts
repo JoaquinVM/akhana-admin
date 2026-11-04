@@ -68,6 +68,7 @@ describe('PosComponent', () => {
     mockCashService = {
       currentSession: signal<CashSessionSummary | null>(mockSession),
       isLoadingCurrent: signal<boolean>(false),
+      sessionCheckFailed: signal<boolean>(false),
       getCurrentSession: vi.fn().mockReturnValue(of(mockSession)),
       getSessionDetail: vi.fn().mockReturnValue(of(mockDetail)),
       openSession: vi.fn().mockReturnValue(of(mockSession)),
@@ -561,5 +562,58 @@ describe('PosComponent', () => {
     }
 
     expect(last.defaultPrevented).toBe(true);
+  });
+
+  describe('POS-17: conexión lenta o caída', () => {
+    const page = (): string => fixture.nativeElement.textContent;
+
+    it('anular con la consulta de la caja caída deja operar: ni caja cerrada ni ventas vacías', () => {
+      component.recentSales.set([mockSale1]);
+      mockSaleService.getSalesBySession.mockReturnValue(throwError(() => ({ status: 0 })));
+      mockCashService.getSessionDetail.mockReturnValue(throwError(() => ({ status: 0 })));
+      mockCashService.getCurrentSession.mockImplementation(() => {
+        mockCashService.sessionCheckFailed.set(true);
+        return throwError(() => ({ status: 0 }));
+      });
+      component.selectedSaleToVoid.set(mockSale1);
+      component.handleConfirmVoid({ voidReason: 'Error' });
+      fixture.detectChanges();
+
+      expect(page()).toContain('No se pudo actualizar la caja');
+      expect(page()).not.toContain('Abrir caja');
+      expect(component.recentSales()).toEqual([mockSale1]);
+
+      (router.navigate as any).mockClear();
+      component.navigateToRegisterSale();
+      expect(router.navigate).toHaveBeenCalledWith(['/pos/sale']);
+    });
+
+    it('sin caja conocida y sin respuesta ofrece reintentar, no abrir caja', () => {
+      mockCashService.currentSession.set(null);
+      mockCashService.sessionCheckFailed.set(true);
+      mockCashService.getCurrentSession.mockClear();
+      fixture.detectChanges();
+
+      expect(page()).toContain('No se pudo consultar la caja');
+      expect(page()).not.toContain('Abrir caja');
+      fixture.nativeElement.querySelector('app-connection-notice button').click();
+      expect(mockCashService.getCurrentSession).toHaveBeenCalled();
+    });
+
+    it('sin caja y con respuesta del servidor sigue mostrando caja cerrada', () => {
+      mockCashService.currentSession.set(null);
+      fixture.detectChanges();
+      expect(page()).toContain('Caja cerrada');
+      expect(fixture.nativeElement.querySelector('app-connection-notice')).toBeNull();
+    });
+
+    it('una falla al refrescar no vacía los gastos y lo avisa', () => {
+      const expense: any = { id: 'tx', type: 'GASTO_MANUAL', status: 'ACTIVO', amount: 10 };
+      component.recentExpenses.set([expense]);
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(throwError(() => ({ status: 502 })));
+      component.loadExpensesForSession('session-1');
+      expect(component.recentExpenses()).toEqual([expense]);
+      expect(component.feedbackMessage()?.type).toBe('error');
+    });
   });
 });

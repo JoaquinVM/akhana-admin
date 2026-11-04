@@ -19,7 +19,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
-| POS y ventas | POS-01 a POS-15 | ✅ Completo | — | `sales.md`, `barcodes.md` |
+| POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | — | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
@@ -203,6 +203,7 @@ Detalle en `sales.md`.
 - **POS-14** En el POS, vaciar la cantidad de una línea o escribir 0 no la quita; al salir del campo vuelve a la última cantidad válida. La línea se quita con el − al llegar a 0 o con su X.
 - **POS-15** En la pantalla de venta, un escaneo con el lector USB agrega el producto por coincidencia exacta, esté donde esté el cursor y sin cambiar ningún campo. Un código desconocido solo avisa. Detalle en `barcodes.md`.
 - **POS-16** · V2 — Impresión de ticket de venta.
+- **POS-17** Con la conexión lenta o caída, el POS y la venta no confunden «no se pudo saber» con «no hay»: una falla de red o del servidor no da la caja por cerrada ni saca de la venta, y el catálogo y los productos rápidos dicen que están cargando o, si fallan, ofrecen reintentar. Lo que sí confirma el servidor manda: la caja cerrada se muestra cerrada, y el servidor valida la caja al vender y al anular.
 
 ### 3.8 Dinero (finanzas) · V1
 

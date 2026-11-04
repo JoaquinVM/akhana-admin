@@ -64,6 +64,13 @@
     </div>
   }
 
+  <!-- POS-17: no answer and no known session: that is not a closed cash -->
+  @else if (cashService.sessionCheckFailed() && !cashService.currentSession()) {
+    <app-connection-notice
+      message="No se pudo consultar la caja. Revisa la conexión."
+      (retry)="loadCurrentSession()" />
+  }
+
   <!-- State 2: cash closed / sales disabled -->
   @else if (!cashService.currentSession()) {
     <app-pos-closed-state (openCash)="openCashModal()" />
@@ -72,6 +79,12 @@
   <!-- State 3: cash open / live operation -->
   @else if (cashService.currentSession(); as cs) {
     <div class="pos-active-workspace">
+      @if (cashService.sessionCheckFailed()) {
+        <app-connection-notice
+          message="No se pudo actualizar la caja: los montos pueden no estar al día. Puedes seguir vendiendo."
+          (retry)="loadCurrentSession()" />
+      }
+
       <!-- Live money KPI grid -->
       <app-pos-kpis
         [session]="cs"

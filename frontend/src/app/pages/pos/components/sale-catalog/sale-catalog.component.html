@@ -26,6 +26,14 @@
       }
     </div>
 
+    @if (catalogLoading()) {
+      <p class="catalog-status" role="status">Cargando productos… lo que busques aparecerá al terminar.</p>
+    } @else if (catalogFailed()) {
+      <app-connection-notice
+        message="No se pudieron cargar los productos. Revisa la conexión."
+        (retry)="retryCatalog.emit()" />
+    }
+
     <!-- Live results dropdown -->
     @if (filteredSearchResults().length > 0) {
       <div class="search-dropdown-results">
@@ -116,6 +124,12 @@
           }
         </div>
       }
+    } @else if (quickProductService.isLoading()) {
+      <p class="quick-empty-groups" role="status">Cargando productos rápidos…</p>
+    } @else if (quickProductService.loadFailed()) {
+      <app-connection-notice
+        message="No se pudieron cargar los productos rápidos. Revisa la conexión."
+        (retry)="retryQuickGroups.emit()" />
     } @else {
       <div class="quick-empty-groups">
         <p>No existen grupos de productos rápidos configurados aún.</p>

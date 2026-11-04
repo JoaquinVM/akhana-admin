@@ -9,6 +9,12 @@
   position: relative;
 }
 
+.catalog-status {
+  margin: 0.5rem 0 0;
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
 .search-input-field {
   position: relative;
   display: flex;

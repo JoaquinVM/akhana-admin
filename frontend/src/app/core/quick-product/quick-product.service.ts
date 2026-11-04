@@ -18,6 +18,8 @@ export class QuickProductService {
   groups = signal<QuickProductGroup[]>([]);
   activeGroupId = signal<string | null>(null);
   isLoading = signal<boolean>(false);
+  // POS-17: the last load failed; what was already loaded stays
+  loadFailed = signal<boolean>(false);
 
   activeGroup = computed(() => {
     const currentId = this.activeGroupId();
@@ -30,6 +32,7 @@ export class QuickProductService {
 
   loadGroups(): Observable<QuickProductGroup[]> {
     this.isLoading.set(true);
+    this.loadFailed.set(false);
     return this.http.get<QuickProductGroup[]>(this.apiUrl).pipe(
       tap({
         next: (data) => {
@@ -40,7 +43,7 @@ export class QuickProductService {
           this.isLoading.set(false);
         },
         error: () => {
-          this.groups.set([]);
+          this.loadFailed.set(true);
           this.isLoading.set(false);
         }
       })
