@@ -92,7 +92,7 @@
       <!-- Live money KPI grid -->
       <app-pos-kpis
         [session]="cs"
-        [expensesTotal]="totalExpensesAmount()"
+        [expensesTotal]="knownExpensesTotal()"
         [expectedCash]="expectedCashInDrawer()" />
 
       <!-- Session transactions: sales, purchases and cash ins/outs (CAJ-08) -->
@@ -101,7 +101,8 @@
         [expenses]="recentExpenses()"
         [transfers]="recentTransfers()"
         [canOperate]="cs.status === 'ABIERTA'"
-        [loadFailed]="transactionsLoadFailed()"
+        [salesState]="salesState()"
+        [expensesState]="expensesState()"
         (registerSale)="navigateToRegisterSale()"
         (registerExpense)="openCashExpenseModal()"
         (viewDetail)="openDetailModal($event)"

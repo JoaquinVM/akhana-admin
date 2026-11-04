@@ -6,7 +6,7 @@ import { SaleService } from '../../core/sale/sale.service';
 import { CashSessionSummary, CashSessionDetail, Sale } from '../../core/cash/models/cash.models';
 import { FinancialTransactionService } from '../../core/finance/financial-transaction.service';
 import { FinancialCategoryService } from '../../core/finance/financial-category.service';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { storeToday } from '../../shared/utils/store-date';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
@@ -654,6 +654,70 @@ describe('PosComponent', () => {
 
       expect(component.transactionsLoadFailed()).toBe(false);
       expect(page()).toContain('1 ventas registradas');
+    });
+
+    it('con los gastos caídos no dice que no hay ni marca Bs 0, y al reintentar los muestra', () => {
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      reopenWithoutAnswer();
+
+      expect(component.knownExpensesTotal()).toBeNull();
+      expect(transactionsCard().expensesView()).toBe('failed');
+      expect(transactionsCard().salesView()).toBe('ready');
+      expect(page()).toContain('Sin datos por ahora');
+
+      const expense: any = { id: 'tx', type: 'GASTO_MANUAL', status: 'ACTIVO', amount: 35.5 };
+      mockCashService.getCurrentSession.mockReturnValue(of(mockSession));
+      mockCashService.sessionCheckFailed.set(false);
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(of([expense]));
+      component.loadCurrentSession();
+      fixture.detectChanges();
+
+      expect(component.knownExpensesTotal()).toBe(35.5);
+      expect(component.transactionsLoadFailed()).toBe(false);
+    });
+
+    it('con la conexión lenta dice que carga hasta tener respuesta, y un turno sin nada recién dice que no hay', () => {
+      const session$ = new Subject<CashSessionSummary>();
+      const sales$ = new Subject<Sale[]>();
+      const expenses$ = new Subject<any[]>();
+      mockCashService.getCurrentSession.mockReturnValue(session$);
+      mockSaleService.getSalesBySession.mockReturnValue(sales$);
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(expenses$);
+      fixture = TestBed.createComponent(PosComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(page()).toContain('Cargando las ventas');
+      expect(page()).not.toContain('0 ventas registradas');
+      expect(component.knownExpensesTotal()).toBeNull();
+
+      session$.next(mockSession);
+      fixture.detectChanges();
+      expect(page()).toContain('Cargando las ventas');
+
+      sales$.next([]);
+      expenses$.next([]);
+      fixture.detectChanges();
+      expect(page()).toContain('No hay ventas registradas');
+      expect(component.knownExpensesTotal()).toBe(0);
+    });
+
+    it('un refresco de listas ya cargadas no vuelve a decir que carga', () => {
+      mockSaleService.getSalesBySession.mockReturnValue(new Subject<Sale[]>());
+      component.loadCurrentSession();
+      fixture.detectChanges();
+      expect(component.salesState()).toBe('ready');
+      expect(page()).not.toContain('Cargando las ventas');
+    });
+
+    it('al reintentar dice que carga desde el primer momento', () => {
+      mockTransactionService.getExpensesByCashSession.mockReturnValue(throwError(() => ({ status: 0 })));
+      component.loadCurrentSession();
+      expect(component.expensesState()).toBe('failed');
+
+      mockCashService.getCurrentSession.mockReturnValue(new Subject<CashSessionSummary>());
+      component.loadCurrentSession();
+      expect(component.expensesState()).toBe('loading');
     });
 
     it('sin caja conocida y sin respuesta el encabezado no dice caja cerrada', () => {

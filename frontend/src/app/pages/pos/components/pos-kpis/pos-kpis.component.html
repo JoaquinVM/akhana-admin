@@ -53,8 +53,13 @@
         </svg>
       </span>
     </div>
-    <div class="kpi-value text-red">Bs {{ expensesTotal() | number:'1.2-2' }}</div>
-    <span class="kpi-caption">Salidas físicas en gaveta</span>
+    @if (expensesTotal() === null) {
+      <div class="kpi-value text-red">—</div>
+      <span class="kpi-caption">Sin datos por ahora</span>
+    } @else {
+      <div class="kpi-value text-red">Bs {{ expensesTotal() | number:'1.2-2' }}</div>
+      <span class="kpi-caption">Salidas físicas en gaveta</span>
+    }
   </div>
 
   <div class="kpi-card kpi-card-highlight">

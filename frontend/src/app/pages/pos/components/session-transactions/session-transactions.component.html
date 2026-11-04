@@ -51,15 +51,23 @@
       </div>
       <span class="transactions-counter">
         @if (activeTab() === 'VENTAS') {
-          @if (loadFailed() && sales().length === 0) {
-            Sin datos
-          } @else {
-            {{ sales().length }} ventas registradas
+          @switch (salesView()) {
+            @case ('loading') { Cargando… }
+            @case ('failed') { Sin datos }
+            @default { {{ sales().length }} ventas registradas }
           }
         } @else if (activeTab() === 'MOVIMIENTOS') {
-          {{ transfers().length }} ingresos y retiros
+          @switch (transfersView()) {
+            @case ('loading') { Cargando… }
+            @case ('failed') { Sin datos }
+            @default { {{ transfers().length }} ingresos y retiros }
+          }
         } @else {
-          {{ activeExpensesCount() }} gastos activos{{ expenses().length > activeExpensesCount() ? ' (' + (expenses().length - activeExpensesCount()) + ' anulados)' : '' }}
+          @switch (expensesView()) {
+            @case ('loading') { Cargando… }
+            @case ('failed') { Sin datos }
+            @default { {{ activeExpensesCount() }} gastos activos{{ expenses().length > activeExpensesCount() ? ' (' + (expenses().length - activeExpensesCount()) + ' anulados)' : '' }} }
+          }
         }
       </span>
     </div>
@@ -92,7 +100,11 @@
 
   @if (activeTab() === 'VENTAS') {
     <!-- SALES VIEW -->
-    @if (loadFailed() && sales().length === 0) {
+    @if (salesView() === 'loading') {
+      <div class="transactions-empty" role="status">
+        <h4>Cargando las ventas de este turno…</h4>
+      </div>
+    } @else if (salesView() === 'failed') {
       <div class="transactions-empty">
         <h4>No se pudieron cargar las ventas de este turno</h4>
         <p>Las ventas registradas siguen guardadas. Usa «Reintentar» cuando vuelva la conexión.</p>
@@ -133,16 +145,38 @@
     }
   } @else if (activeTab() === 'MOVIMIENTOS') {
     <!-- CASH INS AND OUTS VIEW (CAJ-08) -->
-    <app-cash-transfers
-      [transfers]="transfers()"
-      [canOperate]="canOperate()"
-      (changed)="transfersChanged.emit($event)" />
+    @if (transfersView() === 'loading') {
+      <div class="transactions-empty" role="status">
+        <h4>Cargando los ingresos y retiros de este turno…</h4>
+      </div>
+    } @else if (transfersView() === 'failed') {
+      <div class="transactions-empty">
+        <h4>No se pudieron cargar los ingresos y retiros de este turno</h4>
+        <p>Los registrados siguen guardados. Usa «Reintentar» cuando vuelva la conexión.</p>
+      </div>
+    } @else {
+      <app-cash-transfers
+        [transfers]="transfers()"
+        [canOperate]="canOperate()"
+        (changed)="transfersChanged.emit($event)" />
+    }
   } @else {
     <!-- PURCHASES VIEW (expenses of the current cash session) -->
-    <app-cash-expenses
-      [expenses]="expenses()"
-      [canOperate]="canOperate()"
-      (registerExpense)="registerExpense.emit()"
-      (changed)="expensesChanged.emit($event)" />
+    @if (expensesView() === 'loading') {
+      <div class="transactions-empty" role="status">
+        <h4>Cargando los gastos de este turno…</h4>
+      </div>
+    } @else if (expensesView() === 'failed') {
+      <div class="transactions-empty">
+        <h4>No se pudieron cargar los gastos de este turno</h4>
+        <p>Los registrados siguen guardados. Usa «Reintentar» antes de registrar otro: puede que ya esté registrado.</p>
+      </div>
+    } @else {
+      <app-cash-expenses
+        [expenses]="expenses()"
+        [canOperate]="canOperate()"
+        (registerExpense)="registerExpense.emit()"
+        (changed)="expensesChanged.emit($event)" />
+    }
   }
 </div>
