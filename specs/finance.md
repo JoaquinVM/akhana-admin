@@ -59,6 +59,10 @@ El sistema SHALL disponer de una única cuenta activa configurada como «cuenta 
 - **WHEN** el usuario activa el toggle de cuenta QR en la cuenta «Bisa» teniendo previamente configurada la cuenta «Efectivo»
 - **THEN** la cuenta «Bisa» pasa a ser la cuenta QR activa, la cuenta «Efectivo» pierde la condición de cuenta QR y el sistema garantiza que existe exactamente una cuenta QR
 
+#### Scenario: Pasar la marca QR al crear, editar o cambiar directamente
+- **WHEN** el usuario crea una cuenta marcada QR, edita otra cuenta marcándola QR o usa el cambio directo de cuenta QR
+- **THEN** la cuenta anterior pierde la marca, con quién y cuándo, y la elegida la recibe; los saldos no cambian. El índice único admite una sola cuenta QR, así que la marca anterior se envía a la base antes que la nueva: sin eso Hibernate mandaba primero la nueva y el guardado fallaba con «otro registro igual se guardó al mismo tiempo». Pruebas contra PostgreSQL en `FinancialAccountQrSwitchIntegrationTest`.
+
 #### Scenario: Intento de desmarcar cuenta QR sin sustituto
 - **WHEN** el usuario intenta desactivar directamente el indicador de cuenta QR en la cuenta actualmente configurada
 - **THEN** el sistema bloquea el desmarcado indicando que siempre debe existir una cuenta configurada para cobros QR
