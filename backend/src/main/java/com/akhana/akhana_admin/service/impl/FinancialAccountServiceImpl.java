@@ -58,11 +58,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
 
         boolean setAsQr = Boolean.TRUE.equals(request.getIsQrAccount());
         if (setAsQr) {
-            financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()
-                    .ifPresent(existingQr -> {
-                        existingQr.setIsQrAccount(false);
-                        financialAccountRepository.save(existingQr);
-                    });
+            clearCurrentQrAccount(currentUsername);
         }
 
         BigDecimal initial = (request.getInitialBalance() != null ? request.getInitialBalance() : BigDecimal.ZERO)
@@ -119,11 +115,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         if (request.getIsQrAccount() != null) {
             boolean requestedQr = request.getIsQrAccount();
             if (requestedQr && !Boolean.TRUE.equals(account.getIsQrAccount())) {
-                financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()
-                        .ifPresent(existingQr -> {
-                            existingQr.setIsQrAccount(false);
-                            financialAccountRepository.save(existingQr);
-                        });
+                clearCurrentQrAccount(currentUsername);
                 account.setIsQrAccount(true);
             } else if (!requestedQr && Boolean.TRUE.equals(account.getIsQrAccount())) {
                 throw new IllegalStateException("Debe existir siempre una cuenta de cobros QR. Configure otra cuenta como QR para transferir la asignación.");
@@ -146,19 +138,24 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
             return mapToResponse(targetAccount);
         }
 
-        financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()
-                .ifPresent(existingQr -> {
-                    existingQr.setIsQrAccount(false);
-                    existingQr.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-                    existingQr.setUpdatedAt(Instant.now());
-                    financialAccountRepository.save(existingQr);
-                });
+        clearCurrentQrAccount(currentUsername);
 
         targetAccount.setIsQrAccount(true);
         targetAccount.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
         targetAccount.setUpdatedAt(Instant.now());
 
         return mapToResponse(financialAccountRepository.save(targetAccount));
+    }
+
+    // The unique index admits one QR account at a time (FIN-03): the old mark must reach the database before the new one
+    private void clearCurrentQrAccount(String currentUsername) {
+        financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()
+                .ifPresent(existingQr -> {
+                    existingQr.setIsQrAccount(false);
+                    existingQr.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
+                    existingQr.setUpdatedAt(Instant.now());
+                    financialAccountRepository.saveAndFlush(existingQr);
+                });
     }
 
     @Override
