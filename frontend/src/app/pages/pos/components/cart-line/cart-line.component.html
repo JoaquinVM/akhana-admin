@@ -9,20 +9,42 @@
     } @else if (item().presentation; as presentation) {
       <span class="weight-unit">{{ presentation.weightKg | number:'1.3-3' }} kg c/u</span>
     } @else if (weightLine()) {
-      <span class="weight-unit">Peso en kg</span>
+      <!-- POS-10: the weight is written in kilos or grams -->
+      <div class="weight-unit-switch" role="group" aria-label="Unidad del peso">
+        <button type="button" [class.active]="!inGrams()" [attr.aria-pressed]="!inGrams()" (click)="gramsChange.emit(false)">kg</button>
+        <button type="button" [class.active]="inGrams()" [attr.aria-pressed]="inGrams()" (click)="gramsChange.emit(true)">g</button>
+      </div>
     }
   </div>
 
   <!-- Quantity control -->
   <app-quantity-stepper
-    [quantity]="item().quantity"
+    [quantity]="shownQuantity()"
     [weight]="weightLine()"
+    [grams]="inGrams()"
     [restoreOnBlur]="true"
     (increment)="increment.emit()"
     (decrement)="decrement.emit()"
-    (quantityChange)="quantityChange.emit($event)" />
+    (quantityChange)="onQuantityTyped($event)" />
 
-  @if (!atCost() && !item().freeName) {
+  @if (weightLine() && !atCost()) {
+    <!-- POS-10: on a line by weight the only amount to type is its total -->
+    <div class="item-discount-group item-total-group">
+      <label class="discount-lbl" [for]="'line-total-' + item().key">Total:</label>
+      <div class="discount-input-wrap">
+        <span class="currency-prefix">Bs</span>
+        <input
+          #totalField
+          [id]="'line-total-' + item().key"
+          type="number"
+          step="0.50"
+          min="0.01"
+          class="form-control form-control-sm text-right line-total-input"
+          [value]="item().subtotal.toFixed(2)"
+          (change)="onTotalTyped(totalField)" />
+      </div>
+    </div>
+  } @else if (!atCost() && !item().freeName) {
     <!-- Unit discount -->
     <div class="item-discount-group">
       <label class="discount-lbl">Desc/u:</label>
@@ -48,7 +70,12 @@
       }
       <span class="final-unit-price">Bs {{ item().unitFinalPrice | number:'1.2-2' }} {{ weightLine() ? '/kg' : 'c/u' }}</span>
     </div>
-    <strong class="item-subtotal">Bs {{ item().subtotal | number:'1.2-2' }}</strong>
+    <div class="item-subtotal-line">
+      @if (item().lineTotal != null) {
+        <span class="old-price">Bs {{ calculatedTotal() | number:'1.2-2' }}</span>
+      }
+      <strong class="item-subtotal">Bs {{ item().subtotal | number:'1.2-2' }}</strong>
+    </div>
   </div>
 
   <!-- Remove item -->

@@ -65,4 +65,107 @@ describe('CartLineComponent', () => {
     expect(fixture.debugElement.query(By.css('.free-line-badge')).nativeElement.textContent).toContain('De Mami');
     expect(fixture.debugElement.query(By.css('.item-discount-group'))).toBeNull();
   });
+
+  describe('POS-10: «Otro peso»', () => {
+    const weightLine: CartItem = {
+      key: 'ar', product: { id: 'ar', code: 'G002', name: 'Arándanos', saleUnit: 'KILOGRAM' } as any, presentation: null,
+      quantity: 0.03, unitPrice: 374.33, unitDiscount: 0, unitFinalPrice: 374.33, subtotal: 11.23
+    };
+    const query = (css: string) => fixture.debugElement.query(By.css(css));
+    const totalField = () => query('.line-total-input').nativeElement as HTMLInputElement;
+    const quantityField = () => query('.qty-input').nativeElement as HTMLInputElement;
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('item', weightLine);
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('muestra el total en lugar de Desc/u, con el monto calculado', () => {
+      expect(totalField().value).toBe('11.23');
+      expect(fixture.nativeElement.textContent).not.toContain('Desc/u');
+      expect(fixture.nativeElement.querySelector('.old-price')).toBeNull();
+    });
+
+    it('avisa kg o g al pulsar la unidad', () => {
+      const grams = vi.fn();
+      component.gramsChange.subscribe(grams);
+      const [kg, g] = fixture.debugElement.queryAll(By.css('.weight-unit-switch button'));
+
+      g.nativeElement.click();
+      kg.nativeElement.click();
+
+      expect(grams.mock.calls).toEqual([[true], [false]]);
+    });
+
+    it('en gramos muestra 30 y avisa los kilos que se escriben', async () => {
+      fixture.componentRef.setInput('item', { ...weightLine, inGrams: true });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const quantity = vi.fn();
+      component.quantityChange.subscribe(quantity);
+
+      expect(quantityField().value).toBe('30');
+      quantityField().value = '250';
+      quantityField().dispatchEvent(new Event('input'));
+
+      expect(quantity).toHaveBeenCalledWith(0.25);
+    });
+
+    it('en kilos muestra y avisa los kilos, como siempre', async () => {
+      const quantity = vi.fn();
+      component.quantityChange.subscribe(quantity);
+
+      expect(quantityField().value).toBe('0.03');
+      quantityField().value = '1.5';
+      quantityField().dispatchEvent(new Event('input'));
+
+      expect(quantity).toHaveBeenCalledWith(1.5);
+    });
+
+    it('avisa el total escrito y muestra tachado el calculado', () => {
+      const total = vi.fn();
+      component.totalChange.subscribe(total);
+
+      totalField().value = '10';
+      totalField().dispatchEvent(new Event('change'));
+      expect(total).toHaveBeenCalledWith(10);
+
+      fixture.componentRef.setInput('item', { ...weightLine, lineTotal: 10, subtotal: 10 });
+      fixture.detectChanges();
+      expect(totalField().value).toBe('10.00');
+      expect(query('.old-price').nativeElement.textContent).toContain('11.23');
+      expect(query('.item-subtotal').nativeElement.textContent).toContain('10.00');
+    });
+
+    it('un total que no se acepta vuelve al último válido', async () => {
+      totalField().value = '';
+      totalField().dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(totalField().value).toBe('11.23');
+    });
+
+    it('al costo no hay campo de total', () => {
+      fixture.componentRef.setInput('atCost', true);
+      fixture.detectChanges();
+
+      expect(query('.line-total-input')).toBeNull();
+      expect(query('.item-discount-group')).toBeNull();
+    });
+
+    it('una línea por unidad o por presentación conserva Desc/u y no tiene total', () => {
+      fixture.componentRef.setInput('item', unitLine);
+      fixture.detectChanges();
+      expect(query('.line-total-input')).toBeNull();
+      expect(query('.weight-unit-switch')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Desc/u');
+
+      fixture.componentRef.setInput('item', { ...weightLine, presentation: { id: 'pr', name: '100 g', weightKg: 0.1 } as any, quantity: 1 });
+      fixture.detectChanges();
+      expect(query('.line-total-input')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Desc/u');
+    });
+  });
 });

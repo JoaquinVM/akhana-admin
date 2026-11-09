@@ -46,6 +46,8 @@
       (decrement)="decrement.emit(item.key)"
       (quantityChange)="quantityChange.emit({ key: item.key, value: $event })"
       (discountChange)="discountChange.emit({ key: item.key, value: $event })"
+      (totalChange)="totalChange.emit({ key: item.key, value: $event })"
+      (gramsChange)="gramsChange.emit({ key: item.key, value: $event })"
       (remove)="remove.emit(item.key)" />
   } @empty {
     <div class="cart-empty-state">

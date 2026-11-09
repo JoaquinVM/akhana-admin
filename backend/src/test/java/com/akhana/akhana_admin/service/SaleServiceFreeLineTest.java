@@ -176,6 +176,16 @@ class SaleServiceFreeLineTest {
     }
 
     @Test
+    @DisplayName("POS-10: una línea libre no admite total escrito")
+    void freeLineRejectsTypedTotal() {
+        SaleItemRequest typed = new SaleItemRequest(mamiProduct.getId(), BigDecimal.ONE, null, null, "Sagrada Madre",
+            new BigDecimal("35.00"), null, new BigDecimal("30.00"));
+
+        assertThatThrownBy(() -> saleService.registerSale(cashSale(BigDecimal.ZERO, typed), "op"))
+            .hasMessage("Solo se puede escribir el total en una línea de «Otro peso».");
+    }
+
+    @Test
     @DisplayName("P-44: el descuento general se acepta hasta el subtotal de las líneas normales y la de Mami queda exacta")
     void generalDiscountOnlyOverNormalLines() {
         saleService.registerSale(cashSale(new BigDecimal("5.00"), new SaleItemRequest(normal.getId(), new BigDecimal("2"), null),

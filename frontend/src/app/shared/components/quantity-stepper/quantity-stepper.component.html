@@ -12,11 +12,11 @@
   </button>
   <input
     type="number"
-    [min]="weight() ? 0.001 : 1"
-    [step]="weight() ? 0.001 : 1"
+    [min]="weight() && !grams() ? 0.001 : 1"
+    [step]="weight() && !grams() ? 0.001 : 1"
     class="qty-input"
     [class.qty-input-weight]="weight()"
-    [title]="weight() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
+    [title]="grams() ? 'Gramos' : weight() ? 'Kilos (hasta 3 decimales)' : 'Cantidad'"
     [ngModel]="quantity()"
     (ngModelChange)="quantityChange.emit($event)"
     (blur)="onBlur($any($event.target))" />

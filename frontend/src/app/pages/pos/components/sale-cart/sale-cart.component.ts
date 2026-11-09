@@ -2,10 +2,10 @@ import { Component, input, output } from '@angular/core';
 import { CartLineComponent } from '../cart-line/cart-line.component';
 import { CartItem } from '../../register-sale/cart-item';
 
-// A value typed on one cart line (quantity or unit discount), with the key of the line
-export interface CartLineChange {
+// A value changed on one cart line (quantity, unit discount, total or grams), with the key of the line
+export interface CartLineChange<T = number> {
   key: string;
-  value: number;
+  value: T;
 }
 
 /**
@@ -31,5 +31,7 @@ export class SaleCartComponent {
   readonly decrement = output<string>();
   readonly quantityChange = output<CartLineChange>();
   readonly discountChange = output<CartLineChange>();
+  readonly totalChange = output<CartLineChange>();
+  readonly gramsChange = output<CartLineChange<boolean>>();
   readonly remove = output<string>();
 }

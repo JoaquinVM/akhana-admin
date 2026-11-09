@@ -67,6 +67,11 @@ describe('QuantityStepperComponent', () => {
 
     expect(field().step).toBe('0.001');
     expect(field().classList.contains('qty-input-weight')).toBe(true);
+
+    fixture.componentRef.setInput('grams', true);
+    fixture.detectChanges();
+    expect(field().step).toBe('1');
+    expect(field().title).toBe('Gramos');
   });
 
   describe('POS-14: al salir del campo', () => {

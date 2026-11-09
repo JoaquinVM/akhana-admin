@@ -22,7 +22,7 @@ import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-
 import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
 import { SaleCartComponent } from '../components/sale-cart/sale-cart.component';
 import { CartSummaryComponent } from '../components/cart-summary/cart-summary.component';
-import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineName } from './cart-item';
+import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineAmount, lineGross, lineName } from './cart-item';
 import { WEIGHT_STEP_KG } from '../../../shared/components/quantity-stepper/quantity-stepper.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
@@ -108,13 +108,14 @@ export class RegisterSaleComponent implements OnInit {
     return this.cartItems().reduce((sum, item) => sum + (this.isWeightLine(item) ? 1 : item.quantity), 0);
   });
 
+  // Line by line, as the server books them, so the total shown is the total charged
   subtotalGross = computed<number>(() => {
-    const raw = this.cartItems().reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+    const raw = this.cartItems().reduce((sum, it) => sum + lineGross(it), 0);
     return Math.round(raw * 100) / 100;
   });
 
   discountItemsTotal = computed<number>(() => {
-    const raw = this.cartItems().reduce((sum, it) => sum + it.quantity * it.unitDiscount, 0);
+    const raw = this.cartItems().reduce((sum, it) => sum + lineGross(it) - it.subtotal, 0);
     return Math.round(raw * 100) / 100;
   });
 
@@ -138,7 +139,7 @@ export class RegisterSaleComponent implements OnInit {
   normalSubtotal = computed<number>(() => {
     const raw = this.cartItems()
       .filter((it) => !it.freeName)
-      .reduce((sum, it) => sum + it.quantity * it.unitPrice - it.quantity * it.unitDiscount, 0);
+      .reduce((sum, it) => sum + it.subtotal, 0);
     return Math.max(0, Math.round(raw * 100) / 100);
   });
 
@@ -150,7 +151,8 @@ export class RegisterSaleComponent implements OnInit {
           quantity: it.quantity,
           discountPerUnit: it.unitDiscount > 0 ? it.unitDiscount : undefined,
           presentationId: it.presentation?.id,
-          scanned: it.scanned || undefined
+          scanned: it.scanned || undefined,
+          lineTotal: it.lineTotal ?? undefined
         });
   });
 
@@ -294,7 +296,7 @@ export class RegisterSaleComponent implements OnInit {
         unitPrice: price,
         unitDiscount: 0,
         unitFinalPrice: price,
-        subtotal: Math.round(quantity * price * 100) / 100
+        subtotal: lineAmount(quantity, price)
       };
       this.cartItems.update((items) => [...items, newItem]);
     }
@@ -323,14 +325,16 @@ export class RegisterSaleComponent implements OnInit {
     const item = this.cartItems().find((it) => it.key === key);
     if (!item) return;
     const normalized = this.normalizeQuantity(item, Number(quantity) || 0);
-    if (normalized <= 0) return;
+    if (normalized <= 0 || normalized === item.quantity) return;
     this.cartItems.update((items) =>
       items.map((it) => {
         if (it.key === key) {
+          // POS-10: another weight is priced again, so a typed total never stays on the wrong weight
           return {
             ...it,
             quantity: normalized,
-            subtotal: Math.round(normalized * it.unitFinalPrice * 100) / 100
+            lineTotal: null,
+            subtotal: lineAmount(normalized, it.unitFinalPrice)
           };
         }
         return it;
@@ -361,7 +365,7 @@ export class RegisterSaleComponent implements OnInit {
             ...it,
             unitDiscount: cappedDiscount,
             unitFinalPrice,
-            subtotal: Math.round(it.quantity * unitFinalPrice * 100) / 100
+            subtotal: lineAmount(it.quantity, unitFinalPrice)
           };
         }
         return it;
@@ -371,6 +375,26 @@ export class RegisterSaleComponent implements OnInit {
     if (this.globalDiscount() > this.normalSubtotal()) {
       this.globalDiscount.set(this.normalSubtotal());
     }
+  }
+
+  // POS-10: «Otro peso» charges the total typed. Empty or 0 keeps the last valid one; the calculated amount is no edit
+  updateLineTotal(key: string, total: number): void {
+    const typed = Math.round((Number(total) || 0) * 100) / 100;
+    if (typed <= 0) return;
+    this.cartItems.update((items) =>
+      items.map((it) => it.key === key
+        ? { ...it, lineTotal: typed === lineAmount(it.quantity, it.unitPrice) ? null : typed, subtotal: typed }
+        : it)
+    );
+
+    if (this.globalDiscount() > this.normalSubtotal()) {
+      this.globalDiscount.set(this.normalSubtotal());
+    }
+  }
+
+  // POS-10: only how the weight is written; the quantity and the total stay as they are
+  setWeightInGrams(key: string, inGrams: boolean): void {
+    this.cartItems.update((items) => items.map((it) => it.key === key ? { ...it, inGrams } : it));
   }
 
   updateGlobalDiscount(discount: number): void {
@@ -437,7 +461,8 @@ export class RegisterSaleComponent implements OnInit {
           unitPrice: price,
           unitDiscount: 0,
           unitFinalPrice: price,
-          subtotal: Math.round(it.quantity * price * 100) / 100
+          lineTotal: null,
+          subtotal: lineAmount(it.quantity, price)
         };
       })
     );

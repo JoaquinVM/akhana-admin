@@ -47,6 +47,33 @@
   color: #64748b;
 }
 
+/* POS-10: kilos or grams on a line by weight */
+.weight-unit-switch {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.weight-unit-switch button {
+  min-width: 2rem;
+  min-height: 24px;
+  padding: 0 0.4rem;
+  border: none;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weight-unit-switch button.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
 .item-discount-group {
   display: flex;
   align-items: center;
@@ -119,6 +146,18 @@
   white-space: nowrap;
 }
 
+.item-subtotal-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0 0.25rem;
+}
+
+.item-subtotal-line .old-price {
+  white-space: nowrap;
+}
+
 .item-subtotal {
   font-family: var(--font-mono, monospace);
   font-size: 0.875rem;
@@ -151,6 +190,17 @@
   height: 15px;
 }
 
+/* POS-10: the total can be three digits and two decimals, so the label goes above the field */
+.item-total-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.item-total-group .discount-input-wrap {
+  width: 100%;
+}
+
 /* POS-11: free line (unidentified or third-party product) */
 .free-line-badge {
   display: inline-block;
@@ -174,6 +224,7 @@
   .item-identity { grid-area: identity; }
   app-quantity-stepper { grid-area: qty; }
   .item-discount-group { grid-area: discount; }
+  .item-total-group { width: 76px; }
   .item-price-summary { grid-area: price; }
   .btn-remove-item { grid-area: remove; justify-self: end; }
 }

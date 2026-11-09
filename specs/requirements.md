@@ -19,7 +19,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
-| POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | — | `sales.md`, `barcodes.md` |
+| POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | POS-10 con gramos y total escrito sin publicar | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
@@ -189,14 +189,14 @@ Detalle en `sales.md`.
 
 - **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno. También encuentran el código de barras, solo cuando está completo y es exacto.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
-- **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal).
+- **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal). «Otro peso» no lleva descuento por unidad: se cambia su total (POS-10).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.
 - **POS-06** Numeración de venta única y correlativa. En desarrollo los números saltan porque las pruebas consumen las secuencias; en producción no.
 - **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33).
 - **POS-08** Detalle de venta de solo lectura (ítems, descuentos, pagos, auditoría de anulación), reutilizable en POS e historial.
 - **POS-09** Historial de ventas paginado con filtros por fecha (día de operación, CAJ-11), estado, tipo de venta, método de pago y usuario.
-- **POS-10** Venta por peso: cantidades decimales en kilos y presentaciones del producto (CAT-11).
+- **POS-10** Venta por peso: cantidades decimales en kilos y presentaciones del producto (CAT-11). «Otro peso» se escribe en kilos o gramos y su total se puede cambiar al centavo, hacia arriba o hacia abajo (P-64).
 - **POS-11** Línea libre: productos especiales del catálogo, sin inventario, que piden nombre y precio al vender. Sin descuento por unidad, productos rápidos, presentaciones ni venta al costo; el descuento general se reparte solo entre las líneas normales (P-44). Llevan categoría y proveedor reales (P-50).
 - **POS-12** Venta sin identificar: la línea con «Producto sin identificar» queda «por asignar»; después, desde el historial, se le asigna una sola vez el producto real y su costo actual, mostrando antes la utilidad que tendrá la línea, con auditoría y sin cambiar el monto ni la caja (única excepción a T-07). La que nunca se identifique se cierra como «sin identificar definitivo»: suma al total en una columna aparte «Sin identificar» y no cuenta en la utilidad.
 - **POS-13** Venta de productos de terceros (hoy, de Mami): producto especial con su dueña (DEU-01); el costo de la línea es igual al precio y cada venta suma a la deuda con ella, que se le paga con «Pago a tercero» (DEU-03). Los reportes la muestran aparte, fuera de las ventas y la utilidad de la tienda.
@@ -375,6 +375,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-61 | ¿Cómo entran el texto y la foto? | Texto al pedir: pedido pendiente con costos del sistema. Foto al llegar: precios reales. Foto sin pedido: pedido entregado. Un proveedor por mensaje. |
 | P-62 | ¿Qué propone con datos dudosos? | Cantidad «4 a 5»: el menor; sin número: 1, ambas resaltadas. «Cancelado»: el pago, con origen vacío. Costo desconocido: en blanco, con el cálculo en un mensaje. |
 | P-63 | ¿Y si el mensaje no usa las palabras del catálogo? | Se sugieren los productos con más palabras en común, sin elegir ninguno; la medición con 5 textos reales dio 75 % con el buscador solo. |
+| P-64 | ¿Cómo se cobra un peso que no es presentación? | En «Otro peso», el peso se escribe en kg o g solo en la venta y el total se puede subir o bajar; al cambiar el peso se vuelve a calcular. Reemplaza al descuento por kilo. No aplica a presentaciones, líneas libres ni venta al costo. |
 
 ## 6. Hoja de ruta
 

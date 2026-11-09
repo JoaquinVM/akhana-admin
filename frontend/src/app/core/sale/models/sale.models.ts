@@ -36,6 +36,8 @@ export interface SaleItemRequest {
   freePrice?: number | null;
   // POS-15: at least one read of this line was a scan; only for measuring
   scanned?: boolean;
+  // POS-10: total typed on a line of «Otro peso»
+  lineTotal?: number;
 }
 
 export interface SaleDetailRequest {
