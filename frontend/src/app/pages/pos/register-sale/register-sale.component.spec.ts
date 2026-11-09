@@ -280,6 +280,108 @@ describe('RegisterSaleComponent', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelectorAll('.weight-preset-btn').length).toBe(0);
     });
+
+    describe('gramos y total escrito', () => {
+      // Arándanos a Bs 374,33 el kilo
+      const blueberries: Product = { ...weightProduct, id: 'prod-ar', code: 'G002', name: 'Arándanos', sellPrice: 374.33, buyPrice: 200 };
+      const line = () => component.cartItems()[0];
+
+      beforeEach(() => {
+        component.addToCart(blueberries);
+        component.updateQuantity(blueberries.id, 0.03);
+      });
+
+      it('30 g salen 11,23 y el total escrito 10,00 es lo que se cobra y se envía', () => {
+        expect(line().subtotal).toBe(11.23);
+
+        component.updateLineTotal(blueberries.id, 10);
+
+        expect(line().subtotal).toBe(10);
+        expect(component.subtotalGross()).toBe(11.23);
+        expect(component.discountItemsTotal()).toBe(1.23);
+        expect(component.totalAmount()).toBe(10);
+        expect(component.checkoutItems()[0]).toMatchObject({ quantity: 0.03, lineTotal: 10 });
+        expect(component.checkoutItems()[0].discountPerUnit).toBeUndefined();
+      });
+
+      it('subir el total lo cobra sin descuento', () => {
+        component.updateLineTotal(blueberries.id, 12);
+
+        expect(component.subtotalGross()).toBe(12);
+        expect(component.discountItemsTotal()).toBe(0);
+        expect(component.totalAmount()).toBe(12);
+      });
+
+      it('escribir justo el monto calculado no cuenta como total escrito', () => {
+        component.updateLineTotal(blueberries.id, 10);
+        component.updateLineTotal(blueberries.id, 11.23);
+
+        expect(line().lineTotal).toBeNull();
+        expect(component.checkoutItems()[0].lineTotal).toBeUndefined();
+      });
+
+      it('cambiar el peso vuelve a calcular el total', () => {
+        component.updateLineTotal(blueberries.id, 10);
+
+        component.updateQuantity(blueberries.id, 0.3);
+
+        expect(line().lineTotal).toBeNull();
+        expect(line().subtotal).toBe(112.3);
+        expect(component.totalAmount()).toBe(112.3);
+      });
+
+      it('cambiar entre kg y g no cambia el peso ni el total', () => {
+        component.updateLineTotal(blueberries.id, 10);
+
+        component.setWeightInGrams(blueberries.id, true);
+
+        expect(line().inGrams).toBe(true);
+        expect(line().quantity).toBe(0.03);
+        expect(line().lineTotal).toBe(10);
+        expect(component.totalAmount()).toBe(10);
+      });
+
+      it('un total vacío o en 0 conserva el último válido', () => {
+        component.updateLineTotal(blueberries.id, 10);
+
+        for (const typed of [0, NaN, null as unknown as number]) {
+          component.updateLineTotal(blueberries.id, typed);
+          expect(line().lineTotal).toBe(10);
+          expect(line().subtotal).toBe(10);
+        }
+      });
+
+      it('pasar a venta al costo descarta el total escrito', () => {
+        component.updateLineTotal(blueberries.id, 10);
+
+        component.setAtCost(true);
+
+        expect(line().lineTotal).toBeNull();
+        expect(line().subtotal).toBe(6);
+        expect(component.checkoutItems()[0].lineTotal).toBeUndefined();
+      });
+
+      it('el descuento general tiene como tope el total escrito', () => {
+        component.updateGlobalDiscount(11);
+        expect(component.globalDiscount()).toBe(11);
+
+        component.updateLineTotal(blueberries.id, 10);
+
+        expect(component.globalDiscount()).toBe(10);
+
+        component.updateGlobalDiscount(2);
+        expect(component.totalAmount()).toBe(8);
+      });
+    });
+
+    it('redondea el medio centavo igual que el servidor', () => {
+      // 0,125 x 10,04 = 1,255: HALF_UP en el servidor da 1,26; con decimales binarios saldría 1,25
+      component.addToCart({ ...weightProduct, sellPrice: 10.04 });
+      component.updateQuantity(weightProduct.id, 0.125);
+
+      expect(component.cartItems()[0].subtotal).toBe(1.26);
+      expect(component.totalAmount()).toBe(1.26);
+    });
   });
 
   describe('CAT-11: presentaciones', () => {
@@ -302,7 +404,7 @@ describe('RegisterSaleComponent', () => {
         '100 g', '1/2 libra', 'Otro peso…'
       ]);
       expect(Array.from(options).map((o: any) => o.querySelector('.option-amount').textContent.trim())).toEqual([
-        'Bs 21.00', 'Bs 45.00', 'kilos'
+        'Bs 21.00', 'Bs 45.00', 'kilos o gramos'
       ]);
     });
 

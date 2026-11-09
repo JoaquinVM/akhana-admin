@@ -71,6 +71,8 @@
           (decrement)="decrementQuantity($event)"
           (quantityChange)="updateQuantity($event.key, $event.value)"
           (discountChange)="updateUnitDiscount($event.key, $event.value)"
+          (totalChange)="updateLineTotal($event.key, $event.value)"
+          (gramsChange)="setWeightInGrams($event.key, $event.value)"
           (remove)="removeFromCart($event)" />
 
         <app-cart-summary
@@ -114,6 +116,7 @@
       <app-presentation-picker
         [product]="product"
         [priceMode]="atCost() ? 'atCost' : 'price'"
+        otherWeightHint="kilos o gramos"
         (picked)="onPresentationPicked($event)"
         (cancelled)="closePicker()" />
     </app-modal>

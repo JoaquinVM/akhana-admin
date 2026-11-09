@@ -67,6 +67,9 @@ public class SaleServiceImpl implements SaleService {
     static final String FREE_NAME_REQUIRED = "Escriba el nombre de la línea libre.";
     static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";
     static final String FREE_LINE_NO_DISCOUNT = "Una línea libre no admite descuentos.";
+    static final String LINE_TOTAL_ONLY_BY_WEIGHT = "Solo se puede escribir el total en una línea de «Otro peso».";
+    static final String LINE_TOTAL_NOT_AT_COST = "Una venta al costo no admite cambiar el total de una línea.";
+    static final String LINE_TOTAL_WITH_DISCOUNT = "Una línea con el total escrito no admite descuento por kilo.";
     static final String GLOBAL_DISCOUNT_OVER_NORMAL_LINES = "El descuento general no puede superar el subtotal de los productos normales (%s).";
     static final String AT_COST_NO_FREE_LINES = "Una venta al costo no admite líneas libres.";
     static final String ALREADY_ASSIGNED = "La línea ya fue asignada.";
@@ -154,6 +157,17 @@ public class SaleServiceImpl implements SaleService {
             BigDecimal finalUnitPrice = unitPrice.subtract(discountPerUnit).setScale(2, RoundingMode.HALF_UP);
             BigDecimal lineSubtotal = finalUnitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP);
             BigDecimal lineGross = unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            // POS-10: the typed total is charged to the cent; the prices per kilo only describe it
+            if (itemReq.lineTotal() != null) {
+                lineSubtotal = validatedLineTotal(itemReq, product, presentation, atCost);
+                finalUnitPrice = lineSubtotal.divide(qty, 2, RoundingMode.HALF_UP);
+                if (lineSubtotal.compareTo(lineGross) > 0) {
+                    // Raised: nothing was discounted, the line was sold at that price per kilo
+                    unitPrice = finalUnitPrice;
+                    lineGross = lineSubtotal;
+                }
+                discountPerUnit = unitPrice.subtract(finalUnitPrice).setScale(2, RoundingMode.HALF_UP);
+            }
             // Derived from the rounded line amounts so gross - discount always equals the line subtotal
             BigDecimal lineDiscount = lineGross.subtract(lineSubtotal);
 
@@ -461,6 +475,9 @@ public class SaleServiceImpl implements SaleService {
         if (itemReq.discountPerUnit() != null && itemReq.discountPerUnit().signum() != 0) {
             throw new IllegalArgumentException(FREE_LINE_NO_DISCOUNT);
         }
+        if (itemReq.lineTotal() != null) {
+            throw new IllegalArgumentException(LINE_TOTAL_ONLY_BY_WEIGHT);
+        }
         BigDecimal unitPrice = price.setScale(2, RoundingMode.HALF_UP);
         BigDecimal qty = normalizeQuantity(itemReq.quantity(), freeName, SaleUnit.UNIT);
         boolean thirdParty = product.getSpecialType() == ProductSpecialType.THIRD_PARTY;
@@ -559,6 +576,25 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalArgumentException("La cantidad de '" + productName + "' debe ser entera: se vende por unidad.");
         }
         return quantity.setScale(3);
+    }
+
+    // POS-10: only a line of «Otro peso»; the others keep their own price rules
+    private static BigDecimal validatedLineTotal(SaleItemRequest itemReq, Product product,
+                                                 ProductPresentation presentation, boolean atCost) {
+        if (atCost) {
+            throw new IllegalArgumentException(LINE_TOTAL_NOT_AT_COST);
+        }
+        if (product.getSaleUnit() != SaleUnit.KILOGRAM || presentation != null) {
+            throw new IllegalArgumentException(LINE_TOTAL_ONLY_BY_WEIGHT);
+        }
+        if (itemReq.discountPerUnit() != null && itemReq.discountPerUnit().signum() != 0) {
+            throw new IllegalArgumentException(LINE_TOTAL_WITH_DISCOUNT);
+        }
+        BigDecimal total = itemReq.lineTotal();
+        if (total.signum() <= 0 || total.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("El total de '" + product.getName() + "' debe ser mayor a 0, con hasta 2 decimales.");
+        }
+        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
     // A line by presentation counts whole packs (CAT-11)

@@ -75,7 +75,8 @@ Una presentación pertenece a un producto que se vende por kilo y tiene nombre, 
 - **Cuando** se quiere otra presentación **entonces** se quita la línea y se elige de nuevo; la presentación no se
   cambia dentro de la línea.
 - **Cuando** se elige «Otro peso» **entonces** la línea funciona como hoy: cantidad en kilos con hasta 3
-  decimales, precio por kilo y +/− de 100 g.
+  decimales, precio por kilo y +/− de 100 g; en la venta también se escribe en gramos y su total se puede
+  cambiar (POS-10, `sales.md`).
 - **Cuando** el producto por kilo no tiene presentaciones activas **entonces** no se abre el selector y entra
   directo como «Otro peso».
 - **Cuando** se vende **entonces** el servidor vuelve a calcular precio y costo desde el catálogo; si la

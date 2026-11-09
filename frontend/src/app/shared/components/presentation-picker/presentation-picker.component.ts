@@ -22,6 +22,8 @@ export class PresentationPickerComponent {
   product = input.required<Product>();
   // At-cost sale: shows weight x cost per kilo; in consumptions, the cost
   priceMode = input<'price' | 'atCost' | 'cost'>('price');
+  // POS-10: the POS also takes grams
+  otherWeightHint = input<string>('kilos');
 
   picked = output<ProductPresentation | null>();
   cancelled = output<void>();

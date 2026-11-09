@@ -646,6 +646,137 @@ class SaleServiceTest {
     }
 
     // ---------------------------------------------------------------------------------------------
+    // POS-10 total typed on a line of «Otro peso»: Arándanos at 374.33 per kilo
+    // ---------------------------------------------------------------------------------------------
+
+    private SaleItemRequest typedTotalItem(String weight, String discountPerUnit, String total) {
+        product1.setName("Arándanos");
+        product1.setSaleUnit(SaleUnit.KILOGRAM);
+        product1.setBuyPrice(new BigDecimal("200.00"));
+        product1.setSellPrice(new BigDecimal("374.33"));
+        return new SaleItemRequest(product1.getId(), new BigDecimal(weight),
+            discountPerUnit != null ? new BigDecimal(discountPerUnit) : null,
+            null, null, null, null, new BigDecimal(total));
+    }
+
+    private SaleDetailRequest typedTotalSale(String weight, String total) {
+        return new SaleDetailRequest(List.of(typedTotalItem(weight, null, total)),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null);
+    }
+
+    @Test
+    @DisplayName("POS-10: 30 g que salen 11,23 se cobran 10,00; la caja y el descuento quedan con ese monto")
+    void shouldChargeTheTypedTotalWhenLowered() {
+        Sale sale = registerCapturing(typedTotalSale("0.030", "10.00"));
+
+        SaleItem item = sale.getItems().get(0);
+        assertThat(item.getQuantity()).isEqualByComparingTo("0.030");
+        assertThat(item.getSubtotal()).isEqualByComparingTo("10.00");
+        assertThat(item.getUnitPrice()).isEqualByComparingTo("374.33");
+        assertThat(item.getFinalUnitPrice()).isEqualByComparingTo("333.33");
+        assertThat(item.getDiscountPerUnit()).isEqualByComparingTo("41.00");
+        assertThat(sale.getSubtotalAmount()).isEqualByComparingTo("11.23");
+        assertThat(sale.getDiscountItemsTotal()).isEqualByComparingTo("1.23");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("10.00");
+        assertThat(sale.getAmountCash()).isEqualByComparingTo("10.00");
+        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("110.00");
+    }
+
+    @Test
+    @DisplayName("POS-10: subir el total se cobra sin descuento y con el precio por kilo que resulta")
+    void shouldChargeTheTypedTotalWhenRaised() {
+        Sale sale = registerCapturing(typedTotalSale("0.030", "12.00"));
+
+        SaleItem item = sale.getItems().get(0);
+        assertThat(item.getSubtotal()).isEqualByComparingTo("12.00");
+        assertThat(item.getUnitPrice()).isEqualByComparingTo("400.00");
+        assertThat(item.getFinalUnitPrice()).isEqualByComparingTo("400.00");
+        assertThat(item.getDiscountPerUnit()).isEqualByComparingTo("0.00");
+        assertThat(sale.getSubtotalAmount()).isEqualByComparingTo("12.00");
+        assertThat(sale.getDiscountItemsTotal()).isEqualByComparingTo("0.00");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("12.00");
+    }
+
+    @Test
+    @DisplayName("POS-10: el total se respeta al centavo aunque el peso pase de 1 kg")
+    void shouldKeepTheTypedTotalToTheCentAboveOneKilo() {
+        // 10.00 / 1.5 = 6.67 per kilo, and 6.67 x 1.5 would round to 10.01
+        Sale sale = registerCapturing(typedTotalSale("1.500", "10.00"));
+
+        assertThat(sale.getItems().get(0).getSubtotal()).isEqualByComparingTo("10.00");
+        assertThat(sale.getSubtotalAmount()).isEqualByComparingTo("561.50");
+        assertThat(sale.getDiscountItemsTotal()).isEqualByComparingTo("551.50");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("10.00");
+    }
+
+    @Test
+    @DisplayName("POS-10: el descuento general se aplica sobre el total escrito")
+    void shouldApplyTheGlobalDiscountOverTheTypedTotal() {
+        Sale sale = registerCapturing(new SaleDetailRequest(List.of(typedTotalItem("0.030", null, "10.00")),
+            new BigDecimal("1.00"), PaymentMethod.EFECTIVO, null, null, null, null));
+
+        assertThat(sale.getItems().get(0).getSubtotal()).isEqualByComparingTo("10.00");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("9.00");
+    }
+
+    @Test
+    @DisplayName("POS-10: rechaza un total en cero, negativo o con más de 2 decimales")
+    void shouldRejectAnInvalidTypedTotal() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        for (String total : List.of("0", "0.00", "-1", "10.555")) {
+            assertThatThrownBy(() -> saleService.registerSale(typedTotalSale("0.030", total), "cajero"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("debe ser mayor a 0, con hasta 2 decimales");
+        }
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("POS-10: el total solo se acepta en una línea de «Otro peso»")
+    void shouldAcceptTheTypedTotalOnlyOnALineByWeight() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        SaleItemRequest byWeight = typedTotalItem("1", null, "10.00");
+        product1.setSaleUnit(SaleUnit.UNIT);
+        assertThatThrownBy(() -> saleService.registerSale(new SaleDetailRequest(List.of(byWeight),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("«Otro peso»");
+
+        ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
+        SaleItemRequest byPresentation = new SaleItemRequest(product1.getId(), new BigDecimal("1"), null,
+            halfPound.getId(), null, null, null, new BigDecimal("40.00"));
+        assertThatThrownBy(() -> saleService.registerSale(new SaleDetailRequest(List.of(byPresentation),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("«Otro peso»");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    @Test
+    @DisplayName("POS-10: una venta al costo o un descuento por kilo no admiten total escrito")
+    void shouldRejectTheTypedTotalAtCostOrWithDiscount() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        assertThatThrownBy(() -> saleService.registerSale(new SaleDetailRequest(List.of(typedTotalItem("0.030", null, "10.00")),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null, SaleType.AL_COSTO, null, null), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("al costo");
+
+        assertThatThrownBy(() -> saleService.registerSale(new SaleDetailRequest(List.of(typedTotalItem("0.030", "5.00", "10.00")),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("descuento por kilo");
+
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    // ---------------------------------------------------------------------------------------------
     // CAT-11 presentations: Nuez pelada at 130 per kilo cost and 210 per kilo price
     // ---------------------------------------------------------------------------------------------
 

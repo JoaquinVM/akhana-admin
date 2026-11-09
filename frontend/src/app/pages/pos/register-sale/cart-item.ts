@@ -14,6 +14,22 @@ export interface CartItem {
   freeName?: string | null;
   // POS-15: at least one read of this line was a scan
   scanned?: boolean;
+  // POS-10: total typed on a line of «Otro peso», charged instead of weight x price per kilo
+  lineTotal?: number | null;
+  // POS-10: «Otro peso» written in grams; quantity stays in kilos
+  inGrams?: boolean;
+}
+
+// Quantity x price as the server rounds it (HALF_UP), in whole grams and cents so the half cent is exact
+export function lineAmount(quantity: number, price: number): number {
+  const product = Math.round(quantity * 1000) * Math.round(price * 100);
+  return Math.floor((product + 500) / 1000) / 100;
+}
+
+// The line's gross amount as the server books it: a total raised by hand replaces weight x price per kilo
+export function lineGross(item: CartItem): number {
+  const calculated = lineAmount(item.quantity, item.unitPrice);
+  return item.lineTotal != null && item.lineTotal > calculated ? item.lineTotal : calculated;
 }
 
 export function isWeightedProduct(product: Product): boolean {

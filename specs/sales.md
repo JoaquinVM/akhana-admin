@@ -119,7 +119,7 @@ El sistema SHALL guardar en cada línea de venta (`sale_items.unit_cost`) el cos
 ---
 
 ### Requirement: Cantidades decimales para venta por peso (CAT-08, T-11)
-El sistema SHALL aceptar en cada línea de venta una cantidad mayor a 0 con hasta 3 decimales (`sale_items.quantity`, `NUMERIC(12,3)`), para productos vendidos por peso (100 g = 0,100; 1/2 libra). Los montos de la línea siguen en escala 2 con `HALF_UP`: subtotal = precio final × cantidad, bruto = precio × cantidad, y el descuento de la línea es bruto − subtotal, así las líneas siempre suman el total de la venta. La entrada de cantidades decimales y las presentaciones rápidas en el POS son POS-10.
+El sistema SHALL aceptar en cada línea de venta una cantidad mayor a 0 con hasta 3 decimales (`sale_items.quantity`, `NUMERIC(12,3)`), para productos vendidos por peso (100 g = 0,100; 1/2 libra). Los montos de la línea siguen en escala 2 con `HALF_UP`: subtotal = precio final × cantidad (o el total escrito en «Otro peso», POS-10), bruto = precio × cantidad, y el descuento de la línea es bruto − subtotal, así las líneas siempre suman el total de la venta. La entrada de cantidades decimales y las presentaciones rápidas en el POS son POS-10.
 
 #### Scenario: Venta de una cantidad decimal
 - **WHEN** se venden 0,375 de un producto de Bs 20,00 con descuento por unidad de Bs 0,05
@@ -157,6 +157,38 @@ El sistema SHALL permitir en `/pos/sale` vender en kilos los productos con `sale
 #### Scenario: Sin botones fijos en la línea
 - **WHEN** el carrito tiene un producto por peso en «Otro peso»
 - **THEN** la línea no muestra botones «100 g» ni «1/2 libra»: los pesos fijos son presentaciones del producto (CAT-11)
+
+#### Scenario: Escribir el peso en gramos
+- **WHEN** en una línea de «Otro peso» se pulsa «g» y se escribe 30
+- **THEN** la línea queda con 0,030 kg (la cantidad se guarda siempre en kilos, en gramos enteros); cambiar entre kg y g no cambia el peso ni el total. La línea entra en kg, como antes, y +/− siguen siendo de 100 g
+
+#### Scenario: Cambiar el total hacia abajo (P-64)
+- **WHEN** 30 g a Bs 374,33 /kg salen Bs 11,23 y se escribe 10 en «Total»
+- **THEN** se cobra Bs 10,00: el servidor guarda subtotal 10,00, precio 374,33, precio final 333,33 y descuento 41,00 por kilo; el bruto de la venta es 11,23, el descuento de ítems 1,23, y la caja y el pago usan 10,00. La línea muestra tachado el monto calculado
+
+#### Scenario: Cambiar el total hacia arriba (P-64)
+- **WHEN** esa misma línea se cambia a Bs 12,00
+- **THEN** se cobra Bs 12,00 sin descuento y la línea queda con el precio por kilo que resulta (400,00); el bruto de la venta es 12,00
+
+#### Scenario: El total se respeta al centavo
+- **WHEN** 1,500 kg se cobran con total Bs 10,00
+- **THEN** el subtotal es 10,00 exacto, aunque 6,67 /kg × 1,5 redondeado daría 10,01: el servidor guarda el total escrito y el precio final por kilo solo lo describe
+
+#### Scenario: Cambiar el peso después de escribir el total
+- **WHEN** la línea tiene total escrito y se cambia el peso, con el campo o con +/−
+- **THEN** el total vuelve a calcularse con el peso nuevo, para no cobrar otro peso al monto anterior
+
+#### Scenario: Total vacío, en 0 o inválido
+- **WHEN** se deja el total vacío o en 0
+- **THEN** la línea conserva el último total válido; escribir justo el monto calculado no cuenta como total escrito. El servidor rechaza un total de 0, negativo o con más de 2 decimales: «El total de '<producto>' debe ser mayor a 0, con hasta 2 decimales.»
+
+#### Scenario: Dónde se puede escribir el total
+- **WHEN** la línea es por unidad, por presentación o libre, o la venta es al costo
+- **THEN** no hay campo de total y el servidor rechaza el que llegue: «Solo se puede escribir el total en una línea de «Otro peso».» o «Una venta al costo no admite cambiar el total de una línea.»; junto con descuento por kilo, «Una línea con el total escrito no admite descuento por kilo.». Pasar a venta al costo descarta el total escrito
+
+#### Scenario: Descuento general con total escrito
+- **WHEN** una línea tiene total escrito y hay descuento general
+- **THEN** el descuento general se aplica sobre ese total y tiene ese tope, como en cualquier línea normal
 
 ---
 

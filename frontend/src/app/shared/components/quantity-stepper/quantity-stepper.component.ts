@@ -22,6 +22,8 @@ export class QuantityStepperComponent {
   readonly quantity = input.required<number>();
   // By weight: kilos with up to 3 decimals
   readonly weight = input<boolean>(false);
+  // POS-10: by weight, written in whole grams
+  readonly grams = input<boolean>(false);
   readonly decrementDisabled = input<boolean>(false);
   // POS-14: on leaving the field, it shows the parent's quantity, which is the one that counts
   readonly restoreOnBlur = input<boolean>(false);

@@ -17,7 +17,7 @@
     }
     <button type="button" class="picker-option picker-other" (click)="picked.emit(null)">
       <span class="option-name">Otro peso…</span>
-      <span class="option-amount">kilos</span>
+      <span class="option-amount">{{ otherWeightHint() }}</span>
     </button>
   </div>
 </div>
