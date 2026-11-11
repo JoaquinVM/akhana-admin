@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { PurchaseService } from '../../core/purchase/purchase.service';
 import { PurchaseReadingService } from '../../core/purchase/purchase-reading.service';
 import { SupplierService } from '../../core/supplier/supplier.service';
@@ -76,6 +77,8 @@ export class PurchasesComponent implements OnInit {
   supplierFilter = signal<string>('');
   statusFilter = signal<PaymentStatusFilter>('ALL');
   searchTerm = signal<string>('');
+  // Only the latest filter or search may fill the list: an older, slower answer must not overwrite it (COM-26)
+  private purchasesLoad?: Subscription;
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -115,7 +118,8 @@ export class PurchasesComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     const status = this.statusFilter();
-    this.purchaseService.getPurchases({
+    this.purchasesLoad?.unsubscribe();
+    this.purchasesLoad = this.purchaseService.getPurchases({
       supplierId: this.supplierFilter() || null,
       status: status === 'ANULADO' ? 'ANULADO' : null,
       paymentStatus: status === 'ALL' || status === 'ANULADO' ? null : status,

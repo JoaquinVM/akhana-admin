@@ -15,7 +15,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-25 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
@@ -141,6 +141,7 @@ Detalle en `purchases.md`.
 - **COM-23** · V1 — La foto de una factura se guarda reducida con su pedido, sin metadatos, una por pedido, con copia diaria fuera del VPS (NF-08). Una foto sin registrar no se guarda.
 - **COM-24** · V1 — Se guarda con el pedido lo que leyó la IA, para compararlo con lo confirmado.
 - **COM-25** · V1 — Tope de US$10 al mes, contando también las lecturas fallidas. Al llegar, Desde foto y Desde texto se apagan hasta el mes siguiente y el formulario a mano sigue igual. El administrador ve el gasto del mes.
+- **COM-26** · V1 — El listado de pedidos muestra siempre el resultado del último filtro o búsqueda: una respuesta anterior que llega tarde no lo reemplaza.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 

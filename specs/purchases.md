@@ -116,6 +116,9 @@ Calculado con lo pagado (suma de pagos activos) frente al total de las líneas (
   hasta que se registre el pago, P-21); al pagarlo sigue las mismas reglas.
 - **Cuando** las líneas suman 0 **entonces** el pedido queda Pagado.
 - El listado de pedidos filtra por proveedor, estado de pago y texto (número o comentario).
+- **COM-26 · Cuando** se escribe «harinas» letra por letra con la conexión lenta y la búsqueda de «h» (todos los
+  pedidos) responde después que la de «harinas» **entonces** la lista queda con los pedidos de «harinas»: cada filtro
+  o búsqueda nueva cancela la anterior.
 
 ## COM-05 · Pagos
 

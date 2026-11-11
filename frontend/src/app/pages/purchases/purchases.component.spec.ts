@@ -116,6 +116,22 @@ describe('PurchasesComponent', () => {
     expect(fixture.nativeElement.querySelector('.show-more-row')).toBeNull();
   });
 
+  it('COM-26: una respuesta vieja que llega tarde no pisa la búsqueda más nueva', () => {
+    const slowAll = new Subject<Purchase[]>();
+    const fastFiltered = new Subject<Purchase[]>();
+    purchaseService.getPurchases.mockReturnValueOnce(slowAll).mockReturnValueOnce(fastFiltered);
+    const other = { ...purchase, id: 'pur-2', purchaseNumber: 'PED-000002' };
+
+    component.onSearch('h');
+    component.onSearch('harinas');
+    fastFiltered.next([purchase]);
+    slowAll.next([purchase, other]);
+    fixture.detectChanges();
+
+    expect(component.purchases().map((p) => p.id)).toEqual(['pur-1']);
+    expect(component.isLoading()).toBe(false);
+  });
+
   it('al cambiar un filtro mantiene las filas mientras carga', () => {
     purchaseService.getPurchases.mockReturnValue(new Subject());
     component.setStatusFilter('PAGADO');
