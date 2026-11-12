@@ -175,6 +175,7 @@ describe('PurchaseFormModalComponent', () => {
       expect(component.cashOutflow()).toBeNull();
       expect(fixture.nativeElement.querySelector('#purchase-shipping-account').parentElement.textContent)
         .toContain('No sale dinero ahora: sube la deuda con la persona.');
+      expect(fixture.nativeElement.textContent).not.toContain('Se registra como gasto de Transporte');
 
       component.onShippingSourceChange('acc-bisa');
       expect(component.buildRequest().shippingCreditorId).toBeNull();

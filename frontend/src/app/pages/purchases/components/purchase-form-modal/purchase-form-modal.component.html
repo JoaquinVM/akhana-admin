@@ -274,7 +274,9 @@
         <label class="form-label" for="purchase-shipping">Costo de envío (Bs)</label>
         <input id="purchase-shipping" type="number" min="0" step="0.01" class="form-control no-spinner" name="shippingCost"
                [ngModel]="shippingCost()" (ngModelChange)="shippingCost.set($event)" />
-        <span class="form-hint">Se registra como gasto de Transporte vinculado al pedido.</span>
+        @if (!shippingCreditorId()) {
+          <span class="form-hint">Se registra como gasto de Transporte vinculado al pedido.</span>
+        }
       </div>
       @if (needsShippingAccount()) {
         <div class="form-group">
