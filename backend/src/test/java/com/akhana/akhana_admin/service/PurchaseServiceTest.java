@@ -53,6 +53,7 @@ class PurchaseServiceTest {
     @Mock private FinancialCategoryRepository financialCategoryRepository;
     @Mock private FinancialTransactionRepository financialTransactionRepository;
     @Mock private CreditorRepository creditorRepository;
+    @Mock private CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     @Mock private PurchaseReadingRepository purchaseReadingRepository;
     @Mock private PurchasePhotoRepository purchasePhotoRepository;
     @Mock private PurchaseShippingChargeRepository purchaseShippingChargeRepository;
@@ -74,7 +75,7 @@ class PurchaseServiceTest {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
-            purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository);
+            purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -991,6 +992,27 @@ class PurchaseServiceTest {
         var order = inOrder(purchaseRepository, creditorRepository);
         order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
         order.verify(creditorRepository).findByIdForUpdate(mami.getId());
+    }
+
+    @Test
+    @DisplayName("DEU-03 (062): un pago de Mami ya marcado como pagado no se anula, ni solo ni con el pedido, aunque la deuda alcance")
+    void voidPayment_alreadyRepaid() {
+        Purchase purchase = existingPurchase("300.00", "200.00");
+        PurchasePayment payment = addMamiPayment(purchase, "200.00");
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("500.00"));
+        when(creditorRepaymentItemRepository.existsActiveForPurchasePayments(List.of(payment.getId()))).thenReturn(true);
+
+        assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+        assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+        assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ACTIVO);
+        assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.REGISTRADO);
+
+        // Its repayment voided, the payment is pending again and can be voided
+        when(creditorRepaymentItemRepository.existsActiveForPurchasePayments(List.of(payment.getId()))).thenReturn(false);
+        purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator");
+        assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ANULADO);
     }
 
     @Test

@@ -11,6 +11,7 @@ import java.util.UUID;
 /**
  * History of a person (DEU-04): purchase payments and shipping paid by them (DEU-02), sales of their products
  * (POS-13) and repayments to them, oldest first, each with the debt after it. Voided entries keep the previous balance.
+ * Each debt says what is still owed of it and each repayment what it paid (DEU-03).
  */
 public record CreditorHistoryResponse(CreditorResponse creditor, List<Entry> entries) {
 
@@ -40,6 +41,12 @@ public record CreditorHistoryResponse(CreditorResponse creditor, List<Entry> ent
         String voidedBy,
         Instant voidedAt,
         String voidReason,
+        // DEU-03 (062), PAYMENT, SHIPPING and SALE not voided: what is still owed of it; 0 once paid
+        BigDecimal pendingAmount,
+        // Day of the repayment that finished paying it (CAJ-11)
+        LocalDate paidOn,
+        // REPAYMENT: what it paid, oldest first (PED-000015, «Envío PED-000020», VTA-000260)
+        List<String> paidItems,
         BigDecimal balanceAfter
     ) {}
 }

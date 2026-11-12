@@ -97,20 +97,33 @@ uno de los dos.
 ## DEU-03 · Devolución a la persona
 
 Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): persona, monto, cuenta de origen
-(Caja con la caja abierta, Bisa u otra cuenta activa), fecha y comentario.
+(Caja con la caja abierta, Bisa u otra cuenta activa), fecha y comentario. Desde el trabajo 062 se paga marcando
+deudas (P-65): cada devolución guarda qué pagó en `creditor_repayment_items` (V31), una fila por deuda con su monto:
+un pago de pedido (`purchase_payment_id`), un envío (`shipping_charge_id`) o una venta con sus productos (`sale_id`,
+la suma de sus líneas en esa venta), exactamente uno. Una deuda está pagada mientras las filas de devoluciones activas
+la cubren; lo que falta de ella es su monto menos esas filas. La deuda total se sigue calculando desde los totales.
 
-- **Cuando** se devuelven Bs 150,00 a Mami desde Bisa **entonces** se crea la devolución y un gasto
-  (`GASTO_MANUAL`) en Bisa con la categoría Pedido (P-34), descripción
-  «Devolución a Mami», vinculado a la devolución (`financial_transactions.creditor_repayment_id`); baja el saldo
-  de Bisa y la deuda con Mami.
-- **Cuando** se abre «Devolver» a Mami, que pagó el pedido 487 (Bs 122,00) y vendió productos suyos por Bs 60,00
-  (POS-13), **entonces** se propone concepto «Pago a tercero» por Bs 60,00: lo pendiente de sus ventas (ventas
-  activas − devoluciones activas con Pago a tercero, sin pasar la deuda). Registrada esa, la próxima vez se propone
-  «Pedido» por Bs 122,00. Las dos partes suman a la misma deuda; no se descuentan entre sí. Quien registra puede
-  cambiar monto y concepto (P-48, 28-10-2026).
-- **Cuando** el concepto es «Pago a tercero» y el monto supera lo pendiente de sus ventas **entonces** se rechaza:
-  «El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30.00); registre el resto con el concepto
-  Pedido.» (validado en el servidor desde el 29-10-2026; antes solo se proponía).
+- **Cuando** se abre el detalle de Mami con deuda **entonces** arriba del historial se listan sus deudas pendientes
+  (pagos de pedidos, envíos y ventas de sus productos), de la más antigua a la más nueva, con lo que falta de cada una;
+  se marcan una por una (casilla o la fila) o todas, y «A pagar · 2 de 4» muestra la suma de lo marcado.
+- **Cuando** se marcan las ventas VTA-000260 y VTA-000357 (Bs 30,00 cada una) y se paga desde Bisa **entonces** se
+  crea una devolución con concepto Pago a tercero por Bs 60,00, con una fila por venta, y un gasto (`GASTO_MANUAL`) en
+  Bisa con la categoría Pago a tercero, descripción «Pago a tercero a Mami», vinculado a la devolución
+  (`financial_transactions.creditor_repayment_id`); baja el saldo de Bisa y la deuda con Mami, y las dos ventas quedan
+  pagadas ese día.
+- **Cuando** se marcan un pedido (Bs 122,00), un envío (Bs 31,00) y una venta (Bs 27,00) **entonces** se registran en
+  la misma operación dos devoluciones con sus gastos: Pago a tercero por Bs 27,00 (la venta) y Devolución por
+  Bs 153,00 (pedido y envío, categoría Pedido, P-34, descripción «Devolución a Mami»). Si una falla, no queda ninguna.
+  El formulario lo avisa antes de pagar. El Pago a tercero nunca supera lo pendiente de sus ventas: sale solo de ventas
+  marcadas.
+- **Cuando** no se marca nada **entonces** el botón queda desactivado y el servidor rechaza «Elija las deudas que se
+  pagan.» No hay monto libre ni concepto para elegir.
+- **Cuando** lo marcado ya no está pendiente (otra pestaña lo pagó, se anuló, es de otra persona o no existe) o el total
+  no coincide con el que mostró la pantalla **entonces** se rechaza «Las deudas elegidas cambiaron; vuelva a abrir el
+  detalle.» y no se mueve dinero. El servidor calcula el monto con lo que falta de cada deuda, leído después del
+  bloqueo de la persona.
+- **Cuando** una deuda quedó pagada en parte (solo por datos anteriores a 062) **entonces** se lista con lo que falta
+  («Bs 12,00 de Bs 27,00») y marcarla paga ese resto.
 - **Cuando** la devolución sale de Caja y supera el efectivo esperado **entonces** el formulario lo avisa sin
   bloquear (CAJ-03).
 - **Cuando** se elige Caja y el servidor responde que no hay caja abierta **entonces** debajo de la lista aparece «La caja
@@ -119,8 +132,8 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 - **Cuando** se devuelve desde Caja **entonces** exige caja abierta («Los movimientos de la cuenta Caja
   requieren una caja abierta.»), el gasto se vincula a ella y baja el efectivo esperado (CAJ-03,
   `ExpectedCashCalculator`, como un gasto de Caja).
-- **Cuando** el monto supera la deuda **entonces** se rechaza: «La devolución supera la deuda con <nombre>
-  (Bs 50.00).»; con deuda 0, el mismo mensaje.
+- **Cuando** lo marcado supera la deuda (solo con datos anteriores a 062 que no se marcaron del todo) **entonces** se
+  rechaza: «La devolución supera la deuda con <nombre> (Bs 50.00).»
 - **Cuando** la persona está inactiva **entonces** se acepta: hay que poder devolverle lo que se le debe.
 - **Cuando** el gasto de la devolución se mira desde Finanzas o el POS **entonces** no se edita ni anula allí:
   «Los movimientos de una deuda se gestionan desde Deudas.»
@@ -132,7 +145,27 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 
 - **Cuando** se anula con motivo una devolución **entonces** queda `ANULADO` (quién, cuándo, motivo), su gasto
   queda anulado con el mismo motivo, la cuenta recupera el monto y la deuda vuelve a subir; si era de Caja con
-  la caja abierta, el efectivo esperado sube.
+  la caja abierta, el efectivo esperado sube. Lo que pagó vuelve a quedar pendiente y se puede volver a marcar; sus
+  filas no se borran y la devolución anulada sigue diciendo qué había pagado. El aviso lo dice: «Vuelven a quedar
+  pendientes: PED-000015, PED-000014.»
+
+### Lo ya pagado no se anula (P-65)
+
+- **Cuando** se anula un pago por persona, un pedido completo, un cambio del envío pagado por la persona (monto u
+  origen) o una venta con sus productos (POS-07) y eso ya figura como pagado por una devolución activa **entonces** se
+  rechaza con el mensaje de siempre («Ya se devolvió a Mami parte de este pago / envío / esta venta; anule primero la
+  devolución.»), aunque la deuda no quede negativa. Anulada la devolución, se puede.
+
+### Devoluciones anteriores a 062 (V32, P-66)
+
+- **Cuando** corre la migración **entonces** cada devolución activa cubre las deudas activas más antiguas de su
+  concepto (Pedido: pagos y envíos; Pago a tercero: ventas), por día de operación y fecha real, y lo que sobre de ella,
+  las más antiguas de cualquier tipo. Solo toca personas sin ninguna fila, así que correrla otra vez no cambia nada.
+- En producción (12-11-2026) las cinco devoluciones de Mami cubrían deudas enteras: Pago a tercero del 03/11 (Bs 326)
+  HIS-000085, HIS-000086, HIS-000088, VTA-000035 y VTA-000064; Pago a tercero del 05/11 (Bs 20) VTA-000126; Devolución
+  del 03/11 (Bs 122) PED-H00487; del 05/11 (Bs 3.242,45) PED-000015, PED-000014, PED-000019 y PED-000018; del 12/11
+  (Bs 1.280) PED-H00118, PED-000032 y PED-000024. Quedan pendientes VTA-000260, VTA-000357, VTA-000506 y VTA-000519
+  (Bs 102 = la deuda).
 - **Cuando** la devolución se hizo en una caja ya cerrada **entonces** se rechaza: «La devolución se hizo en una
   caja cerrada; no se puede anular.» (CAJ-06, T-16).
 - **Cuando** falta el motivo **entonces** «El motivo de anulación es obligatorio.»; si ya está anulada, «La
@@ -144,13 +177,16 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
   por estado y texto.
 - **Cuando** se abre el detalle de Mami **entonces** se ve su historial en orden de fecha: los pagos de pedidos
   (fecha, pedido `PED-000001`, proveedor, monto), los envíos que pagó («Pagó el envío del pedido PED-000001», con el
-  proveedor) y las devoluciones (fecha, cuenta, monto, comentario), cada uno
+  proveedor), las ventas de sus productos y las devoluciones (fecha, cuenta, monto, comentario), cada uno
   con el saldo después del movimiento. Los anulados se ven marcados, con su motivo, y no cuentan en el saldo.
+- **Cuando** una deuda está pagada **entonces** se ve «Pagada el 05/11» (el día de la devolución que la terminó de
+  pagar); si no, «Pendiente», o «Falta Bs 12,00» si se pagó en parte. Cada devolución dice qué pagó: «Pagó: PED-000015,
+  PED-000014», en el orden de las deudas (`pendingAmount`, `paidOn` y `paidItems` de cada entrada).
 - **Cuando** Mami pagó Bs 200,00 y Bs 100,00 y se le devolvieron Bs 150,00 **entonces** su deuda es Bs 150,00.
 - **Cuando** una venta de un producto de Mami (POS-13) o una devolución desde Caja se cargó pasada la medianoche en
   la caja del 31/10 **entonces** el historial la ordena y la muestra en el 31/10, con la marca «Día 31/10 · cargada
   el 01/11 00:20»; el saldo no cambia (CAJ-11). Una devolución desde Bisa queda en el día de su registro.
-- Desde el detalle se registra una devolución (DEU-03) y se abre el pedido de cada pago o envío.
+- Desde el detalle se pagan las deudas marcadas (DEU-03) y se abre el pedido de cada pago o envío.
 
 ## DEU-05 · Venta al costo a crédito
 
@@ -239,8 +275,8 @@ como fila de sistema (T-17). Los reportes distinguen devoluciones y cobros por s
 | --- | --- | --- |
 | GET | `/api/creditors?status=&search=` | Personas con su deuda (DEU-01, DEU-04); también `PURCHASES` |
 | POST / PUT / DELETE | `/api/creditors[/{id}]` | Alta, edición y baja lógica de personas (DEU-01) |
-| GET | `/api/creditors/{id}/history` | Pagos y devoluciones con saldo (DEU-04) |
-| POST | `/api/creditors/{id}/repayments` | Registrar devolución (DEU-03) |
+| GET | `/api/creditors/{id}/history` | Pagos, envíos, ventas y devoluciones con saldo, lo que falta de cada deuda y qué pagó cada devolución (DEU-04) |
+| POST | `/api/creditors/{id}/repayments` | Pagar las deudas marcadas: `accountId`, `amount` (el total que mostró la pantalla), `comment`, `items` (`type` PAYMENT, SHIPPING o SALE e `id`) (DEU-03) |
 | POST | `/api/creditors/{id}/repayments/{repaymentId}/void` | Anular devolución (DEU-03) |
 | GET | `/api/customers?status=&search=` | Clientes con su saldo (DEU-07); también `POS` |
 | POST / PUT / DELETE | `/api/customers[/{id}]` | Alta, edición y baja lógica de clientes (DEU-05) |
@@ -268,7 +304,14 @@ Deudas con personas (se puede construir ya):
   en `ShippingPaidByPersonIntegrationTest` y `creditor-detail-modal.component.spec.ts`.
 - [x] Probar P-48 en la app (28-10-2026, rama `feat/app-checks`): Mami con Bs 30,00 de sus ventas sin pagar y el
   pedido PED-000071 (Bs 17,00) pagado por ella. «Devolver» propuso «Pago a tercero» por Bs 30,00; registrado desde
-  Caja, propuso «Pedido» por Bs 17,00; registrado desde Bisa, la deuda quedó en 0. Sin hallazgos.
+  Caja, propuso «Pedido» por Bs 17,00; registrado desde Bisa, la deuda quedó en 0. Sin hallazgos. Reemplazado por
+  el pago marcando deudas (062).
+- [x] Pago marcando deudas (062, P-65, P-66): `V31__creditor_repayment_items.sql`, `V32__creditor_repayment_items_backfill.sql`,
+  `CreditorService` (pago por deudas marcadas y lo que falta de cada una), bloqueo de anular lo pagado en
+  `PurchaseService` y `SaleService`, `creditor-repayment-form` en el detalle. Pruebas: `CreditorServiceTest`,
+  `PurchaseServiceTest`, `SaleServiceFreeLineTest`, `CreditorRepositoryTest`, `ShippingPaidByPersonIntegrationTest`,
+  `CreditorRepaymentItemsMigrationIntegrationTest`, `creditor-repayment-form.component.spec.ts`,
+  `creditor-detail-modal.component.spec.ts`.
 
 Cuentas por cobrar (junto con o después de CON-02):
 

@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CreditorRepaymentItemRepository;
 import com.akhana.akhana_admin.repository.CreditorRepository;
 import com.akhana.akhana_admin.repository.SaleItemRepository;
 import com.akhana.akhana_admin.repository.CustomerRepository;
@@ -53,6 +54,7 @@ public class SaleServiceImpl implements SaleService {
     private final ProductPresentationService presentationService;
     private final SaleItemRepository saleItemRepository;
     private final CreditorRepository creditorRepository;
+    private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
@@ -406,7 +408,9 @@ public class SaleServiceImpl implements SaleService {
         if (!owed.isEmpty()) {
             for (Creditor owner : creditorRepository.findAllByIdForUpdate(owed.keySet())) {
                 BigDecimal debt = Optional.ofNullable(creditorRepository.computeDebt(owner.getId())).orElse(BigDecimal.ZERO);
-                if (debt.subtract(owed.get(owner.getId())).signum() < 0) {
+                // DEU-03 (062): also while the sale is marked as paid to them, even if the debt stays above 0
+                if (debt.subtract(owed.get(owner.getId())).signum() < 0
+                        || creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), owner.getId())) {
                     throw new IllegalStateException("Ya se devolvió a " + owner.getName()
                         + " parte de esta venta; anule primero la devolución.");
                 }

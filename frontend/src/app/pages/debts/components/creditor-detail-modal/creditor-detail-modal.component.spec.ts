@@ -10,7 +10,7 @@ const repayment: CreditorHistoryEntry = {
   type: 'REPAYMENT', id: 'rep-1', date: '2026-10-25T14:00:00Z', amount: 150, purchaseId: null, purchaseNumber: null,
   supplierName: null, saleId: null, saleNumber: null, accountId: 'acc-1', accountName: 'Bisa', comment: null,
   concept: 'PURCHASE', voided: false, voidedBy: null,
-  voidedAt: null, voidReason: null, balanceAfter: 150
+  voidedAt: null, voidReason: null, pendingAmount: null, paidOn: null, paidItems: ['PED-000001'], balanceAfter: 150
 };
 const history: CreditorHistory = {
   creditor: {
@@ -19,7 +19,7 @@ const history: CreditorHistory = {
   },
   entries: [
     { ...repayment, type: 'PAYMENT', id: 'pay-1', amount: 300, purchaseId: 'pur-1', purchaseNumber: 'PED-000001',
-      supplierName: 'Granel', accountId: null, accountName: null, balanceAfter: 300 },
+      supplierName: 'Granel', accountId: null, accountName: null, pendingAmount: 150, paidItems: null, balanceAfter: 300 },
     repayment
   ]
 };
@@ -53,37 +53,43 @@ describe('CreditorDetailModalComponent', () => {
     fixture.detectChanges();
   });
 
-  it('DEU-04: carga el historial y propone la deuda como monto a devolver', () => {
+  it('DEU-04: carga el historial y, con deuda, muestra para pagar lo que falta', () => {
     expect(creditorService.getHistory).toHaveBeenCalledWith('cre-1');
     expect(component.debt()).toBe(150);
-    expect(component.repaymentAmount()).toBe(150);
     expect(component.canRepay()).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-creditor-repayment-form')).not.toBeNull();
   });
 
-  it('P-48: con ventas suyas pendientes propone Pago a tercero por ese monto', () => {
-    const sale = (id: string, amount: number, voided = false): CreditorHistoryEntry => ({
-      ...repayment, type: 'SALE', id, amount, saleId: id, saleNumber: 'VTA-000133', accountId: null, accountName: null,
-      concept: null, voided
+  it('DEU-04 (062): cada deuda dice si está pagada, cuánto falta o si está pendiente, y la devolución qué pagó', () => {
+    const sale = (id: string, amount: number, pendingAmount: number, paidOn: string | null = null): CreditorHistoryEntry => ({
+      ...repayment, type: 'SALE', id, amount, saleId: id, saleNumber: 'VTA-' + id, accountId: null, accountName: null,
+      concept: null, pendingAmount, paidOn, paidItems: null
     });
     creditorService.getHistory.mockReturnValue(of({
-      creditor: { ...history.creditor, debt: 182 },
+      creditor: { ...history.creditor, debt: 57 },
       entries: [
-        { ...history.entries[0], amount: 122 },
-        sale('s-1', 60),
-        sale('s-2', 40),
-        sale('s-3', 25, true),
-        { ...repayment, id: 'rep-2', amount: 40, concept: 'THIRD_PARTY' }
+        sale('260', 30, 0, '2026-11-12'),
+        sale('357', 30, 30),
+        sale('506', 27, 12),
+        { ...repayment, id: 'rep-2', amount: 30, concept: 'THIRD_PARTY', paidItems: ['VTA-260'] }
       ]
     }));
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();
-    expect(component.repaymentConcept()).toBe('THIRD_PARTY');
-    expect(component.repaymentAmount()).toBe(60);
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.table-responsive > table > tbody > tr'))
+      .filter(r => !r.closest('app-creditor-repayment-form'));
+    expect(rows[0].querySelector('.debt-state')!.textContent).toContain('Pagada el 12/11');
+    expect(rows[1].querySelector('.debt-state')!.textContent).toContain('Pendiente');
+    expect(rows[2].querySelector('.debt-state')!.textContent).toContain('Falta Bs 12.00');
+    expect(rows[3].querySelector('.debt-state')).toBeNull();
+    expect(rows[3].textContent).toContain('Pagó: VTA-260');
   });
 
-  it('P-48: sin ventas pendientes propone Pedido por toda la deuda', () => {
-    expect(component.repaymentConcept()).toBe('PURCHASE');
-    expect(component.repaymentAmount()).toBe(150);
+  it('DEU-04: sin deuda no muestra para pagar', () => {
+    creditorService.getHistory.mockReturnValue(of({ ...history, creditor: { ...history.creditor, debt: 0 } }));
+    fixture.componentRef.setInput('refreshKey', 1);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-creditor-repayment-form')).toBeNull();
   });
 
   it('CAJ-11: una devolución desde Caja cargada pasada la medianoche se ve en el día de su caja', () => {
@@ -94,7 +100,9 @@ describe('CreditorDetailModalComponent', () => {
     }));
     fixture.componentRef.setInput('refreshKey', 2);
     fixture.detectChanges();
-    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+    // The history rows, not those of the form to pay
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr'))
+      .filter(r => !r.closest('app-creditor-repayment-form'));
     expect(rows[0].querySelector('.day-mark')).toBeNull();
     expect(rows[1].querySelector('.day-mark')?.textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
   });
@@ -108,12 +116,11 @@ describe('CreditorDetailModalComponent', () => {
     }));
     fixture.componentRef.setInput('refreshKey', 3);
     fixture.detectChanges();
-    const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr')!;
+    const row = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr'))
+      .find(r => !r.closest('app-creditor-repayment-form'))!;
     expect(row.textContent).toContain('Pagó el envío del pedido PED-000009');
     expect(row.textContent).toContain('Granel');
     expect(row.textContent).toContain('+ Bs 25.00');
-    expect(component.repaymentConcept()).toBe('PURCHASE');
-    expect(component.repaymentAmount()).toBe(25);
 
     const opened: string[] = [];
     component.openPurchase.subscribe(id => opened.push(id));
@@ -127,32 +134,30 @@ describe('CreditorDetailModalComponent', () => {
     expect(creditorService.getHistory).toHaveBeenCalledTimes(2);
   });
 
-  it('DEU-03: exige cuenta y registra la devolución', () => {
+  it('DEU-03 (062): registra lo marcado y avisa a la lista', () => {
     const changed = vi.fn();
     component.changed.subscribe(changed);
-    component.registerRepayment();
-    expect(component.repaymentError()).toBe('Elija la cuenta desde la que se devuelve.');
-
-    component.repaymentAccountId.set('acc-1');
-    component.repaymentComment.set('  en mano ');
-    component.registerRepayment();
-    expect(creditorService.registerRepayment).toHaveBeenCalledWith('cre-1', { accountId: 'acc-1', amount: 150, comment: 'en mano',
-      concept: 'PURCHASE' });
+    const request = { accountId: 'acc-1', amount: 150, comment: 'en mano', items: [{ type: 'PAYMENT' as const, id: 'pay-1' }] };
+    component.registerRepayment(request);
+    expect(creditorService.registerRepayment).toHaveBeenCalledWith('cre-1', request);
     expect(component.canRepay()).toBe(false);
+    expect(component.isRepaying()).toBe(false);
     expect(changed).toHaveBeenCalled();
   });
 
-  it('DEU-03: muestra el rechazo del servidor', () => {
-    creditorService.registerRepayment.mockReturnValue(throwError(() => ({ error: { message: 'La devolución supera la deuda con Mami (Bs 150.00).' } })));
-    component.repaymentAccountId.set('acc-1');
-    component.repaymentAmount.set(200);
-    component.registerRepayment();
-    expect(component.repaymentError()).toBe('La devolución supera la deuda con Mami (Bs 150.00).');
+  it('DEU-03 (062): muestra el rechazo del servidor en el formulario', () => {
+    creditorService.registerRepayment.mockReturnValue(throwError(() => ({ error: { message: 'Las deudas elegidas cambiaron; vuelva a abrir el detalle.' } })));
+    component.registerRepayment({ accountId: 'acc-1', amount: 150, comment: null, items: [{ type: 'PAYMENT', id: 'pay-1' }] });
+    fixture.detectChanges();
+    expect(component.repaymentError()).toBe('Las deudas elegidas cambiaron; vuelva a abrir el detalle.');
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-creditor-repayment-form .alert-danger')!.textContent)
+      .toContain('Las deudas elegidas cambiaron');
   });
 
   it('DEU-03: anula una devolución con motivo', () => {
     component.openVoid(repayment);
     expect(component.voidMessage()).toContain('desde Bisa');
+    expect(component.voidMessage()).toContain('Vuelven a quedar pendientes: PED-000001.');
     component.confirmVoid('Monto errado');
     expect(creditorService.voidRepayment).toHaveBeenCalledWith('cre-1', 'rep-1', { voidReason: 'Monto errado' });
     expect(component.voidTarget()).toBeNull();
@@ -164,71 +169,5 @@ describe('CreditorDetailModalComponent', () => {
     component.confirmVoid('Error');
     expect(component.voidError()).toBe('La devolución se hizo en una caja cerrada; no se puede anular.');
     expect(component.voidTarget()).not.toBeNull();
-  });
-
-  describe('CAJ-03: Caja sin «(caja abierta)»', () => {
-    const note = (): HTMLElement | null => fixture.nativeElement.querySelector('.cash-closed-note');
-    const saveButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('#repayment-account').closest('form').querySelector('button[type=submit]');
-    const choose = (value: string): void => {
-      const select: HTMLSelectElement = fixture.nativeElement.querySelector('#repayment-account');
-      select.value = value;
-      select.dispatchEvent(new Event('change'));
-      fixture.detectChanges();
-    };
-
-    beforeEach(async () => {
-      fixture.componentRef.setInput('accounts', [{ id: 'acc-caja', name: 'Caja', color: '#000', cashAccount: true, qrAccount: false }, { id: 'acc-efe', name: 'Bisa', color: '#000', cashAccount: false, qrAccount: false }]);
-      fixture.detectChanges();
-      await fixture.whenStable();
-      fixture.detectChanges();
-    });
-
-    it('la opción no dice «(caja abierta)»', () => {
-      const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#repayment-account option')).map(o => o.textContent!.trim());
-      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa']);
-    });
-
-    it('con la caja cerrada muestra la nota al elegir Caja', () => {
-      cashSession.mockReturnValue(of(null));
-      choose('acc-caja');
-      expect(note()!.textContent).toContain('La caja está cerrada. Ábrala y vuelva a elegir Caja.');
-      expect(saveButton().disabled).toBe(true);
-
-      choose('acc-efe');
-      expect(saveButton().disabled).toBe(false);
-    });
-
-    it('al volver a elegir Caja consulta otra vez y, con la caja ya abierta, activa el botón', () => {
-      cashSession.mockReturnValue(of(null));
-      choose('acc-caja');
-      expect(saveButton().disabled).toBe(true);
-
-      choose('');
-      cashSession.mockReturnValue(of({ id: 's1', expectedCash: 1000 }));
-      choose('acc-caja');
-      expect(note()).toBeNull();
-      expect(saveButton().disabled).toBe(false);
-    });
-
-    it('si falla la consulta no bloquea', () => {
-      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
-      choose('acc-caja');
-      expect(saveButton().disabled).toBe(false);
-    });
-
-    it('sin nota con la caja abierta, con otra cuenta o si falla la consulta', () => {
-      choose('acc-caja');
-      expect(note()).toBeNull();
-
-      choose('');
-      cashSession.mockReturnValue(of(null));
-      choose('acc-efe');
-      expect(note()).toBeNull();
-
-      choose('');
-      cashSession.mockReturnValue(throwError(() => ({ status: 0 })));
-      choose('acc-caja');
-      expect(note()).toBeNull();
-    });
   });
 });

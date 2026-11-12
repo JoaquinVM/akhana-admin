@@ -23,7 +23,8 @@ public class CreditorServiceImpl implements CreditorService {
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar la devolución.";
-    static final String THIRD_PARTY_OVER_PENDING = "El Pago a tercero supera lo pendiente de las ventas de %s (%s); registre el resto con el concepto Pedido.";
+    static final String NO_DEBTS_CHOSEN = "Elija las deudas que se pagan.";
+    static final String DEBTS_CHANGED = "Las deudas elegidas cambiaron; vuelva a abrir el detalle.";
     static final String THIRD_PARTY_CATEGORY_MISSING = "No existe la categoría Pago a tercero; no se puede registrar la devolución.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String ALREADY_VOIDED_REPAYMENT = "La devolución ya está anulada.";
@@ -35,6 +36,7 @@ public class CreditorServiceImpl implements CreditorService {
 
     private final CreditorRepository creditorRepository;
     private final CreditorRepaymentRepository creditorRepaymentRepository;
+    private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     private final PurchasePaymentRepository purchasePaymentRepository;
     private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
     private final CashSessionRepository cashSessionRepository;
@@ -128,49 +130,51 @@ public class CreditorServiceImpl implements CreditorService {
     @Transactional(readOnly = true)
     public CreditorHistoryResponse getHistory(UUID id) {
         Creditor creditor = findCreditor(id);
+        List<Debt> debts = debtsOf(id);
+        List<CreditorRepaymentItem> rows = creditorRepaymentItemRepository.findByCreditorId(id);
+        Map<DebtKey, BigDecimal> paid = paidByDebt(rows);
 
-        // Payments raise the debt and repayments lower it; by day of operation (CAJ-11), then server date (T-18)
+        // DEU-03 (062): the day each debt was finished paying, and what each repayment paid, oldest debt first
+        Map<DebtKey, LocalDate> paidOn = new HashMap<>();
+        Map<UUID, List<CreditorRepaymentItem>> rowsByRepayment = new HashMap<>();
+        for (CreditorRepaymentItem row : rows) {
+            CreditorRepayment r = row.getRepayment();
+            rowsByRepayment.computeIfAbsent(r.getId(), k -> new ArrayList<>()).add(row);
+            if (r.getStatus() == CreditorRepaymentStatus.ACTIVO) {
+                paidOn.merge(keyOf(row), r.getOperationDate(), (a, b) -> a.isAfter(b) ? a : b);
+            }
+        }
+        Map<DebtKey, Integer> debtOrder = new HashMap<>();
+        Map<DebtKey, String> labels = new HashMap<>();
+        for (int i = 0; i < debts.size(); i++) {
+            debtOrder.put(debts.get(i).key(), i);
+            labels.put(debts.get(i).key(), debts.get(i).label());
+        }
+
+        // Debts raise the balance and repayments lower it; by day of operation (CAJ-11), then server date (T-18)
         record Item(LocalDate day, Instant date, Instant createdAt, CreditorHistoryResponse.Entry entry, BigDecimal delta) {}
         List<Item> items = new ArrayList<>();
-        for (PurchasePayment p : purchasePaymentRepository.findByCreditorId(id)) {
-            boolean voided = p.getStatus() == PurchasePaymentRecordStatus.ANULADO;
-            items.add(new Item(p.getOperationDate(), p.getPaymentDate(), p.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.PAYMENT, p.getId(), p.getPaymentDate(), p.getOperationDate(), p.getAmount(),
-                p.getPurchase().getId(), p.getPurchase().getPurchaseNumber(), p.getPurchase().getSupplier().getName(),
-                null, null, null, null, null, null, voided, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), null),
-                voided ? ZERO : p.getAmount()));
-        }
-        // DEU-02: the shipping of a purchase paid by the person
-        for (PurchaseShippingCharge c : purchaseShippingChargeRepository.findByCreditorId(id)) {
-            boolean voided = c.getStatus() == PurchasePaymentRecordStatus.ANULADO;
-            items.add(new Item(c.getOperationDate(), c.getChargeDate(), c.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.SHIPPING, c.getId(), c.getChargeDate(), c.getOperationDate(), c.getAmount(),
-                c.getPurchase().getId(), c.getPurchase().getPurchaseNumber(), c.getPurchase().getSupplier().getName(),
-                null, null, null, null, null, null, voided, c.getVoidedBy(), c.getVoidedAt(), c.getVoidReason(), null),
-                voided ? ZERO : c.getAmount()));
-        }
-        // POS-13: one entry per sale with the person's lines, on the day of the sale (CAJ-11)
-        Map<UUID, List<SaleItem>> linesBySale = new LinkedHashMap<>();
-        for (SaleItem line : saleItemRepository.findThirdPartyLinesByCreditorId(id)) {
-            linesBySale.computeIfAbsent(line.getSale().getId(), s -> new ArrayList<>()).add(line);
-        }
-        for (List<SaleItem> lines : linesBySale.values()) {
-            Sale s = lines.getFirst().getSale();
-            BigDecimal amount = lines.stream().map(SaleItem::getSubtotal).reduce(ZERO, BigDecimal::add);
-            boolean voided = s.getStatus() == SaleStatus.ANULADA;
-            items.add(new Item(s.getOperationDate(), s.getCreatedAt(), s.getCreatedAt(), new CreditorHistoryResponse.Entry(
-                CreditorHistoryResponse.EntryType.SALE, s.getId(), s.getCreatedAt(), s.getOperationDate(), amount,
-                null, null, null,
-                s.getId(), s.getSaleNumber(), null, null, null, null, voided, s.getVoidedBy(), s.getVoidedAt(),
-                s.getVoidReason(), null),
-                voided ? ZERO : amount));
+        for (Debt d : debts) {
+            BigDecimal pending = d.voided() ? null : d.amount().subtract(paid.getOrDefault(d.key(), ZERO)).max(ZERO);
+            LocalDate paidDay = pending != null && pending.signum() == 0 ? paidOn.get(d.key()) : null;
+            items.add(new Item(d.day(), d.date(), d.createdAt(), new CreditorHistoryResponse.Entry(
+                d.type(), d.id(), d.date(), d.day(), d.amount(), d.purchaseId(), d.purchaseNumber(), d.supplierName(),
+                d.saleId(), d.saleNumber(), null, null, null, null, d.voided(), d.voidedBy(), d.voidedAt(),
+                d.voidReason(), pending, paidDay, null, null),
+                d.voided() ? ZERO : d.amount()));
         }
         for (CreditorRepayment r : creditorRepaymentRepository.findByCreditorId(id)) {
             boolean voided = r.getStatus() == CreditorRepaymentStatus.ANULADO;
+            List<String> paidItems = rowsByRepayment.getOrDefault(r.getId(), List.of()).stream()
+                .map(this::keyOf)
+                .distinct()
+                .sorted(Comparator.comparing(k -> debtOrder.getOrDefault(k, Integer.MAX_VALUE)))
+                .map(k -> labels.getOrDefault(k, ""))
+                .toList();
             items.add(new Item(r.getOperationDate(), r.getRepaymentDate(), r.getCreatedAt(), new CreditorHistoryResponse.Entry(
                 CreditorHistoryResponse.EntryType.REPAYMENT, r.getId(), r.getRepaymentDate(), r.getOperationDate(), r.getAmount(),
                 null, null, null, null, null, r.getAccount().getId(), r.getAccount().getName(), r.getComment(),
-                r.getConcept(), voided, r.getVoidedBy(), r.getVoidedAt(), r.getVoidReason(), null),
+                r.getConcept(), voided, r.getVoidedBy(), r.getVoidedAt(), r.getVoidReason(), null, null, paidItems, null),
                 voided ? ZERO : r.getAmount().negate()));
         }
         items.sort(Comparator.comparing(Item::day).thenComparing(Item::date)
@@ -183,14 +187,19 @@ public class CreditorServiceImpl implements CreditorService {
             CreditorHistoryResponse.Entry e = item.entry();
             entries.add(new CreditorHistoryResponse.Entry(e.type(), e.id(), e.date(), e.operationDate(), e.amount(), e.purchaseId(),
                 e.purchaseNumber(), e.supplierName(), e.saleId(), e.saleNumber(), e.accountId(), e.accountName(),
-                e.comment(), e.concept(), e.voided(), e.voidedBy(), e.voidedAt(), e.voidReason(), balance));
+                e.comment(), e.concept(), e.voided(), e.voidedBy(), e.voidedAt(), e.voidReason(), e.pendingAmount(),
+                e.paidOn(), e.paidItems(), balance));
         }
         return new CreditorHistoryResponse(CreditorResponse.fromEntity(creditor, balance), entries);
     }
 
     @Override
     public CreditorHistoryResponse registerRepayment(UUID creditorId, CreditorRepaymentRequest request, String username) {
-        BigDecimal amount = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
+        BigDecimal shown = FinancialTransactionServiceImpl.normalizeAmount(request.amount());
+        List<CreditorRepaymentRequest.Item> refs = request.items() != null ? request.items() : List.of();
+        if (refs.isEmpty() || refs.stream().anyMatch(ref -> ref == null || ref.type() == null || ref.id() == null)) {
+            throw new IllegalArgumentException(NO_DEBTS_CHOSEN);
+        }
 
         // Lock order for every money operation, as in sales: cash session, then person, then account (T-14).
         // An inactive person can still be repaid.
@@ -200,26 +209,45 @@ public class CreditorServiceImpl implements CreditorService {
                 .orElseThrow(() -> new IllegalStateException(CASH_SESSION_REQUIRED));
         }
         Creditor creditor = lockCreditor(creditorId);
+
+        // DEU-03 (062): each ticked debt is paid whole; what it still owes is read after the lock. A debt already
+        // paid, voided, of another person or unknown means the screen is stale: nothing is recorded
+        List<Debt> debts = debtsOf(creditorId);
+        Map<DebtKey, BigDecimal> paid = paidByDebt(creditorRepaymentItemRepository.findByCreditorId(creditorId));
+        Set<DebtKey> ticked = new HashSet<>();
+        refs.forEach(ref -> ticked.add(new DebtKey(ref.type(), ref.id())));
+        Map<CreditorRepaymentConcept, Map<Debt, BigDecimal>> byConcept = new EnumMap<>(CreditorRepaymentConcept.class);
+        BigDecimal total = ZERO;
+        for (Debt debt : debts) {
+            if (!ticked.remove(debt.key())) {
+                continue;
+            }
+            BigDecimal pending = debt.voided() ? ZERO : debt.amount().subtract(paid.getOrDefault(debt.key(), ZERO));
+            if (pending.signum() <= 0) {
+                throw new IllegalArgumentException(DEBTS_CHANGED);
+            }
+            // Sales of their products go back as Pago a tercero (POS-13); purchases and shipping as Pedido (P-34)
+            CreditorRepaymentConcept concept = debt.type() == CreditorHistoryResponse.EntryType.SALE
+                ? CreditorRepaymentConcept.THIRD_PARTY : CreditorRepaymentConcept.PURCHASE;
+            byConcept.computeIfAbsent(concept, c -> new LinkedHashMap<>()).put(debt, pending);
+            total = total.add(pending);
+        }
+        if (!ticked.isEmpty() || total.compareTo(shown) != 0) {
+            throw new IllegalArgumentException(DEBTS_CHANGED);
+        }
         BigDecimal debt = debtOf(creditor);
-        if (amount.compareTo(debt) > 0) {
+        if (total.compareTo(debt) > 0) {
             throw new IllegalArgumentException("La devolución supera la deuda con " + creditor.getName()
                 + " (" + StoreFormat.money(debt) + ").");
         }
-        // Purchases go back as Pedido (P-34) and third-party sales as Pago a tercero (POS-13)
-        CreditorRepaymentConcept concept = request.concept() != null ? request.concept() : CreditorRepaymentConcept.PURCHASE;
-        boolean thirdParty = concept == CreditorRepaymentConcept.THIRD_PARTY;
-        // Pago a tercero only pays what is pending of the person's sales (P-48); the rest goes back as Pedido
-        if (thirdParty) {
-            BigDecimal pending = scale(creditorRepository.computeThirdPartyPending(creditor.getId())).max(ZERO);
-            if (amount.compareTo(pending) > 0) {
-                throw new IllegalArgumentException(String.format(THIRD_PARTY_OVER_PENDING, creditor.getName(),
-                    StoreFormat.money(pending)));
-            }
+        Map<CreditorRepaymentConcept, FinancialCategory> categories = new EnumMap<>(CreditorRepaymentConcept.class);
+        for (CreditorRepaymentConcept concept : byConcept.keySet()) {
+            boolean thirdParty = concept == CreditorRepaymentConcept.THIRD_PARTY;
+            categories.put(concept, financialCategoryRepository
+                .findBySystemKeyAndDeletedAtIsNull(thirdParty
+                    ? FinancialCategorySystemKey.THIRD_PARTY_PAYMENT : FinancialCategorySystemKey.PURCHASE_PAYMENT)
+                .orElseThrow(() -> new IllegalStateException(thirdParty ? THIRD_PARTY_CATEGORY_MISSING : PAYMENT_CATEGORY_MISSING)));
         }
-        FinancialCategory category = financialCategoryRepository
-            .findBySystemKeyAndDeletedAtIsNull(thirdParty
-                ? FinancialCategorySystemKey.THIRD_PARTY_PAYMENT : FinancialCategorySystemKey.PURCHASE_PAYMENT)
-            .orElseThrow(() -> new IllegalStateException(thirdParty ? THIRD_PARTY_CATEGORY_MISSING : PAYMENT_CATEGORY_MISSING));
 
         FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(request.accountId())
             .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.accountId()));
@@ -228,38 +256,48 @@ public class CreditorServiceImpl implements CreditorService {
         // CAJ-11: from Caja it counts for the day of the session; from another account, for the day it is recorded
         LocalDate operationDate = session != null ? session.getOperationDate() : StoreFormat.storeDay(now);
         String comment = trimToNull(request.comment());
-        // Saved before its expense, which points to it
-        CreditorRepayment repayment = creditorRepaymentRepository.save(CreditorRepayment.builder()
-            .creditor(creditor)
-            .account(account)
-            .amount(amount)
-            .repaymentDate(now)
-            .operationDate(operationDate)
-            .comment(comment)
-            .concept(concept)
-            .status(CreditorRepaymentStatus.ACTIVO)
-            .createdBy(username)
-            .createdAt(now)
-            .build());
+        // Pago a tercero first, then Pedido: one repayment and one expense per concept, all in this transaction
+        for (CreditorRepaymentConcept concept : List.of(CreditorRepaymentConcept.THIRD_PARTY, CreditorRepaymentConcept.PURCHASE)) {
+            Map<Debt, BigDecimal> chosen = byConcept.get(concept);
+            if (chosen == null) {
+                continue;
+            }
+            boolean thirdParty = concept == CreditorRepaymentConcept.THIRD_PARTY;
+            BigDecimal amount = chosen.values().stream().reduce(ZERO, BigDecimal::add);
+            // Saved before its expense, which points to it
+            CreditorRepayment repayment = creditorRepaymentRepository.save(CreditorRepayment.builder()
+                .creditor(creditor)
+                .account(account)
+                .amount(amount)
+                .repaymentDate(now)
+                .operationDate(operationDate)
+                .comment(comment)
+                .concept(concept)
+                .status(CreditorRepaymentStatus.ACTIVO)
+                .createdBy(username)
+                .createdAt(now)
+                .build());
+            chosen.forEach((d, pending) -> creditorRepaymentItemRepository.save(itemFor(repayment, d, pending)));
 
-        // Deferred payment of a purchase: a Pedido expense (P-34), like a payment from an account (COM-06)
-        account.setCurrentBalance(account.getCurrentBalance().subtract(amount));
+            // Deferred payment of a purchase: a Pedido expense (P-34), like a payment from an account (COM-06)
+            account.setCurrentBalance(account.getCurrentBalance().subtract(amount));
+            financialTransactionRepository.save(FinancialTransaction.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccount(account)
+                .category(categories.get(concept))
+                .amount(amount)
+                .transactionDate(now)
+                .operationDate(operationDate)
+                .description((thirdParty ? "Pago a tercero a " : "Devolución a ") + creditor.getName())
+                .notes(comment)
+                .status(FinancialTransactionStatus.ACTIVO)
+                .creditorRepaymentId(repayment.getId())
+                .cashSessionId(session != null ? session.getId() : null)
+                .createdBy(username)
+                .createdAt(now)
+                .build());
+        }
         financialAccountRepository.save(account);
-        financialTransactionRepository.save(FinancialTransaction.builder()
-            .type(FinancialTransactionType.GASTO_MANUAL)
-            .sourceAccount(account)
-            .category(category)
-            .amount(amount)
-            .transactionDate(now)
-            .operationDate(operationDate)
-            .description((thirdParty ? "Pago a tercero a " : "Devolución a ") + creditor.getName())
-            .notes(comment)
-            .status(FinancialTransactionStatus.ACTIVO)
-            .creditorRepaymentId(repayment.getId())
-            .cashSessionId(session != null ? session.getId() : null)
-            .createdBy(username)
-            .createdAt(now)
-            .build());
 
         if (session != null) {
             expectedCashCalculator.refresh(session);
@@ -331,6 +369,92 @@ public class CreditorServiceImpl implements CreditorService {
             .map(a -> new PaymentAccountResponse(a.getId(), a.getName(), a.getColor(), Boolean.TRUE.equals(a.getIsCashAccount()),
                 Boolean.TRUE.equals(a.getIsQrAccount())))
             .toList();
+    }
+
+    // A debt of a person, as the history lists it: what they paid for a purchase or its shipping (DEU-02) or a sale
+    // with their products (POS-13); a voided one no longer counts
+    private record DebtKey(CreditorHistoryResponse.EntryType type, UUID id) {}
+
+    private record Debt(CreditorHistoryResponse.EntryType type, UUID id, LocalDate day, Instant date, Instant createdAt,
+                        BigDecimal amount, boolean voided, UUID purchaseId, String purchaseNumber, String supplierName,
+                        UUID saleId, String saleNumber, String voidedBy, Instant voidedAt, String voidReason,
+                        // The PurchasePayment, PurchaseShippingCharge or Sale itself
+                        Object source) {
+        DebtKey key() {
+            return new DebtKey(type, id);
+        }
+
+        String label() {
+            return switch (type) {
+                case SHIPPING -> "Envío " + purchaseNumber;
+                case SALE -> saleNumber;
+                default -> purchaseNumber;
+            };
+        }
+    }
+
+    // The person's debts, oldest first: by day of operation (CAJ-11), then server date (T-18)
+    private List<Debt> debtsOf(UUID creditorId) {
+        List<Debt> debts = new ArrayList<>();
+        for (PurchasePayment p : purchasePaymentRepository.findByCreditorId(creditorId)) {
+            debts.add(new Debt(CreditorHistoryResponse.EntryType.PAYMENT, p.getId(), p.getOperationDate(), p.getPaymentDate(),
+                p.getCreatedAt(), p.getAmount(), p.getStatus() == PurchasePaymentRecordStatus.ANULADO,
+                p.getPurchase().getId(), p.getPurchase().getPurchaseNumber(), p.getPurchase().getSupplier().getName(),
+                null, null, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), p));
+        }
+        // DEU-02: the shipping of a purchase paid by the person
+        for (PurchaseShippingCharge c : purchaseShippingChargeRepository.findByCreditorId(creditorId)) {
+            debts.add(new Debt(CreditorHistoryResponse.EntryType.SHIPPING, c.getId(), c.getOperationDate(), c.getChargeDate(),
+                c.getCreatedAt(), c.getAmount(), c.getStatus() == PurchasePaymentRecordStatus.ANULADO,
+                c.getPurchase().getId(), c.getPurchase().getPurchaseNumber(), c.getPurchase().getSupplier().getName(),
+                null, null, c.getVoidedBy(), c.getVoidedAt(), c.getVoidReason(), c));
+        }
+        // POS-13: one debt per sale with the person's lines, on the day of the sale (CAJ-11)
+        Map<UUID, List<SaleItem>> linesBySale = new LinkedHashMap<>();
+        for (SaleItem line : saleItemRepository.findThirdPartyLinesByCreditorId(creditorId)) {
+            linesBySale.computeIfAbsent(line.getSale().getId(), s -> new ArrayList<>()).add(line);
+        }
+        for (List<SaleItem> lines : linesBySale.values()) {
+            Sale s = lines.getFirst().getSale();
+            BigDecimal amount = lines.stream().map(SaleItem::getSubtotal).reduce(ZERO, BigDecimal::add);
+            debts.add(new Debt(CreditorHistoryResponse.EntryType.SALE, s.getId(), s.getOperationDate(), s.getCreatedAt(),
+                s.getCreatedAt(), amount, s.getStatus() == SaleStatus.ANULADA, null, null, null,
+                s.getId(), s.getSaleNumber(), s.getVoidedBy(), s.getVoidedAt(), s.getVoidReason(), s));
+        }
+        debts.sort(Comparator.comparing(Debt::day).thenComparing(Debt::date)
+            .thenComparing(Debt::createdAt, Comparator.nullsFirst(Comparator.naturalOrder())));
+        return debts;
+    }
+
+    // DEU-03 (062): what the active repayments paid of each debt
+    private Map<DebtKey, BigDecimal> paidByDebt(List<CreditorRepaymentItem> rows) {
+        Map<DebtKey, BigDecimal> paid = new HashMap<>();
+        for (CreditorRepaymentItem row : rows) {
+            if (row.getRepayment().getStatus() == CreditorRepaymentStatus.ACTIVO) {
+                paid.merge(keyOf(row), row.getAmount(), BigDecimal::add);
+            }
+        }
+        return paid;
+    }
+
+    private DebtKey keyOf(CreditorRepaymentItem row) {
+        CreditorHistoryResponse.EntryType type = row.getPurchasePayment() != null ? CreditorHistoryResponse.EntryType.PAYMENT
+            : row.getShippingCharge() != null ? CreditorHistoryResponse.EntryType.SHIPPING
+            : CreditorHistoryResponse.EntryType.SALE;
+        return new DebtKey(type, row.debtId());
+    }
+
+    private static CreditorRepaymentItem itemFor(CreditorRepayment repayment, Debt debt, BigDecimal amount) {
+        CreditorRepaymentItem.CreditorRepaymentItemBuilder item = CreditorRepaymentItem.builder()
+            .repayment(repayment)
+            .amount(amount);
+        switch (debt.source()) {
+            case PurchasePayment p -> item.purchasePayment(p);
+            case PurchaseShippingCharge c -> item.shippingCharge(c);
+            case Sale s -> item.sale(s);
+            default -> throw new IllegalStateException("Deuda desconocida: " + debt.id());
+        }
+        return item.build();
     }
 
     private Creditor findCreditor(UUID id) {

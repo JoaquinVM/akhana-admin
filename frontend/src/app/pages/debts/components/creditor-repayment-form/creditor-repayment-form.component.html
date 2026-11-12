@@ -1,0 +1,86 @@
+<form class="repayment-form" (ngSubmit)="submit()">
+  <h4 class="section-title">Pagar deudas</h4>
+  @if (localError() || errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ localError() || errorMessage() }}</span></div>
+  }
+
+  @if (pending().length === 0) {
+    <p class="hint">No tiene deudas pendientes.</p>
+  } @else {
+    <p class="hint">Marque lo que se paga: el monto es la suma de lo marcado.</p>
+    <div class="table-responsive">
+      <table class="table pending-table">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input type="checkbox" aria-label="Marcar todas" [checked]="allSelected()" (change)="toggleAll()" />
+            </th>
+            <th>Deuda</th>
+            <th class="text-right">Falta</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of pending(); track key(entry)) {
+            <tr [class.selected-row]="isSelected(entry)" (click)="toggle(entry)">
+              <td class="check-col">
+                <input type="checkbox" [attr.aria-label]="'Marcar ' + label(entry)" [checked]="isSelected(entry)"
+                       (click)="$event.stopPropagation()" (change)="toggle(entry)" />
+              </td>
+              <td>
+                <span class="entry-title">{{ label(entry) }}</span>
+                <span class="entry-note">
+                  {{ (entry.operationDate || entry.date) | date:'dd/MM/yyyy' }}{{ entry.supplierName ? ' · ' + entry.supplierName : '' }}
+                </span>
+              </td>
+              <td class="text-right amount-col">
+                Bs {{ entry.pendingAmount | number:'1.2-2' }}
+                @if ((entry.pendingAmount ?? 0) < entry.amount) {
+                  <span class="entry-note">de Bs {{ entry.amount | number:'1.2-2' }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="selection-total">
+      <span>A pagar · {{ chosen().length }} de {{ pending().length }}</span>
+      <strong>Bs {{ total() | number:'1.2-2' }}</strong>
+    </div>
+    @if (salesTotal() > 0 && purchasesTotal() > 0) {
+      <p class="hint concept-note">
+        Se registran dos: Pago a tercero por Bs {{ salesTotal() | number:'1.2-2' }} (ventas de sus productos) y
+        Devolución por Bs {{ purchasesTotal() | number:'1.2-2' }} (pedidos y envíos).
+      </p>
+    }
+
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="repayment-account">Pagado desde <span class="required-mark">*</span></label>
+        <select id="repayment-account" class="form-control" name="accountId"
+                [ngModel]="accountId()" (ngModelChange)="accountId.set($event)">
+          <option value="">Seleccione…</option>
+          @for (account of accounts(); track account.id) {
+            <option [value]="account.id">{{ account.name }}</option>
+          }
+        </select>
+        @if (repaysFromCash()) {
+          <app-cash-closed-note (closedChange)="cashClosed.set($event)" />
+          <app-cash-limit-warning [amount]="total()" />
+        }
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="repayment-comment">Comentario</label>
+        <input id="repayment-comment" class="form-control" name="comment" maxlength="500"
+               [ngModel]="comment()" (ngModelChange)="comment.set($event)" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"
+              [disabled]="isSaving() || chosen().length === 0 || (repaysFromCash() && cashClosed())">
+        {{ isSaving() ? 'Registrando…' : 'Pagar Bs ' + (total() | number:'1.2-2') }}
+      </button>
+    </div>
+  }
+</form>

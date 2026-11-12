@@ -16,7 +16,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
-| Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Envío pagado por una persona (DEU-02) sin publicar | `debts.md` |
+| Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
 | POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
@@ -149,8 +149,8 @@ Detalle en `debts.md`. Los saldos no se guardan: se calculan desde los registros
 
 - **DEU-01** Personas a las que el negocio puede deber dinero (ej. Mami), con nombre único, teléfono, descripción y baja lógica; no se dan de baja con deuda.
 - **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con ella, sin movimiento de dinero. El envío de un pedido también lo puede pagar una persona: sube su deuda y no cuenta para el estado de pago (COM-04).
-- **DEU-03** La devolución a la persona se registra desde Caja o una cuenta y baja la deuda sin superarla. Es un gasto con categoría Pedido (P-34), o Pago a tercero si se le paga lo de sus ventas (POS-13), sin superar lo pendiente de ellas; solo se anula desde Deudas.
-- **DEU-04** Saldo por persona e historial de pagos, envíos y devoluciones con el saldo después de cada registro. Al devolver se propone el concepto según lo pendiente (P-48).
+- **DEU-03** A la persona se le paga marcando sus deudas pendientes, cada una completa: el monto es la suma de lo marcado. Sale de Caja o de una cuenta y baja la deuda sin superarla; las ventas de sus productos (POS-13) van como Pago a tercero y los pedidos y envíos como gasto Pedido (P-34). Solo se anula desde Deudas, y lo pagado no se anula mientras su devolución siga (P-65, P-66).
+- **DEU-04** Saldo por persona, sus deudas pendientes y el historial de pagos, envíos, ventas y devoluciones con el saldo después de cada registro; cada deuda se ve pagada (con el día) o pendiente, y cada devolución dice qué pagó.
 - **DEU-05** Una venta al costo puede quedar total o parcialmente a crédito de un cliente registrado; solo la venta al costo admite crédito (P-12).
 - **DEU-06** Los cobros se registran en Caja o en la cuenta QR, bajan el saldo sin superarlo y son un ingreso con categoría Venta (P-34).
 - **DEU-07** Saldos por cobrar por cliente, con historial de ventas al costo y cobros; las pagadas en el momento se ven «pagadas» sin cambiar el saldo (P-49).
@@ -360,7 +360,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-45 | ¿Cómo se migran los pedidos 1 a 341, sin líneas? | Solo con la cabecera. |
 | P-46 | ¿De dónde sale el proveedor de los pedidos? | De una columna nueva Proveedor en la planilla, confirmada por el dueño. |
 | P-47 | ¿Cómo se migran los pedidos «A Cuenta» sin monto pagado? | Con la columna nueva Monto pagado; el resto queda por pagar. |
-| P-48 | ¿Qué concepto se propone al devolverle a Mami? | Primero «Pago a tercero» por lo pendiente de sus ventas; si no queda, «Pedido». |
+| P-48 | ¿Qué concepto se propone al devolverle a Mami? | Ya no se propone: sale de lo marcado. Las ventas van como «Pago a tercero» y los pedidos y envíos como «Pedido» (P-65). |
 | P-49 | ¿Qué cliente propone el cobro de la venta al costo? | «Sin cliente»; al dar crédito se propone el único cliente activo. |
 | P-50 | ¿Los productos especiales llevan categoría y proveedor? | Sí, reales (los de Mami: Inciensos y Sagrada Madre). |
 | P-51 | ¿Cómo se corrige un pedido cuando llega algo distinto de lo pedido? | Se edita con motivo: lo no pedido es una línea nueva, lo que falta se quita, el total no baja de lo pagado y el envío se rehace con alerta (COM-11, COM-12). |
@@ -377,6 +377,8 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-62 | ¿Qué propone con datos dudosos? | Cantidad «4 a 5»: el menor; sin número: 1, ambas resaltadas. «Cancelado»: el pago, con origen vacío. Costo desconocido: en blanco, con el cálculo en un mensaje. |
 | P-63 | ¿Y si el mensaje no usa las palabras del catálogo? | Se sugieren los productos con más palabras en común, sin elegir ninguno; la medición con 5 textos reales dio 75 % con el buscador solo. |
 | P-64 | ¿Cómo se cobra un peso que no es presentación? | En «Otro peso», el peso se escribe en kg o g solo en la venta y el total se puede subir o bajar; al cambiar el peso se vuelve a calcular. Reemplaza al descuento por kilo. No aplica a presentaciones, líneas libres ni venta al costo. |
+| P-65 | ¿Cómo se le paga a Mami y se sabe qué le falta? | Marcando las deudas que se pagan; cada una se paga completa y no hay monto libre. Si se marcan ventas y pedidos, quedan dos registros: Pago a tercero y Pedido. Anular un pago, un envío, un pedido o una venta ya pagados se rechaza hasta anular su devolución. |
+| P-66 | ¿Qué pagaron las devoluciones hechas antes de poder marcar? | Las deudas más antiguas de su concepto y, si sobra, las más antiguas de cualquier tipo; en producción calzaron exacto (`debts.md`). |
 
 ## 6. Hoja de ruta
 

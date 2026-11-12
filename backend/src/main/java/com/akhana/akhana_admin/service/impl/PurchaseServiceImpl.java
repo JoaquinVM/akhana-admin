@@ -66,6 +66,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final PurchaseReadingRepository purchaseReadingRepository;
     private final PurchasePhotoRepository purchasePhotoRepository;
     private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
+    private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -484,6 +485,8 @@ public class PurchaseServiceImpl implements PurchaseService {
                 BigDecimal stays = newCreditor != null && newCreditor.getId().equals(charge.getCreditor().getId())
                     ? shippingCost : BigDecimal.ZERO;
                 ensureDebtCovers(charge.getCreditor(), charge.getAmount().subtract(stays), SHIPPING_REPAID);
+                // DEU-03 (062): a shipping already paid to the person is not changed while its repayment stands
+                ensureNotRepaid(charge);
             }
 
             String oldShipping = shippingText(purchase.getShippingCost(), !shippingTxs.isEmpty()
@@ -642,6 +645,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (payment.getCreditor() != null) {
             // DEU-02: no movement to revert; the debt drops, but never below what was already repaid
             ensureDebtCovers(lockCreditor(payment.getCreditor().getId()), payment.getAmount(), PAYMENT_REPAID);
+            ensureNotRepaid(payment);
         } else {
             FinancialTransaction tx = financialTransactionRepository.findById(payment.getFinancialTransactionId())
                 .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del pago."));
@@ -694,6 +698,11 @@ public class PurchaseServiceImpl implements PurchaseService {
                 ensureDebtCovers(creditor, paidByCreditor.get(creditor.getId()),
                     payingCreditors.contains(creditor.getId()) ? PAYMENT_REPAID : SHIPPING_REPAID);
             }
+            // DEU-03 (062): nothing is voided while a payment or shipping of it is paid to the person
+            purchase.getPayments().stream()
+                .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO && p.getCreditor() != null)
+                .forEach(this::ensureNotRepaid);
+            shippingCharges.forEach(this::ensureNotRepaid);
         }
 
         // Payments and shipping: every movement linked to the purchase (P-24, COM-06)
@@ -898,6 +907,19 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("La persona '" + creditor.getName() + "' no está activa.");
         }
         return creditor;
+    }
+
+    // DEU-03 (062): what was already paid back to the person is voided only after voiding that repayment
+    private void ensureNotRepaid(PurchasePayment payment) {
+        if (creditorRepaymentItemRepository.existsActiveForPurchasePayments(List.of(payment.getId()))) {
+            throw new IllegalStateException(String.format(PAYMENT_REPAID, payment.getCreditor().getName()));
+        }
+    }
+
+    private void ensureNotRepaid(PurchaseShippingCharge charge) {
+        if (creditorRepaymentItemRepository.existsActiveForShippingCharges(List.of(charge.getId()))) {
+            throw new IllegalStateException(String.format(SHIPPING_REPAID, charge.getCreditor().getName()));
+        }
     }
 
     // Voiding what a person paid lowers their debt; it cannot go below 0 (DEU-02)
