@@ -38,10 +38,11 @@ describe('CreditorService', () => {
   });
 
   it('DEU-03: registra y anula devoluciones con POST', () => {
-    service.registerRepayment('cre-1', { accountId: 'acc-1', amount: 150, comment: null }).subscribe();
+    const request = { accountId: 'acc-1', amount: 150, comment: null, items: [{ type: 'PAYMENT' as const, id: 'pay-1' }] };
+    service.registerRepayment('cre-1', request).subscribe();
     const post = httpTesting.expectOne('/api/creditors/cre-1/repayments');
     expect(post.request.method).toBe('POST');
-    expect(post.request.body).toEqual({ accountId: 'acc-1', amount: 150, comment: null });
+    expect(post.request.body).toEqual(request);
     post.flush({});
 
     service.voidRepayment('cre-1', 'rep-1', { voidReason: 'Error' }).subscribe();

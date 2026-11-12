@@ -36,6 +36,7 @@ class CreditorServiceTest {
 
     @Mock private CreditorRepository creditorRepository;
     @Mock private CreditorRepaymentRepository creditorRepaymentRepository;
+    @Mock private CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     @Mock private PurchasePaymentRepository purchasePaymentRepository;
     @Mock private CashSessionRepository cashSessionRepository;
     @Mock private FinancialAccountRepository financialAccountRepository;
@@ -54,10 +55,14 @@ class CreditorServiceTest {
     private CashSession openSession;
     private final List<CreditorRepayment> repayments = new ArrayList<>();
     private final List<PurchasePayment> payments = new ArrayList<>();
+    private final List<PurchaseShippingCharge> shippings = new ArrayList<>();
+    private final List<SaleItem> saleLines = new ArrayList<>();
+    private final List<CreditorRepaymentItem> rows = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
-        creditorService = new CreditorServiceImpl(creditorRepository, creditorRepaymentRepository, purchasePaymentRepository,
+        creditorService = new CreditorServiceImpl(creditorRepository, creditorRepaymentRepository, creditorRepaymentItemRepository,
+            purchasePaymentRepository,
             purchaseShippingChargeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
             new ExpectedCashCalculator(financialTransactionRepository), productRepository, saleItemRepository);
 
@@ -93,6 +98,14 @@ class CreditorServiceTest {
         });
         when(creditorRepaymentRepository.findByCreditorId(mami.getId())).thenReturn(repayments);
         when(purchasePaymentRepository.findByCreditorId(mami.getId())).thenReturn(payments);
+        when(purchaseShippingChargeRepository.findByCreditorId(mami.getId())).thenReturn(shippings);
+        when(saleItemRepository.findThirdPartyLinesByCreditorId(mami.getId())).thenReturn(saleLines);
+        when(creditorRepaymentItemRepository.findByCreditorId(mami.getId())).thenReturn(rows);
+        when(creditorRepaymentItemRepository.save(any(CreditorRepaymentItem.class))).thenAnswer(inv -> {
+            CreditorRepaymentItem row = inv.getArgument(0);
+            rows.add(row);
+            return row;
+        });
         when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(inv -> {
             FinancialTransaction tx = inv.getArgument(0);
             if (tx.getId() == null) {
@@ -115,13 +128,54 @@ class CreditorServiceTest {
 
     private PurchasePayment payment(String amount, Instant date) {
         Supplier supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").build();
-        Purchase purchase = Purchase.builder().id(UUID.randomUUID()).purchaseNumber("PED-000001").supplier(supplier)
+        Purchase purchase = Purchase.builder().id(UUID.randomUUID())
+            .purchaseNumber(String.format("PED-%06d", payments.size() + 1)).supplier(supplier)
             .purchaseDate(LocalDate.now()).build();
         PurchasePayment p = PurchasePayment.builder().id(UUID.randomUUID()).purchase(purchase).creditor(mami)
             .amount(new BigDecimal(amount)).paymentDate(date).operationDate(StoreFormat.storeDay(date)).createdAt(date)
             .status(PurchasePaymentRecordStatus.ACTIVO).build();
         payments.add(p);
         return p;
+    }
+
+    private PurchaseShippingCharge shipping(String amount, Instant date) {
+        Supplier supplier = Supplier.builder().id(UUID.randomUUID()).name("Transporte").build();
+        Purchase purchase = Purchase.builder().id(UUID.randomUUID()).purchaseNumber("PED-000020").supplier(supplier)
+            .purchaseDate(LocalDate.now()).build();
+        PurchaseShippingCharge c = PurchaseShippingCharge.builder().id(UUID.randomUUID()).purchase(purchase).creditor(mami)
+            .amount(new BigDecimal(amount)).chargeDate(date).operationDate(StoreFormat.storeDay(date)).createdAt(date)
+            .status(PurchasePaymentRecordStatus.ACTIVO).build();
+        shippings.add(c);
+        return c;
+    }
+
+    // POS-13: a sale with one line of a product of Mami
+    private Sale sale(String number, String amount, Instant date) {
+        Sale s = Sale.builder().id(UUID.randomUUID()).saleNumber(number).status(SaleStatus.COMPLETADA)
+            .createdAt(date).operationDate(StoreFormat.storeDay(date)).build();
+        saleLines.add(SaleItem.builder().sale(s).subtotal(new BigDecimal(amount)).build());
+        return s;
+    }
+
+    private FinancialCategory thirdPartyCategory() {
+        FinancialCategory thirdParty = FinancialCategory.builder().id(UUID.randomUUID()).name("Pago a tercero")
+            .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT).build();
+        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT))
+            .thenReturn(Optional.of(thirdParty));
+        return thirdParty;
+    }
+
+    private static CreditorRepaymentRequest.Item item(CreditorHistoryResponse.EntryType type, UUID id) {
+        return new CreditorRepaymentRequest.Item(type, id);
+    }
+
+    private static CreditorRepaymentRequest pay(FinancialAccount account, String amount, CreditorRepaymentRequest.Item... items) {
+        return pay(account, amount, null, items);
+    }
+
+    private static CreditorRepaymentRequest pay(FinancialAccount account, String amount, String comment,
+                                                CreditorRepaymentRequest.Item... items) {
+        return new CreditorRepaymentRequest(account.getId(), new BigDecimal(amount), comment, List.of(items));
     }
 
     private CreditorRepayment repayment(FinancialAccount account, String amount, Instant date) {
@@ -228,35 +282,69 @@ class CreditorServiceTest {
     // ---------------------------------------------------------------- POS-13
 
     @Test
-    @DisplayName("POS-13: el pago a tercero usa la categoría Pago a tercero y queda con su concepto")
+    @DisplayName("DEU-03 (062): marcar ventas de Mami las paga como Pago a tercero y cada una queda pagada")
     void registerRepayment_thirdParty() {
         debt("60.00");
-        FinancialCategory thirdParty = FinancialCategory.builder().id(UUID.randomUUID()).name("Pago a tercero")
-            .type(FinancialCategoryType.GASTO).systemKey(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT).build();
-        when(financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.THIRD_PARTY_PAYMENT))
-            .thenReturn(Optional.of(thirdParty));
-        when(creditorRepository.computeThirdPartyPending(mami.getId())).thenReturn(new BigDecimal("60.00"));
+        FinancialCategory thirdParty = thirdPartyCategory();
+        Sale first = sale("VTA-000260", "30.00", Instant.parse("2026-11-05T21:51:00Z"));
+        Sale second = sale("VTA-000357", "30.00", Instant.parse("2026-11-09T18:31:00Z"));
 
-        creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("60"),
-            null, CreditorRepaymentConcept.THIRD_PARTY), "operator");
+        CreditorHistoryResponse history = creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "60", item(CreditorHistoryResponse.EntryType.SALE, first.getId()),
+                item(CreditorHistoryResponse.EntryType.SALE, second.getId())), "operator");
 
+        assertThat(repayments).hasSize(1);
         assertThat(repayments.getFirst().getConcept()).isEqualTo(CreditorRepaymentConcept.THIRD_PARTY);
+        assertThat(repayments.getFirst().getAmount()).isEqualByComparingTo("60.00");
+        assertThat(rows).extracting(CreditorRepaymentItem::getSale).containsExactly(first, second);
+        assertThat(rows).extracting(CreditorRepaymentItem::getAmount)
+            .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+            .containsExactly(new BigDecimal("30.00"), new BigDecimal("30.00"));
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
         assertThat(captor.getValue().getCategory()).isSameAs(thirdParty);
         assertThat(captor.getValue().getDescription()).isEqualTo("Pago a tercero a Mami");
+        assertThat(captor.getValue().getAmount()).isEqualByComparingTo("60.00");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("940.00");
+
+        // Both sales show as paid that day, and the repayment says what it paid
+        assertThat(history.entries()).filteredOn(e -> e.type() == CreditorHistoryResponse.EntryType.SALE)
+            .allSatisfy(e -> {
+                assertThat(e.pendingAmount()).isEqualByComparingTo("0.00");
+                assertThat(e.paidOn()).isEqualTo(repayments.getFirst().getOperationDate());
+            });
+        assertThat(history.entries().getLast().paidItems()).containsExactly("VTA-000260", "VTA-000357");
+        assertThat(history.creditor().debt()).isEqualByComparingTo("0.00");
     }
 
     @Test
-    @DisplayName("P-48: el pago a tercero no supera lo pendiente de las ventas de la persona")
-    void registerRepayment_thirdPartyOverPending() {
-        debt("100.00");
-        when(creditorRepository.computeThirdPartyPending(mami.getId())).thenReturn(new BigDecimal("30.00"));
+    @DisplayName("DEU-03 (062): marcar ventas, un pedido y un envío registra dos: Pago a tercero por las ventas y Pedido por el resto")
+    void registerRepayment_mixedConcepts() {
+        debt("180.00");
+        FinancialCategory thirdParty = thirdPartyCategory();
+        Sale sale = sale("VTA-000506", "27.00", Instant.parse("2026-11-12T16:27:00Z"));
+        PurchasePayment p = payment("122.00", Instant.parse("2026-11-03T02:08:00Z"));
+        PurchaseShippingCharge shipping = shipping("31.00", Instant.parse("2026-11-04T12:00:00Z"));
 
-        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(), new CreditorRepaymentRequest(bisa.getId(),
-            new BigDecimal("30.01"), null, CreditorRepaymentConcept.THIRD_PARTY), "operator"))
-            .hasMessage("El Pago a tercero supera lo pendiente de las ventas de Mami (Bs 30,00); registre el resto con el concepto Pedido.");
-        assertThat(repayments).isEmpty();
+        creditorService.registerRepayment(mami.getId(), pay(bisa, "180",
+            item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId()),
+            item(CreditorHistoryResponse.EntryType.SALE, sale.getId()),
+            item(CreditorHistoryResponse.EntryType.SHIPPING, shipping.getId())), "operator");
+
+        assertThat(repayments).extracting(CreditorRepayment::getConcept)
+            .containsExactly(CreditorRepaymentConcept.THIRD_PARTY, CreditorRepaymentConcept.PURCHASE);
+        assertThat(repayments).extracting(CreditorRepayment::getAmount)
+            .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+            .containsExactly(new BigDecimal("27.00"), new BigDecimal("153.00"));
+        CreditorRepayment purchaseRepayment = repayments.get(1);
+        assertThat(rows).filteredOn(r -> r.getRepayment() == purchaseRepayment)
+            .extracting(CreditorRepaymentItem::debtId).containsExactly(p.getId(), shipping.getId());
+        ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
+        verify(financialTransactionRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(FinancialTransaction::getCategory).containsExactly(thirdParty, pedido);
+        assertThat(captor.getAllValues()).extracting(FinancialTransaction::getCreditorRepaymentId)
+            .containsExactly(repayments.get(0).getId(), repayments.get(1).getId());
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("820.00");
     }
 
     @Test
@@ -323,9 +411,11 @@ class CreditorServiceTest {
     @DisplayName("DEU-03: devolver Bs 150 desde Bisa crea la devolución y un gasto Pedido vinculado; baja Bisa")
     void registerRepayment_fromAccount() {
         debt("300.00");
+        PurchasePayment p = payment("150.00", Instant.parse("2026-10-30T12:00:00Z"));
+        payment("150.00", Instant.parse("2026-10-31T12:00:00Z"));
 
         creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("150"), "  En efectivo a mano  "), "operator");
+            pay(bisa, "150", "  En efectivo a mano  ", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
 
         assertThat(repayments).hasSize(1);
         CreditorRepayment r = repayments.get(0);
@@ -333,6 +423,12 @@ class CreditorServiceTest {
         assertThat(r.getAccount()).isSameAs(bisa);
         assertThat(r.getComment()).isEqualTo("En efectivo a mano");
         assertThat(r.getCreatedBy()).isEqualTo("operator");
+        assertThat(r.getConcept()).isEqualTo(CreditorRepaymentConcept.PURCHASE);
+        assertThat(rows).singleElement().satisfies(row -> {
+            assertThat(row.getPurchasePayment()).isSameAs(p);
+            assertThat(row.getRepayment()).isSameAs(r);
+            assertThat(row.getAmount()).isEqualByComparingTo("150.00");
+        });
 
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
@@ -354,17 +450,18 @@ class CreditorServiceTest {
     @DisplayName("DEU-03: desde Caja exige caja abierta, se vincula a ella y baja el efectivo esperado")
     void registerRepayment_fromCaja() {
         debt("300.00");
+        PurchasePayment p = payment("50.00", Instant.parse("2026-10-30T12:00:00Z"));
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(caja.getId(), new BigDecimal("50"), null), "operator"))
+            pay(caja, "50", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
             .hasMessage("Los movimientos de la cuenta Caja requieren una caja abierta.");
         assertThat(repayments).isEmpty();
 
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(openSession));
         when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(openSession.getId())).thenReturn(new BigDecimal("50.00"));
         creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(caja.getId(), new BigDecimal("50"), null), "operator");
+            pay(caja, "50", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
 
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
@@ -383,26 +480,68 @@ class CreditorServiceTest {
     }
 
     @Test
-    @DisplayName("DEU-03: la devolución no supera la deuda ni es 0; a una persona inactiva sí se le devuelve")
+    @DisplayName("DEU-03 (062): sin deudas marcadas, con lo marcado ya pagado, anulado, ajeno o con otro total, no se registra nada")
+    void registerRepayment_staleOrEmptySelection() {
+        debt("150.00");
+        PurchasePayment p = payment("100.00", Instant.parse("2026-10-30T12:00:00Z"));
+        PurchasePayment voided = payment("50.00", Instant.parse("2026-10-30T13:00:00Z"));
+        voided.setStatus(PurchasePaymentRecordStatus.ANULADO);
+        Sale sale = sale("VTA-000519", "15.00", Instant.parse("2026-11-12T20:15:00Z"));
+        String changed = "Las deudas elegidas cambiaron; vuelva a abrir el detalle.";
+
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(), pay(bisa, "100"), "operator"))
+            .hasMessage("Elija las deudas que se pagan.");
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("100"), null, null), "operator"))
+            .hasMessage("Elija las deudas que se pagan.");
+        // The screen showed another total
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "99.99", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
+            .hasMessage(changed);
+        // Voided, unknown, of another kind than its id
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "50", item(CreditorHistoryResponse.EntryType.PAYMENT, voided.getId())), "operator"))
+            .hasMessage(changed);
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "100", item(CreditorHistoryResponse.EntryType.PAYMENT, UUID.randomUUID())), "operator"))
+            .hasMessage(changed);
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "15", item(CreditorHistoryResponse.EntryType.PAYMENT, sale.getId())), "operator"))
+            .hasMessage(changed);
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "0.004", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+        verify(financialTransactionRepository, never()).save(any());
+        assertThat(repayments).isEmpty();
+        assertThat(rows).isEmpty();
+
+        // Paid once; ticking it again (another tab) is stale
+        creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "100", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "115", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId()),
+                item(CreditorHistoryResponse.EntryType.SALE, sale.getId())), "operator"))
+            .hasMessage(changed);
+        assertThat(repayments).hasSize(1);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("900.00");
+    }
+
+    @Test
+    @DisplayName("DEU-03: la devolución no supera la deuda; a una persona inactiva sí se le devuelve")
     void registerRepayment_amountRules() {
         debt("50.00");
+        PurchasePayment p = payment("60.00", Instant.parse("2026-10-30T12:00:00Z"));
 
+        // Data where the computed debt is below the debt ticked (e.g. a repayment of before 062 not fully marked)
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("50.01"), null), "operator"))
+            pay(bisa, "60", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
             .hasMessage("La devolución supera la deuda con Mami (Bs 50,00).");
-        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("0.004"), null), "operator"))
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
-        debt("0");
-        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("1"), null), "operator"))
-            .hasMessage("La devolución supera la deuda con Mami (Bs 0,00).");
         verify(financialTransactionRepository, never()).save(any());
 
-        debt("50.00");
+        debt("60.00");
         mami.setStatus(CreditorStatus.INACTIVO);
         creditorService.registerRepayment(mami.getId(),
-            new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("50"), null), "operator");
+            pay(bisa, "60", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
         assertThat(repayments).hasSize(1);
     }
 
@@ -482,5 +621,70 @@ class CreditorServiceTest {
         assertThat(last.voided()).isTrue();
         assertThat(last.voidReason()).isEqualTo("Duplicada");
         assertThat(last.accountName()).isEqualTo("Caja");
+    }
+
+    @Test
+    @DisplayName("DEU-04 (062): cada deuda dice si está pagada o cuánto falta; al anular la devolución vuelve a pendiente")
+    void getHistory_pendingAndPaid() {
+        Instant t0 = Instant.parse("2026-11-02T12:00:00Z");
+        PurchasePayment first = payment("200.00", t0);
+        PurchasePayment second = payment("100.00", t0.plusSeconds(60));
+        PurchaseShippingCharge shipping = shipping("20.00", t0.plusSeconds(120));
+        CreditorRepayment r = repayment(bisa, "250.00", t0.plusSeconds(86400));
+        // A repayment of before 062 that covered the second payment only in part
+        rows.add(CreditorRepaymentItem.builder().repayment(r).purchasePayment(second).amount(new BigDecimal("50.00")).build());
+        rows.add(CreditorRepaymentItem.builder().repayment(r).purchasePayment(first).amount(new BigDecimal("200.00")).build());
+
+        CreditorHistoryResponse res = creditorService.getHistory(mami.getId());
+
+        assertThat(res.creditor().debt()).isEqualByComparingTo("70.00");
+        CreditorHistoryResponse.Entry paid = res.entries().get(0);
+        assertThat(paid.pendingAmount()).isEqualByComparingTo("0.00");
+        assertThat(paid.paidOn()).isEqualTo(r.getOperationDate());
+        CreditorHistoryResponse.Entry half = res.entries().get(1);
+        assertThat(half.pendingAmount()).isEqualByComparingTo("50.00");
+        assertThat(half.paidOn()).isNull();
+        CreditorHistoryResponse.Entry shippingEntry = res.entries().get(2);
+        assertThat(shippingEntry.type()).isEqualTo(CreditorHistoryResponse.EntryType.SHIPPING);
+        assertThat(shippingEntry.pendingAmount()).isEqualByComparingTo("20.00");
+        CreditorHistoryResponse.Entry repaymentEntry = res.entries().get(3);
+        assertThat(repaymentEntry.pendingAmount()).isNull();
+        // Oldest debt first, whatever the order of the rows
+        assertThat(repaymentEntry.paidItems()).containsExactly("PED-000001", "PED-000002");
+
+        r.setStatus(CreditorRepaymentStatus.ANULADO);
+        CreditorHistoryResponse voided = creditorService.getHistory(mami.getId());
+
+        assertThat(voided.creditor().debt()).isEqualByComparingTo("320.00");
+        assertThat(voided.entries()).extracting(CreditorHistoryResponse.Entry::pendingAmount)
+            .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+            .containsExactly(new BigDecimal("200.00"), new BigDecimal("100.00"), new BigDecimal("20.00"), null);
+        assertThat(voided.entries().get(0).paidOn()).isNull();
+        // The voided repayment still says what it had paid
+        assertThat(voided.entries().get(3).paidItems()).containsExactly("PED-000001", "PED-000002");
+    }
+
+    @Test
+    @DisplayName("DEU-03 (062): anular la devolución deja otra vez pendientes sus deudas, que se pueden volver a marcar")
+    void voidRepayment_debtsPendingAgain() {
+        debt("100.00");
+        PurchasePayment p = payment("100.00", Instant.parse("2026-10-30T12:00:00Z"));
+        creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "100", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
+        CreditorRepayment r = repayments.getFirst();
+        when(creditorRepaymentRepository.findById(r.getId())).thenReturn(Optional.of(r));
+        FinancialTransaction tx = FinancialTransaction.builder().id(UUID.randomUUID()).sourceAccount(bisa)
+            .amount(r.getAmount()).status(FinancialTransactionStatus.ACTIVO).creditorRepaymentId(r.getId()).build();
+        when(financialTransactionRepository.findByCreditorRepaymentId(r.getId())).thenReturn(Optional.of(tx));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisa));
+
+        CreditorHistoryResponse res = creditorService.voidRepayment(mami.getId(), r.getId(), new VoidDebtRequest("Error"), "admin");
+
+        assertThat(res.entries().getFirst().pendingAmount()).isEqualByComparingTo("100.00");
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1000.00");
+        creditorService.registerRepayment(mami.getId(),
+            pay(bisa, "100", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
+        assertThat(repayments).hasSize(2);
+        assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("900.00");
     }
 }

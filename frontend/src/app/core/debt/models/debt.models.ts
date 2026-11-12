@@ -52,6 +52,12 @@ export interface CreditorHistoryEntry {
   voidedBy: string | null;
   voidedAt: string | null;
   voidReason: string | null;
+  // DEU-03 (062), PAYMENT, SHIPPING and SALE not voided: what is still owed of it (0 once paid)
+  pendingAmount?: number | null;
+  // Day (yyyy-MM-dd) of the repayment that finished paying it
+  paidOn?: string | null;
+  // REPAYMENT: what it paid, oldest first («PED-000015», «Envío PED-000020», «VTA-000260»)
+  paidItems?: string[] | null;
   // Debt after the entry; a voided one does not change it
   balanceAfter: number;
 }
@@ -61,12 +67,21 @@ export interface CreditorHistory {
   entries: CreditorHistoryEntry[];
 }
 
-// DEU-03: repayment from Caja (with an open session) or another account
+// A debt of the person that can be ticked: what she paid for a purchase or its shipping, or a sale of her products
+export type CreditorDebtType = Exclude<CreditorHistoryEntryType, 'REPAYMENT'>;
+
+export interface CreditorDebtRef {
+  type: CreditorDebtType;
+  id: string;
+}
+
+// DEU-03 (062): repayment from Caja (with an open session) or another account of the ticked debts, each paid whole.
+// amount is the total the screen showed; the server checks it. Sales go back as Pago a tercero, the rest as Pedido
 export interface CreditorRepaymentRequest {
   accountId: string;
   amount: number;
   comment: string | null;
-  concept?: CreditorRepaymentConcept;
+  items: CreditorDebtRef[];
 }
 
 export interface VoidDebtRequest {

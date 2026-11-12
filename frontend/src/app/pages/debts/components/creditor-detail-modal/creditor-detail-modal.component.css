@@ -54,8 +54,8 @@
   color: #b91c1c;
 }
 
-.repayment-form {
-  margin-top: 0.5rem;
+.debt-state {
+  margin-top: 0.25rem;
 }
 
 /* CAJ-11: counts for another day than the one it was recorded */

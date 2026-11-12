@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
+import com.akhana.akhana_admin.repository.CreditorRepaymentItemRepository;
 import com.akhana.akhana_admin.repository.CreditorRepository;
 import com.akhana.akhana_admin.repository.SaleItemRepository;
 import com.akhana.akhana_admin.repository.CustomerRepository;
@@ -77,6 +78,7 @@ class SaleServiceTest {
 
     @Mock
     private CreditorRepository creditorRepository;
+    @Mock private CreditorRepaymentItemRepository creditorRepaymentItemRepository;
 
     private SaleServiceImpl saleService;
 
@@ -92,7 +94,7 @@ class SaleServiceTest {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
-            saleItemRepository, creditorRepository);
+            saleItemRepository, creditorRepository, creditorRepaymentItemRepository);
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)

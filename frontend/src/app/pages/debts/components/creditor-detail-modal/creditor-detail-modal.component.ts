@@ -1,21 +1,20 @@
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { CashLimitWarningComponent } from '../../../../shared/components/cash-limit-warning/cash-limit-warning.component';
-import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
+import { CreditorRepaymentFormComponent } from '../creditor-repayment-form/creditor-repayment-form.component';
 import { VoidReasonModalComponent } from '../../../purchases/components/void-reason-modal/void-reason-modal.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
-import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentConcept, DebtAccount } from '../../../../core/debt/models/debt.models';
+import { CreditorHistory, CreditorHistoryEntry, CreditorRepaymentRequest, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { formatBs } from '../../../../shared/utils/money';
 import { operationDayLabel } from '../../../../shared/utils/store-date';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 
-// DEU-03 and DEU-04: the person's history with the balance after each entry, repayment and its void
+// DEU-03 and DEU-04: the person's history with the balance after each entry and what is paid or pending of each debt;
+// paying the ticked debts (062) and voiding a repayment
 @Component({
   selector: 'app-creditor-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, VoidReasonModalComponent, CashLimitWarningComponent, CashClosedNoteComponent],
+  imports: [CommonModule, ModalComponent, VoidReasonModalComponent, CreditorRepaymentFormComponent],
   templateUrl: './creditor-detail-modal.component.html',
   styleUrls: ['./creditor-detail-modal.component.css']
 })
@@ -42,13 +41,6 @@ export class CreditorDetailModalComponent {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  repaymentAccountId = signal<string>('');
-  repaysFromCash = computed(() => !!this.accounts().find((a) => a.id === this.repaymentAccountId())?.cashAccount);
-  // What the note learned from the server; only counts while Caja is chosen
-  cashClosed = signal<boolean>(false);
-  repaymentAmount = signal<number | null>(null);
-  repaymentComment = signal<string>('');
-  repaymentConcept = signal<CreditorRepaymentConcept>('PURCHASE');
   repaymentError = signal<string | null>(null);
   isRepaying = signal<boolean>(false);
 
@@ -61,9 +53,11 @@ export class CreditorDetailModalComponent {
 
   voidMessage = computed(() => {
     const target = this.voidTarget();
-    return target
-      ? `Se anula la devolución de ${formatBs(target.amount)} desde ${target.accountName}: la cuenta recupera el monto y la deuda vuelve a subir.`
-      : '';
+    if (!target) {
+      return '';
+    }
+    const paid = target.paidItems?.length ? ` Vuelven a quedar pendientes: ${target.paidItems.join(', ')}.` : '';
+    return `Se anula la devolución de ${formatBs(target.amount)} desde ${target.accountName}: la cuenta recupera el monto y la deuda vuelve a subir.${paid}`;
   });
 
   constructor() {
@@ -92,67 +86,25 @@ export class CreditorDetailModalComponent {
 
   private setHistory(history: CreditorHistory): void {
     this.history.set(history);
-    this.repaymentAccountId.set('');
-    this.repaymentComment.set('');
-    // P-48: first propose paying what is pending of her sales (Pago a tercero), then purchases
-    const debt = history.creditor.debt;
-    const thirdPartyPending = Math.min(this.pendingThirdParty(history), debt);
-    if (thirdPartyPending > 0) {
-      this.repaymentConcept.set('THIRD_PARTY');
-      this.repaymentAmount.set(thirdPartyPending);
-    } else {
-      this.repaymentConcept.set('PURCHASE');
-      this.repaymentAmount.set(debt > 0 ? debt : null);
-    }
   }
 
-  // Sales of her products minus what was already repaid as Pago a tercero; voided ones do not count
-  private pendingThirdParty(history: CreditorHistory): number {
-    const cents = history.entries
-      .filter(e => !e.voided)
-      .reduce((sum, e) => {
-        if (e.type === 'SALE') {
-          return sum + Math.round(e.amount * 100);
-        }
-        if (e.type === 'REPAYMENT' && e.concept === 'THIRD_PARTY') {
-          return sum - Math.round(e.amount * 100);
-        }
-        return sum;
-      }, 0);
-    return cents / 100;
-  }
-
-  registerRepayment(): void {
+  // DEU-03 (062): the form sends the ticked debts with the total it showed
+  registerRepayment(request: CreditorRepaymentRequest): void {
     const history = this.history();
     if (!history) {
       return;
     }
-    if (!this.repaymentAccountId()) {
-      this.repaymentError.set('Elija la cuenta desde la que se devuelve.');
-      return;
-    }
-    const amount = Number(this.repaymentAmount());
-    if (!amount || amount <= 0) {
-      this.repaymentError.set('Ingrese un monto mayor a 0.');
-      return;
-    }
     this.isRepaying.set(true);
     this.repaymentError.set(null);
-    const comment = this.repaymentComment().trim();
-    this.creditorService.registerRepayment(history.creditor.id, {
-      accountId: this.repaymentAccountId(),
-      amount,
-      comment: comment.length > 0 ? comment : null,
-      concept: this.repaymentConcept()
-    }).subscribe({
+    this.creditorService.registerRepayment(history.creditor.id, request).subscribe({
       next: updated => {
-        this.toast.success('Devolución registrada.');
+        this.toast.success('Pago registrado.');
         this.setHistory(updated);
         this.isRepaying.set(false);
         this.changed.emit();
       },
       error: err => {
-        this.repaymentError.set(err.error?.message || 'No se pudo registrar la devolución.');
+        this.repaymentError.set(err.error?.message || 'No se pudo registrar el pago.');
         this.isRepaying.set(false);
       }
     });

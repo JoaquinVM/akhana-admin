@@ -82,33 +82,40 @@ class ShippingPaidByPersonIntegrationTest {
         assertDebt("30.00");
         assertEquals(mamiName, edited.shippingCreditorName());
 
-        // Repaid: moving it away from her would leave her debt below 0
-        CreditorHistoryResponse repaid = creditorService.registerRepayment(mami,
-                new CreditorRepaymentRequest(bisa, new BigDecimal("30.00"), "En mano"), "it-ship");
+        // Repaid by ticking it (062): moving it away from her, changing it or voiding the purchase is rejected
+        UUID chargeId = creditorService.getHistory(mami).entries().stream()
+                .filter(e -> e.type() == CreditorHistoryResponse.EntryType.SHIPPING && !e.voided())
+                .findFirst().orElseThrow().id();
+        CreditorHistoryResponse repaid = creditorService.registerRepayment(mami, new CreditorRepaymentRequest(bisa,
+                new BigDecimal("30.00"), "En mano", List.of(new CreditorRepaymentRequest.Item(
+                        CreditorHistoryResponse.EntryType.SHIPPING, chargeId))), "it-ship");
         entityManager.flush();
         assertDebt("0.00");
         PurchaseResponse current = edited;
+        String repaidMessage = "Ya se devolvió a " + mamiName + " parte de este envío; anule primero la devolución.";
         IllegalStateException toAccount = assertThrows(IllegalStateException.class, () -> purchaseService.updatePurchase(
                 purchase.id(), edit(current, "30.00", bisa, null, "Cambio"), "it-ship"));
-        assertEquals("Ya se devolvió a " + mamiName + " parte de este envío; anule primero la devolución.", toAccount.getMessage());
-
-        // Still hers and higher: only the difference is new debt (and the unique active shipping holds)
-        edited = purchaseService.updatePurchase(purchase.id(), edit(current, "35.00", null, mami, "Subió el envío"), "it-ship");
-        entityManager.flush();
-        assertDebt("5.00");
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM purchase_shipping_charges WHERE purchase_id = ? "
-                + "AND status = 'ACTIVO'", Integer.class, purchase.id()));
-
-        // Voiding the purchase would leave her debt below 0 until the repayment is voided
+        assertEquals(repaidMessage, toAccount.getMessage());
+        // DEU-03 (062): still hers and higher is also rejected while it stands as paid, though the debt would be 5
+        IllegalStateException higher = assertThrows(IllegalStateException.class, () -> purchaseService.updatePurchase(
+                purchase.id(), edit(current, "35.00", null, mami, "Subió el envío"), "it-ship"));
+        assertEquals(repaidMessage, higher.getMessage());
         IllegalStateException voidRejected = assertThrows(IllegalStateException.class, () -> purchaseService.voidPurchase(
                 purchase.id(), new VoidPurchaseRequest("Error"), "it-ship"));
-        assertEquals("Ya se devolvió a " + mamiName + " parte de este envío; anule primero la devolución.", voidRejected.getMessage());
+        assertEquals(repaidMessage, voidRejected.getMessage());
 
         UUID repaymentId = repaid.entries().stream()
                 .filter(e -> e.type() == CreditorHistoryResponse.EntryType.REPAYMENT).findFirst().orElseThrow().id();
         creditorService.voidRepayment(mami, repaymentId, new VoidDebtRequest("Error"), "it-ship");
         entityManager.flush();
+        assertDebt("30.00");
+
+        // Pending again: it can change, and only the difference is new debt (the unique active shipping holds)
+        purchaseService.updatePurchase(purchase.id(), edit(current, "35.00", null, mami, "Subió el envío"), "it-ship");
+        entityManager.flush();
         assertDebt("35.00");
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM purchase_shipping_charges WHERE purchase_id = ? "
+                + "AND status = 'ACTIVO'", Integer.class, purchase.id()));
 
         PurchaseResponse voided = purchaseService.voidPurchase(purchase.id(), new VoidPurchaseRequest("Pedido duplicado"), "it-ship");
         entityManager.flush();

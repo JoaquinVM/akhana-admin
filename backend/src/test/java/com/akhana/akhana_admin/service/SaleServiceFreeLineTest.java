@@ -47,6 +47,7 @@ class SaleServiceFreeLineTest {
     @Mock private ProductPriceChangeRepository priceChangeRepository;
     @Mock private SaleItemRepository saleItemRepository;
     @Mock private CreditorRepository creditorRepository;
+    @Mock private CreditorRepaymentItemRepository creditorRepaymentItemRepository;
 
     private SaleServiceImpl saleService;
     private CashSession session;
@@ -61,7 +62,7 @@ class SaleServiceFreeLineTest {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
-            saleItemRepository, creditorRepository);
+            saleItemRepository, creditorRepository, creditorRepaymentItemRepository);
         session = CashSession.builder().id(UUID.randomUUID()).sessionNumber(1L).status(CashSessionStatus.ABIERTA)
             .openingAmount(new BigDecimal("100.00")).expectedCash(new BigDecimal("100.00"))
             .totalSalesCash(BigDecimal.ZERO).totalSalesQr(BigDecimal.ZERO).totalSales(BigDecimal.ZERO).build();
@@ -225,6 +226,25 @@ class SaleServiceFreeLineTest {
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
 
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("60.00"));
+        saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "op");
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.ANULADA);
+    }
+
+    @Test
+    @DisplayName("DEU-03 (062): una venta con productos de Mami ya pagada a ella no se anula, aunque la deuda alcance")
+    void voidRejectedWhenTheSaleIsMarkedPaid() {
+        Sale sale = saleWithLine(SaleItem.builder().id(UUID.randomUUID()).creditor(mami)
+            .freeLineType(ProductSpecialType.THIRD_PARTY).subtotal(new BigDecimal("60.00")).build());
+        when(saleRepository.findById(sale.getId())).thenReturn(Optional.of(sale));
+        when(creditorRepository.findAllByIdForUpdate(any())).thenReturn(List.of(mami));
+        when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("500.00"));
+        when(creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), mami.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "op"))
+            .hasMessage("Ya se devolvió a Mami parte de esta venta; anule primero la devolución.");
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
+
+        when(creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), mami.getId())).thenReturn(false);
         saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "op");
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.ANULADA);
     }

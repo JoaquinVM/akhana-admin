@@ -157,24 +157,31 @@ class CreditorRepositoryTest {
         assertEquals(PurchasePaymentStatus.A_CUENTA, purchase.paymentStatus());
         assertTrue(financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.id()).isEmpty());
 
+        // DEU-03 (062): the payment is ticked and paid whole
+        UUID paymentId = purchase.payments().get(0).id();
         CreditorHistoryResponse afterRepayment = creditorService.registerRepayment(mami,
-                new CreditorRepaymentRequest(account, new BigDecimal("150.00"), "En mano"), "it-repo");
+                new CreditorRepaymentRequest(account, new BigDecimal("200.00"), "En mano", List.of(
+                        new CreditorRepaymentRequest.Item(CreditorHistoryResponse.EntryType.PAYMENT, paymentId))), "it-repo");
         entityManager.flush();
-        assertEquals(0, new BigDecimal("50.00").compareTo(afterRepayment.creditor().debt()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(afterRepayment.creditor().debt()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(afterRepayment.entries().get(0).pendingAmount()));
         UUID repaymentId = afterRepayment.entries().get(1).id();
+        assertEquals(List.of(purchase.purchaseNumber()), afterRepayment.entries().get(1).paidItems());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM creditor_repayment_items WHERE repayment_id = ? "
+                + "AND purchase_payment_id = ? AND amount = 200.00", Integer.class, repaymentId, paymentId));
         FinancialTransaction expense = financialTransactionRepository.findByCreditorRepaymentId(repaymentId).orElseThrow();
         assertEquals(FinancialCategorySystemKey.PURCHASE_PAYMENT, expense.getCategory().getSystemKey());
-        assertEquals(0, new BigDecimal("850.00").compareTo(
+        assertEquals(0, new BigDecimal("800.00").compareTo(
                 jdbc.queryForObject("SELECT current_balance FROM financial_accounts WHERE id = ?", BigDecimal.class, account)));
 
-        // The payment was partly repaid: it cannot be voided until the repayment is
-        UUID paymentId = purchase.payments().get(0).id();
+        // The payment was repaid: it cannot be voided until the repayment is
         assertThrows(IllegalStateException.class, () -> purchaseService.voidPayment(purchase.id(), paymentId,
                 new VoidPurchaseRequest("Error"), "it-repo"));
 
         CreditorHistoryResponse afterVoid = creditorService.voidRepayment(mami, repaymentId, new VoidDebtRequest("Error"), "it-repo");
         entityManager.flush();
         assertEquals(0, new BigDecimal("200.00").compareTo(afterVoid.creditor().debt()));
+        assertEquals(0, new BigDecimal("200.00").compareTo(afterVoid.entries().get(0).pendingAmount()));
         assertEquals(0, new BigDecimal("1000.00").compareTo(
                 jdbc.queryForObject("SELECT current_balance FROM financial_accounts WHERE id = ?", BigDecimal.class, account)));
 
