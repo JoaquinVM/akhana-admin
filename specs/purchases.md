@@ -6,7 +6,7 @@ queda para el módulo Deudas.
 
 Moneda Bs, montos con escala 2 `HALF_UP`; cantidades con hasta 3 decimales (escala 3), como las ventas (CAT-08).
 Toda operación que mueve dinero es atómica (RG-05) y bloquea en orden: pedido, caja, persona, cuentas (T-14). Al registrar un pedido, la caja se bloquea primero si el envío
-o el primer pago salen de Caja, y las cuentas del envío y del pago se bloquean juntas por id. Un pago desde Caja que
+o el primer pago salen de Caja; las personas del envío y del pago, y las cuentas del envío y del pago, se bloquean juntas por id. Un pago desde Caja que
 supera el efectivo esperado se avisa sin bloquear (CAJ-03).
 
 ## Permiso
@@ -71,6 +71,12 @@ fecha del pedido, líneas, costo de envío, total y comentario. Auditoría de al
 - **Cuando** el envío se paga desde Caja **entonces** exige caja abierta, se vincula a ella y descuenta del
   efectivo esperado (CAJ-03).
 - **Cuando** el envío es 0 **entonces** no se crea movimiento.
+- **Cuando** el envío es mayor a 0 y no trae origen, o trae cuenta y persona **entonces** se rechaza: «Elija una cuenta
+  o una persona como origen del envío.» La lista «Envío pagado desde» tiene las cuentas y «Pagó una persona».
+- **Cuando** Mami paga el envío de Bs 25,00 **entonces** no se crea gasto ni cambia ninguna cuenta ni la caja: se
+  guarda en `purchase_shipping_charges` (pedido, persona, monto, día de su registro) y la deuda con Mami sube Bs 25,00
+  (DEU-02). El detalle del pedido dice «desde Mami (persona)» y el aviso de efectivo no lo cuenta. Una persona inactiva
+  se rechaza: «La persona '<nombre>' no está activa.» Un pedido tiene a lo más un envío activo de persona.
 - **Cuando** no existe la categoría Transporte **entonces** el pedido no se guarda: «No existe la categoría
   Transporte; no se puede registrar el envío.»
 - El envío no cuenta para el estado de pago: se lo paga a quien transporta, no al proveedor.
@@ -228,7 +234,8 @@ movimientos, personas, cuentas (T-14).
 ### Anular un pedido (`POST /api/purchases/{id}/void`)
 
 - **Cuando** se anula un pedido con motivo **entonces** queda `ANULADO` (quién, cuándo, motivo), se anulan todos
-  sus pagos activos y todos sus gastos activos (pagos y envío), y cada cuenta recupera lo suyo. Lo pagado queda
+  sus pagos activos, todos sus gastos activos (pagos y envío) y el envío pagado por una persona, y cada cuenta recupera
+  lo suyo. Si la deuda de una persona quedaría negativa no se anula nada (DEU-02). Lo pagado queda
   en Bs 0,00 y sale de la vista por pagar.
 - **Cuando** alguno de sus gastos de Caja es de una caja cerrada **entonces** no se anula nada: «El pedido tiene
   movimientos de una caja cerrada; no se puede anular.»
@@ -272,13 +279,19 @@ se registran y anulan aparte, COM-05 y COM-09). `PUT /api/purchases/{id}`; lo ha
 - **Cuando** el nuevo total de las líneas es menor a lo pagado (pagos de cuentas y de personas, DEU-02)
   **entonces** se rechaza: «El total del pedido (Bs 250,00) no puede ser menor a lo pagado (Bs 300,00); anule
   primero el pago.» Igual a lo pagado se acepta (queda Pagado). Las deudas con personas no cambian.
-- **Cuando** cambia el envío (monto o cuenta) **entonces** la pantalla alerta «Se anulará el gasto de envío de
+- **Cuando** cambia el envío (monto u origen) **entonces** la pantalla alerta «Se anulará el gasto de envío de
   Bs X en <cuenta> y se registrará uno nuevo» y, al guardar, el gasto de Transporte anterior queda `ANULADO` con el
   motivo, la cuenta recupera el monto y se registra el nuevo como en COM-02 (envío 0: sin gasto nuevo).
+- **Cuando** el envío anterior lo pagó Mami **entonces** la alerta dice «Se anulará el envío de Bs X que pagó Mami y se
+  registrará uno nuevo»; al guardar, su envío queda `ANULADO` con el motivo y la deuda baja. Si ya se le devolvió y la
+  deuda quedaría negativa, se rechaza: «Ya se devolvió a Mami parte de este envío; anule primero la devolución.» Si
+  sigue siendo de ella, solo cuenta la diferencia (Bs 30,00 → Bs 35,00 sube Bs 5,00). La revisión dice
+  «Envío: Bs 25,00 (Mami) → Bs 25,00 (Bisa)».
 - **Cuando** el gasto de envío anterior fue en una caja cerrada **entonces** se rechaza: «El envío se pagó en una
   caja cerrada; no se puede cambiar.»; si fue de Caja con la caja abierta, el efectivo esperado se recalcula.
 - **Cuando** el envío no cambia **entonces** su gasto no se toca.
-- Bloqueo en orden: pedido, caja, cuentas del envío anterior y nuevo juntas por id (T-14). Todo en una transacción.
+- Bloqueo en orden: pedido, caja, personas y cuentas del envío anterior y nuevo, cada grupo junto por id (T-14). Todo
+  en una transacción.
 - **Cuando** se guarda una edición **entonces** queda una fila en `purchase_revisions` con quién, cuándo, motivo y el
   resumen de lo que cambió, armado en el servidor (ej. «Cantidad de Maní: 3 → 2 · Línea agregada: Barra Chia × 2 a
   Bs 10,00 · Línea quitada: Pasas · Total: Bs 300,00 → Bs 280,00»), y el pedido guarda `updated_by` y
@@ -403,6 +416,10 @@ ese nombre. Finanzas no las elimina: «Las categorías de sistema no se pueden e
   Pruebas en `purchase-form-modal.component.spec.ts` y `purchase-detail-modal.component.spec.ts`; verificado en el
   navegador con la base local (edición con línea nueva, cantidad, envío rehecho y rechazo por total menor a lo pagado).
 - [x] COM-13: precio de venta en el buscador y en la tabla de `purchase-form-modal`, solo frontend.
+- [x] Envío pagado por una persona (COM-02, COM-12, DEU-02): migración `V30__purchase_shipping_charges.sql`, origen
+  del envío en `PurchaseService` y en el formulario. Pruebas en `PurchaseServiceTest`,
+  `ShippingPaidByPersonIntegrationTest` (contra PostgreSQL), `purchase-form-modal.component.spec.ts` y
+  `purchase-detail-modal.component.spec.ts`.
 - [x] COM-20 a COM-25: lectura desde foto o texto. Migración `V29__purchase_readings.sql`, `PurchaseReadingService`,
   `OpenAiPurchaseReader`, `ProductTextMatcher`, `PurchasePhotoService`; pantalla en `purchase-reading-modal`,
   `reading-lines-panel`, `reading-notice` y `purchase-photo-panel`.

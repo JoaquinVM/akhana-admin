@@ -25,7 +25,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String COST_SCALE = "El costo unitario de '%s' admite hasta 2 decimales.";
     static final String NO_ITEMS = "El pedido debe tener al menos una línea.";
     static final String FUTURE_DATE = "La fecha del pedido no puede ser futura.";
-    static final String SHIPPING_ACCOUNT_REQUIRED = "Indique la cuenta con la que se pagó el envío.";
+    static final String SHIPPING_SOURCE_REQUIRED = "Elija una cuenta o una persona como origen del envío.";
     static final String SHIPPING_CATEGORY_MISSING = "No existe la categoría Transporte; no se puede registrar el envío.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar el pago.";
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
@@ -44,6 +44,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String REPEATED_LINE = "La línea de '%s' está repetida.";
     static final String TOTAL_BELOW_PAID = "El total del pedido (%s) no puede ser menor a lo pagado (%s); anule primero el pago.";
     static final String CLOSED_SESSION_SHIPPING = "El envío se pagó en una caja cerrada; no se puede cambiar.";
+    static final String PAYMENT_REPAID = "Ya se devolvió a %s parte de este pago; anule primero la devolución.";
+    static final String SHIPPING_REPAID = "Ya se devolvió a %s parte de este envío; anule primero la devolución.";
     static final String ARRIVAL_REASON = "Llegó la mercadería";
     public static final String ARRIVAL_NOT_DELIVERED = "Cuando llega la mercadería, el pedido queda entregado.";
     public static final String ARRIVAL_READING_NOT_PHOTO = "Los precios reales se leen de una foto, no de un texto.";
@@ -63,6 +65,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final CreditorRepository creditorRepository;
     private final PurchaseReadingRepository purchaseReadingRepository;
     private final PurchasePhotoRepository purchasePhotoRepository;
+    private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -125,21 +128,33 @@ public class PurchaseServiceImpl implements PurchaseService {
     public PurchaseResponse getPurchaseById(UUID id) {
         Purchase purchase = purchaseRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + id));
-        Set<UUID> paymentTxIds = new HashSet<>();
-        purchase.getPayments().forEach(p -> paymentTxIds.add(p.getFinancialTransactionId()));
-        // The shipping expense is the purchase movement that no payment points to (P-24); after an edit the active
-        // one, or the last one when the purchase is voided (COM-12)
-        List<FinancialTransaction> shipping = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(id).stream()
-            .filter(tx -> !paymentTxIds.contains(tx.getId()))
-            .toList();
-        FinancialAccount shippingAccount = shipping.stream()
+        // The shipping was paid by an account (its Transporte expense, P-24) or by a person (DEU-02): after an edit the
+        // active one, or the last one when the purchase is voided (COM-12)
+        List<FinancialTransaction> shipping = shippingExpenses(purchase);
+        List<PurchaseShippingCharge> charges = purchaseShippingChargeRepository.findByPurchaseId(id);
+        Optional<FinancialTransaction> activeTx = shipping.stream()
             .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO)
-            .reduce((first, second) -> second)
-            .or(() -> shipping.isEmpty() ? Optional.empty() : Optional.of(shipping.get(shipping.size() - 1)))
-            .map(FinancialTransaction::getSourceAccount)
-            .orElse(null);
+            .reduce((first, second) -> second);
+        Optional<PurchaseShippingCharge> activeCharge = charges.stream()
+            .filter(c -> c.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
+            .reduce((first, second) -> second);
+        FinancialAccount shippingAccount = null;
+        Creditor shippingCreditor = null;
+        if (activeTx.isPresent()) {
+            shippingAccount = activeTx.get().getSourceAccount();
+        } else if (activeCharge.isPresent()) {
+            shippingCreditor = activeCharge.get().getCreditor();
+        } else {
+            FinancialTransaction lastTx = shipping.isEmpty() ? null : shipping.get(shipping.size() - 1);
+            PurchaseShippingCharge lastCharge = charges.isEmpty() ? null : charges.get(charges.size() - 1);
+            if (lastCharge != null && (lastTx == null || lastCharge.getChargeDate().isAfter(lastTx.getTransactionDate()))) {
+                shippingCreditor = lastCharge.getCreditor();
+            } else if (lastTx != null) {
+                shippingAccount = lastTx.getSourceAccount();
+            }
+        }
         UUID photoId = purchasePhotoRepository.findByPurchaseIdAndActiveTrue(id).map(PurchasePhoto::getId).orElse(null);
-        return PurchaseResponse.detail(purchase, shippingAccount, photoId);
+        return PurchaseResponse.detail(purchase, shippingAccount, shippingCreditor, photoId);
     }
 
     @Override
@@ -186,15 +201,27 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
 
-        // Lock order for every money operation: cash session, then the person who pays the first payment, then the
-        // accounts of the shipping and the first payment together by id (T-14)
-        PurchasePaymentRequest initialPayment = request.initialPayment();
+        // The shipping is paid by an account (P-24) or by a person (DEU-02), exactly one
         UUID shippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
+        UUID shippingCreditorId = shippingCost.signum() > 0 ? request.shippingCreditorId() : null;
+        if (shippingCost.signum() > 0 && (shippingAccountId == null) == (shippingCreditorId == null)) {
+            throw new IllegalArgumentException(SHIPPING_SOURCE_REQUIRED);
+        }
+
+        // Lock order for every money operation: cash session, then the people who pay the first payment or the
+        // shipping, then the accounts of the shipping and the first payment, each group together by id (T-14)
+        PurchasePaymentRequest initialPayment = request.initialPayment();
         UUID paymentAccountId = initialPayment != null ? initialPayment.accountId() : null;
         lockPayers(shippingAccountId, paymentAccountId);
+        Set<UUID> payerCreditors = new HashSet<>();
         if (initialPayment != null && initialPayment.creditorId() != null && initialPayment.accountId() == null) {
-            lockCreditor(initialPayment.creditorId());
+            payerCreditors.add(initialPayment.creditorId());
         }
+        if (shippingCreditorId != null) payerCreditors.add(shippingCreditorId);
+        if (!payerCreditors.isEmpty()) {
+            creditorRepository.findAllByIdForUpdate(payerCreditors);
+        }
+        Creditor shippingCreditor = shippingCreditorId != null ? activeCreditor(shippingCreditorId) : null;
         Set<UUID> payerAccounts = new HashSet<>();
         if (shippingAccountId != null) payerAccounts.add(shippingAccountId);
         if (paymentAccountId != null) payerAccounts.add(paymentAccountId);
@@ -205,14 +232,11 @@ public class PurchaseServiceImpl implements PurchaseService {
         // Category and accounts are resolved before saving anything (RG-05); lock order: session, then account (T-14)
         FinancialCategory shippingCategory = null;
         Payer shippingPayer = null;
-        if (shippingCost.signum() > 0) {
-            if (request.shippingAccountId() == null) {
-                throw new IllegalArgumentException(SHIPPING_ACCOUNT_REQUIRED);
-            }
+        if (shippingAccountId != null) {
             shippingCategory = financialCategoryRepository
                 .findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_SHIPPING)
                 .orElseThrow(() -> new IllegalStateException(SHIPPING_CATEGORY_MISSING));
-            shippingPayer = lockPayer(request.shippingAccountId());
+            shippingPayer = lockPayer(shippingAccountId);
         }
 
         Instant now = Instant.now();
@@ -249,6 +273,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             recordExpense(shippingPayer, shippingCategory, shippingCost, saved,
                 "Envío pedido " + saved.getPurchaseNumber(), null, username);
         }
+        if (shippingCreditor != null) {
+            recordShippingCharge(saved, shippingCreditor, shippingCost, username);
+        }
 
         // Saved in the same transaction: a rejected payment leaves no purchase (RG-05)
         if (initialPayment != null) {
@@ -256,7 +283,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             saved = purchaseRepository.save(saved);
         }
 
-        return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account() : null);
+        return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account() : null, shippingCreditor, null);
     }
 
     @Override
@@ -394,24 +421,32 @@ public class PurchaseServiceImpl implements PurchaseService {
             changes.add("Total: " + StoreFormat.money(purchase.getItemsTotal()) + " → " + StoreFormat.money(itemsTotal));
         }
 
-        // Shipping: a change voids its Transporte expense and records a new one (COM-12, P-24)
+        // Shipping: a change voids its Transporte expense, or what the person paid, and records a new one
+        // (COM-12, P-24, DEU-02)
         BigDecimal shippingCost = request.shippingCost() != null
             ? request.shippingCost().setScale(2, RoundingMode.HALF_UP)
             : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         if (shippingCost.signum() < 0) {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
-        Set<UUID> paymentTxIds = new HashSet<>();
-        purchase.getPayments().forEach(p -> paymentTxIds.add(p.getFinancialTransactionId()));
-        List<FinancialTransaction> shippingTxs = financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchaseId).stream()
-            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO && !paymentTxIds.contains(tx.getId()))
+        List<FinancialTransaction> shippingTxs = shippingExpenses(purchase).stream()
+            .filter(tx -> tx.getStatus() == FinancialTransactionStatus.ACTIVO)
+            .toList();
+        List<PurchaseShippingCharge> shippingCharges = purchaseShippingChargeRepository.findByPurchaseId(purchaseId).stream()
+            .filter(c -> c.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
             .toList();
         UUID currentShippingAccountId = shippingTxs.isEmpty() ? null : shippingTxs.get(0).getSourceAccount().getId();
+        UUID currentShippingCreditorId = shippingCharges.isEmpty() ? null : shippingCharges.get(0).getCreditor().getId();
         UUID newShippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
+        UUID newShippingCreditorId = shippingCost.signum() > 0 ? request.shippingCreditorId() : null;
+        if (newShippingAccountId != null && newShippingCreditorId != null) {
+            throw new IllegalArgumentException(SHIPPING_SOURCE_REQUIRED);
+        }
         boolean shippingChanges = shippingCost.compareTo(purchase.getShippingCost()) != 0
-            || (newShippingAccountId != null && !newShippingAccountId.equals(currentShippingAccountId));
-        if (shippingChanges && shippingCost.signum() > 0 && newShippingAccountId == null) {
-            throw new IllegalArgumentException(SHIPPING_ACCOUNT_REQUIRED);
+            || (newShippingAccountId != null && !newShippingAccountId.equals(currentShippingAccountId))
+            || (newShippingCreditorId != null && !newShippingCreditorId.equals(currentShippingCreditorId));
+        if (shippingChanges && shippingCost.signum() > 0 && newShippingAccountId == null && newShippingCreditorId == null) {
+            throw new IllegalArgumentException(SHIPPING_SOURCE_REQUIRED);
         }
 
         if (changes.isEmpty() && !shippingChanges) {
@@ -419,17 +454,24 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
 
         if (shippingChanges) {
-            FinancialCategory shippingCategory = shippingCost.signum() > 0
+            FinancialCategory shippingCategory = newShippingAccountId != null
                 ? financialCategoryRepository.findBySystemKeyAndDeletedAtIsNull(FinancialCategorySystemKey.PURCHASE_SHIPPING)
                     .orElseThrow(() -> new IllegalStateException(SHIPPING_CATEGORY_MISSING))
                 : null;
             // Lock order: the open session for a new Caja expense and the session of the old one (rejected when
-            // closed), then the old and new accounts together by id (T-14)
+            // closed), then the old and new people, then the old and new accounts, each group together by id (T-14)
             lockPayers(newShippingAccountId);
             shippingTxs.stream().map(FinancialTransaction::getCashSessionId).filter(Objects::nonNull).distinct()
                 .forEach(sessionId -> cashSessionRepository.findByIdForUpdate(sessionId)
                     .filter(cs -> cs.getStatus() == CashSessionStatus.ABIERTA)
                     .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_SHIPPING)));
+            Set<UUID> shippingCreditors = new HashSet<>();
+            shippingCharges.forEach(c -> shippingCreditors.add(c.getCreditor().getId()));
+            if (newShippingCreditorId != null) shippingCreditors.add(newShippingCreditorId);
+            if (!shippingCreditors.isEmpty()) {
+                creditorRepository.findAllByIdForUpdate(shippingCreditors);
+            }
+            Creditor newCreditor = newShippingCreditorId != null ? activeCreditor(newShippingCreditorId) : null;
             Set<UUID> shippingAccounts = new HashSet<>();
             shippingTxs.forEach(tx -> shippingAccounts.add(tx.getSourceAccount().getId()));
             if (newShippingAccountId != null) shippingAccounts.add(newShippingAccountId);
@@ -437,15 +479,29 @@ public class PurchaseServiceImpl implements PurchaseService {
                 financialAccountRepository.findAllByIdForUpdate(shippingAccounts);
             }
 
-            String oldShipping = shippingText(purchase.getShippingCost(), shippingTxs.isEmpty() ? null
-                : shippingTxs.get(0).getSourceAccount().getName());
+            // DEU-02: what a person paid leaves their debt; it never goes below 0, counting what they pay now
+            for (PurchaseShippingCharge charge : shippingCharges) {
+                BigDecimal stays = newCreditor != null && newCreditor.getId().equals(charge.getCreditor().getId())
+                    ? shippingCost : BigDecimal.ZERO;
+                ensureDebtCovers(charge.getCreditor(), charge.getAmount().subtract(stays), SHIPPING_REPAID);
+            }
+
+            String oldShipping = shippingText(purchase.getShippingCost(), !shippingTxs.isEmpty()
+                ? shippingTxs.get(0).getSourceAccount().getName()
+                : !shippingCharges.isEmpty() ? shippingCharges.get(0).getCreditor().getName() : null);
             voidExpenses(shippingTxs, CLOSED_SESSION_SHIPPING, reason, username, now);
+            shippingCharges.forEach(c -> markVoided(c, reason, username, now));
             String newShipping = shippingText(shippingCost, null);
             if (shippingCategory != null) {
                 Payer payer = lockPayer(newShippingAccountId);
                 recordExpense(payer, shippingCategory, shippingCost, purchase,
                     "Envío pedido " + purchase.getPurchaseNumber(), null, username);
                 newShipping = shippingText(shippingCost, payer.account().getName());
+            } else if (newCreditor != null) {
+                // The voided one is written first, so the unique active shipping holds (V30)
+                purchaseShippingChargeRepository.flush();
+                recordShippingCharge(purchase, newCreditor, shippingCost, username);
+                newShipping = shippingText(shippingCost, newCreditor.getName());
             }
             changes.add("Envío: " + oldShipping + " → " + newShipping);
         }
@@ -520,10 +576,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             .createdAt(now);
 
         if (request.creditorId() != null) {
-            Creditor creditor = lockCreditor(request.creditorId());
-            if (creditor.getStatus() != CreditorStatus.ACTIVO) {
-                throw new IllegalArgumentException("La persona '" + creditor.getName() + "' no está activa.");
-            }
+            Creditor creditor = activeCreditor(request.creditorId());
             // CAJ-11: no movement, so it counts for the day it is recorded
             payment.creditor(creditor).paymentDate(now).operationDate(StoreFormat.storeDay(now));
         } else {
@@ -588,7 +641,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         Instant now = Instant.now();
         if (payment.getCreditor() != null) {
             // DEU-02: no movement to revert; the debt drops, but never below what was already repaid
-            ensureDebtCovers(lockCreditor(payment.getCreditor().getId()), payment.getAmount());
+            ensureDebtCovers(lockCreditor(payment.getCreditor().getId()), payment.getAmount(), PAYMENT_REPAID);
         } else {
             FinancialTransaction tx = financialTransactionRepository.findById(payment.getFinancialTransactionId())
                 .orElseThrow(() -> new IllegalStateException("No se encontró el movimiento del pago."));
@@ -626,14 +679,20 @@ public class PurchaseServiceImpl implements PurchaseService {
                 .filter(cs -> cs.getStatus() == CashSessionStatus.ABIERTA)
                 .orElseThrow(() -> new IllegalStateException(CLOSED_SESSION_PURCHASE)));
 
-        // Payments made by people: nothing is voided if any debt would go below 0 (DEU-02)
+        // Payments and shipping paid by people: nothing is voided if any debt would go below 0 (DEU-02)
         Map<UUID, BigDecimal> paidByCreditor = new HashMap<>();
         purchase.getPayments().stream()
             .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO && p.getCreditor() != null)
             .forEach(p -> paidByCreditor.merge(p.getCreditor().getId(), p.getAmount(), BigDecimal::add));
+        Set<UUID> payingCreditors = new HashSet<>(paidByCreditor.keySet());
+        List<PurchaseShippingCharge> shippingCharges = purchaseShippingChargeRepository.findByPurchaseId(purchaseId).stream()
+            .filter(c -> c.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
+            .toList();
+        shippingCharges.forEach(c -> paidByCreditor.merge(c.getCreditor().getId(), c.getAmount(), BigDecimal::add));
         if (!paidByCreditor.isEmpty()) {
             for (Creditor creditor : creditorRepository.findAllByIdForUpdate(paidByCreditor.keySet())) {
-                ensureDebtCovers(creditor, paidByCreditor.get(creditor.getId()));
+                ensureDebtCovers(creditor, paidByCreditor.get(creditor.getId()),
+                    payingCreditors.contains(creditor.getId()) ? PAYMENT_REPAID : SHIPPING_REPAID);
             }
         }
 
@@ -643,6 +702,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.getPayments().stream()
             .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
             .forEach(p -> markVoided(p, voidReason, username, now));
+        shippingCharges.forEach(c -> markVoided(c, voidReason, username, now));
 
         // Product cost and price changes (COM-03) stay: they are corrected from the catalog
         purchase.setPaidAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
@@ -831,12 +891,45 @@ public class PurchaseServiceImpl implements PurchaseService {
             .orElseThrow(() -> new ResourceNotFoundException("Persona no encontrada con ID: " + creditorId));
     }
 
-    // Voiding a payment made by a person lowers their debt; it cannot go below 0 (DEU-02)
-    private void ensureDebtCovers(Creditor creditor, BigDecimal amount) {
-        if (creditorRepository.computeDebt(creditor.getId()).compareTo(amount) < 0) {
-            throw new IllegalStateException("Ya se devolvió a " + creditor.getName()
-                + " parte de este pago; anule primero la devolución.");
+    // DEU-02: a person who pays a payment or the shipping must be active
+    private Creditor activeCreditor(UUID creditorId) {
+        Creditor creditor = lockCreditor(creditorId);
+        if (creditor.getStatus() != CreditorStatus.ACTIVO) {
+            throw new IllegalArgumentException("La persona '" + creditor.getName() + "' no está activa.");
         }
+        return creditor;
+    }
+
+    // Voiding what a person paid lowers their debt; it cannot go below 0 (DEU-02)
+    private void ensureDebtCovers(Creditor creditor, BigDecimal amount, String message) {
+        if (amount.signum() > 0 && creditorRepository.computeDebt(creditor.getId()).compareTo(amount) < 0) {
+            throw new IllegalStateException(String.format(message, creditor.getName()));
+        }
+    }
+
+    // The shipping expenses of a purchase: its movements that no payment points to (P-24), oldest first
+    private List<FinancialTransaction> shippingExpenses(Purchase purchase) {
+        Set<UUID> paymentTxIds = new HashSet<>();
+        purchase.getPayments().forEach(p -> paymentTxIds.add(p.getFinancialTransactionId()));
+        return financialTransactionRepository.findByPurchaseIdOrderByTransactionDateAsc(purchase.getId()).stream()
+            .filter(tx -> !paymentTxIds.contains(tx.getId()))
+            .toList();
+    }
+
+    // DEU-02: the shipping paid by a person moves no money; it raises the debt with them until it is repaid
+    private void recordShippingCharge(Purchase purchase, Creditor creditor, BigDecimal amount, String username) {
+        Instant now = Instant.now();
+        purchaseShippingChargeRepository.save(PurchaseShippingCharge.builder()
+            .purchase(purchase)
+            .creditor(creditor)
+            .amount(amount)
+            .chargeDate(now)
+            // CAJ-11: no movement, so it counts for the day it is recorded
+            .operationDate(StoreFormat.storeDay(now))
+            .status(PurchasePaymentRecordStatus.ACTIVO)
+            .createdBy(username)
+            .createdAt(now)
+            .build());
     }
 
     // COM-24: a reading goes with one purchase; a failed one has nothing to compare
@@ -936,6 +1029,14 @@ public class PurchaseServiceImpl implements PurchaseService {
         payment.setVoidedBy(username);
         payment.setVoidedAt(now);
         payment.setVoidReason(voidReason);
+    }
+
+    private void markVoided(PurchaseShippingCharge charge, String voidReason, String username, Instant now) {
+        charge.setStatus(PurchasePaymentRecordStatus.ANULADO);
+        charge.setVoidedBy(username);
+        charge.setVoidedAt(now);
+        charge.setVoidReason(voidReason);
+        purchaseShippingChargeRepository.save(charge);
     }
 
     // The open session is locked first when any of the accounts is Caja (T-14)

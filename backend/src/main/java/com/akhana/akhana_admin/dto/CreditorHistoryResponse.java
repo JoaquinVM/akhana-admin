@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * History of a person (DEU-04): purchase payments made by them, sales of their products (POS-13) and repayments to
- * them, oldest first, each with the debt after it. Voided entries keep the previous balance.
+ * History of a person (DEU-04): purchase payments and shipping paid by them (DEU-02), sales of their products
+ * (POS-13) and repayments to them, oldest first, each with the debt after it. Voided entries keep the previous balance.
  */
 public record CreditorHistoryResponse(CreditorResponse creditor, List<Entry> entries) {
 
-    public enum EntryType { PAYMENT, SALE, REPAYMENT }
+    public enum EntryType { PAYMENT, SHIPPING, SALE, REPAYMENT }
 
     public record Entry(
         EntryType type,
@@ -24,7 +24,7 @@ public record CreditorHistoryResponse(CreditorResponse creditor, List<Entry> ent
         // CAJ-11: day it counts for (the day of its session or sale)
         LocalDate operationDate,
         BigDecimal amount,
-        // PAYMENT
+        // PAYMENT and SHIPPING
         UUID purchaseId,
         String purchaseNumber,
         String supplierName,

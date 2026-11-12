@@ -73,7 +73,16 @@ uno de los dos.
   como origen del pago.» La nota del pago solo se guarda en el movimiento, así que un pago por persona no la
   lleva.
 - Bloqueo: pedido, luego persona (T-14). Al registrar un pedido con pago inicial por persona, se bloquea la caja
-  (si el envío sale de Caja), luego la persona y luego la cuenta del envío.
+  (si el envío sale de Caja), luego las personas del pago y del envío y luego la cuenta del envío.
+
+### Envío pagado por una persona
+
+- **Cuando** Mami paga el envío de Bs 25,00 de un pedido **entonces** su deuda sube Bs 25,00, sin movimiento de dinero,
+  y el estado de pago del pedido no cambia: el envío no cuenta (COM-04). Se le devuelve como cualquier deuda (DEU-03,
+  concepto Pedido).
+- **Cuando** se cambia el envío de ese pedido o se anula el pedido **entonces** su envío queda anulado con el motivo y
+  la deuda baja, salvo que ya se le haya devuelto: «Ya se devolvió a Mami parte de este envío; anule primero la
+  devolución.» (COM-12, COM-09).
 
 ### Anulación de un pago por persona (COM-09)
 
@@ -134,13 +143,14 @@ Registro de lo que el negocio le devuelve a la persona (`creditor_repayments`): 
 - **Cuando** se abre la pestaña Personas **entonces** se ve cada persona con su deuda y el total adeudado; filtra
   por estado y texto.
 - **Cuando** se abre el detalle de Mami **entonces** se ve su historial en orden de fecha: los pagos de pedidos
-  (fecha, pedido `PED-000001`, proveedor, monto) y las devoluciones (fecha, cuenta, monto, comentario), cada uno
+  (fecha, pedido `PED-000001`, proveedor, monto), los envíos que pagó («Pagó el envío del pedido PED-000001», con el
+  proveedor) y las devoluciones (fecha, cuenta, monto, comentario), cada uno
   con el saldo después del movimiento. Los anulados se ven marcados, con su motivo, y no cuentan en el saldo.
 - **Cuando** Mami pagó Bs 200,00 y Bs 100,00 y se le devolvieron Bs 150,00 **entonces** su deuda es Bs 150,00.
 - **Cuando** una venta de un producto de Mami (POS-13) o una devolución desde Caja se cargó pasada la medianoche en
   la caja del 31/10 **entonces** el historial la ordena y la muestra en el 31/10, con la marca «Día 31/10 · cargada
   el 01/11 00:20»; el saldo no cambia (CAJ-11). Una devolución desde Bisa queda en el día de su registro.
-- Desde el detalle se registra una devolución (DEU-03) y se abre el pedido de cada pago.
+- Desde el detalle se registra una devolución (DEU-03) y se abre el pedido de cada pago o envío.
 
 ## DEU-05 · Venta al costo a crédito
 
@@ -254,6 +264,8 @@ Deudas con personas (se puede construir ya):
   (contra PostgreSQL), `EndpointAuthorizationTest`.
 - [x] Frontend: `core/debt`, `pages/debts` (pestaña Personas con detalle e historial, devolución y anulación),
   origen persona en el pago y en el formulario de pedidos, menú Deudas.
+- [x] Envío pagado por una persona: `purchase_shipping_charges` suma a la deuda y al historial (`SHIPPING`). Pruebas
+  en `ShippingPaidByPersonIntegrationTest` y `creditor-detail-modal.component.spec.ts`.
 - [x] Probar P-48 en la app (28-10-2026, rama `feat/app-checks`): Mami con Bs 30,00 de sus ventas sin pagar y el
   pedido PED-000071 (Bs 17,00) pagado por ella. «Devolver» propuso «Pago a tercero» por Bs 30,00; registrado desde
   Caja, propuso «Pedido» por Bs 17,00; registrado desde Bisa, la deuda quedó en 0. Sin hallazgos.

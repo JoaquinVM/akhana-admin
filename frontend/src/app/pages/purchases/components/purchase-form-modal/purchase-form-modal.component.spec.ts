@@ -142,6 +142,79 @@ describe('PurchaseFormModalComponent', () => {
     expect(component.buildRequest().shippingAccountId).toBeNull();
   });
 
+  describe('DEU-02: envío pagado por una persona', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('accounts', [
+        { id: 'acc-caja', name: 'Caja', color: null, cashAccount: true, qrAccount: false },
+        { id: 'acc-bisa', name: 'Bisa', color: null, cashAccount: false, qrAccount: false }
+      ] as any);
+      fixture.componentRef.setInput('creditors', [{ id: 'cre-mami', name: 'Mami' }] as any);
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.shippingCost.set(25);
+      fixture.detectChanges();
+    });
+
+    it('la lista del envío ofrece las cuentas y «Pagó una persona»', () => {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('#purchase-shipping-account');
+      const groups = Array.from(select.querySelectorAll('optgroup')).map(g => [g.label,
+        Array.from(g.querySelectorAll('option')).map(o => o.textContent!.trim())]);
+      expect(groups).toEqual([['Cuentas', ['Caja', 'Bisa']], ['Pagó una persona', ['Mami']]]);
+    });
+
+    it('elegir a Mami envía la persona sin cuenta, avisa que sube su deuda y no cuenta como salida de Caja', () => {
+      component.onShippingSourceChange('acc-caja');
+      expect(component.shipsFromCash()).toBe(true);
+
+      component.onShippingSourceChange('creditor:cre-mami');
+      fixture.detectChanges();
+      const request = component.buildRequest();
+      expect(request.shippingCreditorId).toBe('cre-mami');
+      expect(request.shippingAccountId).toBeNull();
+      expect(component.shipsFromCash()).toBe(false);
+      expect(component.cashOutflow()).toBeNull();
+      expect(fixture.nativeElement.querySelector('#purchase-shipping-account').parentElement.textContent)
+        .toContain('No sale dinero ahora: sube la deuda con la persona.');
+
+      component.onShippingSourceChange('acc-bisa');
+      expect(component.buildRequest().shippingCreditorId).toBeNull();
+      expect(component.buildRequest().shippingAccountId).toBe('acc-bisa');
+    });
+
+    it('con envío 0 no envía la persona', () => {
+      component.onShippingSourceChange('creditor:cre-mami');
+      component.shippingCost.set(0);
+      expect(component.buildRequest().shippingCreditorId).toBeNull();
+    });
+
+    it('al editar un envío de Mami lo carga, y cambiarlo avisa que se anula lo que ella pagó', () => {
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('purchase', {
+        id: 'pur-8', purchaseNumber: 'PED-000008', supplierId: 'sup-1', supplierName: 'Granel', purchaseDate: '2026-10-25',
+        status: 'REGISTRADO', itemsTotal: 10, shippingCost: 25, totalAmount: 35, paidAmount: 0, balance: 10,
+        paymentStatus: 'POR_PAGAR', consignment: false, comment: null, shippingAccountId: null, shippingAccountName: null,
+        shippingCreditorId: 'cre-mami', shippingCreditorName: 'Mami', deliveryType: 'EN_TIENDA', deliveryStatus: 'PENDIENTE',
+        deliveryDate: null, createdBy: 'operator', createdAt: '2026-10-25T12:00:00Z', updatedBy: null, updatedAt: null,
+        voidedBy: null, voidedAt: null, voidReason: null, payments: [], revisions: [],
+        items: [{ id: 'it-1', productId: 'p-1', productName: 'Té verde', productCode: 'TE-1', saleUnit: 'UNIT', quantity: 1,
+          unitCost: 10, subtotal: 10, previousUnitCost: 10, costUpdated: false }]
+      } as Purchase);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+
+      expect(component.shippingSource()).toBe('creditor:cre-mami');
+      expect(component.shippingChanged()).toBe(false);
+      expect(component.buildUpdateRequest().shippingCreditorId).toBe('cre-mami');
+
+      component.onShippingSourceChange('acc-bisa');
+      fixture.detectChanges();
+      expect(component.shippingChanged()).toBe(true);
+      expect(fixture.nativeElement.querySelector('.alert-warning')?.textContent)
+        .toContain('Se anulará el envío de Bs 25.00 que pagó Mami y se registrará uno nuevo.');
+    });
+  });
+
   it('DEU-02: el pago inicial puede ser de una cuenta o de una persona, y exige monto', () => {
     expect(component.buildRequest().initialPayment).toBeNull();
 

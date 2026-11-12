@@ -119,7 +119,11 @@ export class PurchaseFormModalComponent {
   consignment = signal<boolean>(false);
   comment = signal<string>('');
   shippingCost = signal<number>(0);
+  // Who paid the shipping (P-24, DEU-02): an account or a person, never both
   shippingAccountId = signal<string>('');
+  shippingCreditorId = signal<string>('');
+  // The value of the list: the account id, or 'creditor:<id>'
+  shippingSource = computed(() => this.shippingCreditorId() ? 'creditor:' + this.shippingCreditorId() : this.shippingAccountId());
   // COM-07: entrega
   readonly deliveryTypes = Object.entries(DELIVERY_TYPE_LABELS) as [DeliveryType, string][];
   readonly deliveryStatuses = Object.entries(DELIVERY_STATUS_LABELS) as [DeliveryStatus, string][];
@@ -202,7 +206,8 @@ export class PurchaseFormModalComponent {
     }
     const shipping = round2(Number(this.shippingCost()) || 0);
     return shipping !== round2(purchase.shippingCost)
-      || (shipping > 0 && this.shippingAccountId() !== (purchase.shippingAccountId ?? ''));
+      || (shipping > 0 && (this.shippingAccountId() !== (purchase.shippingAccountId ?? '')
+        || this.shippingCreditorId() !== (purchase.shippingCreditorId ?? '')));
   });
 
   // CAJ-03: what leaves Caja with this form
@@ -276,6 +281,7 @@ export class PurchaseFormModalComponent {
     this.comment.set('');
     this.shippingCost.set(0);
     this.shippingAccountId.set('');
+    this.shippingCreditorId.set('');
     this.deliveryType.set('EN_TIENDA');
     this.deliveryStatus.set('PENDIENTE');
     this.deliveryDate.set('');
@@ -299,6 +305,7 @@ export class PurchaseFormModalComponent {
     this.comment.set(purchase.comment ?? '');
     this.shippingCost.set(purchase.shippingCost);
     this.shippingAccountId.set(purchase.shippingAccountId ?? '');
+    this.shippingCreditorId.set(purchase.shippingCreditorId ?? '');
     this.deliveryType.set(purchase.deliveryType);
     this.deliveryStatus.set(purchase.deliveryStatus);
     this.deliveryDate.set(purchase.deliveryDate ?? '');
@@ -365,6 +372,7 @@ export class PurchaseFormModalComponent {
       // CA-20: the invoice says how much, not which account paid it
       if (round2(draft.shippingCost) !== round2(this.purchase()?.shippingCost ?? 0)) {
         this.shippingAccountId.set('');
+        this.shippingCreditorId.set('');
       }
     }
     const byId = new Map(this.products().map(product => [product.id, product]));
@@ -490,6 +498,13 @@ export class PurchaseFormModalComponent {
     const thousandths = Math.round((Number(line.quantity) || 0) * 1000);
     const cents = Math.round((Number(line.unitCost) || 0) * 100);
     return Math.floor((thousandths * cents + 500) / 1000) / 100;
+  }
+
+  // DEU-02: the list has accounts and people; choosing one leaves the other empty
+  onShippingSourceChange(source: string): void {
+    const creditor = source.startsWith('creditor:');
+    this.shippingCreditorId.set(creditor ? source.slice('creditor:'.length) : '');
+    this.shippingAccountId.set(creditor ? '' : source);
   }
 
   // COM-19: going back to no payment forgets the typed amount; another source keeps it
@@ -713,6 +728,7 @@ export class PurchaseFormModalComponent {
       items,
       shippingCost: shipping,
       shippingAccountId: shipping > 0 ? this.shippingAccountId() || null : null,
+      shippingCreditorId: shipping > 0 ? this.shippingCreditorId() || null : null,
       consignment: this.consignment(),
       comment: comment.length > 0 ? comment : null,
       deliveryType: this.deliveryType(),

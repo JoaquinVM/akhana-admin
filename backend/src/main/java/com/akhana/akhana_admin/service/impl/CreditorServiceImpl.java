@@ -36,6 +36,7 @@ public class CreditorServiceImpl implements CreditorService {
     private final CreditorRepository creditorRepository;
     private final CreditorRepaymentRepository creditorRepaymentRepository;
     private final PurchasePaymentRepository purchasePaymentRepository;
+    private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
     private final CashSessionRepository cashSessionRepository;
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialCategoryRepository financialCategoryRepository;
@@ -138,6 +139,15 @@ public class CreditorServiceImpl implements CreditorService {
                 p.getPurchase().getId(), p.getPurchase().getPurchaseNumber(), p.getPurchase().getSupplier().getName(),
                 null, null, null, null, null, null, voided, p.getVoidedBy(), p.getVoidedAt(), p.getVoidReason(), null),
                 voided ? ZERO : p.getAmount()));
+        }
+        // DEU-02: the shipping of a purchase paid by the person
+        for (PurchaseShippingCharge c : purchaseShippingChargeRepository.findByCreditorId(id)) {
+            boolean voided = c.getStatus() == PurchasePaymentRecordStatus.ANULADO;
+            items.add(new Item(c.getOperationDate(), c.getChargeDate(), c.getCreatedAt(), new CreditorHistoryResponse.Entry(
+                CreditorHistoryResponse.EntryType.SHIPPING, c.getId(), c.getChargeDate(), c.getOperationDate(), c.getAmount(),
+                c.getPurchase().getId(), c.getPurchase().getPurchaseNumber(), c.getPurchase().getSupplier().getName(),
+                null, null, null, null, null, null, voided, c.getVoidedBy(), c.getVoidedAt(), c.getVoidReason(), null),
+                voided ? ZERO : c.getAmount()));
         }
         // POS-13: one entry per sale with the person's lines, on the day of the sale (CAJ-11)
         Map<UUID, List<SaleItem>> linesBySale = new LinkedHashMap<>();

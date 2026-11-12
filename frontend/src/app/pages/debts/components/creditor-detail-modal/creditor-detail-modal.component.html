@@ -42,6 +42,9 @@
                   @if (entry.type === 'PAYMENT') {
                     <span class="entry-title">Pagó pedido {{ entry.purchaseNumber }}</span>
                     <span class="entry-note">{{ entry.supplierName }}</span>
+                  } @else if (entry.type === 'SHIPPING') {
+                    <span class="entry-title">Pagó el envío del pedido {{ entry.purchaseNumber }}</span>
+                    <span class="entry-note">{{ entry.supplierName }}</span>
                   } @else if (entry.type === 'SALE') {
                     <span class="entry-title">Venta {{ entry.saleNumber }}</span>
                     <span class="entry-note">Productos suyos vendidos en la tienda</span>
@@ -60,7 +63,7 @@
                 </td>
                 <td class="text-right">Bs {{ entry.balanceAfter | number:'1.2-2' }}</td>
                 <td class="text-right">
-                  @if (entry.type === 'PAYMENT' && entry.purchaseId) {
+                  @if ((entry.type === 'PAYMENT' || entry.type === 'SHIPPING') && entry.purchaseId) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="openPurchase.emit(entry.purchaseId)">Ver pedido</button>
                   } @else if (entry.type === 'SALE' && entry.saleId) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="openSale.emit(entry.saleId)">Ver venta</button>

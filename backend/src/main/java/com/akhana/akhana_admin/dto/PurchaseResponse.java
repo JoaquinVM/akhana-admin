@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.dto;
 
+import com.akhana.akhana_admin.model.Creditor;
 import com.akhana.akhana_admin.model.DeliveryStatus;
 import com.akhana.akhana_admin.model.DeliveryType;
 import com.akhana.akhana_admin.model.FinancialAccount;
@@ -34,6 +35,9 @@ public record PurchaseResponse(
     String comment,
     UUID shippingAccountId,
     String shippingAccountName,
+    // DEU-02: the person who paid the shipping, instead of an account; only in the detail
+    UUID shippingCreditorId,
+    String shippingCreditorName,
     DeliveryType deliveryType,
     DeliveryStatus deliveryStatus,
     LocalDate deliveryDate,
@@ -56,17 +60,16 @@ public record PurchaseResponse(
     UUID photoId
 ) {
     public static PurchaseResponse summary(Purchase purchase) {
-        return of(purchase, null, List.of(), List.of(), List.of(), null);
+        return of(purchase, null, null, List.of(), List.of(), List.of(), null);
     }
 
-    public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount) {
-        return detail(purchase, shippingAccount, null);
-    }
-
-    public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount, UUID photoId) {
+    /** The shipping was paid by an account or a person (DEU-02), or neither when it is 0. */
+    public static PurchaseResponse detail(Purchase purchase, FinancialAccount shippingAccount, Creditor shippingCreditor,
+                                          UUID photoId) {
         return of(
             purchase,
             shippingAccount,
+            shippingCreditor,
             // Lines removed while editing are only in the revisions (COM-11)
             purchase.getItems().stream().filter(item -> !item.isRemoved()).map(PurchaseItemResponse::fromEntity).toList(),
             purchase.getPayments().stream().map(PurchasePaymentResponse::fromEntity).toList(),
@@ -75,7 +78,7 @@ public record PurchaseResponse(
         );
     }
 
-    private static PurchaseResponse of(Purchase purchase, FinancialAccount shippingAccount,
+    private static PurchaseResponse of(Purchase purchase, FinancialAccount shippingAccount, Creditor shippingCreditor,
                                        List<PurchaseItemResponse> items, List<PurchasePaymentResponse> payments,
                                        List<PurchaseRevisionResponse> revisions, UUID photoId) {
         return new PurchaseResponse(
@@ -95,6 +98,8 @@ public record PurchaseResponse(
             purchase.getComment(),
             shippingAccount != null ? shippingAccount.getId() : null,
             shippingAccount != null ? shippingAccount.getName() : null,
+            shippingCreditor != null ? shippingCreditor.getId() : null,
+            shippingCreditor != null ? shippingCreditor.getName() : null,
             purchase.getDeliveryType(),
             purchase.getDeliveryStatus(),
             purchase.getDeliveryDate(),
