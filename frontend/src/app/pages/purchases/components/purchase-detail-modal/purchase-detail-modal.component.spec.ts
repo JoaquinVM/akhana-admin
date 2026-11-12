@@ -99,6 +99,15 @@ describe('PurchaseDetailModalComponent', () => {
     expect(component.voidMessage()).toContain('hecho por Mami');
   });
 
+  it('DEU-02: el envío pagado por una persona dice de quién es', () => {
+    purchaseService.getPurchaseById.mockReturnValue(of({ ...basePurchase, shippingAccountName: null,
+      shippingCreditorId: 'cre-1', shippingCreditorName: 'Mami' }));
+    fixture.componentRef.setInput('purchaseId', 'pur-2');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('desde Mami (persona)');
+    expect(fixture.nativeElement.textContent).not.toContain('desde Bisa');
+  });
+
   it('CAJ-11: un pago desde Caja cargado pasada la medianoche se marca con el día de su caja', () => {
     expect(component.dayMark('2026-10-31', '2026-11-01T04:30:00Z')).toBe('Día 31/10 · cargada el 01/11 00:30');
     expect(component.dayMark('2026-10-25', '2026-10-25T12:00:00Z')).toBeNull();

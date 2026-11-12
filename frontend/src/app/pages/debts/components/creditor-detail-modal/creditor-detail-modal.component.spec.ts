@@ -99,6 +99,28 @@ describe('CreditorDetailModalComponent', () => {
     expect(rows[1].querySelector('.day-mark')?.textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
   });
 
+  it('DEU-02: el envío que pagó suma a la deuda, se ve con su pedido y abre el pedido', () => {
+    creditorService.getHistory.mockReturnValue(of({
+      ...history,
+      creditor: { ...history.creditor, debt: 25 },
+      entries: [{ ...history.entries[0], type: 'SHIPPING', id: 'shp-1', amount: 25, purchaseId: 'pur-9',
+        purchaseNumber: 'PED-000009', supplierName: 'Granel', balanceAfter: 25 }]
+    }));
+    fixture.componentRef.setInput('refreshKey', 3);
+    fixture.detectChanges();
+    const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr')!;
+    expect(row.textContent).toContain('Pagó el envío del pedido PED-000009');
+    expect(row.textContent).toContain('Granel');
+    expect(row.textContent).toContain('+ Bs 25.00');
+    expect(component.repaymentConcept()).toBe('PURCHASE');
+    expect(component.repaymentAmount()).toBe(25);
+
+    const opened: string[] = [];
+    component.openPurchase.subscribe(id => opened.push(id));
+    (Array.from(row.querySelectorAll('button')).find(b => b.textContent!.includes('Ver pedido')) as HTMLButtonElement).click();
+    expect(opened).toEqual(['pur-9']);
+  });
+
   it('DEU-04: vuelve a cargar cuando cambia la clave de refresco', () => {
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();

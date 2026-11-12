@@ -40,6 +40,7 @@
         <div><span class="label">Total líneas{{ p.costToConfirm ? ' (estimado)' : '' }}</span><strong>Bs {{ p.itemsTotal | number:'1.2-2' }}</strong></div>
         <div><span class="label">Envío</span><strong>Bs {{ p.shippingCost | number:'1.2-2' }}</strong>
           @if (p.shippingAccountName) { <span class="hint">desde {{ p.shippingAccountName }}</span> }
+          @else if (p.shippingCreditorName) { <span class="hint">desde {{ p.shippingCreditorName }} (persona)</span> }
         </div>
         <div><span class="label">Total con envío</span><strong>Bs {{ p.totalAmount | number:'1.2-2' }}</strong></div>
         <div><span class="label">Pagado</span><strong>Bs {{ p.paidAmount | number:'1.2-2' }}</strong></div>

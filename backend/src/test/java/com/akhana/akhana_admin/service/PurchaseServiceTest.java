@@ -55,6 +55,7 @@ class PurchaseServiceTest {
     @Mock private CreditorRepository creditorRepository;
     @Mock private PurchaseReadingRepository purchaseReadingRepository;
     @Mock private PurchasePhotoRepository purchasePhotoRepository;
+    @Mock private PurchaseShippingChargeRepository purchaseShippingChargeRepository;
 
     private PurchaseServiceImpl purchaseService;
 
@@ -73,7 +74,7 @@ class PurchaseServiceTest {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
-            purchaseReadingRepository, purchasePhotoRepository);
+            purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -257,14 +258,52 @@ class PurchaseServiceTest {
     }
 
     @Test
-    @DisplayName("P-24: sin envío no se crea movimiento; con envío se exige la cuenta")
+    @DisplayName("P-24: sin envío no se crea movimiento; con envío se exige la cuenta o la persona")
     void registerPurchase_shippingRules() {
         purchaseService.registerPurchase(request(List.of(line(tea, "1", "10")), "0", null, false), "operator");
         verify(financialTransactionRepository, never()).save(any());
 
         assertThatThrownBy(() -> purchaseService.registerPurchase(
             request(List.of(line(tea, "1", "10")), "5", null, false), "operator"))
-            .hasMessage("Indique la cuenta con la que se pagó el envío.");
+            .hasMessage("Elija una cuenta o una persona como origen del envío.");
+    }
+
+    private PurchaseRequest shippingByPerson(String shipping, UUID accountId, UUID creditorId) {
+        return new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "1", "10")), new BigDecimal(shipping),
+            accountId, false, null, null, null, null, null, null, creditorId);
+    }
+
+    @Test
+    @DisplayName("DEU-02: Mami paga el envío: sin gasto ni cambio de cuentas, queda como su envío")
+    void registerPurchase_shippingPaidByPerson() {
+        PurchaseResponse res = purchaseService.registerPurchase(shippingByPerson("25", null, mami.getId()), "operator");
+
+        verify(financialTransactionRepository, never()).save(any());
+        verify(financialAccountRepository, never()).findActiveByIdForUpdate(any());
+        verifyNoInteractions(cashSessionRepository);
+        var charge = org.mockito.ArgumentCaptor.forClass(PurchaseShippingCharge.class);
+        verify(purchaseShippingChargeRepository).save(charge.capture());
+        assertThat(charge.getValue().getCreditor()).isEqualTo(mami);
+        assertThat(charge.getValue().getAmount()).isEqualByComparingTo("25.00");
+        assertThat(charge.getValue().getStatus()).isEqualTo(PurchasePaymentRecordStatus.ACTIVO);
+        assertThat(charge.getValue().getOperationDate()).isEqualTo(StoreFormat.storeDay(charge.getValue().getChargeDate()));
+        assertThat(res.shippingCreditorName()).isEqualTo("Mami");
+        assertThat(res.shippingAccountId()).isNull();
+        // COM-04: the shipping does not count toward the supplier balance
+        assertThat(res.balance()).isEqualByComparingTo("10.00");
+    }
+
+    @Test
+    @DisplayName("DEU-02: el envío sale de una cuenta o de una persona activa, no de las dos")
+    void registerPurchase_shippingSourceRules() {
+        assertThatThrownBy(() -> purchaseService.registerPurchase(shippingByPerson("25", bisa.getId(), mami.getId()), "operator"))
+            .hasMessage("Elija una cuenta o una persona como origen del envío.");
+
+        mami.setStatus(CreditorStatus.INACTIVO);
+        assertThatThrownBy(() -> purchaseService.registerPurchase(shippingByPerson("25", null, mami.getId()), "operator"))
+            .hasMessage("La persona 'Mami' no está activa.");
+        verify(purchaseRepository, never()).save(any());
+        verify(purchaseShippingChargeRepository, never()).save(any());
     }
 
     @Test

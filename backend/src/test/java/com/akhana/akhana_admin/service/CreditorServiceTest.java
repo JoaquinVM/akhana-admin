@@ -43,6 +43,7 @@ class CreditorServiceTest {
     @Mock private FinancialTransactionRepository financialTransactionRepository;
     @Mock private ProductRepository productRepository;
     @Mock private SaleItemRepository saleItemRepository;
+    @Mock private PurchaseShippingChargeRepository purchaseShippingChargeRepository;
 
     private CreditorServiceImpl creditorService;
 
@@ -57,7 +58,7 @@ class CreditorServiceTest {
     @BeforeEach
     void setUp() {
         creditorService = new CreditorServiceImpl(creditorRepository, creditorRepaymentRepository, purchasePaymentRepository,
-            cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
+            purchaseShippingChargeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
             new ExpectedCashCalculator(financialTransactionRepository), productRepository, saleItemRepository);
 
         mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();

@@ -16,7 +16,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
-| Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | — | `debts.md` |
+| Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Envío pagado por una persona (DEU-02) sin publicar | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
 | POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
@@ -121,7 +121,7 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 Detalle en `purchases.md`.
 
 - **COM-01** Proveedores con código y nombre únicos, teléfono, descripción y baja lógica.
-- **COM-02** Pedido con número correlativo, proveedor, fecha, líneas (producto, cantidad, costo unitario), costo de envío, total y comentario. El envío se paga como gasto de Transporte vinculado al pedido (P-24).
+- **COM-02** Pedido con número correlativo, proveedor, fecha, líneas (producto, cantidad, costo unitario), costo de envío, total y comentario. El envío se paga como gasto de Transporte vinculado al pedido (P-24), o lo paga una persona (DEU-02).
 - **COM-03** Desde una línea del pedido se puede crear un producto nuevo. Si el costo de la línea difiere del registrado, se muestra una alerta; al confirmar, el costo del producto se actualiza y se propone un precio de venta que mantiene la utilidad porcentual, redondeado hacia arriba al boliviano. Quien registra la compra acepta, edita o mantiene el precio (P-29). Las ventas anteriores no cambian (POS-05).
 - **COM-04** Estado de pago calculado desde los pagos: Por pagar, A cuenta o Pagado (el envío no cuenta). Consignación queda por pagar hasta que se registre el pago (P-21).
 - **COM-05** Un pedido admite varios pagos, cada uno con fecha, monto (no mayor al saldo) y origen: Caja, otra cuenta o una persona que pagó por el negocio (DEU-02).
@@ -131,7 +131,7 @@ Detalle en `purchases.md`.
 - **COM-09** Un pago se corrige anulándolo con motivo y un pedido, anulándolo o editándolo (COM-11); la anulación revierte el dinero y no se hace si hay movimientos de una caja cerrada.
 - **COM-10** · V2 — Cajas vinculadas a su unidad (Caja x12 = 12 × Barra Chia) con «Abrir caja». En la V1 la caja es un producto aparte.
 - **COM-11** Un pedido registrado (no anulado ni histórico) se edita en cualquier estado de entrega o pago, con motivo obligatorio: cabecera, entrega, envío y líneas (agregar lo que llegó sin pedirse, cambiar cantidad o costo, quitar lo que faltó con baja lógica), con producto nuevo y precio sugerido como en COM-03 (P-51).
-- **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
+- **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto (o lo que pagó la persona) y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
 - **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
 - **COM-14** Al registrar o editar un pedido, la cantidad de cada línea se cambia con botones − y +, como en el POS, o escribiéndola. El − no baja del mínimo ni quita la línea; la línea se quita con su X. Los campos de cantidad, costo unitario, costo de envío y monto pagado no muestran las flechitas del navegador.
 - **COM-19** · V1 — Al registrar un pedido, elegir el origen del pago inicial llena el monto con la suma de las líneas, y la sigue mientras no se escriba otro monto. El envío se sigue pagando aparte (P-24).
@@ -148,9 +148,9 @@ Detalle en `purchases.md`.
 Detalle en `debts.md`. Los saldos no se guardan: se calculan desde los registros activos y nunca quedan negativos.
 
 - **DEU-01** Personas a las que el negocio puede deber dinero (ej. Mami), con nombre único, teléfono, descripción y baja lógica; no se dan de baja con deuda.
-- **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con ella, sin movimiento de dinero.
+- **DEU-02** Un pago de pedido hecho por una persona marca el pedido como pagado (o a cuenta) y aumenta la deuda con ella, sin movimiento de dinero. El envío de un pedido también lo puede pagar una persona: sube su deuda y no cuenta para el estado de pago (COM-04).
 - **DEU-03** La devolución a la persona se registra desde Caja o una cuenta y baja la deuda sin superarla. Es un gasto con categoría Pedido (P-34), o Pago a tercero si se le paga lo de sus ventas (POS-13), sin superar lo pendiente de ellas; solo se anula desde Deudas.
-- **DEU-04** Saldo por persona e historial de pagos y devoluciones con el saldo después de cada registro. Al devolver se propone el concepto según lo pendiente (P-48).
+- **DEU-04** Saldo por persona e historial de pagos, envíos y devoluciones con el saldo después de cada registro. Al devolver se propone el concepto según lo pendiente (P-48).
 - **DEU-05** Una venta al costo puede quedar total o parcialmente a crédito de un cliente registrado; solo la venta al costo admite crédito (P-12).
 - **DEU-06** Los cobros se registran en Caja o en la cuenta QR, bajan el saldo sin superarlo y son un ingreso con categoría Venta (P-34).
 - **DEU-07** Saldos por cobrar por cliente, con historial de ventas al costo y cobros; las pagadas en el momento se ven «pagadas» sin cambiar el saldo (P-49).

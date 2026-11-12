@@ -25,9 +25,9 @@ export interface CreditorRequest {
   status?: CreditorStatus;
 }
 
-// DEU-04: purchase payments made by the person (PAYMENT) and repayments (REPAYMENT)
-// POS-13: SALE is a sale with the person's products (adds to the debt)
-export type CreditorHistoryEntryType = 'PAYMENT' | 'SALE' | 'REPAYMENT';
+// DEU-04: purchase payments made by the person (PAYMENT), the shipping of a purchase she paid (SHIPPING, DEU-02)
+// and repayments (REPAYMENT). POS-13: SALE is a sale with the person's products (adds to the debt)
+export type CreditorHistoryEntryType = 'PAYMENT' | 'SHIPPING' | 'SALE' | 'REPAYMENT';
 
 // What is repaid: purchases she paid (category Pedido) or sales of her products (Pago a tercero)
 export type CreditorRepaymentConcept = 'PURCHASE' | 'THIRD_PARTY';

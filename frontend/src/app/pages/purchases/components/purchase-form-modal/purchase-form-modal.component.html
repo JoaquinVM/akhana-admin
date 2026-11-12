@@ -279,13 +279,25 @@
       @if (needsShippingAccount()) {
         <div class="form-group">
           <label class="form-label" for="purchase-shipping-account">Envío pagado desde <span class="required-mark">*</span></label>
-          <select id="purchase-shipping-account" class="form-control" name="shippingAccountId"
-                  [ngModel]="shippingAccountId()" (ngModelChange)="shippingAccountId.set($event)">
+          <select id="purchase-shipping-account" class="form-control" name="shippingSource"
+                  [ngModel]="shippingSource()" (ngModelChange)="onShippingSourceChange($event)">
             <option value="">Seleccione…</option>
-            @for (account of accounts(); track account.id) {
-              <option [value]="account.id">{{ account.name }}</option>
+            <optgroup label="Cuentas">
+              @for (account of accounts(); track account.id) {
+                <option [value]="account.id">{{ account.name }}</option>
+              }
+            </optgroup>
+            @if (creditors().length > 0) {
+              <optgroup label="Pagó una persona">
+                @for (creditor of creditors(); track creditor.id) {
+                  <option [value]="'creditor:' + creditor.id">{{ creditor.name }}</option>
+                }
+              </optgroup>
             }
           </select>
+          @if (shippingCreditorId()) {
+            <span class="form-hint">No sale dinero ahora: sube la deuda con la persona.</span>
+          }
           @if (shipsFromCash()) {
             <app-cash-closed-note [closedInForm]="cashClosed()" (closedChange)="cashClosed.set($event)" />
           }
@@ -294,8 +306,13 @@
       @if (shippingChanged() && purchase()!.shippingCost > 0) {
         <div class="form-group">
           <div class="alert alert-warning" role="alert">
-            <span>Se anulará el gasto de envío de Bs {{ purchase()!.shippingCost | number:'1.2-2' }}
-              en {{ purchase()!.shippingAccountName }} y se registrará uno nuevo.</span>
+            @if (purchase()!.shippingCreditorName) {
+              <span>Se anulará el envío de Bs {{ purchase()!.shippingCost | number:'1.2-2' }}
+                que pagó {{ purchase()!.shippingCreditorName }} y se registrará uno nuevo.</span>
+            } @else {
+              <span>Se anulará el gasto de envío de Bs {{ purchase()!.shippingCost | number:'1.2-2' }}
+                en {{ purchase()!.shippingAccountName }} y se registrará uno nuevo.</span>
+            }
           </div>
         </div>
       }

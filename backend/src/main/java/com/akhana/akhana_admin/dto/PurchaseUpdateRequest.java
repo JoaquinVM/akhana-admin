@@ -31,7 +31,7 @@ public record PurchaseUpdateRequest(
     @DecimalMin(value = "0.00", message = "El costo de envío no puede ser negativo.")
     BigDecimal shippingCost,
 
-    // Account that paid the shipping; required when the shipping changes and is > 0 (COM-12)
+    // Who paid the shipping, an account or a person (DEU-02); one is required when the shipping changes and is > 0 (COM-12)
     UUID shippingAccountId,
 
     Boolean consignment,
@@ -53,12 +53,23 @@ public record PurchaseUpdateRequest(
     Boolean arrival,
 
     // COM-24: the photo reading used to fill the arrival, if any
-    UUID readingId
+    UUID readingId,
+
+    // DEU-02: the person who paid the shipping, instead of an account
+    UUID shippingCreditorId
 ) {
+    public PurchaseUpdateRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
+                                 UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
+                                 DeliveryStatus deliveryStatus, LocalDate deliveryDate, String reason, Boolean arrival,
+                                 UUID readingId) {
+        this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
+            deliveryStatus, deliveryDate, reason, arrival, readingId, null);
+    }
+
     public PurchaseUpdateRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
                                  UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
                                  DeliveryStatus deliveryStatus, LocalDate deliveryDate, String reason) {
         this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
-            deliveryStatus, deliveryDate, reason, null, null);
+            deliveryStatus, deliveryDate, reason, null, null, null);
     }
 }

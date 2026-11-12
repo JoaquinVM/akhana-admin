@@ -81,6 +81,9 @@ export interface Purchase {
   comment: string | null;
   shippingAccountId: string | null;
   shippingAccountName: string | null;
+  // DEU-02: the person who paid the shipping, instead of an account; only in the detail
+  shippingCreditorId?: string | null;
+  shippingCreditorName?: string | null;
   deliveryType: DeliveryType;
   deliveryStatus: DeliveryStatus;
   deliveryDate: string | null;
@@ -128,7 +131,9 @@ export interface PurchaseRequest {
   purchaseDate: string | null;
   items: PurchaseItemRequest[];
   shippingCost: number;
+  // Who paid the shipping when it is > 0: an account (P-24) or a person (DEU-02), exactly one
   shippingAccountId: string | null;
+  shippingCreditorId?: string | null;
   consignment: boolean;
   comment: string | null;
   deliveryType: DeliveryType;
