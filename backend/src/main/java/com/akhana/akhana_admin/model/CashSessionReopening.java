@@ -38,6 +38,12 @@ public class CashSessionReopening {
     @Column(name = "closing_comment", length = 500, updatable = false)
     private String closingComment;
 
+    @Column(name = "closing_reserve_bills", precision = 12, scale = 2, updatable = false)
+    private BigDecimal closingReserveBills;
+
+    @Column(name = "closing_reserve_coins", precision = 12, scale = 2, updatable = false)
+    private BigDecimal closingReserveCoins;
+
     @Column(name = "closed_by", length = 100, updatable = false)
     private String closedBy;
 

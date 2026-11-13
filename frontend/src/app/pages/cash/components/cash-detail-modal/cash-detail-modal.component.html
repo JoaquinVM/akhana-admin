@@ -172,6 +172,19 @@
                   </span>
                 </div>
               }
+              @if (reopening.closingReserveBills || reopening.closingReserveCoins) {
+                <div class="audit-row reopening-reserves">
+                  <span class="audit-k">Reservas:</span>
+                  <span class="audit-v">
+                    @if (reopening.closingReserveBills) {
+                      <span class="qty-badge">Billetes Bs {{ reopening.closingReserveBills | number:'1.2-2' }}</span>
+                    }
+                    @if (reopening.closingReserveCoins) {
+                      <span class="qty-badge">Monedas Bs {{ reopening.closingReserveCoins | number:'1.2-2' }}</span>
+                    }
+                  </span>
+                </div>
+              }
             </div>
           }
         </section>
@@ -252,7 +265,7 @@
       <!-- Tab content: cuts -->
       @if (activeTab === 'cortes') {
         <div class="tab-pane">
-          @if (cs.cuts.length === 0) {
+          @if (cs.cuts.length === 0 && !cs.closingReserveBills && !cs.closingReserveCoins) {
             <div class="empty-tab-state">
               <span class="empty-icon">ℹ️</span>
               <p>El cierre de esta caja se realizó por monto directo sin utilizar la matriz de cortes de billetes y monedas.</p>
@@ -283,6 +296,23 @@
                       </td>
                       <td style="text-align: right">
                         <strong class="price-val">Bs {{ cut.subtotal | number:'1.2-2' }}</strong>
+                      </td>
+                    </tr>
+                  }
+                  <!-- CAJ-04: the loose reserves of the closing -->
+                  @if (cs.closingReserveBills) {
+                    <tr class="reserve-row">
+                      <td colspan="3"><strong>Reserva billetes</strong></td>
+                      <td style="text-align: right">
+                        <strong class="price-val">Bs {{ cs.closingReserveBills | number:'1.2-2' }}</strong>
+                      </td>
+                    </tr>
+                  }
+                  @if (cs.closingReserveCoins) {
+                    <tr class="reserve-row">
+                      <td colspan="3"><strong>Reserva monedas</strong></td>
+                      <td style="text-align: right">
+                        <strong class="price-val">Bs {{ cs.closingReserveCoins | number:'1.2-2' }}</strong>
                       </td>
                     </tr>
                   }

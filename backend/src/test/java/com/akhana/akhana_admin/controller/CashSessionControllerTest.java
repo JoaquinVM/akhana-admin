@@ -309,6 +309,8 @@ class CashSessionControllerTest {
             null,
             0,
             Collections.emptyList(),
+            new BigDecimal("150.00"),
+            null,
             Collections.emptyList(),
             false,
             null,
@@ -325,6 +327,34 @@ class CashSessionControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(sessionId.toString()))
-            .andExpect(jsonPath("$.status").value("ABIERTA"));
+            .andExpect(jsonPath("$.status").value("ABIERTA"))
+            .andExpect(jsonPath("$.closingReserveBills").value(150.00));
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/current/close - CAJ-04: las reservas llegan al servicio")
+    void closeSession_reservesReachTheService() throws Exception {
+        when(cashSessionService.closeCurrentSession(any(CloseCashRequest.class), any())).thenReturn(summaryResponse);
+
+        mockMvc.perform(post("/api/cash-sessions/current/close")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"closingAmount\": 1350.00, \"reserveBills\": 150.00, \"reserveCoins\": 200.00}"))
+            .andExpect(status().isOk());
+
+        verify(cashSessionService).closeCurrentSession(org.mockito.ArgumentMatchers.argThat(request ->
+            request.reserveBills().compareTo(new BigDecimal("150.00")) == 0
+                && request.reserveCoins().compareTo(new BigDecimal("200.00")) == 0), eq("admin"));
+    }
+
+    @Test
+    @DisplayName("POST /api/cash-sessions/current/close - CAJ-04: una reserva negativa se rechaza")
+    void closeSession_negativeReserve_rejected() throws Exception {
+        mockMvc.perform(post("/api/cash-sessions/current/close")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"closingAmount\": 90.00, \"reserveBills\": -10.00}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("La reserva de billetes no puede ser negativa.")));
     }
 }

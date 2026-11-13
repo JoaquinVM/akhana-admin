@@ -123,6 +123,10 @@ El sistema SHALL permitir calcular el monto de cierre a través de una matriz de
 - **WHEN** se cierra con cortes (por ejemplo un billete de Bs 100) y un monto contado distinto de su suma (Bs 3.500,00)
 - **THEN** el servidor rechaza el cierre con «Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrija el conteo o deje los cortes vacíos.» y la caja sigue abierta. Un corte que no es billete ni moneda boliviana o uno repetido también se rechaza; las filas en 0 no se guardan. En la pantalla, «Conteo Global Directo» ya no envía los cortes cargados antes: solo el arqueo detallado los envía, con su total como monto. La diferencia del modal se redondea al centavo y el faltante se muestra sin doble signo («Faltante: Bs 50,00»). Pruebas en `CashSessionServiceTest` y `close-cash-modal.component.spec.ts`.
 
+#### Scenario: Reservas sueltas de billetes y monedas (CAJ-04)
+- **WHEN** en el arqueo detallado se cuentan Bs 1.000 en cortes y se escriben «Reserva billetes» 150 y «Reserva monedas» 200
+- **THEN** cada columna suma su reserva a su subtotal, el total contado es Bs 1.350 y la diferencia se calcula con ese total; el cierre guarda las dos reservas (`closing_reserve_bills` y `closing_reserve_coins` de la caja) y el servidor exige que cortes + reservas sumen el monto contado, si no responde «Los cortes y las reservas suman Bs 1.350,00 y el monto contado es Bs 1.300,00; corrija el conteo o deje los cortes y las reservas vacíos.» y la caja sigue abierta. Solo con reservas también vale. Una reserva negativa se rechaza («La reserva de billetes no puede ser negativa.») y en la pantalla no deja cerrar; una reserva en 0 no se guarda. El conteo directo no envía cortes ni reservas
+
 #### Scenario: Consulta de la caja actual sin caja abierta
 - **WHEN** el POS o la barra de navegación piden `GET /api/cash-sessions/current` y no hay caja abierta
 - **THEN** el servidor responde 204 sin cuerpo (no un 404) y la pantalla la toma como caja cerrada, sin errores en la consola. Pruebas en `CashSessionControllerTest` y `cash.service.spec.ts`.
@@ -207,7 +211,22 @@ El sistema SHALL listar el historial cronológico de sesiones de caja y permitir
 
 #### Scenario: Consulta de detalle de una sesión cerrada
 - **WHEN** el usuario selecciona una caja del historial
-- **THEN** el sistema muestra información de apertura (usuario, fecha, monto inicial, comentario si existe), ventas asociadas por método de pago (`EFECTIVO` y `QR`), información de cierre (usuario, fecha, monto de cierre, comentario si existe, diferencia) y el desglose de cortes de denominación si fueron utilizados
+- **THEN** el sistema muestra información de apertura (usuario, fecha, monto inicial, comentario si existe), ventas asociadas por método de pago (`EFECTIVO` y `QR`), información de cierre (usuario, fecha, monto de cierre, comentario si existe, diferencia) y el desglose de cortes de denominación si fueron utilizados, con «Reserva billetes» y «Reserva monedas» si las hubo (CAJ-04); una reapertura muestra las reservas del cierre que deshizo (CAJ-14)
+
+### Requirement: Conteo guardado en el equipo (CAJ-15)
+Lo escrito en el modal de cierre queda en el navegador de ese equipo hasta que la caja se cierra.
+
+#### Scenario: Cerrar el modal o recargar
+- **WHEN** se escriben cortes, reservas o el comentario y se cancela, se cierra el modal o se recarga la página
+- **THEN** al abrir de nuevo el cierre de esa caja aparece lo escrito, con el mismo modo (arqueo o directo) y el monto directo si lo había
+
+#### Scenario: Cerrar la caja
+- **WHEN** la caja se cierra con éxito
+- **THEN** lo guardado se borra y la caja siguiente empieza en 0; si el servidor rechaza el cierre, lo escrito se conserva
+
+#### Scenario: Otra caja u otro equipo
+- **WHEN** lo guardado es de otra caja (por ejemplo, cerrada desde otro equipo)
+- **THEN** se descarta y el modal empieza vacío; lo escrito en un equipo no aparece en otro
 
 ### Requirement: Día de operación de la caja (CAJ-11)
 El sistema SHALL dar a cada caja un día de operación, el elegido al abrirla (CAJ-12; hoy en la tienda, America/La_Paz, por defecto), y SHALL contar para ese día sus ventas y todos los movimientos vinculados a ella o a sus ventas (gastos, pagos de pedidos, ingresos y retiros, ajustes de apertura y cierre, devoluciones y cobros desde Caja, e ingresos en efectivo y QR de sus ventas), aunque se registren pasada la medianoche o la caja se cierre al día siguiente. La fecha y hora reales de carga se guardan y se siguen viendo.
@@ -449,6 +468,8 @@ El sistema SHALL mantener la opción principal "POS" con una etiqueta reactiva d
 ## Notas de implementación
 
 Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.
+
+- **CAJ-04 (reservas) y CAJ-15** Trabajo 065 de Foundry. `V33__cash_closing_reserves.sql`: `closing_reserve_bills` y `closing_reserve_coins` (opcionales, ≥ 0) en `cash_sessions` y `cash_session_reopenings`; las cajas anteriores quedan sin reservas. Va después de V31 y V32 (deudas). `CloseCashRequest` recibe `reserveBills` y `reserveCoins`; `buildCuts` valida cortes + reservas contra el monto contado; una reserva en 0 se guarda como nula. Reabrir copia las reservas a la reapertura y las limpia de la caja. El detalle y cada reapertura traen `closingReserveBills` y `closingReserveCoins`. Frontend: filas «Reserva billetes (Bs)» y «Reserva monedas (Bs)» al pie de cada columna del arqueo (controles del formulario, para no pisar lo que se escribe); el borrador lo guarda `CloseCashDraftService` (`core/cash`) en `localStorage` (`akhana.closeCashDraft`, con el id de la caja) en cada cambio, y `CashService.closeSession` lo borra solo al cerrar con éxito. El POS pasa el id de la caja al modal. Pruebas: `CashSessionServiceTest`, `CashSessionControllerTest`, `CashReopenIntegrationTest`, y en el frontend `close-cash-modal`, `cash.service.spec.ts` y `cash-detail-modal`. Migración probada sobre una copia de la base local (152 cajas: sin cambios en sus datos, reservas nulas).
 
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") como transferencia entre Caja y otra cuenta (ej. Efectivo), con comentario. Hecho el 26-10-2026: pestaña «Ingresos / Retiros» del POS (`pages/pos/components/cash-transfers`), permiso `POS`. `POST /api/finances/transactions/cash-transfer` recibe sentido (`INGRESO` o `RETIRO`), la otra cuenta, monto y comentario obligatorio; el servidor arma la `TRANSFERENCIA` (descripción «Retiro de caja a X» o «Ingreso a caja desde X», el comentario va en notas), la vincula a la caja abierta y recalcula el efectivo esperado (T-15, T-16). Un retiro mayor al saldo de la cuenta Caja se rechaza. Se anula desde el POS con motivo (`/cash-transfer/{id}/void`) solo si es una transferencia de la caja abierta. `GET /cash-transfer/accounts` lista las cuentas activas distintas de Caja. Cada cuenta de la respuesta de movimientos trae `cashAccount` para distinguir ingreso de retiro.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado. Hecho el 26-10-2026 (migración `V13__cash_close_adjustment.sql`): categorías de sistema «Ajuste» de ingreso (`CASH_SURPLUS`) y de gasto (`CASH_SHORTAGE`), reutilizando las que ya se llamen así. En la misma transacción del cierre, si la diferencia (contado − esperado) no es 0, se crea un `INGRESO_MANUAL` (sobrante) o `GASTO_MANUAL` (faltante) en Caja por el valor absoluto, con descripción «Sobrante/Faltante al cierre de caja #N», el comentario de cierre en notas y vinculado a la caja cerrada, así que no se edita ni anula (CAJ-06); el saldo de Caja sube o baja ese monto. Bloqueo caja → cuenta (T-14). Con cuadre exacto no se crea nada. El efectivo esperado guardado de la caja cerrada no cambia. El saldo de Caja coincide con lo contado siempre que al abrir coincidiera con el monto inicial (desde el 29-10-2026 lo asegura el ajuste de apertura de CAJ-10). El modal de cierre avisa que la diferencia se registrará como ajuste. Pruebas en `CashSessionServiceTest`.

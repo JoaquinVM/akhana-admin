@@ -329,7 +329,7 @@ class CashSessionServiceTest {
         );
 
         // Expected era 100.00, cerramos con 120.00 -> diferencia +20.00
-        CloseCashRequest request = new CloseCashRequest(new BigDecimal("120.00"), "Cierre de turno con sobrante", cuts);
+        CloseCashRequest request = new CloseCashRequest(new BigDecimal("120.00"), "Cierre de turno con sobrante", cuts, null, null);
         CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(request, "cajero1");
 
         assertThat(response).isNotNull();
@@ -347,7 +347,7 @@ class CashSessionServiceTest {
         List<CashCutDto> cuts = List.of(new CashCutDto(new BigDecimal("100.00"), 1, 0, null));
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
-                new CloseCashRequest(new BigDecimal("3500.00"), null, cuts), "cajero1"))
+                new CloseCashRequest(new BigDecimal("3500.00"), null, cuts, null, null), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrija el conteo o deje los cortes vacíos.");
         assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
@@ -360,10 +360,10 @@ class CashSessionServiceTest {
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("3.00"), null,
-                List.of(new CashCutDto(new BigDecimal("3"), 1, 0, null))), "cajero1"))
+                List.of(new CashCutDto(new BigDecimal("3"), 1, 0, null)), null, null), "cajero1"))
             .hasMessage("El corte de Bs 3,00 no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.");
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("20.00"), null,
-                List.of(new CashCutDto(new BigDecimal("10"), 1, 0, null), new CashCutDto(new BigDecimal("10.00"), 0, 1, null))), "cajero1"))
+                List.of(new CashCutDto(new BigDecimal("10"), 1, 0, null), new CashCutDto(new BigDecimal("10.00"), 0, 1, null)), null, null), "cajero1"))
             .hasMessage("El corte de Bs 10,00 está repetido.");
 
         List<CashDenominationCut> cuts = CashSessionServiceImpl.buildCuts(activeSession, List.of(
@@ -371,6 +371,67 @@ class CashSessionServiceTest {
             new CashCutDto(new BigDecimal("200"), 0, 0, null)), new BigDecimal("2.00"));
         assertThat(cuts).hasSize(1);
         assertThat(cuts.get(0).getSubtotal()).isEqualByComparingTo("2.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-04: las reservas de billetes y monedas se suman a los cortes: 1.000 + 150 + 200 = 1.350 y se guardan con el cierre")
+    void closeSession_reservesAddUpWithTheCuts() {
+        stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(new CloseCashRequest(
+            new BigDecimal("1350.00"), null, List.of(new CashCutDto(new BigDecimal("200"), 4, 1, null)),
+            new BigDecimal("150"), new BigDecimal("200.00")), "cajero1");
+
+        assertThat(response.status()).isEqualTo(CashSessionStatus.CERRADA);
+        assertThat(response.closingAmount()).isEqualByComparingTo("1350.00");
+        assertThat(response.difference()).isEqualByComparingTo("1250.00");
+        assertThat(activeSession.getCuts()).hasSize(1);
+        assertThat(activeSession.getClosingReserveBills()).isEqualByComparingTo("150.00");
+        assertThat(activeSession.getClosingReserveCoins()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("CAJ-04: cortes y reservas que no suman el monto contado se rechazan y la caja sigue abierta")
+    void closeSession_reservesThatDoNotAddUp_rejected() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(
+                new BigDecimal("1300.00"), null, List.of(new CashCutDto(new BigDecimal("200"), 4, 1, null)),
+                new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Los cortes y las reservas suman Bs 1.350,00 y el monto contado es Bs 1.300,00; corrija el conteo o deje los cortes y las reservas vacíos.");
+        assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
+        assertThat(activeSession.getClosingReserveBills()).isNull();
+        verify(cashSessionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CAJ-04: solo con reservas, sin cortes, el conteo son las reservas; una reserva en 0 no se guarda")
+    void closeSession_onlyReserves() {
+        stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("150.00"), null, List.of(),
+            new BigDecimal("150.00"), BigDecimal.ZERO), "cajero1");
+
+        assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.CERRADA);
+        assertThat(activeSession.getCuts()).isEmpty();
+        assertThat(activeSession.getClosingReserveBills()).isEqualByComparingTo("150.00");
+        assertThat(activeSession.getClosingReserveCoins()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-04: reservas sin cortes que no suman el monto contado se rechazan")
+    void closeSession_onlyReservesThatDoNotAddUp_rejected() {
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+
+        assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("500.00"), null,
+                null, new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
+            .hasMessage("Los cortes y las reservas suman Bs 350,00 y el monto contado es Bs 500,00; corrija el conteo o deje los cortes y las reservas vacíos.");
+        verify(cashSessionRepository, never()).save(any());
     }
 
     @Test
@@ -406,6 +467,21 @@ class CashSessionServiceTest {
         assertThat(detail.id()).isEqualTo(sessionId);
         assertThat(detail.sales()).hasSize(1);
         assertThat(detail.sales().get(0).saleNumber()).isEqualTo("VTA-0001-001");
+        assertThat(detail.closingReserveBills()).isNull();
+    }
+
+    @Test
+    @DisplayName("CAJ-04, CAJ-07: el detalle de la caja trae las reservas de su cierre")
+    void getSessionDetail_withReserves() {
+        activeSession.setStatus(CashSessionStatus.CERRADA);
+        activeSession.setClosingReserveBills(new BigDecimal("150.00"));
+        activeSession.setClosingReserveCoins(new BigDecimal("200.00"));
+        when(cashSessionRepository.findByIdWithCuts(sessionId)).thenReturn(Optional.of(activeSession));
+
+        CashSessionDetailResponse detail = cashSessionService.getSessionDetail(sessionId);
+
+        assertThat(detail.closingReserveBills()).isEqualByComparingTo("150.00");
+        assertThat(detail.closingReserveCoins()).isEqualByComparingTo("200.00");
     }
 
     @Test
@@ -441,7 +517,9 @@ class CashSessionServiceTest {
         CloseCashRequest request = new CloseCashRequest(
             new BigDecimal("950.00"),
             "Cierre con gastos",
-            Collections.emptyList()
+            Collections.emptyList(),
+            null,
+            null
         );
 
         CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(request, "admin");
@@ -462,7 +540,7 @@ class CashSessionServiceTest {
         when(financialTransactionRepository.sumActiveCashInflowsBySessionId(sessionId)).thenReturn(new BigDecimal("50.00"));
 
         CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("680.00"), null, Collections.emptyList()), "admin");
+            new CloseCashRequest(new BigDecimal("680.00"), null, Collections.emptyList(), null, null), "admin");
 
         assertThat(response.expectedCash()).isEqualByComparingTo("680.00");
         assertThat(response.difference()).isEqualByComparingTo("0.00");
@@ -476,7 +554,7 @@ class CashSessionServiceTest {
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("112.50"), "Sobró sencillo", Collections.emptyList()), "cajero1");
+            new CloseCashRequest(new BigDecimal("112.50"), "Sobró sencillo", Collections.emptyList(), null, null), "cajero1");
 
         FinancialTransaction tx = captureAdjustment();
         assertThat(tx.getType()).isEqualTo(FinancialTransactionType.INGRESO_MANUAL);
@@ -501,7 +579,7 @@ class CashSessionServiceTest {
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CashSessionSummaryResponse response = cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("93.00"), null, Collections.emptyList()), "cajero1");
+            new CloseCashRequest(new BigDecimal("93.00"), null, Collections.emptyList(), null, null), "cajero1");
 
         assertThat(response.difference()).isEqualByComparingTo("-7.00");
         FinancialTransaction tx = captureAdjustment();
@@ -523,7 +601,7 @@ class CashSessionServiceTest {
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("100.00"), null, Collections.emptyList()), "cajero1");
+            new CloseCashRequest(new BigDecimal("100.00"), null, Collections.emptyList(), null, null), "cajero1");
 
         verify(financialTransactionRepository, never()).save(any());
         verify(financialAccountRepository, never()).save(any());
@@ -538,7 +616,7 @@ class CashSessionServiceTest {
             .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("120.00"), null, Collections.emptyList()), "cajero1"))
+            new CloseCashRequest(new BigDecimal("120.00"), null, Collections.emptyList(), null, null), "cajero1"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Ajuste");
         verify(financialAccountRepository, never()).save(any());

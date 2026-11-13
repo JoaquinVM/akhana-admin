@@ -72,6 +72,13 @@ public class CashSession {
     @Column(name = "closing_comment", length = 500)
     private String closingComment;
 
+    // CAJ-04: bills and coins kept in reserve, counted as one amount each (null when the closing had none)
+    @Column(name = "closing_reserve_bills", precision = 12, scale = 2)
+    private BigDecimal closingReserveBills;
+
+    @Column(name = "closing_reserve_coins", precision = 12, scale = 2)
+    private BigDecimal closingReserveCoins;
+
     @Column(name = "closed_by", length = 100)
     private String closedBy;
 

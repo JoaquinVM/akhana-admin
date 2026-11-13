@@ -6,6 +6,7 @@ describe('CloseCashModalComponent', () => {
   let fixture: ComponentFixture<CloseCashModalComponent>;
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [CloseCashModalComponent]
     }).compileComponents();
@@ -100,5 +101,126 @@ describe('CloseCashModalComponent', () => {
     fixture.detectChanges();
     expect(component.difference()).toBe(-0.1);
     expect(fixture.nativeElement.textContent).toContain('Faltante: Bs 0.10');
+  });
+
+  const setCut = (denomination: number, cashQuantity: number, reserveQuantity = 0) => {
+    component.updateCutQuantity(denomination, 'cashQuantity', { target: { value: String(cashQuantity) } } as any);
+    component.updateCutQuantity(denomination, 'reserveQuantity', { target: { value: String(reserveQuantity) } } as any);
+  };
+
+  const reopen = (sessionId: string | null) => {
+    fixture.componentRef.setInput('isOpen', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('sessionId', sessionId);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+  };
+
+  it('CAJ-04: las reservas de billetes y monedas se suman al conteo: 1.000 + 150 + 200 = 1.350', () => {
+    setCut(200, 4, 1);
+    component.form.patchValue({ reserveBills: 150, reserveCoins: 200 });
+
+    expect(component.subtotalBills()).toBe(1150);
+    expect(component.subtotalCoins()).toBe(200);
+    expect(component.totalCuts()).toBe(1350);
+    expect(component.form.get('closingAmount')?.value).toBe(1350);
+    expect(component.difference()).toBe(1250);
+  });
+
+  it('CAJ-04: lo escrito en los campos de reserva llega al total', () => {
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#reserveCoins')!;
+    input.value = '0.50';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(component.totalCuts()).toBe(0.5);
+    expect(fixture.nativeElement.textContent).toContain('Reserva billetes (Bs)');
+    expect(fixture.nativeElement.textContent).toContain('Reserva monedas (Bs)');
+  });
+
+  it('CAJ-04: en arqueo se envían las reservas junto a los cortes; una reserva en 0 no se envía', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    setCut(200, 5);
+    component.form.patchValue({ reserveBills: 150 });
+    component.onSubmit();
+
+    expect(emitted.closingAmount).toBe(1150);
+    expect(emitted.cuts).toEqual([{ denomination: 200, cashQuantity: 5, reserveQuantity: 0, subtotal: 1000 }]);
+    expect(emitted.reserveBills).toBe(150);
+    expect(emitted.reserveCoins).toBeUndefined();
+  });
+
+  it('CAJ-04: con conteo directo no se envían las reservas escritas antes', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    component.form.patchValue({ reserveBills: 150, reserveCoins: 200 });
+
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 500 });
+    component.onSubmit();
+
+    expect(emitted.closingAmount).toBe(500);
+    expect(emitted.cuts).toBeUndefined();
+    expect(emitted.reserveBills).toBeUndefined();
+    expect(emitted.reserveCoins).toBeUndefined();
+  });
+
+  it('CAJ-04: una reserva negativa no se suma y no deja cerrar', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    component.form.patchValue({ reserveBills: -10 });
+    fixture.detectChanges();
+
+    expect(component.totalCuts()).toBe(0);
+    expect(component.form.invalid).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('La reserva no puede ser negativa.');
+    component.onSubmit();
+    expect(emitted).toBeNull();
+  });
+
+  it('CAJ-15: lo escrito sigue al cerrar y volver a abrir el modal', () => {
+    reopen('cs-1');
+    setCut(100, 2);
+    component.form.patchValue({ reserveBills: 150, closingComment: 'Turno tarde' });
+    component.onCancel();
+
+    reopen('cs-1');
+
+    expect(component.cutsData().find((r) => r.denomination === 100)?.cashQuantity).toBe(2);
+    expect(component.reserveBills()).toBe(150);
+    expect(component.form.get('reserveBills')?.value).toBe(150);
+    expect(component.form.get('closingComment')?.value).toBe('Turno tarde');
+    expect(component.form.get('closingAmount')?.value).toBe(350);
+    expect(component.activeMode()).toBe('ARQUEO');
+  });
+
+  it('CAJ-15: el conteo directo y su monto también se guardan', () => {
+    reopen('cs-1');
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 780.5 });
+
+    reopen('cs-1');
+
+    expect(component.activeMode()).toBe('DIRECTO');
+    expect(component.form.get('closingAmount')?.value).toBe(780.5);
+  });
+
+  it('CAJ-15: lo guardado es de esa caja: otra caja empieza vacía y lo viejo se descarta', () => {
+    reopen('cs-1');
+    setCut(100, 2);
+    component.form.patchValue({ reserveCoins: 20 });
+
+    reopen('cs-2');
+
+    expect(component.totalCuts()).toBe(0);
+    expect(component.reserveCoins()).toBe(0);
+    expect(localStorage.getItem('akhana.closeCashDraft')).toBeNull();
+  });
+
+  it('CAJ-15: sin caja conocida no se guarda nada', () => {
+    reopen(null);
+    setCut(100, 2);
+    expect(localStorage.getItem('akhana.closeCashDraft')).toBeNull();
   });
 });

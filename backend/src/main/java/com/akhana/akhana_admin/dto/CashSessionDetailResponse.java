@@ -27,6 +27,9 @@ public record CashSessionDetailResponse(
     BigDecimal difference,
     long salesCount,
     List<CashCutDto> cuts,
+    // CAJ-04: the reserves of the closing (null when it had none)
+    BigDecimal closingReserveBills,
+    BigDecimal closingReserveCoins,
     List<SaleResponse> sales,
     // FIN-11: closed session of Cierre de Caja, with the amounts of the spreadsheet (null for other sessions)
     boolean historical,

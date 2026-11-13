@@ -42,6 +42,9 @@ export interface CloseCashRequest {
   closingAmount: number;
   closingComment?: string | null;
   cuts?: CashCutItem[];
+  // CAJ-04: bills and coins kept in reserve, one amount each, added to the cuts
+  reserveBills?: number;
+  reserveCoins?: number;
 }
 
 export interface SaleItem {
@@ -147,10 +150,15 @@ export interface CashSessionReopening {
   expectedCash: number;
   difference?: number | null;
   cuts: CashCutItem[];
+  closingReserveBills?: number | null;
+  closingReserveCoins?: number | null;
 }
 
 export interface CashSessionDetail extends CashSessionSummary {
   cuts: CashCutItem[];
+  // CAJ-04: the reserves of the closing (null when it had none)
+  closingReserveBills?: number | null;
+  closingReserveCoins?: number | null;
   sales: Sale[];
   // FIN-11: spreadsheet amounts the system otherwise computes from movements (null for other sessions)
   historicalOtherIncome?: number | null;

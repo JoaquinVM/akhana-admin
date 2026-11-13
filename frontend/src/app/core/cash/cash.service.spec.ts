@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { CashService } from './cash.service';
+import { CloseCashDraft, CloseCashDraftService } from './close-cash-draft.service';
 import {
   CashSessionSummary,
   CashSessionDetail,
@@ -155,6 +156,24 @@ describe('CashService', () => {
     req.flush({ ...mockSession, status: 'CERRADA', closingAmount: 200.0 });
 
     expect(service.currentSession()).toBeNull();
+  });
+
+  it('CAJ-15: el conteo guardado en el navegador se borra solo cuando la caja se cierra', () => {
+    const draft = TestBed.inject(CloseCashDraftService);
+    const saved: CloseCashDraft = { sessionId: 'session-1', mode: 'ARQUEO', cuts: [], reserveBills: 150, reserveCoins: 0,
+      closingAmount: 150, closingComment: '' };
+    draft.save(saved);
+
+    service.closeSession({ closingAmount: 100 }).subscribe({ error: () => undefined });
+    httpTesting.expectOne('/api/cash-sessions/current/close')
+      .flush({ message: 'Los cortes suman…' }, { status: 400, statusText: 'Bad Request' });
+    expect(draft.load('session-1')).toEqual(saved);
+
+    service.closeSession({ closingAmount: 150, reserveBills: 150 }).subscribe();
+    const req = httpTesting.expectOne('/api/cash-sessions/current/close');
+    expect(req.request.body).toEqual({ closingAmount: 150, reserveBills: 150 });
+    req.flush({ ...mockSession, status: 'CERRADA', closingAmount: 150 });
+    expect(draft.load('session-1')).toBeNull();
   });
 
   it('debe obtener el historial de sesiones', () => {

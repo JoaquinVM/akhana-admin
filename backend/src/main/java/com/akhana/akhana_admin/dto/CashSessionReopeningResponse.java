@@ -17,5 +17,7 @@ public record CashSessionReopeningResponse(
     Instant closedAt,
     BigDecimal expectedCash,
     BigDecimal difference,
-    List<CashCutDto> cuts
+    List<CashCutDto> cuts,
+    BigDecimal closingReserveBills,
+    BigDecimal closingReserveCoins
 ) {}
