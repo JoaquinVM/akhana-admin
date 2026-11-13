@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.ChangePasswordResponse;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
+import com.akhana.akhana_admin.dto.TwoFactorLoginRequest;
 import com.akhana.akhana_admin.dto.UserProfileResponse;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.service.AuthService;
@@ -32,6 +33,12 @@ public class AuthController {
         // getRemoteAddr only honors X-Forwarded-For when server.forward-headers-strategy enables a trusted proxy
         LoginResponse response = authService.login(request, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login/second-factor")
+    public ResponseEntity<LoginResponse> loginWithSecondFactor(@Valid @RequestBody TwoFactorLoginRequest request,
+                                                               HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.loginWithSecondFactor(request, httpRequest.getRemoteAddr()));
     }
 
     @GetMapping("/me")

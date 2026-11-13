@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/login/second-factor").permitAll()
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )

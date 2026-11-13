@@ -44,7 +44,7 @@ class LoginAttemptServiceTest {
             .hasMessage("Demasiados intentos fallidos. Espere 30 minutos e intente nuevamente.");
 
         clock.advance(Duration.ofMinutes(29));
-        assertThatThrownBy(() -> service.checkNotBlocked("ana", "198.51.100.7"))
+        assertThatThrownBy(() -> service.checkNotBlocked("ana", IP))
             .isInstanceOf(LoginBlockedException.class);
 
         clock.advance(Duration.ofMinutes(1));
@@ -62,9 +62,31 @@ class LoginAttemptServiceTest {
                 // expected for nothing below the limits
             }
         }
-        service.recordSuccess("user0");
+        service.recordSuccess("user0", IP);
 
         assertThatThrownBy(() -> service.recordFailure("other", IP))
             .isInstanceOf(LoginBlockedException.class);
+    }
+
+    @Test
+    @DisplayName("Un usuario bloqueado desde una IP sigue entrando desde otra (USR-07)")
+    void userIsLockedOnlyFromTheFailingIp() {
+        service.recordFailure("ana", IP);
+        service.recordFailure("ana", IP);
+        assertThatThrownBy(() -> service.recordFailure("ana", IP)).isInstanceOf(LoginBlockedException.class);
+
+        assertThatThrownBy(() -> service.checkNotBlocked("ana", IP)).isInstanceOf(LoginBlockedException.class);
+        assertThatCode(() -> service.checkNotBlocked("ana", "198.51.100.7")).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("El éxito desde una IP no borra los fallos del mismo usuario desde otra")
+    void successClearsOnlyThatIp() {
+        String other = "198.51.100.7";
+        service.recordFailure("ana", other);
+        service.recordFailure("ana", other);
+        service.recordSuccess("ana", IP);
+
+        assertThatThrownBy(() -> service.recordFailure("ana", other)).isInstanceOf(LoginBlockedException.class);
     }
 }

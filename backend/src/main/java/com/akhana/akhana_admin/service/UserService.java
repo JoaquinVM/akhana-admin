@@ -19,4 +19,7 @@ public interface UserService {
     UserResponse updateUser(UUID id, UpdateUserRequest request, String currentUsername);
 
     void deleteUser(UUID id, String currentUsername);
+
+    /** Removes another user's second factor (lost phone); it is activated again at the next login (USR-08). */
+    UserResponse resetSecondFactor(UUID id, String currentUsername);
 }

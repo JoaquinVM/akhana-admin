@@ -361,7 +361,8 @@ class EndpointAuthorizationTest {
                 adminOnly(get, "/api/users/roles", null),
                 adminOnly(post, "/api/users", CREATE_USER),
                 adminOnly(put, "/api/users/" + ID, UPDATE_USER),
-                adminOnly(delete, "/api/users/" + ID, null)
+                adminOnly(delete, "/api/users/" + ID, null),
+                adminOnly(post, "/api/users/" + ID + "/second-factor/reset", null)
         );
     }
 

@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { ChangePasswordRequest, LoginRequest, LoginResponse, Role, UserSession } from './models/auth.models';
+import { ChangePasswordRequest, LoginRequest, LoginResponse, Role, TwoFactorLoginRequest, UserSession } from './models/auth.models';
 
 const KNOWN_ROLES: Role[] = ['OPERATOR', 'ADMINISTRATOR'];
 
@@ -16,6 +16,7 @@ export class AuthService {
   private readonly TOKEN_KEY = 'akhana_token';
   private readonly USER_KEY = 'akhana_user';
   private readonly LOGIN_URL = '/api/auth/login';
+  private readonly SECOND_FACTOR_URL = '/api/auth/login/second-factor';
   private readonly ME_URL = '/api/auth/me';
   private readonly CHANGE_PASSWORD_URL = '/api/auth/change-password';
 
@@ -32,22 +33,27 @@ export class AuthService {
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
   readonly mustChangePassword = computed(() => !!this._currentUser()?.mustChangePassword);
 
+  // An administrator's response carries twoFactor instead of a token: the session starts with loginWithSecondFactor
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(this.LOGIN_URL, credentials).pipe(
-      tap((response) => {
-        if (response && response.token) {
-          const userSession: UserSession = {
-            id: response.id,
-            username: response.username,
-            fullName: response.fullName,
-            role: response.role,
-            permissions: response.permissions ? Array.from(response.permissions) : [],
-            mustChangePassword: !!response.mustChangePassword
-          };
-          this.saveSession(response.token, userSession);
-        }
-      })
-    );
+    return this.http.post<LoginResponse>(this.LOGIN_URL, credentials).pipe(tap((response) => this.startSession(response)));
+  }
+
+  loginWithSecondFactor(request: TwoFactorLoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(this.SECOND_FACTOR_URL, request).pipe(tap((response) => this.startSession(response)));
+  }
+
+  private startSession(response: LoginResponse): void {
+    if (response && response.token) {
+      const userSession: UserSession = {
+        id: response.id,
+        username: response.username,
+        fullName: response.fullName,
+        role: response.role,
+        permissions: response.permissions ? Array.from(response.permissions) : [],
+        mustChangePassword: !!response.mustChangePassword
+      };
+      this.saveSession(response.token, userSession);
+    }
   }
 
   fetchCurrentUserProfile(): Observable<any> {

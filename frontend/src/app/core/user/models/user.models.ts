@@ -13,6 +13,8 @@ export interface User {
   updatedBy: string | null;
   deletedAt: string | null;
   deletedBy: string | null;
+  // Second factor of administrators (USR-08): only whether it is active, never its key
+  twoFactorEnabled: boolean;
 }
 
 export interface CreateUserRequest {

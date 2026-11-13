@@ -55,15 +55,16 @@ describe('manifest (CA-03)', () => {
 
 describe('offline.html (CA-09, CA-10)', () => {
   it('dice qué revisar y ofrece Reintentar, sin depender de la red', () => {
-    expect(offlinePage).toContain('No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.');
-    expect(offlinePage).toContain('location.reload()');
-    expect(offlinePage).toContain('>Reintentar<');
+    expect(offlinePage).toContain('No se pudo conectar. Revisa tu internet.');
+    // Reloads the same address with a link: the CSP of nginx blocks inline handlers such as onclick
+    expect(offlinePage).toContain('<a href="">Reintentar</a>');
+    expect(offlinePage).not.toMatch(/\son[a-z]+=/);
     expect(offlinePage).not.toContain('https://');
   });
 });
 
 describe('service worker (MOV-03, CA-09, CA-11)', () => {
-  const ORIGIN = 'https://akhana.example.ts.net';
+  const ORIGIN = 'https://admin.example.com';
   const OFFLINE = new Response('offline');
   let handlers: Record<string, (event: any) => void>;
   let stored: string[];
@@ -114,7 +115,7 @@ describe('service worker (MOV-03, CA-09, CA-11)', () => {
   it('CA-11: al activarse borra las cachés de versiones anteriores', async () => {
     await wait('install');
     await wait('activate');
-    expect(cacheNames).toEqual(['akhana-offline-v1']);
+    expect(cacheNames).toEqual(['akhana-offline-v2']);
   });
 
   it('CA-11: no intercepta la API, los bundles ni otros orígenes', () => {

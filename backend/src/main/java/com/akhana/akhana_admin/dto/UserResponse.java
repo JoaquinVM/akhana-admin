@@ -18,5 +18,6 @@ public record UserResponse(
     Instant updatedAt,
     String updatedBy,
     Instant deletedAt,
-    String deletedBy
+    String deletedBy,
+    boolean twoFactorEnabled
 ) {}

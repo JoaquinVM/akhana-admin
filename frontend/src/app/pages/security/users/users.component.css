@@ -258,6 +258,19 @@
   border: 1px solid #bae6fd;
 }
 
+.second-factor-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #2e5b27;
+  background: rgba(46, 91, 39, 0.08);
+  border: 1px solid rgba(46, 91, 39, 0.2);
+}
+
 .date-cell {
   display: flex;
   flex-direction: column;
@@ -324,6 +337,12 @@
   color: #dc2626;
   background-color: #fef2f2;
   border-color: #fecaca;
+}
+
+.btn-second-factor:hover {
+  color: #b45309;
+  background-color: #fffbeb;
+  border-color: #fde68a;
 }
 
 /* Pagination */

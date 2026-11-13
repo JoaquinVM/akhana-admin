@@ -120,6 +120,9 @@
                         [title]="user.permissions.join(', ')">
                     {{ roleLabel(user.role) }}
                   </span>
+                  @if (user.twoFactorEnabled) {
+                    <span class="second-factor-badge" title="Segundo factor activo">2FA</span>
+                  }
                 </td>
                 <td>
                   <div class="date-cell">
@@ -164,6 +167,22 @@
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </button>
+
+                    <!-- Remove the second factor (lost phone, USR-08) -->
+                    @if (canResetSecondFactor(user)) {
+                      <button
+                        type="button"
+                        class="btn-icon btn-second-factor"
+                        (click)="openResetSecondFactor(user)"
+                        title="Quitar 2FA"
+                        aria-label="Quitar el segundo factor">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="5" y="2" width="14" height="20" rx="2" />
+                          <line x1="9" y1="9" x2="15" y2="15" />
+                          <line x1="15" y1="9" x2="9" y2="15" />
+                        </svg>
+                      </button>
+                    }
 
                     <!-- 3. Delete (logical) -->
                     <button
@@ -464,6 +483,19 @@
     [isLoading]="isDeleting()"
     (confirm)="confirmDelete()"
     (cancel)="cancelDelete()">
+  </app-confirm-modal>
+
+  <!-- Remove the second factor confirmation modal (USR-08) -->
+  <app-confirm-modal
+    [isOpen]="!!userToResetSecondFactor()"
+    title="Quitar el segundo factor"
+    [message]="'¿Quitar el segundo factor de ' + (userToResetSecondFactor()?.fullName || '') + ' (' + (userToResetSecondFactor()?.username || '') + ')? Úselo si perdió el teléfono: en su próximo ingreso tendrá que activarlo de nuevo con la app autenticadora.'"
+    confirmText="Quitar 2FA"
+    cancelText="Cancelar"
+    variant="warning"
+    [isLoading]="isResettingSecondFactor()"
+    (confirm)="confirmResetSecondFactor()"
+    (cancel)="cancelResetSecondFactor()">
   </app-confirm-modal>
 
   <!-- Shared audit modal (6 fields) -->

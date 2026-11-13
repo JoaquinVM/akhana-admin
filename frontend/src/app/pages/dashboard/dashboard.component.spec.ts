@@ -387,7 +387,7 @@ describe('DashboardComponent instalado (MOV-02)', () => {
       expect(component.errorMessage()).toBeNull();
       expect(component.isLoading()).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(component.errorMessage()).toBe('No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.');
+      expect(component.errorMessage()).toBe('No se pudo conectar. Revisa tu internet.');
       expect(component.isLoading()).toBe(false);
       expect(reload).not.toHaveBeenCalled();
     } finally {
@@ -432,7 +432,7 @@ describe('DashboardComponent instalado (MOV-02)', () => {
     const installed = create(true);
     installed.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
     installed.fixture.componentInstance.selectPeriod('WEEK');
-    expect(installed.fixture.componentInstance.errorMessage()).toContain('Tailscale');
+    expect(installed.fixture.componentInstance.errorMessage()).toBe('No se pudo conectar. Revisa tu internet.');
     installed.fixture.destroy();
 
     TestBed.resetTestingModule();

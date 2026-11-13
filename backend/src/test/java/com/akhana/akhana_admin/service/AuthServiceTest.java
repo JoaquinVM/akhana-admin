@@ -3,6 +3,7 @@ package com.akhana.akhana_admin.service;
 import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
+import com.akhana.akhana_admin.dto.TwoFactorLoginRequest;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
@@ -10,6 +11,8 @@ import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.exception.LoginBlockedException;
 import com.akhana.akhana_admin.service.impl.AuthServiceImpl;
 import com.akhana.akhana_admin.service.impl.LoginAttemptServiceImpl;
+import com.akhana.akhana_admin.service.impl.TotpServiceImpl;
+import com.akhana.akhana_admin.service.impl.TwoFactorChallengeServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,16 +51,26 @@ class AuthServiceTest {
     private AuthServiceImpl authService;
 
     private User activeUser;
+    private User administrator;
 
     @BeforeEach
     void setUp() {
         LoginAttemptService loginAttemptService = new LoginAttemptServiceImpl(
             5, 20, Duration.ofMinutes(15), Duration.ofMinutes(15), clock);
-        authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, loginAttemptService);
+        authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, loginAttemptService,
+            new TotpServiceImpl(clock), new TwoFactorChallengeServiceImpl(clock));
+        // An operator: the password alone opens the session; administrators are covered below (USR-08)
         activeUser = User.builder()
             .id(UUID.randomUUID())
             .username("admin")
             .password("$2a$10$hashedPassword")
+            .role(Role.OPERATOR)
+            .active(true)
+            .build();
+        administrator = User.builder()
+            .id(UUID.randomUUID())
+            .username("duena")
+            .password("$2a$10$adminHash")
             .role(Role.ADMINISTRATOR)
             .active(true)
             .build();
@@ -79,8 +92,9 @@ class AuthServiceTest {
         assertThat(response.token()).isEqualTo(expectedToken);
         assertThat(response.id()).isEqualTo(activeUser.getId());
         assertThat(response.username()).isEqualTo("admin");
-        assertThat(response.role()).isEqualTo(Role.ADMINISTRATOR);
+        assertThat(response.role()).isEqualTo(Role.OPERATOR);
         assertThat(response.message()).isEqualTo("Sesión iniciada.");
+        assertThat(response.twoFactor()).isNull();
 
         verify(userRepository, times(1)).findByUsername("admin");
         verify(passwordEncoder, times(1)).matches("12345admin", activeUser.getPassword());
@@ -318,8 +332,153 @@ class AuthServiceTest {
         failLogins("Admin", IP, 2);
         failLogins(" ADMIN ", IP, 3);
 
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "x"), "198.51.100.7"))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "x"), IP))
             .isInstanceOf(LoginBlockedException.class);
+    }
+
+    // --- Second factor of administrators (USR-08) ---
+
+    private LoginResponse adminPasswordStep(String ip) {
+        when(userRepository.findByUsername("duena")).thenReturn(Optional.of(administrator));
+        when(passwordEncoder.matches("clave-duena", administrator.getPassword())).thenReturn(true);
+        return authService.login(new LoginRequest("duena", "clave-duena"), ip);
+    }
+
+    private String codeNow(String secret, int stepsFromNow) {
+        long step = Math.floorDiv(clock.instant().getEpochSecond(), 30) + stepsFromNow;
+        return TotpServiceImpl.code(TotpServiceImpl.base32Decode(secret), step);
+    }
+
+    private LoginResponse secondFactor(LoginResponse challenge, String code) {
+        return authService.loginWithSecondFactor(new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), code), IP);
+    }
+
+    @Test
+    @DisplayName("Con la contraseña sola, un administrador sin 2FA recibe el QR para activarlo y ningún token")
+    void administrator_WithoutSecondFactor_GetsActivation() {
+        LoginResponse response = adminPasswordStep(IP);
+
+        assertThat(response.token()).isNull();
+        assertThat(response.id()).isNull();
+        assertThat(response.permissions()).isEmpty();
+        assertThat(response.twoFactor().setupRequired()).isTrue();
+        assertThat(response.twoFactor().secret()).matches("[A-Z2-7]{32}");
+        assertThat(response.twoFactor().otpauthUri()).isEqualTo("otpauth://totp/Akhana%20Admin:duena?secret="
+            + response.twoFactor().secret() + "&issuer=Akhana%20Admin&algorithm=SHA1&digits=6&period=30");
+        assertThat(administrator.getTotpSecret()).isNull();
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    @DisplayName("El 2FA queda activo solo al confirmar un código válido, y entonces se entrega la sesión")
+    void administrator_ActivatesWithValidCodeOnly() {
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(jwtService.generateToken(administrator)).thenReturn("admin-token");
+        LoginResponse challenge = adminPasswordStep(IP);
+        String secret = challenge.twoFactor().secret();
+
+        assertThatThrownBy(() -> secondFactor(challenge, "000000"))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("Código incorrecto.");
+        assertThat(administrator.getTotpSecret()).isNull();
+        verify(userRepository, never()).save(any());
+
+        LoginResponse session = secondFactor(challenge, codeNow(secret, 0));
+
+        assertThat(session.token()).isEqualTo("admin-token");
+        assertThat(session.role()).isEqualTo(Role.ADMINISTRATOR);
+        assertThat(administrator.getTotpSecret()).isEqualTo(secret);
+        assertThat(administrator.getTotpEnabledAt()).isNotNull();
+        assertThat(administrator.getTotpLastStep()).isEqualTo(Math.floorDiv(clock.instant().getEpochSecond(), 30));
+        verify(userRepository).save(administrator);
+    }
+
+    @Test
+    @DisplayName("Con el 2FA activo se pide solo el código; uno ya usado no vuelve a servir")
+    void administrator_WithSecondFactor_EntersWithCodeOnce() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        administrator.setTotpSecret(secret);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(jwtService.generateToken(administrator)).thenReturn("admin-token");
+
+        LoginResponse challenge = adminPasswordStep(IP);
+        assertThat(challenge.twoFactor().setupRequired()).isFalse();
+        assertThat(challenge.twoFactor().secret()).isNull();
+        assertThat(challenge.twoFactor().otpauthUri()).isNull();
+
+        String code = codeNow(secret, 0);
+        assertThat(secondFactor(challenge, code).token()).isEqualTo("admin-token");
+
+        LoginResponse again = adminPasswordStep(IP);
+        assertThatThrownBy(() -> secondFactor(again, code))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("Código incorrecto.");
+        // The previous step is older than the one just used: it does not serve either
+        assertThatThrownBy(() -> secondFactor(again, codeNow(secret, -1)))
+            .isInstanceOf(AuthenticationFailedException.class);
+    }
+
+    @Test
+    @DisplayName("El desafío vence a los 5 minutos y se cierra tras 5 códigos incorrectos")
+    void administrator_ChallengeExpiresAndEndsAfterFiveFailures() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        administrator.setTotpSecret(secret);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+
+        LoginResponse expiring = adminPasswordStep(IP);
+        clock.advance(Duration.ofMinutes(5));
+        assertThatThrownBy(() -> secondFactor(expiring, codeNow(secret, 0)))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+
+        LoginResponse challenge = adminPasswordStep("198.51.100.7");
+        for (int i = 0; i < 4; i++) {
+            assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                    new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), "000000"), "198.51.100.7"))
+                .isInstanceOf(AuthenticationFailedException.class);
+        }
+        assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), "000000"), "198.51.100.7"))
+            .isInstanceOf(LoginBlockedException.class);
+        clock.advance(Duration.ofMinutes(15));
+        assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), codeNow(secret, 0)), "198.51.100.7"))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+    }
+
+    @Test
+    @DisplayName("Los códigos incorrectos cuentan como fallos del login y bloquean a ese usuario desde esa IP")
+    void administrator_WrongCodesCountAsFailedLogins() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        administrator.setTotpSecret(secret);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+
+        for (int i = 0; i < 4; i++) {
+            LoginResponse challenge = adminPasswordStep(IP);
+            assertThatThrownBy(() -> secondFactor(challenge, "000000")).isInstanceOf(AuthenticationFailedException.class);
+        }
+        LoginResponse last = adminPasswordStep(IP);
+        assertThatThrownBy(() -> secondFactor(last, "000000")).isInstanceOf(LoginBlockedException.class);
+
+        assertThatThrownBy(() -> adminPasswordStep(IP)).isInstanceOf(LoginBlockedException.class);
+        assertThat(adminPasswordStep("198.51.100.7").twoFactor()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Si quitaron el 2FA mientras el desafío estaba abierto, hay que volver a ingresar")
+    void administrator_SecondFactorRemovedMeanwhile_EndsChallenge() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        administrator.setTotpSecret(secret);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        LoginResponse challenge = adminPasswordStep(IP);
+
+        administrator.setTotpSecret(null);
+
+        assertThatThrownBy(() -> secondFactor(challenge, codeNow(secret, 0)))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+        verifyNoInteractions(jwtService);
     }
 
     static class MutableClock extends Clock {

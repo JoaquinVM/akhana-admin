@@ -15,8 +15,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * In-memory failed login counter per username and per IP. The app runs as a single instance on the VPS,
- * so memory is enough; counters are lost on restart, which only shortens an active lock.
+ * In-memory failed login counter per username and IP pair and per IP. The app runs as a single instance on the VPS,
+ * so memory is enough; counters are lost on restart, which only shortens an active lock. The app is on the internet
+ * (specs/deploy.md): a username alone is never locked, or anyone could lock out a user by guessing its name.
  */
 @Service
 @Slf4j
@@ -56,7 +57,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
     @Override
     public void checkNotBlocked(String username, String clientIp) {
         Instant now = clock.instant();
-        if (isLocked(userKey(username), now) || isLocked(ipKey(clientIp), now)) {
+        if (isLocked(userKey(username, clientIp), now) || isLocked(ipKey(clientIp), now)) {
             throw new LoginBlockedException(blockedMessage);
         }
     }
@@ -65,7 +66,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
     public void recordFailure(String username, String clientIp) {
         Instant now = clock.instant();
         purgeExpiredIfLarge(now);
-        boolean userLocked = registerFailure(userKey(username), maxAttemptsPerUser, now);
+        boolean userLocked = registerFailure(userKey(username, clientIp), maxAttemptsPerUser, now);
         boolean ipLocked = registerFailure(ipKey(clientIp), maxAttemptsPerIp, now);
         if (userLocked || ipLocked) {
             log.warn("Login locked for {} (user '{}', ip {})", lockout, username, clientIp);
@@ -74,8 +75,8 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
     }
 
     @Override
-    public void recordSuccess(String username) {
-        attempts.remove(userKey(username));
+    public void recordSuccess(String username, String clientIp) {
+        attempts.remove(userKey(username, clientIp));
     }
 
     private boolean isLocked(String key, Instant now) {
@@ -101,8 +102,8 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         }
     }
 
-    private static String userKey(String username) {
-        return "user:" + (username == null ? "" : username.trim().toLowerCase(Locale.ROOT));
+    private static String userKey(String username, String clientIp) {
+        return "user:" + (username == null ? "" : username.trim().toLowerCase(Locale.ROOT)) + "@" + ipKey(clientIp);
     }
 
     private static String ipKey(String clientIp) {
