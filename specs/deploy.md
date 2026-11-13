@@ -452,6 +452,28 @@ Paso a internet (067, rama `feat/public-access`):
 
 ## Validación
 
+Paso a internet en la Mac (067, rama `feat/public-access`), con el compose de producción en un proyecto aparte
+(`akhana067`, entrada local en `127.0.0.1:8091`), base vacía y secretos de prueba. `cloudflared` se simuló con pedidos
+desde el contenedor `api` a `web:80`, por la red de Docker; el túnel real y el dominio quedan para «Paso a internet».
+
+- `docker compose config`: sin `COMPOSE_PROFILES` corren db, api y web; con `tunnel`, también `tunnel`. En los dos casos
+  el único puerto es `127.0.0.1:8091` → `web:8080`.
+- Cabeceras: `/`, `/api/products` (401) y `web:80` traen HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy` y la CSP.
+  El `index.html` compilado no trae `onload` ni scripts en línea, y `offline.html` no trae `onclick`.
+- IP real: 5 logins fallidos de `cajero` con `CF-Connecting-IP` A dieron 401 × 4 y 429 («Demasiados intentos fallidos…»);
+  el mismo usuario con B dio 401. Por la entrada local, 5 fallos con un `CF-Connecting-IP` distinto cada vez se contaron
+  como una sola IP (429 al quinto).
+- Ritmo: 25 logins seguidos desde una IP dieron 11 × 401 y 14 × 429 con «Demasiados intentos seguidos…»; el segundo
+  factor quedó limitado igual; 25 pedidos a `/api/products` desde la misma IP dieron 401 sin ningún 429; otra IP siguió
+  entrando.
+- Navegador (Chrome del panel): el primer admin vio el QR y la clave, entró con el código calculado de esa clave, pasó al
+  cambio de contraseña y abrió el POS con los estilos y las fuentes de Google; una foto de producto se vio por `blob:`; en
+  Usuarios, «Quitar 2FA» apareció solo en el otro administrador y le quitó la clave (`updated_by` = quien la quitó). La
+  consola no mostró violaciones de CSP en ningún paso.
+- V34: corrió sobre la base vacía (Flyway 34). Su `UPDATE`, repetido a mano con dos usuarios, los dejó con cambio de
+  contraseña obligatorio y la sesión abierta pasó a 401: la app volvió al login con el aviso de sesión terminada.
+- `shellcheck -x -P SCRIPTDIR deploy/*.sh` sin advertencias (contenedor `koalaman/shellcheck-alpine:v0.10.0`).
+
 En la Mac (rama `feat/deploy`), con una copia de la base local que tiene el historial importado:
 
 - `deploy.sh --no-pull` construyó las imágenes y levantó db, api y web sanos; `web` publica solo en `127.0.0.1`.
