@@ -8,6 +8,7 @@ import {
   OpenCashRequest,
   CloseCashRequest
 } from './models/cash.models';
+import { CloseCashDraftService } from './close-cash-draft.service';
 
 // POS-17: no answer, or a server failure, says nothing about the cash; a 204 or a 4xx is the server's answer
 export function isConnectionFailure(error: HttpErrorResponse): boolean {
@@ -19,6 +20,7 @@ export function isConnectionFailure(error: HttpErrorResponse): boolean {
 })
 export class CashService {
   private readonly http = inject(HttpClient);
+  private readonly closeDraft = inject(CloseCashDraftService);
   private readonly apiUrl = '/api/cash-sessions';
 
   // Shared state of the open cash session; null while the cash is closed
@@ -61,7 +63,11 @@ export class CashService {
 
   closeSession(request: CloseCashRequest): Observable<CashSessionSummary> {
     return this.http.post<CashSessionSummary>(`${this.apiUrl}/current/close`, request).pipe(
-      tap(() => this.setKnownSession(null))
+      // CAJ-15: the count written in this browser goes away only when the cash is closed
+      tap(() => {
+        this.closeDraft.clear();
+        this.setKnownSession(null);
+      })
     );
   }
 

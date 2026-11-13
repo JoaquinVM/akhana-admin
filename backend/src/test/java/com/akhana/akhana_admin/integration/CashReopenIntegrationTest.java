@@ -91,7 +91,14 @@ class CashReopenIntegrationTest {
 
     private CashSessionSummaryResponse close(String amount, CashCutDto... cuts) {
         CashSessionSummaryResponse closed = cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal(amount), "Cierre " + amount, List.of(cuts)), "ana");
+            new CloseCashRequest(new BigDecimal(amount), "Cierre " + amount, List.of(cuts), null, null), "ana");
+        next();
+        return closed;
+    }
+
+    private CashSessionSummaryResponse closeWithReserves(String amount, String bills, String coins, CashCutDto... cuts) {
+        CashSessionSummaryResponse closed = cashSessionService.closeCurrentSession(new CloseCashRequest(
+            new BigDecimal(amount), "Cierre " + amount, List.of(cuts), new BigDecimal(bills), new BigDecimal(coins)), "ana");
         next();
         return closed;
     }
@@ -239,6 +246,32 @@ class CashReopenIntegrationTest {
         CashSessionDetailResponse detail = cashSessionService.getSessionDetail(id);
         assertThat(detail.cuts()).isEmpty();
         assertThat(detail.reopenings().getFirst().cuts()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("CAJ-04, CAJ-14: las reservas del cierre deshecho quedan en su reapertura y la caja reabierta no las muestra")
+    void reserves_stayWithTheirClosing() {
+        UUID id = open("100.00", "Carga").id();
+        closeWithReserves("450.00", "150.00", "200.00", cut("100", 1));
+
+        CashSessionDetailResponse closed = cashSessionService.getSessionDetail(id);
+        assertThat(closed.closingReserveBills()).isEqualByComparingTo("150.00");
+        assertThat(closed.closingReserveCoins()).isEqualByComparingTo("200.00");
+        assertThat(jdbc.queryForObject("SELECT closing_reserve_bills FROM cash_sessions WHERE id = ?", BigDecimal.class, id))
+            .isEqualByComparingTo("150.00");
+
+        reopen(id, "Faltó contar");
+        CashSessionDetailResponse reopened = cashSessionService.getSessionDetail(id);
+        assertThat(reopened.closingReserveBills()).isNull();
+        assertThat(reopened.closingReserveCoins()).isNull();
+
+        close("100.00", cut("100", 1));
+        CashSessionDetailResponse detail = cashSessionService.getSessionDetail(id);
+        assertThat(detail.closingReserveBills()).isNull();
+        assertThat(detail.closingReserveCoins()).isNull();
+        assertThat(detail.reopenings().getFirst().closingAmount()).isEqualByComparingTo("450.00");
+        assertThat(detail.reopenings().getFirst().closingReserveBills()).isEqualByComparingTo("150.00");
+        assertThat(detail.reopenings().getFirst().closingReserveCoins()).isEqualByComparingTo("200.00");
     }
 
     @Test

@@ -82,4 +82,41 @@ describe('CashDetailModalComponent', () => {
 
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Reaperturas');
   });
+
+  it('CAJ-04: el arqueo muestra las reservas del cierre, también sin cortes', () => {
+    fixture.componentRef.setInput('session', { ...session, cuts: [], closingReserveBills: 150, closingReserveCoins: 200 });
+    fixture.componentInstance.setTab('cortes');
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Reserva billetes');
+    expect(text).toContain('Bs 150.00');
+    expect(text).toContain('Reserva monedas');
+    expect(text).toContain('Bs 200.00');
+    expect(text).not.toContain('por monto directo');
+  });
+
+  it('CAJ-04: una caja sin reservas se ve como antes', () => {
+    fixture.componentRef.setInput('session', { ...session, cuts: [] });
+    fixture.componentInstance.setTab('cortes');
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('por monto directo');
+    expect(text).not.toContain('Reserva billetes');
+  });
+
+  it('CAJ-04, CAJ-14: la reapertura muestra las reservas del cierre deshecho', () => {
+    fixture.componentRef.setInput('session', {
+      ...session,
+      reopenings: [
+        { id: 'r-1', reason: 'Faltó contar', reopenedBy: 'luis', reopenedAt: '2026-10-30T13:00:00Z', closingAmount: 450,
+          closingComment: null, closedBy: 'ana', closedAt: '2026-10-30T12:00:00Z', expectedCash: 450, difference: 0,
+          cuts: [{ denomination: 100, cashQuantity: 1, reserveQuantity: 0, subtotal: 100 }],
+          closingReserveBills: 150, closingReserveCoins: 200 }
+      ]
+    });
+    fixture.detectChanges();
+    const block = (fixture.nativeElement as HTMLElement).querySelector('.reopening')?.textContent ?? '';
+    expect(block).toContain('Billetes Bs 150.00');
+    expect(block).toContain('Monedas Bs 200.00');
+  });
 });

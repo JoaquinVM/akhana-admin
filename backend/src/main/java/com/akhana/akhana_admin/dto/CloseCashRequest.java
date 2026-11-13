@@ -15,5 +15,12 @@ public record CloseCashRequest(
     @Size(max = 500, message = "El comentario no debe superar los 500 caracteres.")
     String closingComment,
 
-    List<CashCutDto> cuts
+    List<CashCutDto> cuts,
+
+    // CAJ-04: bills and coins kept in reserve, counted as one amount each; they add up with the cuts
+    @DecimalMin(value = "0.00", message = "La reserva de billetes no puede ser negativa.")
+    BigDecimal reserveBills,
+
+    @DecimalMin(value = "0.00", message = "La reserva de monedas no puede ser negativa.")
+    BigDecimal reserveCoins
 ) {}

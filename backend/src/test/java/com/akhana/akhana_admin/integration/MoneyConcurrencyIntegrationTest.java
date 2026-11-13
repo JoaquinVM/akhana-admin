@@ -235,7 +235,7 @@ class MoneyConcurrencyIntegrationTest {
                 locked.countDown();
                 sleep();
                 cashSessionService.openSession(next, USER);
-                cashSessionService.closeCurrentSession(new CloseCashRequest(proposed, null, List.of()), USER);
+                cashSessionService.closeCurrentSession(new CloseCashRequest(proposed, null, List.of(), null, null), USER);
             }));
             assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
 
@@ -293,7 +293,7 @@ class MoneyConcurrencyIntegrationTest {
     private CashSessionSummaryResponse openAndCloseWithShortage(LocalDate day) {
         cashSessionService.openSession(openingOn(day, new BigDecimal("100.00")), USER);
         return cashSessionService.closeCurrentSession(
-            new CloseCashRequest(new BigDecimal("93.00"), "Cierre con faltante", List.of()), USER);
+            new CloseCashRequest(new BigDecimal("93.00"), "Cierre con faltante", List.of(), null, null), USER);
     }
 
     private record Outcome<T>(T value, Throwable error) {}

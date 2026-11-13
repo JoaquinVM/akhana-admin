@@ -18,7 +18,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
-| Caja | CAJ-01 a CAJ-14 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día | `cash.md` |
+| Caja | CAJ-01 a CAJ-15 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día. Reservas sueltas del conteo (CAJ-04) y conteo guardado (CAJ-15) sin publicar | `cash.md` |
 | POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
@@ -172,7 +172,7 @@ Detalle en `cash.md`.
 - **CAJ-01** No se puede vender sin una caja abierta.
 - **CAJ-02** Apertura con monto inicial ≥ 0 y comentario opcional.
 - **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros. Los ajustes de apertura y cierre no cuentan. Una salida de Caja que supera el esperado se avisa sin bloquear.
-- **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", que si se carga debe sumar el monto contado.
+- **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", más dos montos sueltos «Reserva billetes» y «Reserva monedas»; si se carga, cortes + reservas deben sumar el monto contado (1.000 en cortes + 150 + 200 = 1.350).
 - **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
 - **CAJ-06** Una caja cerrada es inmutable: no recibe movimientos y no se reabre, salvo la última con motivo (CAJ-14).
 - **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
@@ -183,6 +183,7 @@ Detalle en `cash.md`.
 - **CAJ-12** Al abrir una caja se elige su día de operación: hoy por defecto, o un día anterior con comentario. Nunca un día futuro, ni uno igual o anterior al de la última caja. No hay límite de días atrás. El día no cambia después de abrir.
 - **CAJ-13** Las cajas van en secuencia. No se abre el día D si queda atrás un día que no es domingo sin caja y sin la marca «sin atención». Quien abre la caja confirma esa marca con un comentario.
 - **CAJ-14** La última caja cerrada se puede reabrir con motivo, mientras no se haya abierto otra después: se anula el ajuste de su cierre y queda registrado lo que el cierre tenía. Es la única excepción a CAJ-06.
+- **CAJ-15** Lo escrito en el cierre (cortes, reservas, modo, monto y comentario) queda guardado en el navegador de ese equipo aunque se cierre el modal o se recargue la página; se borra al cerrar la caja.
 
 ### 3.7 Punto de venta · V1
 

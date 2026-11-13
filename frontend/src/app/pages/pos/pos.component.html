@@ -124,6 +124,7 @@
     [isOpen]="isCloseModalVisible()"
     [isLoading]="isActionLoading()"
     [expectedCash]="expectedCashInDrawer()"
+    [sessionId]="cashService.currentSession()?.id ?? null"
     (close)="closeCloseModal()"
     (confirmed)="handleConfirmClose($event)" />
 

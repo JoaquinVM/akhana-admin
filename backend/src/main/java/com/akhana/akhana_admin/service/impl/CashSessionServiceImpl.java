@@ -57,6 +57,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (%s). Indique el motivo en el comentario de apertura.";
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
     static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrija el conteo o deje los cortes vacíos.";
+    static final String COUNT_WITH_RESERVES_MISMATCH = "Los cortes y las reservas suman %s y el monto contado es %s; corrija el conteo o deje los cortes y las reservas vacíos.";
     static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.";
     static final String CUT_DENOMINATION_REPEATED = "El corte de %s está repetido.";
     static final String FUTURE_DAY = "El día de la caja no puede ser futuro.";
@@ -269,6 +270,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             .reopenedAt(now)
             .closingAmount(session.getClosingAmount())
             .closingComment(session.getClosingComment())
+            .closingReserveBills(session.getClosingReserveBills())
+            .closingReserveCoins(session.getClosingReserveCoins())
             .closedBy(session.getClosedBy())
             .closedAt(session.getClosedAt())
             .expectedCash(session.getExpectedCash())
@@ -282,6 +285,8 @@ public class CashSessionServiceImpl implements CashSessionService {
         session.setStatus(CashSessionStatus.ABIERTA);
         session.setClosingAmount(null);
         session.setClosingComment(null);
+        session.setClosingReserveBills(null);
+        session.setClosingReserveCoins(null);
         session.setClosedBy(null);
         session.setClosedAt(null);
         session.setDifference(null);
@@ -359,13 +364,18 @@ public class CashSessionServiceImpl implements CashSessionService {
             .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna caja abierta para cerrar."));
 
         BigDecimal closingAmount = request.closingAmount().setScale(2, RoundingMode.HALF_UP);
-        List<CashDenominationCut> cuts = buildCuts(session, request.cuts(), closingAmount);
+        BigDecimal reserveBills = reserveAmount(request.reserveBills());
+        BigDecimal reserveCoins = reserveAmount(request.reserveCoins());
+        List<CashDenominationCut> cuts = buildCuts(session, request.cuts(), closingAmount,
+            add(reserveBills, reserveCoins));
         BigDecimal expectedCash = expectedCashCalculator.calculate(session);
         BigDecimal difference = closingAmount.subtract(expectedCash).setScale(2, RoundingMode.HALF_UP);
 
         session.setClosingAmount(closingAmount);
         session.setClosingComment(request.closingComment() != null && !request.closingComment().isBlank()
             ? request.closingComment().trim() : null);
+        session.setClosingReserveBills(reserveBills);
+        session.setClosingReserveCoins(reserveCoins);
         session.setClosedBy(username);
         session.setClosedAt(Instant.now());
         session.setStatus(CashSessionStatus.CERRADA);
@@ -442,6 +452,8 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getDifference(),
             sales.size(),
             cutDtos,
+            session.getClosingReserveBills(),
+            session.getClosingReserveCoins(),
             saleResponses,
             session.isHistorical(),
             session.getHistoricalOtherIncome(),
@@ -479,20 +491,42 @@ public class CashSessionServiceImpl implements CashSessionService {
                 reopening.getClosedAt(),
                 reopening.getExpectedCash(),
                 reopening.getDifference(),
-                cuts.getOrDefault(reopening.getId(), List.of()).stream().map(CashSessionServiceImpl::cutDto).toList()))
+                cuts.getOrDefault(reopening.getId(), List.of()).stream().map(CashSessionServiceImpl::cutDto).toList(),
+                reopening.getClosingReserveBills(),
+                reopening.getClosingReserveCoins()))
             .toList();
     }
 
-    // CAJ-04: the count by bills and coins is optional, but when given it must add up to the counted amount, so
-    // the history never shows a count that disagrees with the closing. Empty rows are left out
+    // CAJ-04: a reserve of 0 is no reserve, so the history shows only the ones that were counted
+    private static BigDecimal reserveAmount(BigDecimal requested) {
+        if (requested == null) {
+            return null;
+        }
+        BigDecimal amount = requested.setScale(2, RoundingMode.HALF_UP);
+        return amount.signum() > 0 ? amount : null;
+    }
+
+    private static BigDecimal add(BigDecimal a, BigDecimal b) {
+        return (a != null ? a : BigDecimal.ZERO).add(b != null ? b : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
     public static List<CashDenominationCut> buildCuts(CashSession session, List<CashCutDto> requested, BigDecimal closingAmount) {
-        if (requested == null || requested.isEmpty()) {
+        return buildCuts(session, requested, closingAmount, BigDecimal.ZERO);
+    }
+
+    // CAJ-04: the count by bills and coins is optional, but when given it must add up to the counted amount, so
+    // the history never shows a count that disagrees with the closing. The loose reserves of bills and coins are
+    // part of the count: cuts + reserves = counted amount. Empty rows are left out
+    public static List<CashDenominationCut> buildCuts(CashSession session, List<CashCutDto> requested, BigDecimal closingAmount,
+                                                      BigDecimal reserves) {
+        BigDecimal reserveTotal = (reserves != null ? reserves : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        if ((requested == null || requested.isEmpty()) && reserveTotal.signum() == 0) {
             return List.of();
         }
         List<CashDenominationCut> cuts = new ArrayList<>();
         Set<BigDecimal> seen = new HashSet<>();
         BigDecimal total = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        for (CashCutDto cutDto : requested) {
+        for (CashCutDto cutDto : requested != null ? requested : List.<CashCutDto>of()) {
             BigDecimal denomination = cutDto.denomination().setScale(2, RoundingMode.HALF_UP);
             if (!DENOMINATIONS.contains(denomination)) {
                 throw new IllegalArgumentException(String.format(CUT_DENOMINATION_INVALID, StoreFormat.money(denomination)));
@@ -515,7 +549,13 @@ public class CashSessionServiceImpl implements CashSessionService {
                 .subtotal(subtotal)
                 .build());
         }
-        if (!cuts.isEmpty() && total.compareTo(closingAmount) != 0) {
+        if (reserveTotal.signum() > 0) {
+            BigDecimal count = total.add(reserveTotal);
+            if (count.compareTo(closingAmount) != 0) {
+                throw new IllegalArgumentException(String.format(COUNT_WITH_RESERVES_MISMATCH, StoreFormat.money(count),
+                    StoreFormat.money(closingAmount)));
+            }
+        } else if (!cuts.isEmpty() && total.compareTo(closingAmount) != 0) {
             throw new IllegalArgumentException(String.format(CUTS_MISMATCH, StoreFormat.money(total),
                 StoreFormat.money(closingAmount)));
         }
