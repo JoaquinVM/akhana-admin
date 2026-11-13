@@ -21,10 +21,10 @@ const CHART_WIDTH = 640;
 const CHART_HEIGHT = 200;
 const CHART_TOP = 12;
 const CHART_BOTTOM = 188;
-// The server cannot be reached: no network, Tailscale off or a gateway error (MOV-03, like public/sw.js)
+// The server cannot be reached: no network or a gateway error (MOV-03, like public/sw.js)
 const CONNECTION_ERRORS = [0, 502, 503, 504];
 const CONNECTION_TIMEOUT_MS = 10000;
-const CONNECTION_MESSAGE = 'No se pudo conectar. Revisa tu internet y que Tailscale esté encendido.';
+const CONNECTION_MESSAGE = 'No se pudo conectar. Revisa tu internet.';
 
 function isConnectionError(err: unknown): boolean {
   return err instanceof TimeoutError || (err instanceof HttpErrorResponse && CONNECTION_ERRORS.includes(err.status));

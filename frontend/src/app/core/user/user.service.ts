@@ -42,4 +42,9 @@ export class UserService {
   deleteUser(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  // Lost phone: the user activates the second factor again at the next login (USR-08)
+  resetSecondFactor(id: string): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/${id}/second-factor/reset`, null);
+  }
 }

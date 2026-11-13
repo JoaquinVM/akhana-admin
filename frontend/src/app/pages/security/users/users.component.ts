@@ -79,6 +79,10 @@ export class UsersComponent implements OnInit {
   isDiscardConfirmOpen = signal<boolean>(false);
 
   // Logical delete confirmation modal
+  // Remove another user's second factor (USR-08)
+  userToResetSecondFactor = signal<User | null>(null);
+  isResettingSecondFactor = signal<boolean>(false);
+
   isDeleteModalOpen = signal<boolean>(false);
   isDeleting = signal<boolean>(false);
   userToDelete = signal<User | null>(null);
@@ -338,6 +342,43 @@ export class UsersComponent implements OnInit {
       error: (err) => {
         this.isDeleting.set(false);
         this.deleteError.set(err.error?.message || 'Error al dar de baja al usuario.');
+      }
+    });
+  }
+
+  // --- Remove the second factor (lost phone, USR-08) ---
+
+  // Nobody removes their own: a stolen session could otherwise drop it
+  canResetSecondFactor(user: User): boolean {
+    const currentUsername = this.authService.currentUser()?.username;
+    return user.twoFactorEnabled && currentUsername?.toLowerCase() !== user.username.toLowerCase();
+  }
+
+  openResetSecondFactor(user: User): void {
+    this.userToResetSecondFactor.set(user);
+    this.isResettingSecondFactor.set(false);
+  }
+
+  cancelResetSecondFactor(): void {
+    this.userToResetSecondFactor.set(null);
+  }
+
+  confirmResetSecondFactor(): void {
+    const user = this.userToResetSecondFactor();
+    if (!user) return;
+
+    this.isResettingSecondFactor.set(true);
+    this.userService.resetSecondFactor(user.id).subscribe({
+      next: () => {
+        this.toast.success('Segundo factor quitado. Lo activará en su próximo ingreso.');
+        this.isResettingSecondFactor.set(false);
+        this.userToResetSecondFactor.set(null);
+        this.loadUsers(this.currentPage());
+      },
+      error: (err) => {
+        this.isResettingSecondFactor.set(false);
+        this.userToResetSecondFactor.set(null);
+        this.toast.error(err.error?.message || 'No se pudo quitar el segundo factor.');
       }
     });
   }

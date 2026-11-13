@@ -2,8 +2,9 @@
 
 Detalle de MOV-01 a MOV-04 (sección 3.12 de `specs/requirements.md`), con los mismos IDs. Es Admin instalado en la
 pantalla de inicio del teléfono: mismas pantallas, datos, usuarios y permisos. No es un sistema aparte ni se publica en
-tiendas de apps. Sigue sin haber modo sin internet (P-14) y cada teléfono necesita la app de Tailscale encendida
-(`deploy.md`).
+tiendas de apps. Sigue sin haber modo sin internet (P-14). Desde que Admin está en internet (067, `deploy.md`) el
+teléfono ya no necesita Tailscale; la app instalada desde la dirección `.ts.net` se reinstala desde el dominio, porque
+la sesión y la instalación son de cada dirección.
 
 ## MOV-01 · Instalar
 
@@ -39,8 +40,9 @@ La app se reconoce instalada con `display-mode: standalone` y, en iPhone, `navig
 Un service worker escrito a mano (`public/sw.js`), sin dependencias. Lo registra solo la app instalada, así que la PC de
 caja no cambia. En un Android, el Chrome normal comparte el worker una vez registrado y también ve esta página.
 
-- **Cuando** se abre la app sin internet o con Tailscale apagado **entonces** muestra «No se pudo conectar. Revisa tu
-  internet y que Tailscale esté encendido.» con un botón **Reintentar**.
+- **Cuando** se abre la app sin internet **entonces** muestra «No se pudo conectar. Revisa tu internet.» con un botón
+  **Reintentar**. El botón es un enlace a la misma dirección, sin JavaScript: la política de contenido de nginx (NF-02)
+  bloquea los `onclick` en línea. Por este cambio `CACHE_NAME` pasó a `akhana-offline-v2`.
 - **Cuando** el servidor responde 502, 503 o 504, o no responde en 10 s **entonces** muestra la misma página.
 - **Cuando** el Dashboard vuelve de segundo plano y no llega al servidor (sin conexión, 502, 503, 504 o sin respuesta en
   10 s) **entonces** recarga la página para mostrar lo mismo. Si ya se salió del Dashboard, no recarga nada.
@@ -93,5 +95,5 @@ a este aviso aún tiene el problema una vez, al publicarse la versión que lo tr
 ## Validación
 
 Probado en Chrome de escritorio a 375 × 812 contra una base local desechable y la configuración real de nginx,
-simulando la app instalada con `navigator.standalone`. La instalación real, la zona segura del iPhone y Tailscale apagado
+simulando la app instalada con `navigator.standalone`. La instalación real, la zona segura del iPhone y la app sin conexión
 solo se validan en teléfonos reales, porque no hay ambiente de staging.

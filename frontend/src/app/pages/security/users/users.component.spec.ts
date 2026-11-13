@@ -6,6 +6,7 @@ import { User, PageResponse } from '../../../core/user/models/user.models';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { By } from '@angular/platform-browser';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 describe('UsersComponent', () => {
   let component: UsersComponent;
@@ -26,7 +27,8 @@ describe('UsersComponent', () => {
       updatedAt: '2026-02-01T12:00:00Z',
       updatedBy: 'admin',
       deletedAt: null,
-      deletedBy: null
+      deletedBy: null,
+      twoFactorEnabled: false
     },
     {
       id: '22222222-2222-2222-2222-222222222222',
@@ -40,7 +42,8 @@ describe('UsersComponent', () => {
       updatedAt: null,
       updatedBy: null,
       deletedAt: null,
-      deletedBy: null
+      deletedBy: null,
+      twoFactorEnabled: false
     }
   ];
 
@@ -280,4 +283,53 @@ describe('UsersComponent', () => {
       .map(el => el.nativeElement.textContent.trim());
     expect(badges).toEqual(['Administrador', 'Operador']);
   });
+
+  describe('Segundo factor (USR-08)', () => {
+    const own: User = { ...mockUsersList[0], twoFactorEnabled: true };
+    const other: User = {
+      ...mockUsersList[0], id: '33333333-3333-3333-3333-333333333333', username: 'duena', fullName: 'Dueña', twoFactorEnabled: true
+    };
+
+    beforeEach(() => {
+      mockUserService.getUsers.mockReturnValue(of({ ...mockPageResponse, content: [own, other, mockUsersList[1]], totalElements: 3 }));
+      mockUserService.resetSecondFactor = vi.fn().mockReturnValue(of({ ...other, twoFactorEnabled: false }));
+      component.loadUsers(0);
+      fixture.detectChanges();
+    });
+
+    it('marca 2FA y ofrece quitarlo solo a otro usuario que lo tiene activo', () => {
+      const rows = fixture.debugElement.queryAll(By.css('.table-row'));
+
+      expect(rows[0].query(By.css('.second-factor-badge'))).not.toBeNull();
+      expect(rows[0].query(By.css('.btn-second-factor'))).toBeNull();
+      expect(rows[1].query(By.css('.btn-second-factor'))).not.toBeNull();
+      expect(rows[2].query(By.css('.second-factor-badge'))).toBeNull();
+      expect(rows[2].query(By.css('.btn-second-factor'))).toBeNull();
+    });
+
+    it('al confirmar lo quita y recarga la lista', () => {
+      fixture.debugElement.query(By.css('.btn-second-factor')).nativeElement.click();
+      expect(component.userToResetSecondFactor()).toEqual(other);
+
+      component.confirmResetSecondFactor();
+
+      expect(mockUserService.resetSecondFactor).toHaveBeenCalledWith(other.id);
+      expect(component.userToResetSecondFactor()).toBeNull();
+      expect(mockUserService.getUsers).toHaveBeenCalledTimes(3);
+    });
+
+    it('si el servidor lo rechaza, muestra su mensaje', () => {
+      const toast = TestBed.inject(ToastService);
+      const error = vi.spyOn(toast, 'error');
+      mockUserService.resetSecondFactor.mockReturnValue(throwError(() =>
+        ({ error: { message: 'Este usuario no tiene el segundo factor activo.' } })));
+
+      component.openResetSecondFactor(other);
+      component.confirmResetSecondFactor();
+
+      expect(error).toHaveBeenCalledWith('Este usuario no tiene el segundo factor activo.');
+      expect(component.isResettingSecondFactor()).toBe(false);
+    });
+  });
 });
+

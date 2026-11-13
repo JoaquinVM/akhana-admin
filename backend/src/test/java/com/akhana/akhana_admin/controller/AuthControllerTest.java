@@ -6,6 +6,8 @@ import com.akhana.akhana_admin.config.SecurityConfig;
 import com.akhana.akhana_admin.dto.ChangePasswordRequest;
 import com.akhana.akhana_admin.dto.LoginRequest;
 import com.akhana.akhana_admin.dto.LoginResponse;
+import com.akhana.akhana_admin.dto.TwoFactorChallengeResponse;
+import com.akhana.akhana_admin.dto.TwoFactorLoginRequest;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.exception.GlobalExceptionHandler;
 import com.akhana.akhana_admin.exception.LoginBlockedException;
@@ -79,6 +81,51 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.username").value("admin"))
             .andExpect(jsonPath("$.role").value("ADMINISTRATOR"))
             .andExpect(jsonPath("$.message").value("Sesión iniciada."));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login - A un administrador le pide el segundo factor sin entregar token (USR-08)")
+    void login_Administrator_GetsSecondFactorChallenge() throws Exception {
+        when(authService.login(any(LoginRequest.class), anyString())).thenReturn(LoginResponse.secondFactor(
+            "admin", "Ingrese el código de su app autenticadora.", new TwoFactorChallengeResponse("c-1", false, null, null)));
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\": \"admin\", \"password\": \"12345admin\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").doesNotExist())
+            .andExpect(jsonPath("$.twoFactor.challengeId").value("c-1"))
+            .andExpect(jsonPath("$.twoFactor.setupRequired").value(false))
+            .andExpect(jsonPath("$.twoFactor.secret").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login/second-factor - Sin token, con la IP de la conexión, entrega la sesión")
+    void loginWithSecondFactor_IsPublicAndUsesRemoteAddress() throws Exception {
+        when(authService.loginWithSecondFactor(any(TwoFactorLoginRequest.class), anyString()))
+            .thenReturn(new LoginResponse("t", UUID.randomUUID(), "admin", Role.ADMINISTRATOR, "Sesión iniciada."));
+
+        mockMvc.perform(post("/api/auth/login/second-factor")
+                .with(request -> { request.setRemoteAddr("203.0.113.10"); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challengeId\": \"c-1\", \"code\": \"123456\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").value("t"));
+
+        verify(authService).loginWithSecondFactor(eq(new TwoFactorLoginRequest("c-1", "123456")), eq("203.0.113.10"));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login/second-factor - Un código incorrecto da 401 con su mensaje")
+    void loginWithSecondFactor_WrongCode_IsUnauthorized() throws Exception {
+        when(authService.loginWithSecondFactor(any(TwoFactorLoginRequest.class), anyString()))
+            .thenThrow(new AuthenticationFailedException("Código incorrecto."));
+
+        mockMvc.perform(post("/api/auth/login/second-factor")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challengeId\": \"c-1\", \"code\": \"000000\"}"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Código incorrecto."));
     }
 
     @Test

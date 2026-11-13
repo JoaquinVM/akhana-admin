@@ -131,4 +131,32 @@ describe('AuthService', () => {
     expect(service.getToken()).toBe('jwt.after.change');
     expect(JSON.parse(localStorage.getItem('akhana_user')!).mustChangePassword).toBe(false);
   });
+
+  it('USR-08: a un administrador no le guarda sesión hasta que entra con el código del segundo factor', () => {
+    let challenge: LoginResponse | undefined;
+    service.login({ username: 'duena', password: 'clave' }).subscribe(r => (challenge = r));
+    httpTesting.expectOne('/api/auth/login').flush({
+      token: null, id: null, username: 'duena', role: null, permissions: [], mustChangePassword: false,
+      message: 'Ingrese el código de su app autenticadora.',
+      twoFactor: { challengeId: 'c-1', setupRequired: false, secret: null, otpauthUri: null }
+    });
+
+    expect(challenge?.twoFactor?.challengeId).toBe('c-1');
+    expect(service.isAuthenticated()).toBe(false);
+    expect(localStorage.getItem('akhana_token')).toBeNull();
+
+    service.loginWithSecondFactor({ challengeId: 'c-1', code: '123456' }).subscribe();
+    const req = httpTesting.expectOne('/api/auth/login/second-factor');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ challengeId: 'c-1', code: '123456' });
+    req.flush({
+      token: 'admin.token', id: 'u-1', username: 'duena', fullName: 'Dueña', role: 'ADMINISTRATOR',
+      permissions: ['USERS'], mustChangePassword: true, message: 'Debe cambiar su contraseña.', twoFactor: null
+    });
+
+    expect(service.isAuthenticated()).toBe(true);
+    expect(localStorage.getItem('akhana_token')).toBe('admin.token');
+    expect(service.mustChangePassword()).toBe(true);
+  });
 });
+

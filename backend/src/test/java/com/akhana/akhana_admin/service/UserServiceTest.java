@@ -222,4 +222,55 @@ class UserServiceTest {
         verify(userRepository, never()).findActiveByRoleForUpdate(any());
         verify(userRepository).save(sampleUser);
     }
+
+    @Test
+    void resetSecondFactor_ofAnotherUser_removesItWithAudit() {
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        sampleUser.setTotpEnabledAt(Instant.now());
+        sampleUser.setTotpLastStep(42L);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.resetSecondFactor(userId, "other_admin");
+
+        assertNull(sampleUser.getTotpSecret());
+        assertNull(sampleUser.getTotpEnabledAt());
+        assertNull(sampleUser.getTotpLastStep());
+        assertEquals("other_admin", sampleUser.getUpdatedBy());
+        assertNotNull(sampleUser.getUpdatedAt());
+        assertFalse(response.twoFactorEnabled());
+    }
+
+    @Test
+    void resetSecondFactor_ofOneself_isRejected() {
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.resetSecondFactor(userId, "TestUser"));
+        assertEquals("No puede quitar su propio segundo factor. Pídaselo a otro administrador.", error.getMessage());
+        assertNotNull(sampleUser.getTotpSecret());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void resetSecondFactor_withoutOne_isRejected() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.resetSecondFactor(userId, "other_admin"));
+        assertEquals("Este usuario no tiene el segundo factor activo.", error.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void mapToResponse_saysWhetherTheSecondFactorIsActive_withoutTheSecret() {
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+
+        UserResponse response = userService.getUserById(userId);
+
+        assertTrue(response.twoFactorEnabled());
+        assertFalse(response.toString().contains("JBSWY3DPEHPK3PXP"));
+    }
 }

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Prepares an Ubuntu 24.04 VPS for Akhana Admin (specs/deploy.md). Run as root; safe to run again.
-#   setup-server.sh          packages, Docker, Tailscale, rclone, time zone, folders and backup timers
-#   setup-server.sh --lock   closes every public port: only Tailscale reaches the server (run it over Tailscale)
+#   setup-server.sh          packages, Docker, Tailscale (SSH only), rclone, time zone, folders and backup timers
+#   setup-server.sh --lock   closes every public port: SSH only through Tailscale (run it over Tailscale); the app goes
+#                            out through the Cloudflare tunnel, which opens no port
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "Correr como root" >&2; exit 1; }
@@ -80,6 +81,6 @@ Siguientes pasos (specs/deploy.md):
   1. tailscale up --ssh --hostname akhana
   2. rclone config (remoto b2 y remoto crypt "akhana-crypt") y guardar las claves en el gestor de contraseñas
   3. completar /opt/akhana/.env: el timer akhana-deploy despliega la rama production (último tag probado)
-  4. tailscale serve --bg --https=443 http://127.0.0.1:8081
+  4. túnel de Cloudflare: CLOUDFLARE_TUNNEL_TOKEN y COMPOSE_PROFILES=tunnel en /opt/akhana/.env (specs/deploy.md)
   5. desde Tailscale: setup-server.sh --lock
 NEXT

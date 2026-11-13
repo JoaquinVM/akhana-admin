@@ -1,7 +1,8 @@
 # Producción (NF-01, NF-02, NF-05, NF-06)
 
-Servidor de producción de la V1: un VPS con la app detrás de HTTPS, accesible solo para los equipos de la tienda, con
-respaldo diario de la base guardado fuera del VPS y una restauración probada antes de la salida.
+Servidor de producción de la V1: un VPS con la app detrás de HTTPS, publicada en internet en un dominio propio (desde el
+067; antes, solo por Tailscale), con respaldo diario de la base guardado fuera del VPS y una restauración probada antes
+de la salida.
 
 Todo lo que se puede versionar vive en `deploy/` (compose de producción, Dockerfiles, nginx, scripts y unidades de
 systemd). Los secretos viven solo en el servidor (`/opt/akhana/.env`, `rclone.conf`) y en el gestor de contraseñas
@@ -13,8 +14,8 @@ del dueño; nunca en git.
 | --- | --- |
 | Proveedor | Contabo, plan más chico, región US East (~100–130 ms desde Bolivia), con Auto Backup ($2/mes). |
 | Sistema | Ubuntu 24.04 LTS con Docker y `docker compose`, administrado con los scripts del repo (ver D-1). |
-| Acceso | Tailscale: solo los equipos agregados a la red de la tienda ven el sistema; sin dominio propio. |
-| HTTPS | Certificado `*.ts.net` de Tailscale (`tailscale serve`), delante de nginx como proxy inverso. |
+| Acceso | Internet, en `admin.<dominio>`, por Cloudflare Tunnel (067): el VPS sale hacia Cloudflare y no abre puertos. Tailscale queda solo para SSH y como entrada local (`.ts.net`) mientras la tienda pasa al dominio o en una emergencia. Antes del 067: solo Tailscale, sin dominio. |
+| HTTPS | Certificado de Cloudflare en su borde y túnel cifrado hasta el VPS; nginx detrás como proxy inverso. La entrada local mantiene el certificado `*.ts.net` (`tailscale serve`). |
 | Respaldo | `pg_dump` diario cifrado y subido a un almacenamiento S3 fuera de Contabo (ver D-2); el Auto Backup de Contabo es una capa extra, no lo reemplaza. |
 
 ### Confirmadas con el dueño (todas gratuitas)
@@ -27,24 +28,33 @@ del dueño; nunca en git.
 - **D-3 · Avisos con healthchecks.io** (plan Hobbyist gratuito): un chequeo para el respaldo diario y otro para la
   prueba semanal de restauración; si un día no llega el aviso, manda un correo.
 - **Tailscale:** el plan Personal es gratuito, pero Tailscale lo presenta como de uso no comercial. Si se exige un
-  plan pago para la tienda, la arquitectura no cambia (solo el plan de la cuenta).
+  plan pago para la tienda, la arquitectura no cambia (solo el plan de la cuenta). Desde el 067 lo usa solo Joaquín
+  (SSH), así que serían US$ 8 al mes por un usuario.
+- **Cloudflare (067):** plan gratuito, que incluye el túnel. Cloudflare descifra el tráfico en su borde (contraseñas y
+  datos incluidos); lo aceptó el dueño. Lo más probable es que alguien tome la cuenta, así que lleva 2FA. Corta una
+  petición que tarda más de 100 a 125 s y acepta subidas de hasta 100 MB (las de Admin llegan a 21 MB).
 
 ## Arquitectura
 
 ```
-Equipo de la tienda (app Tailscale)
-   │  https://akhana.<red>.ts.net  (TLS de Tailscale, solo dentro de la red)
-   ▼
-VPS · tailscale serve :443 ──► 127.0.0.1:8081
-                                   │
-                    docker compose (red interna)
-                    ├─ web: nginx — Angular compilado + /api ──► api:8080
-                    ├─ api: Spring Boot (Java 21)
-                    └─ db: PostgreSQL 17 (volumen, sin puerto publicado)
-                    api guarda las fotos de productos en el volumen product_photos (NF-08)
+Cualquier equipo (caja, teléfonos)            Equipo con Tailscale (cambio, emergencia)
+   │  https://admin.<dominio>                    │  https://akhana.<red>.ts.net
+   ▼                                             ▼
+Cloudflare (TLS, filtra ataques)          VPS · tailscale serve :443
+   │  túnel abierto desde el VPS                 │
+   ▼                                             ▼
+VPS · docker compose (red interna)        127.0.0.1:8081
+   ├─ tunnel: cloudflared ──► web:80 (entrada pública)  ◄─┘ web:8080 (entrada local)
+   ├─ web: nginx — Angular compilado + /api ──► api:8080
+   ├─ api: Spring Boot (Java 21)
+   └─ db: PostgreSQL 17 (volumen, sin puerto publicado)
+   api guarda las fotos de productos en el volumen product_photos (NF-08)
+
+Mac de Joaquín (Tailscale) ──► SSH al VPS (solo por Tailscale; el 22 está cerrado a internet)
 ```
 
-Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `web` publica en `127.0.0.1:8081`.
+Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `web` publica su entrada local en
+`127.0.0.1:8081`. El puerto 80 de `web` solo lo alcanza `cloudflared` desde la red de Docker.
 
 ## NF-05 · VPS
 
@@ -73,36 +83,78 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 - **Entonces** no hay ningún puerto abierto que responda.
 
 - **Cuando** un empleado deja la tienda
-- **Entonces** se quita su equipo del panel de Tailscale y se desactiva su usuario en la app (USR); sin ambos pasos no
-  se da por cerrado.
+- **Entonces** se desactiva su usuario en la app (USR-03): pierde el acceso al instante. Si tenía un equipo en
+  Tailscale (antes del 067), también se lo quita del panel.
 
 ## NF-02 · HTTPS con proxy inverso
 
-- **Cuando** se activan MagicDNS y HTTPS en el panel de Tailscale y se corre
-  `tailscale serve --bg --https=443 http://127.0.0.1:8081`
-- **Entonces** `https://akhana.<red>.ts.net` responde con un certificado válido (renovado por Tailscale) y muestra el
-  login.
+nginx tiene dos entradas que sirven la misma app (`deploy/nginx-app.conf`) y solo difieren en de dónde toman la IP del
+cliente (`deploy/nginx.conf`):
+
+| Entrada | Quién llega | IP del cliente |
+| --- | --- | --- |
+| Pública, `web:80` | Solo `cloudflared`, por la red de Docker (el puerto no se publica) | `CF-Connecting-IP`, que pone Cloudflare |
+| Local, `127.0.0.1:8081` → `web:8080` | `tailscale serve` en el VPS y la Mac | La última de `X-Forwarded-For` (la que agregó `tailscale serve`) |
+
+- **Cuando** `CLOUDFLARE_TUNNEL_TOKEN` y `COMPOSE_PROFILES=tunnel` están en `/opt/akhana/.env` y se despliega
+- **Entonces** el servicio `tunnel` (cloudflared 2026.10.7) abre el túnel hacia Cloudflare y `https://admin.<dominio>`
+  muestra el login con el certificado de Cloudflare. Sin el perfil no hay entrada pública y lo demás funciona igual.
+
+- **Cuando** se corre `tailscale serve --bg --https=443 http://127.0.0.1:8081`
+- **Entonces** `https://akhana.<red>.ts.net` sigue respondiendo desde los equipos de Tailscale (el cambio al dominio y las
+  emergencias). `tailscale serve reset` la apaga.
 
 - **Cuando** el navegador pide una ruta de la app (`/pos`, `/caja`) o recarga la página en ella
 - **Entonces** nginx devuelve `index.html` (rutas de Angular) y los archivos con hash se cachean; `index.html` no.
   Tampoco se cachean `sw.js`, `manifest.webmanifest` ni `icons/` de la app instalada (`mobile.md`).
 
 - **Cuando** el navegador llama a `/api/...`
-- **Entonces** nginx lo pasa al backend en la misma URL (sin CORS), con `X-Forwarded-For` y `X-Forwarded-Proto`, y
-  acepta archivos de hasta 21 MB (importación y migración, FIN-11).
+- **Entonces** nginx lo pasa al backend en la misma URL (sin CORS), con `X-Forwarded-For` (la IP real de esa entrada) y
+  `X-Forwarded-Proto`, y acepta archivos de hasta 21 MB (importación y migración, FIN-11).
 
-- **Cuando** fallan 20 intentos de login desde un equipo (T-19)
-- **Entonces** el bloqueo por IP cae sobre la IP de Tailscale de ese equipo y no sobre la de nginx: nginx toma como
-  cliente la última dirección que agregó `tailscale serve` a `X-Forwarded-For` (lo que escriba el navegador antes se
-  ignora) y el backend corre con `FORWARD_HEADERS_STRATEGY=native`. Se verifica en el VPS que otro equipo de la
-  tienda sigue pudiendo entrar.
+- **Cuando** fallan 5 intentos de login de un usuario desde un equipo (USR-07, T-19)
+- **Entonces** el bloqueo cae sobre la IP real de ese equipo y no sobre la de nginx ni la de Cloudflare; lo que escriba el
+  navegador en esos encabezados no cambia la IP, y el backend corre con `FORWARD_HEADERS_STRATEGY=native`.
 
-- **Cuando** se responde cualquier página
-- **Entonces** lleva `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` y
-  `Referrer-Policy: same-origin`.
+- **Cuando** llegan más de 10 pedidos por minuto (con ráfaga de 10) desde una IP a `/api/auth/login` o a
+  `/api/auth/login/second-factor`
+- **Entonces** nginx responde 429 con «Demasiados intentos seguidos. Espere un minuto e intente nuevamente.», en JSON, sin
+  llegar al backend. Las demás rutas no tienen ese límite.
+
+- **Cuando** se responde cualquier página, por cualquiera de las dos entradas
+- **Entonces** lleva `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: same-origin` y una `Content-Security-Policy` que solo admite el propio sitio y Google Fonts (`data:` y
+  `blob:` para el QR del 2FA y las fotos). El build de Angular no incrusta el CSS crítico, cuyo `onload` la política
+  bloquearía, y la página sin conexión reintenta con un enlace (`mobile.md`).
 
 - **Cuando** se cambia `JWT_EXPIRATION` en `/opt/akhana/.env` y se reinicia el backend
 - **Entonces** los tokens nuevos duran lo configurado (expiración de sesión configurable; 12 h por defecto, USR-07).
+
+## Paso a internet (067)
+
+Orden, para que nadie se quede sin sistema y ningún administrador quede sin 2FA con la dirección pública abierta:
+
+1. Publicar la versión con el 067 (tag, NF-06). La migración `V34` termina todas las sesiones: conviene antes de abrir.
+2. Por la dirección de Tailscale, cada administrador ingresa y activa su 2FA con el QR, y todos cambian la contraseña
+   (USR-08). La tienda sigue trabajando por esa dirección.
+3. Joaquín compra el dominio (Cloudflare Registrar, ~US$ 11 al año en `.com`) o, si lo compra en otro lado, lo pone con
+   los servidores de nombres de Cloudflare. La cuenta de Cloudflare lleva 2FA.
+4. En Cloudflare, Zero Trust → Networks → Tunnels: crear el túnel `akhana`, copiar su token y agregar el hostname público
+   `admin.<dominio>` → servicio `http://web:80`. En el dominio: «Always Use HTTPS» encendido; Rocket Loader apagado.
+5. Como root en el VPS (Joaquín): agregar a `/opt/akhana/.env` `CLOUDFLARE_TUNNEL_TOKEN=<token>` y
+   `COMPOSE_PROFILES=tunnel`, y correr `deploy/deploy.sh --ref production` para levantar el túnel.
+6. Comprobar `https://admin.<dominio>` (login, 2FA, una venta) y medir la velocidad desde la tienda.
+7. La PC de caja abre `admin.<dominio>`; cada teléfono reinstala la app desde esa dirección (`mobile.md`).
+8. Unos días después, como root: `tailscale serve reset`, y en el panel de Tailscale quitar los equipos de la tienda.
+   Quedan el VPS y la Mac de Joaquín, para SSH.
+
+Si Cloudflare se cae, la app no abre por el dominio: como root, `tailscale serve --bg --https=443 http://127.0.0.1:8081`
+vuelve a abrir la dirección `.ts.net` para los equipos que sigan en Tailscale.
+
+Si no queda ningún administrador que pueda quitarle el 2FA a otro (USR-08), Joaquín, como root:
+
+    docker compose -p akhana exec -T db psql -U akhana -d akhana -c \
+      "UPDATE app_users SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = NULL WHERE username = '<usuario>';"
 
 ## Variables de entorno
 
@@ -124,7 +176,9 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 | `BACKUP_REMOTE` | Remoto cifrado de rclone, p. ej. `akhana-crypt:` |
 | `BACKUP_KEEP_LOCAL_DAYS`, `BACKUP_KEEP_REMOTE_DAYS` | `7` y `60` |
 | `HEALTHCHECK_BACKUP_URL`, `HEALTHCHECK_RESTORE_URL`, `HEALTHCHECK_DEPLOY_URL` | URLs de aviso de healthchecks.io (D-3, NF-06) |
-| `WEB_PORT` | `8081` (nginx en `127.0.0.1`) |
+| `WEB_PORT` | `8081` (entrada local de nginx en `127.0.0.1`) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Token del túnel de Cloudflare («Paso a internet»); vacío, sin entrada pública |
+| `COMPOSE_PROFILES` | `tunnel` cuando el token está puesto; vacío, `cloudflared` no corre |
 
 - **Cuando** falta una variable obligatoria
 - **Entonces** el backend no arranca y el log dice cuál falta (T-03); `docker compose` tampoco levanta si falta
@@ -168,7 +222,7 @@ Ningún contenedor publica puertos en `0.0.0.0` (Docker se salta `ufw`); solo `w
 
 - **Cuando** se quiere probar el compose de producción en la Mac
 - **Entonces** `docker compose -f deploy/docker-compose.prod.yml --env-file .env up` levanta todo en
-  `http://localhost:8081`, sin Tailscale.
+  `http://localhost:8081` (la entrada local), sin Tailscale ni túnel.
 
 ## NF-06 · Despliegue continuo
 
@@ -368,7 +422,7 @@ En el VPS (con el dueño), en este orden:
 - [x] Crear los dos chequeos en healthchecks.io (diario con 2 h de gracia; semanal con 1 día).
 - [x] Completar `/opt/akhana/.env` (guardar copia en el gestor) y correr `deploy.sh`.
 - [x] `tailscale serve --bg --https=443 http://127.0.0.1:8081`; entrar con HTTPS y cambiar la contraseña del admin.
-- [ ] Instalar Tailscale en la PC de caja y el celular y entrar con HTTPS desde ellos.
+- [x] ~~Instalar Tailscale en la PC de caja y el celular~~: reemplazado por el paso a internet (067).
 - [x] Desde una sesión por Tailscale: `setup-server.sh --lock`; comprobar desde fuera de la red que la IP pública no
   responde en ningún puerto.
 - [x] Prueba de restauración en el VPS y en la Mac (arriba); anotar en «Validación».
@@ -389,6 +443,12 @@ Despliegue continuo (NF-06):
 - [x] Primer despliegue real con el tag `v1.0.1` (ver «Validación»).
 - [x] Chequeo `akhana-deploy` en healthchecks.io (2 min, 30 de gracia) y `HEALTHCHECK_DEPLOY_URL` en `/opt/akhana/.env`;
   el primer aviso llegó en verde.
+
+Paso a internet (067, rama `feat/public-access`):
+
+- [x] Servicio `tunnel` con perfil, dos entradas de nginx, límite de ritmo en el login, CSP y `.env.production.example`.
+- [x] Probar en la Mac con el compose de producción (ver «Validación»).
+- [ ] «Paso a internet», pasos 1 a 8, con Joaquín.
 
 ## Validación
 

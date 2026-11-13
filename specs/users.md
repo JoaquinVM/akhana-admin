@@ -229,19 +229,23 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 - **THEN** el backend responde 400 con el motivo y la contraseña no cambia
 
 ### Requirement: Límite de intentos de login (USR-07, T-19)
-El sistema SHALL contar los intentos fallidos de login por nombre de usuario (sin distinguir mayúsculas ni espacios) y por IP de la conexión, y SHALL rechazar nuevos intentos durante un bloqueo cuando se supera el límite dentro de la ventana. Valores por defecto: 5 fallos por usuario o 20 por IP en 15 minutos, bloqueo de 15 minutos, configurables en `application.properties` (`security.login.*`). El contador vive en memoria (un solo servidor).
+El sistema SHALL contar los intentos fallidos de login por nombre de usuario (sin distinguir mayúsculas ni espacios) desde cada IP y por IP de la conexión, y SHALL rechazar nuevos intentos durante un bloqueo cuando se supera el límite dentro de la ventana. Valores por defecto: 5 fallos de un usuario desde una IP o 20 de una IP en 15 minutos, bloqueo de 15 minutos, configurables en `application.properties` (`security.login.*`). El contador vive en memoria (un solo servidor). Desde que Admin está en internet (067, `deploy.md`) un usuario nunca se bloquea para todas las IP: si no, cualquiera que adivine su nombre lo dejaría afuera.
 
 #### Scenario: Bloqueo tras N fallos
-- **WHEN** un usuario acumula 5 fallos dentro de 15 minutos
-- **THEN** el quinto fallo y todo intento siguiente, incluso con la contraseña correcta, responden 429 `Too Many Requests` con "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente." y no se valida la contraseña ni se genera token
+- **WHEN** un usuario acumula 5 fallos desde una IP dentro de 15 minutos
+- **THEN** el quinto fallo y todo intento siguiente desde esa IP, incluso con la contraseña correcta, responden 429 `Too Many Requests` con "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente." y no se valida la contraseña ni se genera token
+
+#### Scenario: El mismo usuario desde otra IP
+- **WHEN** un usuario está bloqueado desde una IP
+- **THEN** desde otra IP entra con normalidad, y un ingreso correcto desde esa otra IP no borra los fallos de la primera (`LoginAttemptServiceTest`)
 
 #### Scenario: Desbloqueo al pasar el tiempo
 - **WHEN** termina el bloqueo, o pasan 15 minutos desde el primer fallo sin llegar al límite
 - **THEN** el contador se olvida y el usuario puede ingresar con normalidad
 
 #### Scenario: Login exitoso reinicia el contador
-- **WHEN** un usuario con fallos previos (sin bloqueo) ingresa con la contraseña correcta
-- **THEN** su contador vuelve a cero; el contador de la IP no se reinicia
+- **WHEN** un usuario con fallos previos (sin bloqueo) ingresa con la contraseña correcta, o un administrador con su código (USR-08)
+- **THEN** su contador desde esa IP vuelve a cero; el contador de la IP no se reinicia
 
 #### Scenario: Bloqueo por IP con usuarios distintos
 - **WHEN** desde una misma IP fallan 20 intentos dentro de 15 minutos, aunque sean con usuarios distintos
@@ -253,7 +257,7 @@ El sistema SHALL contar los intentos fallidos de login por nombre de usuario (si
 
 #### Scenario: IP detrás de un proxy
 - **WHEN** el pedido trae `X-Forwarded-For` y `FORWARD_HEADERS_STRATEGY` no está en `native`
-- **THEN** se usa la IP de la conexión y el encabezado se ignora; con `native` (solo detrás del proxy del VPS) Tomcat lo acepta únicamente desde direcciones internas
+- **THEN** se usa la IP de la conexión y el encabezado se ignora; con `native` (solo detrás del proxy del VPS) Tomcat lo acepta únicamente desde direcciones internas. En el VPS, nginx pone ahí la IP real: la de Cloudflare (`CF-Connecting-IP`) en la entrada pública y la de Tailscale en la local (`deploy.md`, NF-02)
 
 #### Scenario: Mensaje en la pantalla de login
 - **WHEN** el login responde 429
@@ -263,7 +267,35 @@ El sistema SHALL contar los intentos fallidos de login por nombre de usuario (si
 - **WHEN** un usuario inicia sesión
 - **THEN** el token dura 12 h por defecto (`JWT_EXPIRATION`); al vencer, el siguiente pedido responde 401 y el frontend vuelve al login
 
+### Requirement: Segundo factor de los administradores (USR-08)
+El sistema SHALL pedir a todo administrador, después de la contraseña, un código de 6 dígitos de una app autenticadora (TOTP, RFC 6238: SHA-1, 30 segundos, un paso de tolerancia hacia cada lado). Con la contraseña sola no entrega token. El operador entra como antes, solo con la contraseña.
+
+#### Scenario: Primer ingreso de un administrador sin 2FA
+- **WHEN** un administrador sin segundo factor ingresa con la contraseña correcta
+- **THEN** recibe un desafío con el QR y la clave para la app (`setupRequired`), y ningún token; el 2FA queda activo solo cuando confirma un código válido, y entonces entra. Un código malo deja el usuario sin 2FA
+
+#### Scenario: Ingreso con el 2FA activo
+- **WHEN** un administrador con segundo factor ingresa con la contraseña correcta
+- **THEN** recibe un desafío sin QR ni clave y entra con `POST /api/auth/login/second-factor` (`challengeId`, `code`)
+
+#### Scenario: Código incorrecto, vencido o repetido
+- **WHEN** el código no corresponde, ya se usó (el mismo paso de 30 s o uno anterior) o el desafío venció (5 minutos) o ya tuvo 5 códigos malos
+- **THEN** responde 401 con "Código incorrecto." o "El ingreso venció. Vuelva a ingresar su usuario y contraseña."; cada código malo cuenta como fallo del login (USR-07), así que el quinto bloquea a ese usuario desde esa IP. La pantalla sigue en el código si es incorrecto y vuelve a la contraseña en los demás casos
+
+#### Scenario: Quitar el 2FA
+- **WHEN** un administrador pierde el teléfono y otro administrador elige «Quitar 2FA» en Usuarios
+- **THEN** se borra su clave con quién y cuándo (auditoría de la fila) y en su próximo ingreso lo activa de nuevo. Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
+
+#### Scenario: La clave no sale del servidor
+- **WHEN** se consultan los usuarios (`/api/users`) o la sesión (`/api/auth/me`), o un administrador con 2FA vuelve a ingresar
+- **THEN** solo se informa si está activo (`twoFactorEnabled`), nunca la clave; el QR se dibuja en el navegador, sin servicios externos. El acceso de solo lectura de los agentes no lee `app_users.totp_secret` (`puertas/vps-solo-lectura.sh` de Foundry)
+
+#### Scenario: Contraseñas antes de salir a internet
+- **WHEN** se aplica la migración `V34__admin_second_factor.sql`
+- **THEN** todo usuario activo debe cambiar la contraseña en su próximo ingreso y las sesiones abiertas terminan (T-19): las contraseñas se eligieron cuando solo se llegaba por Tailscale
+
 ### Tareas
+- [x] USR-08 (067): `TotpService` (RFC 6238 sin dependencias), `TwoFactorChallengeService` en memoria, `POST /api/auth/login/second-factor`, columnas `totp_secret`, `totp_enabled_at`, `totp_last_step` (`V34`), `POST /api/users/{id}/second-factor/reset`, paso del código y QR (`qrcode-generator`) en `/login`, «Quitar 2FA» en `/users`. Pruebas: `TotpServiceTest` (vectores del RFC), `AuthServiceTest`, `AuthControllerTest`, `UserServiceTest`, `EndpointAuthorizationTest`, `JwtAuthenticationIntegrationTest`, `login.component.spec.ts`, `users.component.spec.ts`.
 - [x] USR-07 / T-19: `LoginAttemptService` en memoria (usuario e IP), 429 `LoginBlockedException`, `security.login.*`, IP sin confiar en `X-Forwarded-For`, token de 12 h configurable, mensaje del backend en `/login` (25-10-2026).
 - [x] USR-06: migración `V2__user_must_change_password.sql`, `DataInitializer`, `POST /api/auth/change-password`, bloqueo en `JwtAuthenticationFilter`, pantalla `/change-password` (T-03, 25-10-2026).
 - [x] USR-05 / T-08 / T-13: roles Operador y Administrador con permisos por pantalla (`Permission`, `Role`), migración `V3__operator_administrator_roles.sql`, `@PreAuthorize` por pantalla en todos los controllers, 403 con mensaje en `GlobalExceptionHandler`, `EndpointAuthorizationTest` (matriz de todos los endpoints), selector de rol en `/users`, `PERMISSIONS` en `navigation.config.ts` (25-10-2026).

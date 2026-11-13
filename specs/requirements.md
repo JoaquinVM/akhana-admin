@@ -13,7 +13,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
-| Login y usuarios | USR-01 a USR-07 | ✅ Completo | — | `users.md` |
+| Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA de administradores (USR-08) y bloqueo por usuario y equipo (USR-07) | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
@@ -24,8 +24,8 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
-| App instalable | MOV-01 a MOV-04 | ✅ Completo | Sin publicar; probar en teléfonos reales la instalación, la zona segura del iPhone y Tailscale apagado | `mobile.md` |
-| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | `v1.0.1` en el VPS con HTTPS, respaldo a B2, restauración probada y despliegue continuo por tag (NF-06) funcionando; falta Tailscale en la PC de caja y los teléfonos | `deploy.md` |
+| App instalable | MOV-01 a MOV-04 | ✅ Completo | Probar en teléfonos reales la instalación, la zona segura del iPhone y sin conexión; reinstalarla desde el dominio al salir a internet | `mobile.md` |
+| Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | Salida a internet por Cloudflare Tunnel (NF-02) sin publicar: falta el dominio, el túnel y pasar la caja y los teléfonos a la dirección nueva | `deploy.md` |
 | Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -233,7 +233,8 @@ Detalle en `users.md`.
 - **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador, tampoco con dos bajas a la vez.
 - **USR-05** Dos roles, Operador y Administrador, con permisos por pantalla según la tabla 2.2 (P-33).
 - **USR-06** El primer administrador se crea desde variables de entorno solo si no hay usuarios y debe cambiar la contraseña en su primer ingreso. Cualquier usuario puede cambiar su contraseña indicando la actual.
-- **USR-07** El login se bloquea tras varios intentos fallidos por usuario o por IP, con un mensaje que no revela si el usuario existe (T-19).
+- **USR-07** El login se bloquea tras varios intentos fallidos de un usuario desde una IP, o de una IP con cualquier usuario, con un mensaje que no revela si el usuario existe (T-19). Un usuario bloqueado desde una IP sigue entrando desde otra.
+- **USR-08** Los administradores entran con la contraseña y un código de una app autenticadora (2FA), que activan con un QR en su primer ingreso. Si pierden el teléfono, otro administrador se lo quita, con quién y cuándo; nadie se lo quita a sí mismo. El operador entra solo con la contraseña.
 
 ### 3.10 Inventario · V2
 
@@ -283,7 +284,7 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 | T-16 | Los movimientos de la cuenta Caja exigen caja abierta y se vinculan a ella; los de una caja cerrada no se editan ni anulan. | V1 | `cash.md` |
 | T-17 | La venta falla si falta su cuenta o su categoría (RG-05). | V1 | `sales.md` |
 | T-18 | Montos con escala 2 en el servidor, motivo obligatorio en toda anulación, saldo inicial no anulable y fecha puesta por el servidor (salvo FIN-11). | V1 | `finance.md` |
-| T-19 | Límite de intentos de login por usuario e IP y token de 12 h que deja de valer al cambiar la contraseña (USR-07). | V1 | `users.md` |
+| T-19 | Límite de intentos de login por usuario desde cada IP y por IP, y token de 12 h que deja de valer al cambiar la contraseña (USR-07). | V1 | `users.md` |
 | T-04 | Saldos derivados del libro de movimientos, o caché con reporte de conciliación. | V2 | — |
 | T-09 | Auditoría con referencia al id del usuario, no solo su nombre. | V2 | — |
 | T-12 | Caja por punto de venta si hay más de uno (P-01). | V3 | — |
@@ -291,7 +292,7 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 Requerimientos no funcionales, todos para la V1:
 
 - **NF-01** Respaldo diario automático de la base, con una restauración probada antes de salir.
-- **NF-02** HTTPS obligatorio y expiración de sesión configurable.
+- **NF-02** HTTPS obligatorio y expiración de sesión configurable. Admin está en internet en un dominio propio por Cloudflare Tunnel, sin puertos abiertos en el VPS, con límite de ritmo en el login y una política de contenido (CSP) que solo admite el propio sitio y Google Fonts.
 - **NF-03** Pruebas automáticas de las reglas de dinero (ventas, anulaciones, cierres, pagos de pedidos, deudas) antes de cada despliegue.
 - **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo. Medido en local: la venta responde en 20–50 ms y el catálogo activo (590 KB, 60 KB comprimido desde la cuarta revisión) en 35–70 ms.
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
@@ -335,7 +336,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-19 | ¿El operador registra consumos, ventas al costo y otros gastos de caja? | Sí, los tres. |
 | P-20 | ¿A quién se le debe hoy? | A nadie, salvo lo vendido de Mami y no pagado (POS-13). |
 | P-21 | ¿Cómo se paga la consignación? | Queda por pagar hasta que se registre el pago. |
-| P-22 | ¿Dónde se aloja el sistema? | En un VPS Contabo (US East) con Ubuntu, accesible solo por Tailscale (HTTPS `.ts.net`), con respaldo diario cifrado en Backblaze B2 (`deploy.md`). |
+| P-22 | ¿Dónde se aloja el sistema? | En un VPS Contabo (US East) con Ubuntu, publicado en internet en un dominio propio por Cloudflare Tunnel (sin puertos abiertos; el dominio cuesta unos US$ 11 al año); Tailscale queda solo para entrar al servidor por SSH. Respaldo diario cifrado en Backblaze B2 (`deploy.md`). |
 | P-23 | ¿Se migran ventas históricas? | Sí, todas (FIN-11). |
 | P-24 | ¿Cómo se trata el envío de un pedido? | Gasto de Transporte aparte, vinculado a su pedido. |
 | P-25 | ¿El operador puede crear productos? | Sí. |
@@ -399,7 +400,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
 - [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
-- [ ] Instalar Tailscale en la PC de caja y en los teléfonos que usarán la app (`deploy.md`, `mobile.md`).
+- [ ] Salir a internet (NF-02, `deploy.md` «Paso a internet»): publicada la versión, cada administrador activa su 2FA y todos cambian la contraseña por la dirección de Tailscale; Joaquín compra el dominio, crea el túnel y pone el token; la caja y los teléfonos pasan a `admin.<dominio>`; Joaquín apaga `tailscale serve` y saca de Tailscale los equipos de la tienda.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
 

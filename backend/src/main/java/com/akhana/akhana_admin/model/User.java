@@ -47,6 +47,17 @@ public class User {
     @Column(name = "password_changed_at")
     private Instant passwordChangedAt;
 
+    // Second factor of administrators (USR-08): Base32 secret of the authenticator app, null while not active
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+
+    @Column(name = "totp_enabled_at")
+    private Instant totpEnabledAt;
+
+    // Last accepted time step: a code is never accepted twice
+    @Column(name = "totp_last_step")
+    private Long totpLastStep;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

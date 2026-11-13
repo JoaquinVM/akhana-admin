@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.JwtService;
+import com.akhana.akhana_admin.service.impl.TotpServiceImpl;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,16 +63,40 @@ class JwtAuthenticationIntegrationTest {
             .build());
     }
 
+    /** Logs in; an administrator also goes through the second factor (USR-08), activating it the first time. */
     private String login(String username, String password, boolean expectedMustChange) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        String body = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(username, password)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.token").isString())
             .andExpect(jsonPath("$.username").value(username))
-            .andExpect(jsonPath("$.mustChangePassword").value(expectedMustChange))
-            .andReturn();
-        return JsonPath.read(result.getResponse().getContentAsString(), "$.token");
+            .andReturn().getResponse().getContentAsString();
+        Map<String, Object> twoFactor = JsonPath.read(body, "$.twoFactor");
+        if (twoFactor != null) {
+            assertThat((String) JsonPath.read(body, "$.token")).isNull();
+            String secret = (String) twoFactor.get("secret");
+            body = mockMvc.perform(post("/api/auth/login/second-factor")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"challengeId\":\"%s\",\"code\":\"%s\"}"
+                        .formatted(twoFactor.get("challengeId"), nextCode(username, secret))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        }
+        assertThat((Boolean) JsonPath.read(body, "$.mustChangePassword")).isEqualTo(expectedMustChange);
+        String token = JsonPath.read(body, "$.token");
+        assertThat(token).isNotBlank();
+        return token;
+    }
+
+    /** The code of the authenticator app: the current step, or the next one if this step was already used. */
+    private String nextCode(String username, String activationSecret) {
+        User user = userRepository.findByUsername(username).orElseThrow();
+        String secret = activationSecret != null ? activationSecret : user.getTotpSecret();
+        long step = Instant.now().getEpochSecond() / 30;
+        if (user.getTotpLastStep() != null && user.getTotpLastStep() >= step) {
+            step = user.getTotpLastStep() + 1;
+        }
+        return TotpServiceImpl.code(TotpServiceImpl.base32Decode(secret), step);
     }
 
     @Test
@@ -168,5 +195,39 @@ class JwtAuthenticationIntegrationTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error").value("Unauthorized"))
             .andExpect(jsonPath("$.message").value("La sesión no es válida o venció; vuelva a iniciar sesión."));
+    }
+
+    @Test
+    @DisplayName("End-to-End: the second factor secret is sent only while activating it (USR-08)")
+    void secondFactorSecret_IsNeverSentAgain() throws Exception {
+        User admin = createUser(Role.ADMINISTRATOR, false);
+        String token = login(admin.getUsername(), PASSWORD, false);
+        String secret = userRepository.findByUsername(admin.getUsername()).orElseThrow().getTotpSecret();
+        assertThat(secret).matches("[A-Z2-7]{32}");
+
+        String users = mockMvc.perform(get("/api/users").param("search", admin.getUsername())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String user = mockMvc.perform(get("/api/users/" + admin.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.twoFactorEnabled").value(true))
+            .andReturn().getResponse().getContentAsString();
+        String me = mockMvc.perform(get("/api/auth/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String nextLogin = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(admin.getUsername(), PASSWORD)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.twoFactor.setupRequired").value(false))
+            .andReturn().getResponse().getContentAsString();
+
+        assertThat(users).contains("\"twoFactorEnabled\":true").doesNotContain(secret);
+        assertThat(user).doesNotContain(secret);
+        assertThat(me).doesNotContain(secret);
+        assertThat(nextLogin).doesNotContain(secret).doesNotContain("otpauth://");
     }
 }

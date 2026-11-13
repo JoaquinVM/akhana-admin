@@ -425,3 +425,68 @@
     font-size: 1.45rem;
   }
 }
+
+/* Second factor of administrators (USR-08) */
+.step-intro {
+  text-align: center;
+}
+
+.step-title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2e5b27;
+}
+
+.step-text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #5b6e57;
+  text-align: center;
+}
+
+.qr-image {
+  display: block;
+  margin: 0 auto;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(46, 91, 39, 0.15);
+}
+
+.secret-key {
+  display: block;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(46, 91, 39, 0.05);
+  border: 1px dashed rgba(46, 91, 39, 0.25);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: #2e5b27;
+  text-align: center;
+  word-break: break-all;
+  user-select: all;
+}
+
+.link-button {
+  align-self: center;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2e5b27;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+

@@ -133,6 +133,32 @@ public class UserServiceImpl implements UserService {
         log.info("User '{}' logically deleted by '{}'", user.getUsername(), currentUsername);
     }
 
+    @Override
+    @Transactional
+    public UserResponse resetSecondFactor(UUID id, String currentUsername) {
+        User user = userRepository.findById(id)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
+
+        // Like the user's own removal (USR-04): whoever holds a stolen session cannot drop the second factor
+        if (user.getUsername().equalsIgnoreCase(currentUsername)) {
+            throw new IllegalArgumentException("No puede quitar su propio segundo factor. Pídaselo a otro administrador.");
+        }
+        if (user.getTotpSecret() == null) {
+            throw new IllegalArgumentException("Este usuario no tiene el segundo factor activo.");
+        }
+
+        user.setTotpSecret(null);
+        user.setTotpEnabledAt(null);
+        user.setTotpLastStep(null);
+        user.setUpdatedAt(Instant.now());
+        user.setUpdatedBy(currentUsername);
+
+        User updated = userRepository.save(user);
+        log.info("Second factor of user '{}' removed by '{}'", updated.getUsername(), currentUsername);
+        return mapToResponse(updated);
+    }
+
     private void ensureNotLastAdministrator(String message) {
         if (userRepository.findActiveByRoleForUpdate(Role.ADMINISTRATOR).size() <= 1) {
             throw new IllegalStateException(message);
@@ -152,7 +178,8 @@ public class UserServiceImpl implements UserService {
                 user.getUpdatedAt(),
                 user.getUpdatedBy(),
                 user.getDeletedAt(),
-                user.getDeletedBy()
+                user.getDeletedBy(),
+                user.getTotpSecret() != null
         );
     }
 }

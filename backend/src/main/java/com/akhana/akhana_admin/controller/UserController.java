@@ -84,6 +84,15 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/second-factor/reset")
+    public ResponseEntity<UserResponse> resetSecondFactor(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        String currentUsername = extractUsername(authentication);
+        return ResponseEntity.ok(userService.resetSecondFactor(id, currentUsername));
+    }
+
     private String extractUsername(Authentication authentication) {
         if (authentication == null) {
             return "system";

@@ -94,7 +94,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "User Name", "username", Role.ADMINISTRATOR, true,
                 Role.ADMINISTRATOR.permissionKeys(),
-                Instant.now(), "system", null, null, null, null
+                Instant.now(), "system", null, null, null, null, false
         );
         when(userService.getUsers(any(), any())).thenReturn(new PageImpl<>(List.of(response)));
 
@@ -120,7 +120,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "Carlos Perez", "cperez", Role.OPERATOR, true,
                 Role.OPERATOR.permissionKeys(),
-                Instant.now(), "admin", null, null, null, null
+                Instant.now(), "admin", null, null, null, null, false
         );
 
         when(userService.createUser(any(CreateUserRequest.class), eq("admin"))).thenReturn(response);
@@ -149,7 +149,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "Carlos Perez Modificado", "cperez", Role.OPERATOR, true,
                 Role.OPERATOR.permissionKeys(),
-                Instant.now().minusSeconds(100), "admin", Instant.now(), "admin", null, null
+                Instant.now().minusSeconds(100), "admin", Instant.now(), "admin", null, null, false
         );
 
         when(userService.updateUser(eq(sampleUserId), any(UpdateUserRequest.class), eq("admin"))).thenReturn(response);
