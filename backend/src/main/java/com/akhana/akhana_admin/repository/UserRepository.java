@@ -7,10 +7,12 @@ import org.springframework.data.domain.Pageable;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,4 +40,19 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.role = :role AND u.active = true AND u.deletedAt IS NULL ORDER BY u.id")
     List<User> findActiveByRoleForUpdate(@Param("role") Role role);
+
+    // Second factor of a login (USR-08). Queries and not save(): a login is not an edit of the user, so updated_at and
+    // updated_by keep the last real change (who removed the second factor, for instance).
+
+    /** Activates the second factor only if the user still has none; 0 when another login activated it first. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE User u SET u.totpSecret = :secret, u.totpEnabledAt = :enabledAt, u.totpLastStep = :step " +
+           "WHERE u.id = :id AND u.totpSecret IS NULL")
+    int activateSecondFactor(@Param("id") UUID id, @Param("secret") String secret,
+                             @Param("enabledAt") Instant enabledAt, @Param("step") long step);
+
+    /** Keeps the step of the accepted code, so it is not accepted again. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE User u SET u.totpLastStep = :step WHERE u.id = :id")
+    int recordSecondFactorStep(@Param("id") UUID id, @Param("step") long step);
 }

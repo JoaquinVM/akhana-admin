@@ -102,12 +102,13 @@ public class AuthServiceImpl implements AuthService {
 
         challengeService.remove(challenge.id());
         if (activating) {
-            user.setTotpSecret(secret);
-            user.setTotpEnabledAt(Instant.now());
+            if (userRepository.activateSecondFactor(user.getId(), secret, Instant.now(), step.getAsLong()) == 0) {
+                throw new AuthenticationFailedException(CHALLENGE_ENDED);
+            }
             log.info("User '{}' activated the second factor", user.getUsername());
+        } else {
+            userRepository.recordSecondFactorStep(user.getId(), step.getAsLong());
         }
-        user.setTotpLastStep(step.getAsLong());
-        userRepository.save(user);
 
         loginAttemptService.recordSuccess(challenge.username(), clientIp);
         return session(user);

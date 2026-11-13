@@ -284,11 +284,11 @@ El sistema SHALL pedir a todo administrador, después de la contraseña, un cód
 
 #### Scenario: Quitar el 2FA
 - **WHEN** un administrador pierde el teléfono y otro administrador elige «Quitar 2FA» en Usuarios
-- **THEN** se borra su clave con quién y cuándo (auditoría de la fila) y en su próximo ingreso lo activa de nuevo. Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
+- **THEN** se borra su clave con quién y cuándo (auditoría de la fila) y en su próximo ingreso lo activa de nuevo. Entrar con el 2FA, o activarlo, no es una edición del usuario: guarda la clave y el paso del código con una consulta propia, sin tocar `updated_by` ni `updated_at`, así que la auditoría sigue mostrando quién lo quitó y cuándo (`JwtAuthenticationIntegrationTest`, revisión del 067). Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
 
 #### Scenario: La clave no sale del servidor
 - **WHEN** se consultan los usuarios (`/api/users`) o la sesión (`/api/auth/me`), o un administrador con 2FA vuelve a ingresar
-- **THEN** solo se informa si está activo (`twoFactorEnabled`), nunca la clave; el QR se dibuja en el navegador, sin servicios externos. El acceso de solo lectura de los agentes no lee `app_users.totp_secret` (`puertas/vps-solo-lectura.sh` de Foundry)
+- **THEN** `/api/users` informa solo si está activo (`twoFactorEnabled`) y ninguna de esas respuestas trae la clave; el QR se dibuja en el navegador, sin servicios externos. El acceso de solo lectura de los agentes no lee `app_users.totp_secret` (`puertas/vps-solo-lectura.sh` de Foundry)
 
 #### Scenario: Contraseñas antes de salir a internet
 - **WHEN** se aplica la migración `V34__admin_second_factor.sql`

@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -49,6 +50,9 @@ class JwtAuthenticationIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private User createUser(Role role, boolean mustChangePassword) {
         String username = "it_" + role.name().toLowerCase() + "_" + UUID.randomUUID().toString().substring(0, 8);
@@ -230,4 +234,22 @@ class JwtAuthenticationIntegrationTest {
         assertThat(me).doesNotContain(secret);
         assertThat(nextLogin).doesNotContain(secret).doesNotContain("otpauth://");
     }
+
+    @Test
+    @DisplayName("End-to-End: logging in with the second factor is not an edit, the user audit keeps the last change")
+    void secondFactorLogin_KeepsTheUserAudit() throws Exception {
+        User admin = createUser(Role.ADMINISTRATOR, false);
+        String audit = "SELECT coalesce(updated_by, '-') || ' ' || updated_at FROM app_users WHERE id = ?";
+        String before = jdbcTemplate.queryForObject(audit, String.class, admin.getId());
+
+        login(admin.getUsername(), PASSWORD, false);
+        login(admin.getUsername(), PASSWORD, false);
+
+        User stored = userRepository.findByUsername(admin.getUsername()).orElseThrow();
+        assertThat(stored.getTotpSecret()).isNotNull();
+        assertThat(stored.getTotpEnabledAt()).isNotNull();
+        assertThat(stored.getTotpLastStep()).isNotNull();
+        assertThat(jdbcTemplate.queryForObject(audit, String.class, admin.getId())).isEqualTo(before);
+    }
 }
+

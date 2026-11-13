@@ -376,21 +376,52 @@ class AuthServiceTest {
         when(jwtService.generateToken(administrator)).thenReturn("admin-token");
         LoginResponse challenge = adminPasswordStep(IP);
         String secret = challenge.twoFactor().secret();
+        long step = Math.floorDiv(clock.instant().getEpochSecond(), 30);
 
         assertThatThrownBy(() -> secondFactor(challenge, "000000"))
             .isInstanceOf(AuthenticationFailedException.class)
             .hasMessage("Código incorrecto.");
-        assertThat(administrator.getTotpSecret()).isNull();
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).activateSecondFactor(any(), any(), any(), anyLong());
 
+        when(userRepository.activateSecondFactor(eq(administrator.getId()), eq(secret), any(Instant.class), eq(step)))
+            .thenReturn(1);
         LoginResponse session = secondFactor(challenge, codeNow(secret, 0));
 
         assertThat(session.token()).isEqualTo("admin-token");
         assertThat(session.role()).isEqualTo(Role.ADMINISTRATOR);
-        assertThat(administrator.getTotpSecret()).isEqualTo(secret);
-        assertThat(administrator.getTotpEnabledAt()).isNotNull();
-        assertThat(administrator.getTotpLastStep()).isEqualTo(Math.floorDiv(clock.instant().getEpochSecond(), 30));
-        verify(userRepository).save(administrator);
+        verify(userRepository).activateSecondFactor(eq(administrator.getId()), eq(secret), any(Instant.class), eq(step));
+    }
+
+    @Test
+    @DisplayName("Entrar con el 2FA no es una edición del usuario: la auditoría queda como estaba")
+    void administrator_SecondFactorLogin_KeepsTheAudit() {
+        Instant removedAt = Instant.parse("2026-11-13T16:35:13Z");
+        administrator.setUpdatedBy("otra-admin");
+        administrator.setUpdatedAt(removedAt);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(userRepository.activateSecondFactor(eq(administrator.getId()), anyString(), any(Instant.class), anyLong()))
+            .thenReturn(1);
+
+        LoginResponse challenge = adminPasswordStep(IP);
+        secondFactor(challenge, codeNow(challenge.twoFactor().secret(), 0));
+
+        assertThat(administrator.getUpdatedBy()).isEqualTo("otra-admin");
+        assertThat(administrator.getUpdatedAt()).isEqualTo(removedAt);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Si otro ingreso activó el 2FA primero, este no lo pisa y hay que volver a ingresar")
+    void administrator_ActivationAlreadyDoneElsewhere_EndsChallenge() {
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(userRepository.activateSecondFactor(eq(administrator.getId()), anyString(), any(Instant.class), anyLong()))
+            .thenReturn(0);
+        LoginResponse challenge = adminPasswordStep(IP);
+
+        assertThatThrownBy(() -> secondFactor(challenge, codeNow(challenge.twoFactor().secret(), 0)))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+        verifyNoInteractions(jwtService);
     }
 
     @Test
@@ -400,6 +431,11 @@ class AuthServiceTest {
         administrator.setTotpSecret(secret);
         when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
         when(jwtService.generateToken(administrator)).thenReturn("admin-token");
+        // What the database keeps: the step of the accepted code
+        when(userRepository.recordSecondFactorStep(eq(administrator.getId()), anyLong())).thenAnswer(invocation -> {
+            administrator.setTotpLastStep(invocation.getArgument(1));
+            return 1;
+        });
 
         LoginResponse challenge = adminPasswordStep(IP);
         assertThat(challenge.twoFactor().setupRequired()).isFalse();
