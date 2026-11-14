@@ -26,6 +26,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Migración | CAT-06, FIN-11 | ✅ Completo | Corrida en producción con corte 27-10 y 0 rechazadas; falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Probar en teléfonos reales la instalación, la zona segura del iPhone y sin conexión; reinstalarla desde el dominio al salir a internet | `mobile.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | Salida a internet por Cloudflare Tunnel (NF-02) sin publicar: falta el dominio, el túnel y pasar la caja y los teléfonos a la dirección nueva | `deploy.md` |
+| Integraciones | INT-01 | ✅ Completo | Sin publicar: catálogo para el bot de WhatsApp; para encenderlo, `CATALOG_API_KEY` en el `.env` del VPS y la misma clave en el bot | `integrations.md` |
 | Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -262,6 +263,12 @@ Detalle en `mobile.md`. Admin instalado en el teléfono, no un sistema aparte; s
 - **MOV-03** Si no se llega al servidor, la app instalada muestra una página propia que dice qué revisar.
 - **MOV-04** Instalar la app no cambia lo que cada usuario puede ver o hacer (USR-05, P-33), ni las sesiones (T-19).
 
+### 3.13 Integraciones · V1
+
+Detalle en `integrations.md`.
+
+- **INT-01** El bot de WhatsApp de la tienda lee el catálogo activo (nombre, código, categoría, descripción, precio de venta y precio de cada presentación) con una clave propia, sin usuario, y solo dentro del servidor. Nunca ve costos, utilidades, proveedores ni los productos especiales del POS; sin clave configurada, queda apagado.
+
 ## 4. Requerimientos técnicos y de seguridad
 
 Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; el detalle de cada uno está en la spec indicada.
@@ -398,6 +405,8 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 ### Próximos pasos
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
+
+- [ ] INT-01: publicada la versión, generar la clave (`openssl rand -hex 32`), ponerla como `CATALOG_API_KEY` en el `.env` del VPS y como `AKHANA_ADMIN_API_KEY` en el del bot, reiniciar Admin y comprobar en el bot que el catálogo se sincroniza.
 
 - [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
 - [ ] Salir a internet (NF-02, `deploy.md` «Paso a internet»): publicada la versión, cada administrador activa su 2FA y todos cambian la contraseña por la dirección de Tailscale; Joaquín compra el dominio, crea el túnel y pone el token; la caja y los teléfonos pasan a `admin.<dominio>`; Joaquín apaga `tailscale serve` y saca de Tailscale los equipos de la tienda.
