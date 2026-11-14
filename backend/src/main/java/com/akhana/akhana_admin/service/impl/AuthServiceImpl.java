@@ -7,7 +7,6 @@ import com.akhana.akhana_admin.dto.TwoFactorChallengeResponse;
 import com.akhana.akhana_admin.dto.TwoFactorLoginRequest;
 import com.akhana.akhana_admin.exception.AuthenticationFailedException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
-import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.model.User;
 import com.akhana.akhana_admin.repository.UserRepository;
 import com.akhana.akhana_admin.service.AuthService;
@@ -64,14 +63,9 @@ public class AuthServiceImpl implements AuthService {
             throw failure(username, clientIp, GENERIC_AUTH_ERROR);
         }
 
-        // An administrator gets no session with the password alone (USR-08); the failures are not reset until the
-        // code is right, so they keep counting against whoever knows the password but not the code
-        if (user.getRole() == Role.ADMINISTRATOR) {
-            return secondFactorChallenge(user);
-        }
-
-        loginAttemptService.recordSuccess(username, clientIp);
-        return session(user);
+        // Nobody gets a session with the password alone (USR-08); the failures are not reset until the code is
+        // right, so they keep counting against whoever knows the password but not the code
+        return secondFactorChallenge(user);
     }
 
     @Override
@@ -84,9 +78,9 @@ public class AuthServiceImpl implements AuthService {
         loginAttemptService.checkNotBlocked(challenge.username(), clientIp);
 
         User user = userRepository.findById(challenge.userId()).orElse(null);
-        // The user was removed, lost the role or got the second factor changed while the challenge was open
+        // The user was removed or got the second factor changed while the challenge was open
         boolean activating = challenge.pendingSecret() != null;
-        if (user == null || !user.isActive() || user.getDeletedAt() != null || user.getRole() != Role.ADMINISTRATOR
+        if (user == null || !user.isActive() || user.getDeletedAt() != null
                 || activating == (user.getTotpSecret() != null)) {
             challengeService.remove(challenge.id());
             throw new AuthenticationFailedException(CHALLENGE_ENDED);
@@ -120,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
             return LoginResponse.secondFactor(user.getUsername(), "Ingrese el código de su app autenticadora.",
                 new TwoFactorChallengeResponse(challengeId, false, null, null));
         }
-        // Activation: the secret is kept only in the challenge until the administrator confirms a code with it
+        // Activation: the secret is kept only in the challenge until the user confirms a code with it
         String secret = totpService.generateSecret();
         String challengeId = challengeService.create(user.getId(), user.getUsername(), secret);
         return LoginResponse.secondFactor(user.getUsername(), "Active el segundo factor con su app autenticadora.",

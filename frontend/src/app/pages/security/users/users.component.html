@@ -291,10 +291,10 @@
             type="password"
             class="form-control"
             formControlName="password"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Mínimo 12 caracteres"
           />
           @if (createForm.get('password')?.touched && createForm.get('password')?.errors) {
-            <span class="form-error">La contraseña debe tener entre 8 y 100 caracteres.</span>
+            <span class="form-error">La contraseña debe tener entre 12 y 100 caracteres.</span>
           }
         </div>
 

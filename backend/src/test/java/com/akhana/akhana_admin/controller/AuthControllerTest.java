@@ -267,7 +267,7 @@ class AuthControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    { "currentPassword": "initial-pass", "newPassword": "new-strong-pass" }
+                    { "currentPassword": "initial-pass", "newPassword": "twelve-chars" }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.token").value("new.token"));
@@ -276,18 +276,19 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/change-password - Retorna 400 si la nueva contraseña es demasiado corta")
+    @DisplayName("POST /api/auth/change-password - Retorna 400 si la nueva contraseña tiene menos de 12 caracteres (069)")
     void changePassword_TooShort_BadRequest() throws Exception {
         authenticate("valid.token", true);
 
+        // 11 characters; the 12 of "twelve-chars" pass (changePassword_Success)
         mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    { "currentPassword": "initial-pass", "newPassword": "short" }
+                    { "currentPassword": "initial-pass", "newPassword": "eleven-char" }
                     """))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 8 y 100 caracteres."));
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 100 caracteres."));
 
         verify(authService, never()).changePassword(any(), any());
     }

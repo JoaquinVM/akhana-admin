@@ -73,13 +73,14 @@ class DataInitializerTest {
     }
 
     @Test
-    @DisplayName("Sin usuarios y ADMIN_PASSWORD corta: el arranque falla")
+    @DisplayName("Sin usuarios y ADMIN_PASSWORD de menos de 12 caracteres: el arranque falla (069)")
     void run_WhenAdminPasswordTooShort_Fails() {
         when(userRepository.count()).thenReturn(0L);
 
-        assertThatThrownBy(() -> initializer("admin", "short").run())
+        // 11 characters; the 12 of "initial-pass" are enough (first test)
+        assertThatThrownBy(() -> initializer("admin", "eleven-char").run())
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("at least 8 characters");
+            .hasMessageContaining("at least 12 characters");
 
         verify(userRepository, never()).save(any());
     }

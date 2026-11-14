@@ -13,7 +13,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
-| Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA de administradores (USR-08) y bloqueo por usuario y equipo (USR-07) | `users.md` |
+| Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA para todos los usuarios (USR-08) y contraseñas de 12 caracteres (USR-01) | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
@@ -227,14 +227,14 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 
 Detalle en `users.md`.
 
-- **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña de 8 a 100 caracteres, distinta del nombre de usuario, con hash BCrypt.
+- **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña nueva de 12 a 100 caracteres, distinta del nombre de usuario, con hash BCrypt; las guardadas antes siguen sirviendo.
 - **USR-02** Permisos controlados en el frontend (menú, rutas) y en el backend (cada endpoint).
 - **USR-03** Un usuario dado de baja pierde el acceso de inmediato, aunque tenga una sesión abierta.
 - **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador, tampoco con dos bajas a la vez.
 - **USR-05** Dos roles, Operador y Administrador, con permisos por pantalla según la tabla 2.2 (P-33).
 - **USR-06** El primer administrador se crea desde variables de entorno solo si no hay usuarios y debe cambiar la contraseña en su primer ingreso. Cualquier usuario puede cambiar su contraseña indicando la actual.
 - **USR-07** El login se bloquea tras varios intentos fallidos de un usuario desde una IP, o de una IP con cualquier usuario, con un mensaje que no revela si el usuario existe (T-19). Un usuario bloqueado desde una IP sigue entrando desde otra.
-- **USR-08** Los administradores entran con la contraseña y un código de una app autenticadora (2FA), que activan con un QR en su primer ingreso. Si pierden el teléfono, otro administrador se lo quita, con quién y cuándo; nadie se lo quita a sí mismo. El operador entra solo con la contraseña.
+- **USR-08** Todo usuario, operador o administrador, entra con la contraseña y un código de una app autenticadora (2FA), que activa con un QR en su primer ingreso. Si pierde el teléfono, otro usuario con permiso de Usuarios se lo quita, con quién y cuándo; nadie se lo quita a sí mismo.
 
 ### 3.10 Inventario · V2
 
@@ -401,6 +401,7 @@ Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
 - [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
 - [ ] Salir a internet (NF-02, `deploy.md` «Paso a internet»): publicada la versión, cada administrador activa su 2FA y todos cambian la contraseña por la dirección de Tailscale; Joaquín compra el dominio, crea el túnel y pone el token; la caja y los teléfonos pasan a `admin.<dominio>`; Joaquín apaga `tailscale serve` y saca de Tailscale los equipos de la tienda.
+- [ ] Al publicar el 2FA para todos (USR-08): antes de su turno, cada operador instala una app autenticadora y activa el 2FA con el QR en su primer ingreso.
 - [ ] Después de migrar: registrar el pago de `PED-H00487` (Savia Herbolarita, Bs 122) hecho por Mami (DEU-02).
 - [ ] CAJ-11: cerrar las cajas #146, #147 y #148 antes de desplegar; al día siguiente, comparar ventas por día del 28, 29 y 30/10 con el Total del día de la planilla (`cash.md`).
 

@@ -37,7 +37,7 @@
       }
 
       @if (secondFactor(); as challenge) {
-        <!-- Second factor of administrators (USR-08) -->
+        <!-- Second factor of every user (USR-08) -->
         <form [formGroup]="codeForm" (ngSubmit)="onSubmitCode()" class="login-form" novalidate>
           @if (challenge.setupRequired) {
             <div class="step-intro">

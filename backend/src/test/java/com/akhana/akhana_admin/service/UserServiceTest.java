@@ -242,6 +242,25 @@ class UserServiceTest {
     }
 
     @Test
+    void resetSecondFactor_ofAnOperator_removesItWithAudit() {
+        // 069: operators also use the second factor, and whoever has Usuarios removes it the same way
+        sampleUser.setRole(Role.OPERATOR);
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        sampleUser.setTotpEnabledAt(Instant.now());
+        sampleUser.setTotpLastStep(42L);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.resetSecondFactor(userId, "admin");
+
+        assertNull(sampleUser.getTotpSecret());
+        assertNull(sampleUser.getTotpEnabledAt());
+        assertNull(sampleUser.getTotpLastStep());
+        assertEquals("admin", sampleUser.getUpdatedBy());
+        assertFalse(response.twoFactorEnabled());
+    }
+
+    @Test
     void resetSecondFactor_ofOneself_isRejected() {
         sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
         when(userRepository.findById(userId)).thenReturn(Optional.of(sampleUser));

@@ -67,7 +67,7 @@ class JwtAuthenticationIntegrationTest {
             .build());
     }
 
-    /** Logs in; an administrator also goes through the second factor (USR-08), activating it the first time. */
+    /** Logs in with the password and the second factor (USR-08, 069), activating it the first time. */
     private String login(String username, String password, boolean expectedMustChange) throws Exception {
         String body = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -75,17 +75,17 @@ class JwtAuthenticationIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value(username))
             .andReturn().getResponse().getContentAsString();
+        // Every user, operators included: the password alone gives no token
         Map<String, Object> twoFactor = JsonPath.read(body, "$.twoFactor");
-        if (twoFactor != null) {
-            assertThat((String) JsonPath.read(body, "$.token")).isNull();
-            String secret = (String) twoFactor.get("secret");
-            body = mockMvc.perform(post("/api/auth/login/second-factor")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"challengeId\":\"%s\",\"code\":\"%s\"}"
-                        .formatted(twoFactor.get("challengeId"), nextCode(username, secret))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        }
+        assertThat(twoFactor).isNotNull();
+        assertThat((String) JsonPath.read(body, "$.token")).isNull();
+        String secret = (String) twoFactor.get("secret");
+        body = mockMvc.perform(post("/api/auth/login/second-factor")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challengeId\":\"%s\",\"code\":\"%s\"}"
+                    .formatted(twoFactor.get("challengeId"), nextCode(username, secret))))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
         assertThat((Boolean) JsonPath.read(body, "$.mustChangePassword")).isEqualTo(expectedMustChange);
         String token = JsonPath.read(body, "$.token");
         assertThat(token).isNotBlank();
@@ -124,13 +124,14 @@ class JwtAuthenticationIntegrationTest {
     }
 
     @Test
-    @DisplayName("End-to-End: Operator login gets the OPERATOR role, its permissions, and 403 on admin-only endpoints")
+    @DisplayName("End-to-End: an operator enters with the second factor and gets the OPERATOR role, its permissions, and 403 on admin-only endpoints (069)")
     void fullAuthFlow_OperatorUser() throws Exception {
         User operator = createUser(Role.OPERATOR, false);
 
         String token = login(operator.getUsername(), PASSWORD, false);
 
         assertThat(jwtService.extractRole(token)).isEqualTo("OPERATOR");
+        assertThat(userRepository.findByUsername(operator.getUsername()).orElseThrow().getTotpSecret()).isNotNull();
 
         mockMvc.perform(get("/api/auth/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -180,6 +181,28 @@ class JwtAuthenticationIntegrationTest {
             .andExpect(status().isOk());
 
         login(admin.getUsername(), "brand-new-pass", false);
+    }
+
+    @Test
+    @DisplayName("End-to-End: an operator that must change the password activates the second factor first, then changes it with 12 characters (069)")
+    void operatorFirstLogin_SecondFactorThenPasswordChange() throws Exception {
+        User operator = createUser(Role.OPERATOR, true);
+        String token = login(operator.getUsername(), PASSWORD, true);
+        assertThat(userRepository.findByUsername(operator.getUsername()).orElseThrow().getTotpSecret()).isNotNull();
+
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"%s\",\"newPassword\":\"eleven-char\"}".formatted(PASSWORD)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 100 caracteres."));
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"%s\",\"newPassword\":\"twelve-chars\"}".formatted(PASSWORD)))
+            .andExpect(status().isOk());
+
+        login(operator.getUsername(), "twelve-chars", false);
     }
 
     @Test

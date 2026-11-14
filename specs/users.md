@@ -40,8 +40,8 @@ El sistema SHALL permitir el registro de nuevos usuarios requiriendo obligatoria
 - **THEN** el sistema rechaza la solicitud e informa que el nombre de usuario ya se encuentra registrado
 
 #### Scenario: Nombre de usuario que solo cambia en mayúsculas y contraseña al crear (segunda revisión, 29-10-2026)
-- **WHEN** existe `operador_qa` (activo o dado de baja) y se crea `Operador_QA`, o la contraseña nueva tiene menos de 8 caracteres o es igual al nombre de usuario
-- **THEN** el servidor rechaza el alta: el nombre de usuario es único sin distinguir mayúsculas («El nombre de usuario 'Operador_QA' ya está registrado.», 409) y la contraseña sigue la misma regla que el cambio de contraseña (8 a 100 caracteres, distinta del nombre de usuario). El formulario pide 8 caracteres. Pruebas en `UserServiceTest`.
+- **WHEN** existe `operador_qa` (activo o dado de baja) y se crea `Operador_QA`, o la contraseña nueva tiene menos de 12 caracteres (8 hasta el 069) o es igual al nombre de usuario
+- **THEN** el servidor rechaza el alta: el nombre de usuario es único sin distinguir mayúsculas («El nombre de usuario 'Operador_QA' ya está registrado.», 409) y la contraseña sigue la misma regla que el cambio de contraseña (12 a 100 caracteres, distinta del nombre de usuario). El formulario pide 12 caracteres. Pruebas en `UserServiceTest`, `UserControllerTest` y `users.component.spec.ts`.
 
 #### Scenario: Rechazo por rol ausente
 - **WHEN** se intenta crear o editar un usuario sin indicar el rol
@@ -209,7 +209,7 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 - **THEN** crea un único usuario activo con rol Administrador y `must_change_password = true`; no crea ningún operador
 
 #### Scenario: Arranque sin usuarios y sin variables del admin
-- **WHEN** la tabla de usuarios está vacía y falta `ADMIN_USERNAME` o `ADMIN_PASSWORD`, o la contraseña tiene menos de 8 caracteres
+- **WHEN** la tabla de usuarios está vacía y falta `ADMIN_USERNAME` o `ADMIN_PASSWORD`, o la contraseña tiene menos de 12 caracteres
 - **THEN** el arranque falla con un mensaje que nombra las variables
 
 #### Scenario: Arranque con usuarios existentes
@@ -221,7 +221,7 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 - **THEN** el login responde con `mustChangePassword: true`, el frontend muestra la pantalla de cambio de contraseña y el backend responde 403 `PasswordChangeRequired` a toda llamada distinta de `/api/auth/me` y `/api/auth/change-password`
 
 #### Scenario: Cambio de contraseña válido
-- **WHEN** el usuario envía su contraseña actual correcta y una nueva de 8 a 100 caracteres, distinta de la actual y del nombre de usuario
+- **WHEN** el usuario envía su contraseña actual correcta y una nueva de 12 a 100 caracteres, distinta de la actual y del nombre de usuario
 - **THEN** se guarda el nuevo hash, se quita la marca de cambio obligatorio, se registra `updated_by` y el usuario puede usar el sistema
 
 #### Scenario: Cambio de contraseña rechazado
@@ -244,7 +244,7 @@ El sistema SHALL contar los intentos fallidos de login por nombre de usuario (si
 - **THEN** el contador se olvida y el usuario puede ingresar con normalidad
 
 #### Scenario: Login exitoso reinicia el contador
-- **WHEN** un usuario con fallos previos (sin bloqueo) ingresa con la contraseña correcta, o un administrador con su código (USR-08)
+- **WHEN** un usuario con fallos previos (sin bloqueo) ingresa con la contraseña correcta y su código (USR-08)
 - **THEN** su contador desde esa IP vuelve a cero; el contador de la IP no se reinicia
 
 #### Scenario: Bloqueo por IP con usuarios distintos
@@ -267,15 +267,15 @@ El sistema SHALL contar los intentos fallidos de login por nombre de usuario (si
 - **WHEN** un usuario inicia sesión
 - **THEN** el token dura 12 h por defecto (`JWT_EXPIRATION`); al vencer, el siguiente pedido responde 401 y el frontend vuelve al login
 
-### Requirement: Segundo factor de los administradores (USR-08)
-El sistema SHALL pedir a todo administrador, después de la contraseña, un código de 6 dígitos de una app autenticadora (TOTP, RFC 6238: SHA-1, 30 segundos, un paso de tolerancia hacia cada lado). Con la contraseña sola no entrega token. El operador entra como antes, solo con la contraseña.
+### Requirement: Segundo factor de todos los usuarios (USR-08)
+El sistema SHALL pedir a todo usuario, operador o administrador, después de la contraseña, un código de 6 dígitos de una app autenticadora (TOTP, RFC 6238: SHA-1, 30 segundos, un paso de tolerancia hacia cada lado). Con la contraseña sola no entrega token. Hasta el 069 solo lo usaban los administradores y el operador entraba solo con la contraseña.
 
-#### Scenario: Primer ingreso de un administrador sin 2FA
-- **WHEN** un administrador sin segundo factor ingresa con la contraseña correcta
+#### Scenario: Primer ingreso de un usuario sin 2FA
+- **WHEN** un usuario sin segundo factor, operador o administrador, ingresa con la contraseña correcta
 - **THEN** recibe un desafío con el QR y la clave para la app (`setupRequired`), y ningún token; el 2FA queda activo solo cuando confirma un código válido, y entonces entra. Un código malo deja el usuario sin 2FA
 
 #### Scenario: Ingreso con el 2FA activo
-- **WHEN** un administrador con segundo factor ingresa con la contraseña correcta
+- **WHEN** un usuario con segundo factor ingresa con la contraseña correcta
 - **THEN** recibe un desafío sin QR ni clave y entra con `POST /api/auth/login/second-factor` (`challengeId`, `code`)
 
 #### Scenario: Código incorrecto, vencido o repetido
@@ -283,18 +283,23 @@ El sistema SHALL pedir a todo administrador, después de la contraseña, un cód
 - **THEN** responde 401 con "Código incorrecto." o "El ingreso venció. Vuelva a ingresar su usuario y contraseña."; cada código malo cuenta como fallo del login (USR-07), así que el quinto bloquea a ese usuario desde esa IP. La pantalla sigue en el código si es incorrecto y vuelve a la contraseña en los demás casos
 
 #### Scenario: Quitar el 2FA
-- **WHEN** un administrador pierde el teléfono y otro administrador elige «Quitar 2FA» en Usuarios
+- **WHEN** un usuario, operador o administrador, pierde el teléfono y otro usuario con permiso de Usuarios elige «Quitar 2FA» en Usuarios
 - **THEN** se borra su clave con quién y cuándo (auditoría de la fila) y en su próximo ingreso lo activa de nuevo. Entrar con el 2FA, o activarlo, no es una edición del usuario: guarda la clave y el paso del código con una consulta propia, sin tocar `updated_by` ni `updated_at`, así que la auditoría sigue mostrando quién lo quitó y cuándo (`JwtAuthenticationIntegrationTest`, revisión del 067). Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
 
 #### Scenario: La clave no sale del servidor
-- **WHEN** se consultan los usuarios (`/api/users`) o la sesión (`/api/auth/me`), o un administrador con 2FA vuelve a ingresar
+- **WHEN** se consultan los usuarios (`/api/users`) o la sesión (`/api/auth/me`), o un usuario con 2FA vuelve a ingresar
 - **THEN** `/api/users` informa solo si está activo (`twoFactorEnabled`) y ninguna de esas respuestas trae la clave; el QR se dibuja en el navegador, sin servicios externos. El acceso de solo lectura de los agentes no lee `app_users.totp_secret` (`puertas/vps-solo-lectura.sh` de Foundry)
+
+#### Scenario: Primer ingreso de un operador que debe cambiar la contraseña (069)
+- **WHEN** un operador sin 2FA y con `must_change_password` ingresa con la contraseña correcta
+- **THEN** primero activa el 2FA con el QR y el código, y después el sistema le pide la contraseña nueva, de al menos 12 caracteres (`JwtAuthenticationIntegrationTest`)
 
 #### Scenario: Contraseñas antes de salir a internet
 - **WHEN** se aplica la migración `V34__admin_second_factor.sql`
 - **THEN** todo usuario activo debe cambiar la contraseña en su próximo ingreso y las sesiones abiertas terminan (T-19): las contraseñas se eligieron cuando solo se llegaba por Tailscale
 
 ### Tareas
+- [x] USR-08 y USR-01 (069): el 2FA se pide a todo usuario (`AuthServiceImpl` ya no mira el rol) y las contraseñas nuevas tienen de 12 a 100 caracteres (`CreateUserRequest`, `ChangePasswordRequest`, `DataInitializer`, formulario de `/users` y texto de `/change-password`). Pruebas: `AuthServiceTest`, `AuthControllerTest`, `UserControllerTest`, `UserServiceTest`, `DataInitializerTest`, `JwtAuthenticationIntegrationTest`, `users.component.spec.ts`.
 - [x] USR-08 (067): `TotpService` (RFC 6238 sin dependencias), `TwoFactorChallengeService` en memoria, `POST /api/auth/login/second-factor`, columnas `totp_secret`, `totp_enabled_at`, `totp_last_step` (`V34`), `POST /api/users/{id}/second-factor/reset`, paso del código y QR (`qrcode-generator`) en `/login`, «Quitar 2FA» en `/users`. Pruebas: `TotpServiceTest` (vectores del RFC), `AuthServiceTest`, `AuthControllerTest`, `UserServiceTest`, `EndpointAuthorizationTest`, `JwtAuthenticationIntegrationTest`, `login.component.spec.ts`, `users.component.spec.ts`.
 - [x] USR-07 / T-19: `LoginAttemptService` en memoria (usuario e IP), 429 `LoginBlockedException`, `security.login.*`, IP sin confiar en `X-Forwarded-For`, token de 12 h configurable, mensaje del backend en `/login` (25-10-2026).
 - [x] USR-06: migración `V2__user_must_change_password.sql`, `DataInitializer`, `POST /api/auth/change-password`, bloqueo en `JwtAuthenticationFilter`, pantalla `/change-password` (T-03, 25-10-2026).
@@ -307,7 +312,7 @@ El sistema SHALL pedir a todo administrador, después de la contraseña, un cód
 Detalle de cómo se construyó cada requerimiento, movido desde `requirements.md` el 29-10-2026 sin cambios.
 
 - **USR-05** Dos roles iniciales, Operador y Administrador, con los permisos de la tabla 2.2. Hecha el 25-10-2026: el rol se elige al crear o editar el usuario (ya no hay matriz por submenú) y agrupa permisos por pantalla definidos en código (`Permission`, `Role`; detalle en `specs/users.md`). Quien entra a una pantalla puede hacer todo en ella (P-33). El operador entra a POS, historial de ventas, historial de cajas, productos, categorías, etiquetas, proveedores y pedidos (`PURCHASES`, desde el 25-10-2026); el administrador, además, a finanzas y usuarios. No se puede quitar el rol ni dar de baja al último administrador activo.
-- **T-03** · V1 — Hallazgo: Secreto JWT por defecto y contraseña de base escritos en `application.properties`. El README ya no documenta contraseñas, pero `DataInitializer` crea en cada arranque `admin`/`12345admin` y `seller`/`12345seller` si no existen, y el vendedor recibe todos los permisos. Requerimiento: Secretos solo por variables de entorno; el primer admin se crea con contraseña obligatoria de cambiar. Hecha el 25-10-2026: `DB_PASSWORD` y `JWT_SECRET` (mín. 32 caracteres) solo vienen del entorno; si faltan, el arranque falla antes de crear beans con un mensaje que nombra cada variable (`RequiredEnvironmentValidator`). Para desarrollo, `.env.example` en la raíz: copiado a `.env` (ignorado por git) lo leen `docker compose` y el backend (`spring.config.import`); las variables reales del entorno tienen prioridad. `DataInitializer` ya no crea `admin` ni `seller`: solo si no hay ningún usuario crea el primer admin con `ADMIN_USERNAME`/`ADMIN_PASSWORD` (mín. 8 caracteres; si faltan, el arranque falla) y queda con `must_change_password` (migración `V2__user_must_change_password.sql`). Ver USR-06. Las bases de desarrollo que ya tenían `admin`/`seller` los conservan: cambiar o dar de baja esas cuentas a mano.
+- **T-03** · V1 — Hallazgo: Secreto JWT por defecto y contraseña de base escritos en `application.properties`. El README ya no documenta contraseñas, pero `DataInitializer` crea en cada arranque `admin`/`12345admin` y `seller`/`12345seller` si no existen, y el vendedor recibe todos los permisos. Requerimiento: Secretos solo por variables de entorno; el primer admin se crea con contraseña obligatoria de cambiar. Hecha el 25-10-2026: `DB_PASSWORD` y `JWT_SECRET` (mín. 32 caracteres) solo vienen del entorno; si faltan, el arranque falla antes de crear beans con un mensaje que nombra cada variable (`RequiredEnvironmentValidator`). Para desarrollo, `.env.example` en la raíz: copiado a `.env` (ignorado por git) lo leen `docker compose` y el backend (`spring.config.import`); las variables reales del entorno tienen prioridad. `DataInitializer` ya no crea `admin` ni `seller`: solo si no hay ningún usuario crea el primer admin con `ADMIN_USERNAME`/`ADMIN_PASSWORD` (mín. 12 caracteres desde el 069; si faltan, el arranque falla) y queda con `must_change_password` (migración `V2__user_must_change_password.sql`). Ver USR-06. Las bases de desarrollo que ya tenían `admin`/`seller` los conservan: cambiar o dar de baja esas cuentas a mano.
 - **T-08** · V1 — Hallazgo: Rol `ADMIN/SELLER` convive con la matriz de permisos; `UserController` acepta `hasRole('ADMIN')` como atajo. Requerimiento: Un solo modelo: roles Operador y Administrador que agrupan permisos. Hecha el 25-10-2026: `Role` (`OPERATOR`, `ADMINISTRATOR`) agrupa el enum `Permission`, con un permiso por pantalla (P-33); las autoridades de Spring son los permisos del rol y se quitó `hasRole('ADMIN')`. Migración `V3__operator_administrator_roles.sql`: `ADMIN` o quien tenía `SECURITY_USERS` pasa a Administrador, el resto a Operador, y se elimina `user_permissions`. Las bases de desarrollo con el `seller` heredado (tenía todos los permisos) lo dejan como Administrador: pasarlo a Operador o darlo de baja a mano.
 - **T-13** · V1 — Hallazgo: Solo `UserController` tiene `@PreAuthorize`. Cualquier usuario autenticado puede llamar por API a finanzas, anulación de ventas, catálogo y caja, aunque el menú se lo oculte. Requerimiento: Cada endpoint exige el permiso de la tabla 2.2 (USR-02, USR-05), con pruebas de acceso denegado para el operador. Hecha el 25-10-2026: `@PreAuthorize` en todos los controllers con el permiso de la pantalla dueña del endpoint; los endpoints que otra pantalla solo lee también aceptan esa pantalla (Productos lee proveedores, categorías y etiquetas; el POS lee productos y categorías de gasto). Un 403 responde «No tiene permiso para realizar esta acción». El POS anula gastos con `POST /api/finances/transactions/cash-expense/{id}/void`, que solo acepta gastos de caja de la caja abierta; la anulación general de movimientos sigue siendo de Finanzas. `EndpointAuthorizationTest` recorre todos los endpoints: 2xx para el administrador, 403 para el operador en finanzas y usuarios, y falla si un endpoint no tiene `@PreAuthorize` o falta en la matriz. Frontend con las mismas claves (`PERMISSIONS` en `navigation.config.ts`, rutas y `permission.guard.ts`).
 - **T-19** · V1 — Hallazgo: El login no limita intentos fallidos y el token dura 24 h. La baja de usuario sí corta el acceso al instante (el filtro consulta el usuario en cada pedido). Requerimiento: Límite de intentos de login por usuario e IP antes de exponer el VPS (NF-02, NF-05). Hecha el 25-10-2026: ver USR-07. Contador en memoria (`LoginAttemptServiceImpl`): hay un solo servidor en el VPS y perder los contadores al reiniciar solo acorta un bloqueo, así que no hace falta tabla. Por defecto 5 fallos por usuario o 20 por IP en 15 minutos bloquean 15 minutos (`security.login.*`, variables `LOGIN_MAX_ATTEMPTS_PER_USER`, `LOGIN_MAX_ATTEMPTS_PER_IP`, `LOGIN_WINDOW`, `LOGIN_LOCKOUT`); el límite por IP es mayor porque los equipos de la tienda comparten una IP pública. La IP es la de la conexión (`getRemoteAddr`); `X-Forwarded-For` se ignora salvo con `FORWARD_HEADERS_STRATEGY=native`, que se activa solo detrás del proxy inverso del VPS (Tomcat confía en el encabezado solo desde direcciones internas). El token pasa de 24 h a 12 h por defecto (`JWT_EXPIRATION`, acepta `12h` o milisegundos): cubre un turno completo sin pedir otro ingreso y vence durante la noche; al vencer, el frontend vuelve al login. Desde el 29-10-2026 cambiar la contraseña cierra las otras sesiones del usuario: `app_users.password_changed_at` (migración `V19__password_changed_at.sql`) guarda el instante del cambio, el token lleva `iatMs` (el emitido, con milisegundos) y el filtro rechaza los tokens emitidos antes del cambio (401, el frontend vuelve al login). `POST /api/auth/change-password` responde 200 con `{ token }`, el nuevo con el que sigue la sesión que cambió la contraseña, y el frontend lo guarda. Pruebas en `AuthControllerTest`, `JwtAuthenticationIntegrationTest` y `auth.service.spec.ts`.
