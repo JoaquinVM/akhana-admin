@@ -117,7 +117,7 @@ describe('UsersComponent', () => {
       component.createForm.patchValue({
         fullName: 'Nuevo usuario',
         username: 'nuevo_user',
-        password: 'password123',
+        password: 'password1234',
         confirmPassword: 'password_distinto'
       });
 
@@ -144,18 +144,34 @@ describe('UsersComponent', () => {
         role: 'ADMINISTRATOR',
         fullName: 'Nuevo usuario',
         username: 'nuevo_user',
-        password: 'password123',
-        confirmPassword: 'password123'
+        password: 'password1234',
+        confirmPassword: 'password1234'
       });
 
       component.submitCreate();
       expect(mockUserService.createUser).toHaveBeenCalledWith({
         fullName: 'Nuevo usuario',
         username: 'nuevo_user',
-        password: 'password123',
+        password: 'password1234',
         role: 'ADMINISTRATOR'
       });
       expect(component.isCreateModalOpen()).toBe(false);
+    });
+
+    it('pide una contraseña de al menos 12 caracteres (069)', () => {
+      component.openCreateModal();
+      const password = component.createForm.get('password')!;
+
+      password.setValue('password123');
+      expect(password.valid).toBe(false);
+      password.setValue('password1234');
+      expect(password.valid).toBe(true);
+
+      component.createForm.patchValue({
+        fullName: 'Nuevo usuario', username: 'nuevo_user', password: 'password123', confirmPassword: 'password123'
+      });
+      component.submitCreate();
+      expect(mockUserService.createUser).not.toHaveBeenCalled();
     });
   });
 
@@ -305,6 +321,21 @@ describe('UsersComponent', () => {
       expect(rows[1].query(By.css('.btn-second-factor'))).not.toBeNull();
       expect(rows[2].query(By.css('.second-factor-badge'))).toBeNull();
       expect(rows[2].query(By.css('.btn-second-factor'))).toBeNull();
+    });
+
+    it('ofrece quitarlo también a un operador que lo tiene activo (069)', () => {
+      const operator: User = { ...mockUsersList[1], twoFactorEnabled: true };
+      mockUserService.getUsers.mockReturnValue(of({ ...mockPageResponse, content: [own, operator], totalElements: 2 }));
+      component.loadUsers(0);
+      fixture.detectChanges();
+
+      const rows = fixture.debugElement.queryAll(By.css('.table-row'));
+      expect(rows[1].query(By.css('.second-factor-badge'))).not.toBeNull();
+      expect(rows[1].query(By.css('.btn-second-factor'))).not.toBeNull();
+
+      rows[1].query(By.css('.btn-second-factor')).nativeElement.click();
+      component.confirmResetSecondFactor();
+      expect(mockUserService.resetSecondFactor).toHaveBeenCalledWith(operator.id);
     });
 
     it('al confirmar lo quita y recarga la lista', () => {

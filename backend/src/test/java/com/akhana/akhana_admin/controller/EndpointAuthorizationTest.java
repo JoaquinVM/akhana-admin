@@ -143,7 +143,7 @@ class EndpointAuthorizationTest {
     private static final String FINANCIAL_CATEGORY = """
             {"name":"Comida","type":"GASTO","color":"#ffffff"}""";
     private static final String CREATE_USER = """
-            {"fullName":"Ana Rojas","username":"arojas","password":"password123","role":"OPERATOR"}""";
+            {"fullName":"Ana Rojas","username":"arojas","password":"password1234","role":"OPERATOR"}""";
     private static final String UPDATE_USER = """
             {"fullName":"Ana Rojas","role":"OPERATOR"}""";
     // Sent as a multipart "file" part instead of a JSON body (CAT-06)

@@ -155,7 +155,7 @@ describe('LoginComponent', () => {
     expect(TestBed.createComponent(LoginComponent).componentInstance.errorMessage()).toBeNull();
   });
 
-  describe('segundo factor de administradores (USR-08)', () => {
+  describe('segundo factor de todo usuario (USR-08)', () => {
     const SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
     const challenge = (setupRequired: boolean): LoginResponse => ({
       token: null,

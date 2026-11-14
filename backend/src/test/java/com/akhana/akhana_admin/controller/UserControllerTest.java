@@ -31,6 +31,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -129,7 +131,7 @@ class UserControllerTest {
                 {
                     "fullName": "Carlos Perez",
                     "username": "cperez",
-                    "password": "password123",
+                    "password": "password1234",
                     "role": "OPERATOR"
                 }
                 """;
@@ -189,13 +191,34 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/users con una contraseña de menos de 12 caracteres retorna 400 (069)")
+    void createUser_passwordShorterThanTwelve_returnsBadRequest() throws Exception {
+        String json = """
+                {
+                    "fullName": "Carlos Perez",
+                    "username": "cperez",
+                    "password": "password123",
+                    "role": "OPERATOR"
+                }
+                """;
+
+        mockMvc.perform(post("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("La contraseña debe tener entre 12 y 100 caracteres."));
+        verify(userService, never()).createUser(any(), any());
+    }
+
+    @Test
     @DisplayName("POST /api/users sin rol retorna 400")
     void createUser_withoutRole_returnsBadRequest() throws Exception {
         String json = """
                 {
                     "fullName": "Carlos Perez",
                     "username": "cperez",
-                    "password": "password123"
+                    "password": "password1234"
                 }
                 """;
 

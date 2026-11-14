@@ -59,7 +59,7 @@ class AuthServiceTest {
             5, 20, Duration.ofMinutes(15), Duration.ofMinutes(15), clock);
         authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, loginAttemptService,
             new TotpServiceImpl(clock), new TwoFactorChallengeServiceImpl(clock));
-        // An operator: the password alone opens the session; administrators are covered below (USR-08)
+        // An operator: like every user, it enters with the password and the second factor (USR-08, 069)
         activeUser = User.builder()
             .id(UUID.randomUUID())
             .username("admin")
@@ -76,29 +76,96 @@ class AuthServiceTest {
             .build();
     }
 
-    @Test
-    @DisplayName("Debe autenticar exitosamente cuando las credenciales son válidas y generar el JWT")
-    void login_Success() {
-        LoginRequest request = new LoginRequest("admin", "12345admin");
-        String expectedToken = "mocked.jwt.token";
+    /** The operator's password, then the code of its authenticator app: activates the second factor the first time. */
+    private LoginResponse operatorSession(String ip) {
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(userRepository.activateSecondFactor(eq(activeUser.getId()), anyString(), any(Instant.class), anyLong()))
+            .thenReturn(1);
+        LoginResponse challenge = authService.login(new LoginRequest("admin", "12345admin"), ip);
+        return authService.loginWithSecondFactor(
+            new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), codeNow(challenge.twoFactor().secret(), 0)), ip);
+    }
 
+    @Test
+    @DisplayName("Un operador con la contraseña sola recibe el QR para activar el 2FA y ningún token (069)")
+    void operator_PasswordAlone_GetsActivationAndNoToken() {
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
-        when(jwtService.generateToken(activeUser)).thenReturn(expectedToken);
 
-        LoginResponse response = authService.login(request, IP);
+        LoginResponse response = authService.login(new LoginRequest("admin", "12345admin"), IP);
 
-        assertThat(response).isNotNull();
-        assertThat(response.token()).isEqualTo(expectedToken);
-        assertThat(response.id()).isEqualTo(activeUser.getId());
-        assertThat(response.username()).isEqualTo("admin");
-        assertThat(response.role()).isEqualTo(Role.OPERATOR);
-        assertThat(response.message()).isEqualTo("Sesión iniciada.");
-        assertThat(response.twoFactor()).isNull();
+        assertThat(response.token()).isNull();
+        assertThat(response.id()).isNull();
+        assertThat(response.permissions()).isEmpty();
+        assertThat(response.twoFactor().setupRequired()).isTrue();
+        assertThat(response.twoFactor().secret()).matches("[A-Z2-7]{32}");
+        assertThat(activeUser.getTotpSecret()).isNull();
+        verifyNoInteractions(jwtService);
+    }
 
-        verify(userRepository, times(1)).findByUsername("admin");
-        verify(passwordEncoder, times(1)).matches("12345admin", activeUser.getPassword());
-        verify(jwtService, times(1)).generateToken(activeUser);
+    @Test
+    @DisplayName("Un operador activa el 2FA solo con un código válido y entonces entra con su rol (069)")
+    void operator_ActivatesWithValidCodeAndEnters() {
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(jwtService.generateToken(activeUser)).thenReturn("operator-token");
+        LoginResponse challenge = authService.login(new LoginRequest("admin", "12345admin"), IP);
+        String secret = challenge.twoFactor().secret();
+        long step = Math.floorDiv(clock.instant().getEpochSecond(), 30);
+
+        assertThatThrownBy(() -> secondFactor(challenge, "000000"))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("Código incorrecto.");
+        verify(userRepository, never()).activateSecondFactor(any(), any(), any(), anyLong());
+
+        when(userRepository.activateSecondFactor(eq(activeUser.getId()), eq(secret), any(Instant.class), eq(step)))
+            .thenReturn(1);
+        LoginResponse session = secondFactor(challenge, codeNow(secret, 0));
+
+        assertThat(session.token()).isEqualTo("operator-token");
+        assertThat(session.id()).isEqualTo(activeUser.getId());
+        assertThat(session.role()).isEqualTo(Role.OPERATOR);
+        assertThat(session.message()).isEqualTo("Sesión iniciada.");
+        assertThat(session.twoFactor()).isNull();
+        verify(userRepository).activateSecondFactor(eq(activeUser.getId()), eq(secret), any(Instant.class), eq(step));
+    }
+
+    @Test
+    @DisplayName("Un operador con el 2FA activo entra solo con el código, que no vuelve a servir (069)")
+    void operator_WithSecondFactor_EntersWithCodeOnce() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        activeUser.setTotpSecret(secret);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(jwtService.generateToken(activeUser)).thenReturn("operator-token");
+        when(userRepository.recordSecondFactorStep(eq(activeUser.getId()), anyLong())).thenAnswer(invocation -> {
+            activeUser.setTotpLastStep(invocation.getArgument(1));
+            return 1;
+        });
+
+        LoginResponse challenge = authService.login(new LoginRequest("admin", "12345admin"), IP);
+        assertThat(challenge.token()).isNull();
+        assertThat(challenge.twoFactor().setupRequired()).isFalse();
+        assertThat(challenge.twoFactor().secret()).isNull();
+
+        String code = codeNow(secret, 0);
+        assertThat(secondFactor(challenge, code).token()).isEqualTo("operator-token");
+
+        LoginResponse again = authService.login(new LoginRequest("admin", "12345admin"), IP);
+        assertThatThrownBy(() -> secondFactor(again, code))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage("Código incorrecto.");
+    }
+
+    @Test
+    @DisplayName("Una contraseña guardada antes del mínimo de 12 caracteres sigue sirviendo para entrar (069)")
+    void login_StoredShortPassword_StillEnters() {
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("ocho1234", activeUser.getPassword())).thenReturn(true);
+
+        assertThat(authService.login(new LoginRequest("admin", "ocho1234"), IP).twoFactor()).isNotNull();
     }
 
     @Test
@@ -159,15 +226,16 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("El login informa que el usuario debe cambiar la contraseña")
+    @DisplayName("Después del código, el login informa que el usuario debe cambiar la contraseña")
     void login_MustChangePassword_IsReported() {
         activeUser.setMustChangePassword(true);
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
-        when(passwordEncoder.matches("initial-pass", activeUser.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
         when(jwtService.generateToken(activeUser)).thenReturn("token");
 
-        LoginResponse response = authService.login(new LoginRequest("admin", "initial-pass"), IP);
+        LoginResponse response = operatorSession(IP);
 
+        assertThat(response.token()).isEqualTo("token");
         assertThat(response.mustChangePassword()).isTrue();
         assertThat(response.message()).isEqualTo("Debe cambiar su contraseña.");
     }
@@ -265,11 +333,11 @@ class AuthServiceTest {
         failLogins("admin", IP, 5);
         clock.advance(Duration.ofMinutes(15));
 
-        assertThat(authService.login(new LoginRequest("admin", "12345admin"), IP).token()).isEqualTo("token");
+        assertThat(operatorSession(IP).token()).isEqualTo("token");
     }
 
     @Test
-    @DisplayName("Un login exitoso reinicia el contador del usuario")
+    @DisplayName("Un login exitoso, con el código, reinicia el contador del usuario")
     void login_SuccessResetsUserCounter() {
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("wrong", activeUser.getPassword())).thenReturn(false);
@@ -277,7 +345,7 @@ class AuthServiceTest {
         when(jwtService.generateToken(activeUser)).thenReturn("token");
 
         failLogins("admin", IP, 4);
-        authService.login(new LoginRequest("admin", "12345admin"), IP);
+        operatorSession(IP);
         failLogins("admin", IP, 3);
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "wrong"), IP))
@@ -298,9 +366,8 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "12345admin"), IP))
             .isInstanceOf(LoginBlockedException.class)
             .hasMessage(BLOCKED_MESSAGE);
-        when(jwtService.generateToken(activeUser)).thenReturn("token");
-        assertThat(authService.login(new LoginRequest("admin", "12345admin"), "198.51.100.7").token())
-            .isEqualTo("token");
+        assertThat(authService.login(new LoginRequest("admin", "12345admin"), "198.51.100.7").twoFactor())
+            .isNotNull();
     }
 
     @Test
@@ -336,7 +403,7 @@ class AuthServiceTest {
             .isInstanceOf(LoginBlockedException.class);
     }
 
-    // --- Second factor of administrators (USR-08) ---
+    // --- Second factor of administrators (USR-08); operators go through the same steps (069, above) ---
 
     private LoginResponse adminPasswordStep(String ip) {
         when(userRepository.findByUsername("duena")).thenReturn(Optional.of(administrator));
