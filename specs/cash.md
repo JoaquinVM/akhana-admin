@@ -453,6 +453,23 @@ Las ventas del 28, 29 y 30/10/2026 se cargaron en cajas abiertas otros días (la
 - **WHEN** se ven ventas por día del 28, 29 y 30/10
 - **THEN** el 28/10 suma las ventas de la #146, el 29/10 las de la #147 y el 30/10 las de la #148; lo mismo en ventas por proveedor, totales, movimientos por categoría y mes, dashboard e historial de ventas filtrado por día
 
+### Requirement: Corrección única de la caja #161 (CAJ-06)
+El pago de PED-000053 (Deli, Bs 360) salió de la caja #161 (16/11/2026), pero se cargó en la #162 después de cerrar la #161 y se anuló ahí con el motivo «CARGAR EN LA CAJA ANTERIOR 16/11/26»; la #161 ya no se podía reabrir (CAJ-14). Por decisión de Joaquín del 18/11/2026 (los Bs 360 salieron completos de la #161 y el sobrante de Bs 100 que queda está bien), una migración que corre una sola vez, `V35__cash_session_161_deli_payment.sql`, carga ese pago en la #161. No existe pantalla, botón ni permiso para agregar movimientos a una caja cerrada.
+
+#### Scenario: Despliegue en producción
+- **WHEN** se despliega con la #161, su faltante y PED-000053 como estaban el 18/11/2026
+- **THEN** entra en la #161 el pago de Bs 360 desde Caja como lo registra la app (gasto «Pago pedido PED-000053» de categoría Pedido y su pago de pedido, día 16/11, a la hora del pago anulado) y PED-000053 queda pagado; el «Faltante al cierre de caja #161» de Bs 260 queda anulado con motivo, entra «Sobrante al cierre de caja #161» de Bs 100 y la #161 queda con esperado 4.133,20 y diferencia +100,00
+
+#### Scenario: Nada más cambia
+- **WHEN** corre la corrección
+- **THEN** no cambian apertura, ventas, monto contado, cortes, la #162 ni su pago anulado, y el saldo de Caja queda igual (−360 + 260 + 100)
+
+#### Scenario: Bases de desarrollo y pruebas
+- **WHEN** la #161, su faltante o PED-000053 no están como en producción, o la corrección ya corrió
+- **THEN** no cambia nada
+
+Pruebas en `CashSession161DeliPaymentMigrationIntegrationTest`.
+
 ### Requirement: Navegación y estado de caja en el menú principal
 El sistema SHALL mantener la opción principal "POS" con una etiqueta reactiva de estado (`Abierta` o `Cerrada`) correspondiente al estado real de la sesión compartida, e integrar la opción "Historial de cajas" dentro del menú desplegable "Ventas".
 
