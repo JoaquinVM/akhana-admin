@@ -46,4 +46,22 @@ class RequiredEnvironmentValidatorTest {
 
         assertThatCode(() -> validator.postProcessEnvironment(env, null)).doesNotThrowAnyException();
     }
+
+    @Test
+    @DisplayName("CATALOG_API_KEY es opcional, pero si está debe tener al menos 32 caracteres")
+    void catalogApiKey_OptionalButLong() {
+        MockEnvironment shortKey = new MockEnvironment()
+            .withProperty("spring.datasource.password", "db-pass")
+            .withProperty("security.jwt.secret", "x".repeat(32))
+            .withProperty("app.integrations.catalog-api-key", "corta");
+        assertThatThrownBy(() -> validator.postProcessEnvironment(shortKey, null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("CATALOG_API_KEY");
+
+        MockEnvironment longKey = new MockEnvironment()
+            .withProperty("spring.datasource.password", "db-pass")
+            .withProperty("security.jwt.secret", "x".repeat(32))
+            .withProperty("app.integrations.catalog-api-key", "k".repeat(32));
+        assertThatCode(() -> validator.postProcessEnvironment(longKey, null)).doesNotThrowAnyException();
+    }
 }

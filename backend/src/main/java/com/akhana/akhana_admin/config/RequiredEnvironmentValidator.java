@@ -30,6 +30,12 @@ public class RequiredEnvironmentValidator implements EnvironmentPostProcessor {
             problems.add("JWT_SECRET must have at least " + MIN_JWT_SECRET_LENGTH + " characters");
         }
 
+        // INT-01: optional, but a short key would be easy to guess
+        String catalogApiKey = environment.getProperty("app.integrations.catalog-api-key");
+        if (!isBlank(catalogApiKey) && catalogApiKey.trim().length() < MIN_JWT_SECRET_LENGTH) {
+            problems.add("CATALOG_API_KEY must have at least " + MIN_JWT_SECRET_LENGTH + " characters (or be empty to turn the bot catalog off)");
+        }
+
         if (!problems.isEmpty()) {
             throw new IllegalStateException("Missing required configuration:\n  - "
                 + String.join("\n  - ", problems)
