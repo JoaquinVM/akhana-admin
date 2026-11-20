@@ -33,7 +33,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.reset;
@@ -64,7 +63,7 @@ class CashOpeningIntegrationTest {
 
     private void requireNoOpenSession() {
         Integer open = jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE status = 'ABIERTA'", Integer.class);
-        assumeTrue(open != null && open == 0, "La base ya tiene una caja abierta");
+        assertThat(open).as("La base ya tiene una caja abierta").isZero();
     }
 
     @Test
@@ -193,7 +192,7 @@ class CashOpeningIntegrationTest {
         LocalDate today = StoreFormat.today();
         LocalDate last = jdbc.queryForObject("SELECT MAX(operation_date) FROM cash_sessions", LocalDate.class);
         LocalDate base = today.minusDays(8);
-        assumeTrue(last == null || last.isBefore(base), "La base tiene una caja reciente: se omite");
+        assertThat(last == null || last.isBefore(base)).as("La base tiene una caja reciente").isTrue();
         BigDecimal balance = jdbc.queryForObject("SELECT current_balance FROM financial_accounts WHERE is_cash_account = TRUE", BigDecimal.class);
         UUID seeded = CashTestDays.seedClosedSession(jdbc, base, "100.00", USER);
         try {

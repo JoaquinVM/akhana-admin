@@ -40,8 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * T-14 / T-06: concurrent money operations against the real database. Threads need committed data, so this class
@@ -77,10 +75,10 @@ class MoneyConcurrencyIntegrationTest {
     @BeforeEach
     void requireNoOpenSession() {
         Integer open = jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE status = 'ABIERTA'", Integer.class);
-        assumeFalse(open != null && open > 0, "La base ya tiene una caja abierta: se omite la prueba concurrente");
+        assertThat(open).as("La base ya tiene una caja abierta").isZero();
         List<BigDecimal> cash = jdbc.queryForList(
             "SELECT current_balance FROM financial_accounts WHERE is_cash_account = TRUE", BigDecimal.class);
-        assumeTrue(cash.size() == 1, "La base no tiene la cuenta Caja");
+        assertThat(cash).as("La base no tiene la cuenta Caja").hasSize(1);
         cashAccountBalanceBefore = cash.get(0);
     }
 
@@ -274,7 +272,7 @@ class MoneyConcurrencyIntegrationTest {
     private LocalDate firstFreeDay() {
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
         LocalDate day = proposal.minDay() != null ? proposal.minDay() : proposal.today();
-        assumeFalse(day.isAfter(proposal.today()), "La base ya tiene la caja de hoy: se omite la prueba concurrente");
+        assertThat(day).as("La base ya tiene la caja de hoy").isBeforeOrEqualTo(proposal.today());
         return day;
     }
 
@@ -282,7 +280,7 @@ class MoneyConcurrencyIntegrationTest {
     private LocalDate dayWithRoomForAnother() {
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
         LocalDate day = proposal.minDay() != null ? proposal.minDay() : proposal.today().minusDays(3);
-        assumeFalse(day.plusDays(1).isAfter(proposal.today()), "La base no deja dos días libres: se omite la prueba concurrente");
+        assertThat(day.plusDays(1)).as("La base no deja dos días libres").isBeforeOrEqualTo(proposal.today());
         return day;
     }
 

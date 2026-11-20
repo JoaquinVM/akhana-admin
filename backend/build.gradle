@@ -52,4 +52,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// Each checkout or worktree tests on its own database in the akhana-postgres container, never on `akhana`:
+	// akhana_test_<folder of the checkout> unless TEST_DB_NAME says otherwise (CLAUDE.md, «Pruebas»)
+	def checkout = rootDir.parentFile.name.toLowerCase().replaceAll('[^a-z0-9]+', '_').take(40)
+	environment 'TEST_DB_NAME', System.getenv('TEST_DB_NAME') ?: "akhana_test_${checkout}"
 }
