@@ -35,6 +35,17 @@ Objetivo actual: la V1, que reemplaza las planillas de Google Sheets (sin invent
 
 Log de SQL apagado por defecto; para verlo: `SHOW_SQL=true ./gradlew bootRun`.
 
+## Pruebas
+
+- `./gradlew test` nunca usa la base `akhana`: cada checkout o worktree usa su propia base
+  `akhana_test_<carpeta>` en el contenedor `akhana-postgres`. Se crea sola y se vacía al empezar cada corrida.
+- Solo hace falta el contenedor arriba y el `.env` en la raíz del worktree:
+  `cp /Users/joaquin/Proyectos/akhana/akhana-admin/.env .` (una vez) y `docker compose up -d postgres`.
+- Suite completa: `cd backend && ./gradlew test`. Una clase: `cd backend && ./gradlew test --tests "*NombreClase*"`.
+- Otra base: `TEST_DB_NAME=akhana_test_<algo> ./gradlew test`. Solo acepta nombres que terminen en `_test` o
+  `_test_<algo>`; cualquier otro hace fallar las pruebas sin tocar la base.
+- Ninguna prueba se omite: nada de `assume` sobre los datos. El CI falla si hay una prueba omitida.
+
 ## Estructura
 
 - Backend: `controller/`, `service/` + `service/impl/`, `repository/`, `model/`, `dto/`, `config/`, `exception/`.

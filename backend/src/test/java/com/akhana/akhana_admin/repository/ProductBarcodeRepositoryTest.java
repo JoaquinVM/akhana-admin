@@ -97,10 +97,32 @@ class ProductBarcodeRepositoryTest {
 
     @Test
     void leavesOutWhatDoesNotNeedACode() {
+        leavesOutWhatDoesNotNeedACodeOfThisTest();
+    }
+
+    @Test
+    void leavesOutWhatDoesNotNeedACodeWhenTheDatabaseAlreadyHasTheUnidentifiedProduct() {
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM products WHERE special_type = 'UNIDENTIFIED' "
+            + "AND status <> 'ELIMINADO'", Integer.class) == 0) {
+            jdbc.update("INSERT INTO products (code, name, category_id, supplier_id, buy_price, sell_price, fixed_profit, "
+                + "percentage_profit, status, sale_unit, special_type, created_by) VALUES (?, ?, ?, ?, 1, 2, 1, 100, "
+                + "'ACTIVO', 'UNIT', 'UNIDENTIFIED', 'it')", "IT-PREVIO-" + suffix, "Previo " + suffix, category, supplier);
+        }
+        leavesOutWhatDoesNotNeedACodeOfThisTest();
+    }
+
+    private void leavesOutWhatDoesNotNeedACodeOfThisTest() {
         UUID pending = product("Pendiente", "UNIT", "ACTIVO", null);
         product("Kilo", "KILOGRAM", "ACTIVO", null);
         product("Inactivo", "UNIT", "INACTIVO", null);
-        product("Especial", "UNIT", "ACTIVO", "UNIDENTIFIED");
+        // Only one unidentified product may exist (V17): reuse the one the database may already have
+        List<UUID> unidentified = jdbc.queryForList("SELECT id FROM products WHERE special_type = 'UNIDENTIFIED' "
+            + "AND status <> 'ELIMINADO'", UUID.class);
+        if (unidentified.isEmpty()) {
+            product("Especial", "UNIT", "ACTIVO", "UNIDENTIFIED");
+        } else {
+            created.add(unidentified.get(0));
+        }
         UUID marked = product("Marcado", "UNIT", "ACTIVO", null);
         service.markNoBarcode(marked, "it");
         UUID withCode = product("Con codigo", "UNIT", "ACTIVO", null);
