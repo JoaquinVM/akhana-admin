@@ -28,19 +28,20 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: akhana
+          POSTGRES_DB: akhana_test
           POSTGRES_USER: akhana
           POSTGRES_PASSWORD: ci-only-db-password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U akhana -d akhana"
+          --health-cmd "pg_isready -U akhana -d akhana_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     # Throwaway values for the CI database and app; production secrets live only in /opt/akhana/.env
+    # The tests use the database TEST_DB_NAME (backend/build.gradle), created by the service below
     env:
-      DB_URL: jdbc:postgresql://localhost:5432/akhana
+      TEST_DB_NAME: akhana_test
       DB_USERNAME: akhana
       DB_PASSWORD: ci-only-db-password
       ADMIN_USERNAME: admin
@@ -60,6 +61,24 @@ jobs:
           JWT_SECRET=$(openssl rand -hex 32)
           export JWT_SECRET
           ./gradlew test --no-daemon
+      # A skipped test hides a check that did not run: none is skipped on purpose today. An intentional skip
+      # would be listed here by class and test name, with the reason.
+      - name: No skipped tests
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, sys, xml.etree.ElementTree as ET
+          allowed = set()  # {"<class>.<test>"}: none
+          skipped = []
+          for path in glob.glob('build/test-results/test/*.xml'):
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  name = case.get('classname') + '.' + case.get('name')
+                  if case.find('skipped') is not None and name not in allowed:
+                      skipped.append(name)
+          for name in skipped:
+              print(f'::error::Prueba omitida: {name}')
+          sys.exit(1 if skipped else 0)
+          PY
       - name: Test report
         if: failure()
         uses: actions/upload-artifact@v6

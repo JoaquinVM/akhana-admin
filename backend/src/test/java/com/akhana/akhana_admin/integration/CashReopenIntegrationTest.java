@@ -27,7 +27,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * CAJ-14 against PostgreSQL: the whole cycle with the real services. Everything runs in the transaction of the test,
@@ -54,7 +53,7 @@ class CashReopenIntegrationTest {
     @BeforeEach
     void setUp() {
         Integer open = jdbc.queryForObject("SELECT COUNT(*) FROM cash_sessions WHERE status = 'ABIERTA'", Integer.class);
-        assumeTrue(open != null && open == 0, "La base ya tiene una caja abierta");
+        assertThat(open).as("La base ya tiene una caja abierta").isZero();
         CashTestDays.movePastSessionsAway(jdbc);
         day = StoreFormat.today().minusDays(2);
         CashTestDays.seedClosedSession(jdbc, day.minusDays(1), "100.00", USER);

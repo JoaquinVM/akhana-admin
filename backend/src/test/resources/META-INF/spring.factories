@@ -1,0 +1,2 @@
+org.springframework.test.context.ContextCustomizerFactory=\
+com.akhana.akhana_admin.testdb.TestDatabaseContextCustomizerFactory

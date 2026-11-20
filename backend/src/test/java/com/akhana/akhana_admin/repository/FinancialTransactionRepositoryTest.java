@@ -15,11 +15,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SpringBootTest
 class FinancialTransactionRepositoryTest {
@@ -64,7 +64,7 @@ class FinancialTransactionRepositoryTest {
     @Transactional
     void expectedCashSumsCountOnlyActiveCashMovementsOfTheSession() {
         List<UUID> cash = jdbc.queryForList("SELECT id FROM financial_accounts WHERE is_cash_account = TRUE", UUID.class);
-        assumeTrue(cash.size() == 1, "La base no tiene la cuenta Caja");
+        assertThat(cash).as("La base no tiene la cuenta Caja").hasSize(1);
         UUID caja = cash.get(0);
         UUID other = jdbc.queryForObject(
                 "INSERT INTO financial_accounts (name, initial_balance, current_balance, created_by) VALUES (?, 0, 0, 'it-repo') RETURNING id",

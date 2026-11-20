@@ -198,6 +198,11 @@ Si no queda ningún administrador que pueda quitarle el 2FA a otro (USR-08), Joa
   frontend con `npm ci && npm run build` en una imagen de nginx. Las pruebas no corren en el VPS: las corre GitHub
   Actions antes de que una versión llegue a la rama `production` (NF-03, NF-06).
 
+- **Cuando** corren las pruebas del backend (en GitHub Actions o en local)
+- **Entonces** usan su propia base `akhana_test…`, que se crea sola y se vacía al empezar la corrida, y nunca la base
+  `akhana`; una base cuyo nombre no termine en `_test` o `_test_<algo>` las hace fallar sin tocarla. El CI falla si
+  una sola prueba del backend queda omitida (NF-03).
+
 - **Cuando** se despliega una versión (`deploy/deploy.sh [--ref production|<tag>|<commit>]` en el VPS; sin `--ref`,
   la rama `production`)
 - **Entonces** el script baja de GitHub la versión pedida y la deja en el checkout, guarda las imágenes actuales como
