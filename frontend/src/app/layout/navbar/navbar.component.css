@@ -111,7 +111,12 @@
   color: var(--primary-color);
 }
 
-/* Active group: a 2 px Terra line under the label */
+/* Active group: a 2 px Terra line under the label. It is its own element, so the button keeps its pill shape on
+   hover and the line never bends or jumps when a menu option is chosen. */
+.nav-group-btn {
+  position: relative;
+}
+
 .group-active-indicator {
   display: none;
 }
@@ -119,8 +124,17 @@
 .nav-group-container.group-active .nav-group-btn {
   color: var(--primary-color);
   font-weight: 700;
-  box-shadow: inset 0 -2px 0 var(--color-terra);
-  border-radius: 0;
+}
+
+.nav-group-container.group-active .group-active-indicator {
+  display: block;
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-terra);
 }
 
 /* Floating dropdown menu */
