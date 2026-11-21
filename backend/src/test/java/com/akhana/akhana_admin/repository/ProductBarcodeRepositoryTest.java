@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Clock;
 
 // CAT-10: the «Cargar códigos» list against PostgreSQL; every row is rolled back at the end of each test
 @SpringBootTest
@@ -81,7 +82,7 @@ class ProductBarcodeRepositoryTest {
 
     @Test
     void ordersByLinesOfTheLast30DaysAndThenByName() {
-        LocalDate recent = StoreFormat.today().minusDays(2);
+        LocalDate recent = StoreFormat.today(Clock.systemUTC()).minusDays(2);
         UUID noSalesB = product("Bbb", "UNIT", "ACTIVO", null);
         UUID noSalesA = product("Aaa", "UNIT", "ACTIVO", null);
         UUID oneLine = product("Ccc", "UNIT", "ACTIVO", null);

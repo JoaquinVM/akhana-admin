@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -53,11 +54,14 @@ class CustomerServiceTest {
     private final List<CustomerCollection> collections = new ArrayList<>();
     private final List<Sale> creditSales = new ArrayList<>();
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         customerService = new CustomerServiceImpl(customerRepository, customerCollectionRepository, saleRepository,
             cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
-            new ExpectedCashCalculator(financialTransactionRepository));
+            new ExpectedCashCalculator(financialTransactionRepository), clock);
 
         neida = Customer.builder().id(UUID.randomUUID()).name("Tía Neida").status(CustomerStatus.ACTIVO).build();
         caja = FinancialAccount.builder().id(UUID.randomUUID()).name("Caja")

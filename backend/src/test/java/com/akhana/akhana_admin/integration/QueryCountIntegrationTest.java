@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Clock;
 
 /**
  * The screens that list many rows read them in a fixed number of queries, whatever the number of rows: the count with
@@ -69,7 +70,7 @@ class QueryCountIntegrationTest {
     @DisplayName("Historial de cajas: una sola consulta cuenta las ventas de todas las cajas")
     void sessionListCountsSalesInOneQuery() {
         CashTestDays.movePastSessionsAway(jdbc);
-        LocalDate day = StoreFormat.today().minusDays(30);
+        LocalDate day = StoreFormat.today(Clock.systemUTC()).minusDays(30);
         UUID product = product("ACTIVO");
         UUID first = CashTestDays.seedClosedSession(jdbc, day, "100.00", USER);
         sale(first, product);
@@ -92,7 +93,7 @@ class QueryCountIntegrationTest {
     @DisplayName("Detalle de caja: las líneas de todas las ventas llegan sin una consulta por venta")
     void sessionDetailLoadsItemsInBatches() {
         CashTestDays.movePastSessionsAway(jdbc);
-        UUID session = CashTestDays.seedClosedSession(jdbc, StoreFormat.today().minusDays(30), "100.00", USER);
+        UUID session = CashTestDays.seedClosedSession(jdbc, StoreFormat.today(Clock.systemUTC()).minusDays(30), "100.00", USER);
         UUID product = product("ACTIVO");
         sale(session, product);
         long few = queries(() -> cashSessionService.getSessionDetail(session));

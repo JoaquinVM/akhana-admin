@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -40,6 +41,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final FinancialCategoryRepository financialCategoryRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -74,7 +77,7 @@ public class CustomerServiceImpl implements CustomerService {
             .description(trimToNull(request.description()))
             .status(status)
             .createdBy(username)
-            .createdAt(Instant.now())
+            .createdAt(Instant.now(clock))
             .build());
         return CustomerResponse.fromEntity(saved, ZERO);
     }
@@ -101,7 +104,7 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setStatus(request.status());
         }
         customer.setUpdatedBy(username);
-        customer.setUpdatedAt(Instant.now());
+        customer.setUpdatedAt(Instant.now(clock));
         return CustomerResponse.fromEntity(customerRepository.save(customer), balance);
     }
 
@@ -115,7 +118,7 @@ public class CustomerServiceImpl implements CustomerService {
         // Logical delete: the history stays visible (RG-03)
         customer.setStatus(CustomerStatus.ELIMINADO);
         customer.setDeletedBy(username);
-        customer.setDeletedAt(Instant.now());
+        customer.setDeletedAt(Instant.now(clock));
         customerRepository.save(customer);
     }
 
@@ -186,7 +189,7 @@ public class CustomerServiceImpl implements CustomerService {
             throw new IllegalArgumentException(COLLECTION_ACCOUNT);
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         // CAJ-11: into Caja it counts for the day of the session; into QR, for the day it is recorded
         LocalDate operationDate = session != null ? session.getOperationDate() : StoreFormat.storeDay(now);
         String comment = trimToNull(request.comment());
@@ -266,7 +269,7 @@ public class CustomerServiceImpl implements CustomerService {
         // Like any void (FIN-06): taking the collection back out cannot leave the account negative; 0.00 is allowed
         FinancialTransactionServiceImpl.requireBalanceFor(account, tx.getAmount());
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         account.setCurrentBalance(account.getCurrentBalance().subtract(tx.getAmount()));
         financialAccountRepository.save(account);
         tx.setStatus(FinancialTransactionStatus.ANULADO);

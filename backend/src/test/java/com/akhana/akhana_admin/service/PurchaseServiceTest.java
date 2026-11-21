@@ -41,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.time.Clock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -72,13 +73,16 @@ class PurchaseServiceTest {
     private CashSession openSession;
     private Creditor mami;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
             purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository,
-            new TransactionTemplate(mock(PlatformTransactionManager.class)));
+            new TransactionTemplate(mock(PlatformTransactionManager.class)), clock);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)

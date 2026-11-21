@@ -39,6 +39,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 
 // Dashboard (DSH-01 to DSH-04) on top of the real reports (FIN-10, CON-03); scenarios of specs/dashboard.md
 @ExtendWith(MockitoExtension.class)
@@ -64,10 +66,13 @@ class DashboardServiceTest {
 
     private DashboardServiceImpl dashboardService;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         ReportServiceImpl reportService = new ReportServiceImpl(saleRepository, financialTransactionRepository,
-                consumptionRepository);
+                consumptionRepository, clock);
         dashboardService = new DashboardServiceImpl(reportService, dashboardRepository, saleRepository, consumptionRepository,
                 cashSessionService, financialSummaryService, purchaseService, creditorService, customerService,
                 cashNoAttentionDayRepository);

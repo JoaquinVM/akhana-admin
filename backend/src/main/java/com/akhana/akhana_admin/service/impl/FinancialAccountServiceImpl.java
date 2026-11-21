@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,8 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     private final FinancialAccountRepository financialAccountRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final CashSessionRepository cashSessionRepository;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -77,13 +80,13 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
                 .isCashAccount(false)
                 .isQrAccount(setAsQr)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
-                .createdAt(Instant.now())
+                .createdAt(Instant.now(clock))
                 .build();
 
         FinancialAccount savedAccount = financialAccountRepository.save(account);
 
         // The opening balance is a movement (FIN-01)
-        Instant openedAt = Instant.now();
+        Instant openedAt = Instant.now(clock);
         FinancialTransaction initialTx = FinancialTransaction.builder()
                 .type(FinancialTransactionType.SALDO_INICIAL)
                 .sourceAccount(savedAccount)
@@ -93,7 +96,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
                 .description("Saldo inicial de apertura")
                 .status(FinancialTransactionStatus.ACTIVO)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
-                .createdAt(Instant.now())
+                .createdAt(Instant.now(clock))
                 .build();
         financialTransactionRepository.save(initialTx);
 
@@ -130,7 +133,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         }
 
         account.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-        account.setUpdatedAt(Instant.now());
+        account.setUpdatedAt(Instant.now(clock));
 
         return mapToResponse(financialAccountRepository.save(account));
     }
@@ -149,7 +152,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
 
         targetAccount.setIsQrAccount(true);
         targetAccount.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-        targetAccount.setUpdatedAt(Instant.now());
+        targetAccount.setUpdatedAt(Instant.now(clock));
 
         return mapToResponse(financialAccountRepository.save(targetAccount));
     }
@@ -158,7 +161,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     private void clearQrMark(FinancialAccount lockedQr, String currentUsername) {
         lockedQr.setIsQrAccount(false);
         lockedQr.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-        lockedQr.setUpdatedAt(Instant.now());
+        lockedQr.setUpdatedAt(Instant.now(clock));
         financialAccountRepository.saveAndFlush(lockedQr);
     }
 
@@ -211,7 +214,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
             throw new IllegalStateException("La cuenta ya tiene movimientos: el saldo al corte solo se carga antes de operar. Corrija con un ingreso, gasto o transferencia.");
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         FinancialTransaction openingTx = financialTransactionRepository
                 .findFirstBySourceAccountIdAndType(id, FinancialTransactionType.SALDO_INICIAL)
                 .orElseGet(() -> FinancialTransaction.builder()
@@ -255,7 +258,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
             throw new IllegalStateException("La cuenta solo puede eliminarse cuando su saldo actual sea exactamente Bs 0,00.");
         }
 
-        account.setDeletedAt(Instant.now());
+        account.setDeletedAt(Instant.now(clock));
         account.setDeletedBy(currentUsername != null ? currentUsername : "SYSTEM");
         financialAccountRepository.save(account);
     }

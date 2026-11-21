@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,6 +38,8 @@ public class ProductBarcodeServiceImpl implements ProductBarcodeService {
 
     private final ProductBarcodeRepository barcodeRepository;
     private final ProductRepository productRepository;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -50,7 +53,7 @@ public class ProductBarcodeServiceImpl implements ProductBarcodeService {
     @Override
     @Transactional(readOnly = true)
     public List<BarcodePendingResponse> findPending() {
-        return barcodeRepository.findPending(StoreFormat.today().minusDays(PENDING_DAYS)).stream()
+        return barcodeRepository.findPending(StoreFormat.today(clock).minusDays(PENDING_DAYS)).stream()
                 .map(row -> new BarcodePendingResponse(row.getId(), row.getCode(), row.getName(),
                         row.getSupplierName(), row.getSellPrice()))
                 .toList();
@@ -77,7 +80,7 @@ public class ProductBarcodeServiceImpl implements ProductBarcodeService {
             throw new IllegalArgumentException(ALREADY_HAS_ONE);
         }
         product.setNoBarcodeMarkedBy(actor(username));
-        product.setNoBarcodeMarkedAt(Instant.now());
+        product.setNoBarcodeMarkedAt(Instant.now(clock));
         return ProductResponse.fromEntity(productRepository.save(product));
     }
 
@@ -114,7 +117,7 @@ public class ProductBarcodeServiceImpl implements ProductBarcodeService {
         if (codes.size() > MAX_BARCODES) {
             throw new IllegalArgumentException(TOO_MANY);
         }
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         for (ProductBarcode existing : product.getBarcodes()) {
             if (existing.isActive() && !codes.contains(existing.getBarcode())) {
                 existing.setActive(false);

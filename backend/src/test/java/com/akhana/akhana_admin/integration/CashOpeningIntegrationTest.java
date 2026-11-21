@@ -40,6 +40,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import java.time.Clock;
 
 /** CAJ-12, CAJ-13 against PostgreSQL. Each test rolls back, except the one that needs a real rollback of the service. */
 @SpringBootTest
@@ -58,7 +59,7 @@ class CashOpeningIntegrationTest {
 
     /** A Tuesday at least a week ago: the session of the Friday before it leaves Saturday and Monday missing. */
     private LocalDate pastTuesday() {
-        return StoreFormat.today().minusDays(7).with(TemporalAdjusters.previous(DayOfWeek.TUESDAY));
+        return StoreFormat.today(Clock.systemUTC()).minusDays(7).with(TemporalAdjusters.previous(DayOfWeek.TUESDAY));
     }
 
     private void requireNoOpenSession() {
@@ -80,7 +81,7 @@ class CashOpeningIntegrationTest {
 
         assertThat(jdbc.queryForObject("SELECT operation_date FROM cash_sessions WHERE id = ?", LocalDate.class, opened.id()))
             .isEqualTo(tuesday);
-        assertThat(StoreFormat.storeDay(opened.openedAt())).isEqualTo(StoreFormat.today());
+        assertThat(StoreFormat.storeDay(opened.openedAt())).isEqualTo(StoreFormat.today(Clock.systemUTC()));
         assertThat(jdbc.queryForObject("SELECT operation_date FROM financial_transactions "
             + "WHERE cash_session_id = ? AND description LIKE 'Diferencia al abrir%'", LocalDate.class, opened.id())).isEqualTo(tuesday);
     }
@@ -189,7 +190,7 @@ class CashOpeningIntegrationTest {
     void failedOpeningLeavesNoMark() {
         // Commits for real, so it needs room after the last session and removes what it created
         requireNoOpenSession();
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(Clock.systemUTC());
         LocalDate last = jdbc.queryForObject("SELECT MAX(operation_date) FROM cash_sessions", LocalDate.class);
         LocalDate base = today.minusDays(8);
         assertThat(last == null || last.isBefore(base)).as("La base tiene una caja reciente").isTrue();

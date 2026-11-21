@@ -32,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -48,11 +50,14 @@ class ConsumptionServiceTest {
     private Product bombitas;
     private Product nuts;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         // Only these two repositories: a consumption cannot reach a cash session, an account or a movement
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
-            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository));
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository), clock);
 
         roquin = product("Roquin", "ROQ-1", SaleUnit.UNIT, "2.73", "4.00");
         bombitas = product("Bombitas Proteína", "BOM-1", SaleUnit.UNIT, "10.00", "15.00");
@@ -265,5 +270,27 @@ class ConsumptionServiceTest {
         assertThat(response.items().get(1).presentationId()).isNull();
         assertThat(response.items().get(1).subtotal()).isEqualByComparingTo("39.00");
         assertThat(response.totalAmount()).isEqualByComparingTo("98.02");
+    }
+
+    @Test
+    @DisplayName("A las 23:59 de La Paz el día siguiente todavía es futuro; a las 00:00 ya es hoy y es el día por defecto")
+    void register_futureDateFollowsTheStoreMidnight() {
+        LocalDate december1 = LocalDate.of(2026, 12, 1);
+        consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            StoreClocks.at(StoreClocks.LAST_SECOND_OF_NOVEMBER));
+        assertThatThrownBy(() -> consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La fecha del consumo no puede ser futura.");
+        assertThat(consumptionService.registerConsumption(request(null, line(roquin, "1")), "operator").consumptionDate())
+            .isEqualTo(LocalDate.of(2026, 11, 30));
+
+        consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            StoreClocks.at(StoreClocks.FIRST_SECOND_OF_DECEMBER));
+        assertThat(consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator").consumptionDate())
+            .isEqualTo(december1);
+        assertThat(consumptionService.registerConsumption(request(null, line(roquin, "1")), "operator").consumptionDate())
+            .isEqualTo(december1);
     }
 }
