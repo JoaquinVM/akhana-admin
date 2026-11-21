@@ -13,6 +13,11 @@ Construida el 27-10-2026 (rama `feat/migration`, migración `V18__historical_mig
 planilla hechas el 27-10-2026 (HOJITA cerrada) y el 28-10-2026 (filas de Ventas sin código); corrida en
 producción el 29-10-2026 con fecha de corte 27-10-2026 (abajo).
 
+**Retirada.** La corrida ya se hizo y su código se retiró: la pantalla, la API `/api/migration/**`, el servicio que
+leía las planillas y el permiso `MIGRATION` ya no existen. Lo que queda son los datos migrados, su marca
+«Histórico» (`historical_import_id`, `historical` en las respuestas) y la fila de `HistoricalImport`, con todo lo que
+los muestra y los protege. Lo que sigue documenta cómo se hizo la corrida.
+
 ## Qué se migra y qué no
 
 | Hoja | Archivo | Se migra como | Notas |
