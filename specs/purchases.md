@@ -364,6 +364,26 @@ Bs 300,00 y envío de Bs 25,00, que se sigue pagando aparte (P-24).
 
 Pruebas en `purchase-form-modal.component.spec.ts`.
 
+## COM-27 · Registrar un pedido sin duplicarlo
+
+Mismas reglas que POS-18 (`sales.md`): el formulario de pedido nuevo crea un id (UUID) cada vez que se abre y lo manda
+en `clientRequestId` al guardar; los reintentos de ese formulario repiten el id. Editar un pedido no lo usa.
+
+- **Cuando** se pierde la respuesta (sin conexión o 5xx), **entonces** el formulario avisa que el pedido pudo quedar
+  registrado y deja volver a guardar; con el mismo id el servidor devuelve el pedido ya registrado, sin otro número,
+  gasto de envío, pago, cambio de costo ni uso de la lectura.
+- **Cuando** dos envíos con el mismo id llegan a la vez, **entonces** queda un solo pedido y los dos lo reciben.
+- **Cuando** el id ya existe con otro total (líneas más envío) u otra cantidad de líneas, **entonces** responde 409:
+  «Este pedido ya se registró como PED-… con otro contenido; revise la lista de pedidos antes de volver a guardar.»
+- **Cuando** el pedido viene de una lectura (COM-20), **entonces** el reintento se reconoce antes de exigir la lectura
+  sin usar, así no falla por «Esta lectura ya no se puede usar».
+- **Cuando** llega sin id (cliente viejo), **entonces** se registra como antes.
+
+Notas: `purchases.client_request_id` con índice único parcial `ux_purchases_client_request_id` (V36). Un pedido sin pago
+ni envío no bloquea nada, así que dos envíos simultáneos llegan al índice: el que pierde se deshace y vuelve a correr en
+una transacción nueva, que encuentra el pedido (`ClientRequestRetry`). Pruebas en `PurchaseServiceTest`,
+`ClientRequestIdempotencyIntegrationTest` y `purchase-form-modal.component.spec.ts`.
+
 ## Día de los pagos (CAJ-11)
 
 - **Cuando** un pago o un envío se paga desde Caja pasada la medianoche en la caja del 31/10 **entonces** su gasto y

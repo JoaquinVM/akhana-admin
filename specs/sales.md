@@ -426,6 +426,47 @@ El sistema SHALL distinguir «no se pudo saber» de «no hay». Solo una respues
 - **WHEN** falla la carga del catálogo
 - **THEN** lo dice y ofrece «Reintentar»
 
+### Requirement: Reintentar un cobro no duplica la venta (POS-18)
+El sistema SHALL registrar una sola vez cada venta aunque su envío se repita. La pantalla crea un id (UUID) al abrir
+el cobro y lo manda en `clientRequestId`; lo repite en los reintentos de esa venta, también si se cierra y se vuelve a
+abrir el cobro, y crea otro al vaciar el carrito o al empezar otra venta.
+
+#### Scenario: Se pierde la respuesta y se vuelve a cobrar
+- **WHEN** el servidor guardó la venta pero la respuesta no llegó (sin conexión, 502 o 504)
+- **THEN** la pantalla deja de esperar y avisa que la venta pudo quedar registrada y que volver a cobrar no la duplica
+- **AND** al volver a cobrar manda el mismo id, el servidor devuelve la venta ya registrada, sin otra venta, número,
+  ingreso ni cambio en la caja, y la pantalla la muestra como registrada
+
+#### Scenario: El mismo id llega dos veces a la vez
+- **WHEN** dos envíos con el mismo id llegan al mismo tiempo
+- **THEN** se registra una sola venta y los dos reciben esa venta
+
+#### Scenario: Mismo id con otro contenido
+- **WHEN** llega un id ya registrado con otro total o con otra cantidad de líneas
+- **THEN** se rechaza con 409: «Esta venta ya se registró como VTA-… con otro contenido; revise el historial antes de
+  volver a cobrar.»
+
+#### Scenario: La caja se cerró antes del reintento
+- **WHEN** el reintento llega cuando la caja de esa venta ya se cerró
+- **THEN** igual devuelve la venta ya registrada
+
+#### Scenario: Cliente sin id
+- **WHEN** una venta llega sin `clientRequestId` (un cliente viejo) o es histórica
+- **THEN** se registra como antes, cada envío una venta
+
+Notas de implementación:
+- `V36__client_request_ids.sql`: `sales.client_request_id` (UUID, nulo en las ventas viejas e históricas) con índice
+  único parcial `ux_sales_client_request_id` donde no es nulo.
+- `SaleServiceImpl.registerSale` bloquea la caja abierta (T-14), calcula el total y busca el id: si existe compara
+  total y cantidad de líneas y la devuelve. Un segundo envío espera en el bloqueo de la caja y la encuentra. Si el
+  índice único rechaza el insert, la transacción se deshace y el registro corre de nuevo en una transacción nueva,
+  que encuentra la venta del otro (`ClientRequestRetry`).
+- Un 4xx muestra el mensaje del servidor; solo 0 y 5xx muestran el aviso de reintento
+  (`shared/utils/client-request-id.ts`).
+- Pruebas: `SaleServiceTest` (id guardado, id repetido, caja cerrada, 409), `ClientRequestIdempotencyIntegrationTest`
+  (envíos simultáneos contra PostgreSQL, reintento posterior y ventas sin id), `register-sale.component.spec.ts` y
+  `client-request-id.spec.ts`.
+
 ## Línea libre, venta sin identificar y venta de terceros (POS-11 a POS-13)
 
 Spec del 27-10-2026, escrita con lo decidido al revisar la migración (P-42). Lo que el dueño no dijo y se resolvió

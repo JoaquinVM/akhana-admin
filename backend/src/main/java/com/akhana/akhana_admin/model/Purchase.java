@@ -27,6 +27,10 @@ public class Purchase {
     @Column(name = "historical_import_id", updatable = false)
     private UUID historicalImportId;
 
+    // COM-27: id the form made for this new purchase; a retry with it gets this purchase back. Null for old ones
+    @Column(name = "client_request_id", updatable = false)
+    private UUID clientRequestId;
+
     @Column(name = "purchase_number", nullable = false, length = 50, updatable = false)
     private String purchaseNumber;
 

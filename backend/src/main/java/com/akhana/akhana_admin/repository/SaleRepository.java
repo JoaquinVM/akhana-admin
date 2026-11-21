@@ -14,10 +14,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, UUID> {
+
+    Optional<Sale> findByClientRequestId(UUID clientRequestId);
 
     // A line that counts as a normal sale with its cost: not a free line, or an unidentified one already assigned
     // (POS-12). One closed as unidentified for good stays out of cost and profit

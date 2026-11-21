@@ -48,20 +48,31 @@ public record PurchaseRequest(
     UUID readingId,
 
     // DEU-02: the person who paid the shipping, instead of an account
-    UUID shippingCreditorId
+    UUID shippingCreditorId,
+
+    // COM-27: id of this new purchase, made by the form and kept on its retries; null for old clients
+    UUID clientRequestId
 ) {
+    public PurchaseRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
+                           UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
+                           DeliveryStatus deliveryStatus, LocalDate deliveryDate, PurchasePaymentRequest initialPayment,
+                           UUID readingId, UUID shippingCreditorId) {
+        this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
+            deliveryStatus, deliveryDate, initialPayment, readingId, shippingCreditorId, null);
+    }
+
     public PurchaseRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
                            UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
                            DeliveryStatus deliveryStatus, LocalDate deliveryDate, PurchasePaymentRequest initialPayment,
                            UUID readingId) {
         this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
-            deliveryStatus, deliveryDate, initialPayment, readingId, null);
+            deliveryStatus, deliveryDate, initialPayment, readingId, null, null);
     }
 
     public PurchaseRequest(UUID supplierId, LocalDate purchaseDate, List<PurchaseItemRequest> items, BigDecimal shippingCost,
                            UUID shippingAccountId, Boolean consignment, String comment, DeliveryType deliveryType,
                            DeliveryStatus deliveryStatus, LocalDate deliveryDate, PurchasePaymentRequest initialPayment) {
         this(supplierId, purchaseDate, items, shippingCost, shippingAccountId, consignment, comment, deliveryType,
-            deliveryStatus, deliveryDate, initialPayment, null, null);
+            deliveryStatus, deliveryDate, initialPayment, null, null, null);
     }
 }
