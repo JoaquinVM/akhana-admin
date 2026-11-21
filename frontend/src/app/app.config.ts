@@ -10,7 +10,7 @@ import { STORE_LOCALE, STORE_TIMEZONE } from './shared/utils/money';
 import { installNumberInputComma } from './shared/utils/number-input-comma';
 import { installNumberInputGuard } from './shared/utils/number-input-guard';
 
-// Amounts read "Bs 1.234,50" (the locale is registered in money.ts) and dates are store days (America/La_Paz), like
+// Amounts read "Bs 1,234.50" (the locale is registered in money.ts) and dates are store days (America/La_Paz), like
 // the server
 
 export const appConfig: ApplicationConfig = {

@@ -465,7 +465,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static BigDecimal normalizeAmount(BigDecimal amount) {
         BigDecimal normalized = amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : null;
         if (normalized == null || normalized.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto debe ser mayor a Bs 0,00.");
+            throw new IllegalArgumentException("El monto debe ser mayor a Bs 0.00.");
         }
         return normalized;
     }

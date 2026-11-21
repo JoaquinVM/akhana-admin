@@ -255,7 +255,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         }
 
         if (account.getCurrentBalance() != null && account.getCurrentBalance().compareTo(BigDecimal.ZERO) != 0) {
-            throw new IllegalStateException("La cuenta solo puede eliminarse cuando su saldo actual sea exactamente Bs 0,00.");
+            throw new IllegalStateException("La cuenta solo puede eliminarse cuando su saldo actual sea exactamente Bs 0.00.");
         }
 
         account.setDeletedAt(Instant.now(clock));

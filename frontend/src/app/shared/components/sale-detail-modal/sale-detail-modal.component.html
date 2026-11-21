@@ -183,7 +183,7 @@
                         <span class="discount-percentage">({{ getItemDiscountPercentage(item) | number:'1.0-1' }}%)</span>
                       </div>
                     } @else {
-                      <span class="text-muted">Bs 0,00</span>
+                      <span class="text-muted">Bs 0.00</span>
                     }
                   </td>
                   <td style="text-align: right">
@@ -299,21 +299,21 @@
             <div class="totals-row">
               <span class="totals-label">Descuentos por productos</span>
               <span class="totals-val">
-                {{ (sale.discountItemsTotal && sale.discountItemsTotal > 0) ? '-Bs ' + (sale.discountItemsTotal | number:'1.2-2') : 'Bs 0,00' }}
+                {{ (sale.discountItemsTotal && sale.discountItemsTotal > 0) ? '-Bs ' + (sale.discountItemsTotal | number:'1.2-2') : 'Bs 0.00' }}
               </span>
             </div>
 
             <div class="totals-row">
               <span class="totals-label">Descuento por venta</span>
               <span class="totals-val">
-                {{ (sale.globalDiscountAmount && sale.globalDiscountAmount > 0) ? '-Bs ' + (sale.globalDiscountAmount | number:'1.2-2') : 'Bs 0,00' }}
+                {{ (sale.globalDiscountAmount && sale.globalDiscountAmount > 0) ? '-Bs ' + (sale.globalDiscountAmount | number:'1.2-2') : 'Bs 0.00' }}
               </span>
             </div>
 
             <div class="totals-row row-accumulated">
               <span class="totals-label font-semibold">Total descuentos acumulados</span>
               <span class="totals-val font-semibold">
-                {{ getAccumulatedDiscounts(sale) > 0 ? '-Bs ' + (getAccumulatedDiscounts(sale) | number:'1.2-2') : 'Bs 0,00' }}
+                {{ getAccumulatedDiscounts(sale) > 0 ? '-Bs ' + (getAccumulatedDiscounts(sale) | number:'1.2-2') : 'Bs 0.00' }}
               </span>
             </div>
 

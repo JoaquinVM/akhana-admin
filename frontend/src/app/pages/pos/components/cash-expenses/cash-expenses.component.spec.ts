@@ -74,7 +74,7 @@ describe('CashExpensesComponent', () => {
     component.confirmVoid();
 
     expect(mockTransactionService.voidCashExpense).toHaveBeenCalledWith('tx-exp-1', { voidReason: 'Error en comprobante' });
-    expect(changed).toHaveBeenCalledWith('Gasto de Bs 45,00 anulado exitosamente.');
+    expect(changed).toHaveBeenCalledWith('Gasto de Bs 45.00 anulado exitosamente.');
     expect(component.voidTarget()).toBeNull();
   });
 

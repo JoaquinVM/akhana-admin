@@ -274,10 +274,10 @@ describe('PosComponent', () => {
 
     mockCashService.getCurrentSession.mockClear();
     mockTransactionService.getExpensesByCashSession.mockClear();
-    component.onCashExpenseSaved('Gasto de caja de Bs 35,50 registrado exitosamente.');
+    component.onCashExpenseSaved('Gasto de caja de Bs 35.50 registrado exitosamente.');
 
     expect(component.isCashExpenseModalVisible()).toBe(false);
-    expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs 35,50 registrado exitosamente');
+    expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs 35.50 registrado exitosamente');
     expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledTimes(1);
     expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledWith('session-1');
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
@@ -397,9 +397,9 @@ describe('PosComponent', () => {
 
   it('al anular un gasto desde la tabla de gastos, avisa y recarga la caja', () => {
     mockCashService.getCurrentSession.mockClear();
-    component.onCashExpensesChanged('Gasto de Bs 45,00 anulado exitosamente.');
+    component.onCashExpensesChanged('Gasto de Bs 45.00 anulado exitosamente.');
 
-    expect(component.feedbackMessage()?.text).toBe('Gasto de Bs 45,00 anulado exitosamente.');
+    expect(component.feedbackMessage()?.text).toBe('Gasto de Bs 45.00 anulado exitosamente.');
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
   });
 
@@ -409,7 +409,7 @@ describe('PosComponent', () => {
 
     expect(component.feedbackMessage()).toEqual({
       type: 'warning',
-      text: 'Caja #208 cerrada con faltante de Bs 4,32, registrado como ajuste en la cuenta Caja.'
+      text: 'Caja #208 cerrada con faltante de Bs 4.32, registrado como ajuste en la cuenta Caja.'
     });
   });
 

@@ -94,7 +94,7 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 
 ## 3. Requerimientos por versión
 
-Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz). Los textos tratan de tú y sin jerga, los contadores van en singular o plural según la cantidad («1 venta», «3 ventas») y una caja se nombra siempre «Caja #N».
+Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, como «Bs 1,234.50» (punto decimal y coma de miles; también las cantidades y los kilos, «0.454»), también en la exportación a Excel, y las fechas son días de la tienda (America/La_Paz). Los textos tratan de tú y sin jerga, los contadores van en singular o plural según la cantidad («1 venta», «3 ventas») y una caja se nombra siempre «Caja #N».
 
 ### 3.1 Principios transversales · V1
 
@@ -342,7 +342,7 @@ Requerimientos no funcionales, todos para la V1:
 - **NF-04** El POS registra una venta en menos de 2 segundos con todo el catálogo. Medido en local: la venta responde en 20–50 ms y el catálogo activo (590 KB, 60 KB comprimido desde la cuarta revisión) en 35–70 ms.
 - **NF-05** Servidor de producción en un VPS en la nube (P-22), con HTTPS y respaldo diario guardado fuera del VPS.
 - **NF-06** Despliegue continuo: un tag de versión que pasa las pruebas automáticas se despliega solo en el VPS, sin abrirle puertos, y si falla vuelve solo a la versión anterior.
-- **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal. Un número pegado con coma se rechaza con un mensaje.
+- **NF-07** En todo campo numérico, la tecla coma escribe un punto y el punto es siempre el separador decimal; al escribir no se pone separador de miles. Un número pegado con coma se rechaza con un mensaje.
 - **NF-08** Las fotos, de productos y de facturas, se respaldan cada día, cifradas y fuera del VPS, sin la limpieza de 60 días de los respaldos de la base, y la prueba semanal de restauración también las comprueba.
 - **NF-09** Mientras lo escrito en un campo numérico todavía no es un número, el sistema no reescribe el campo. Un separador al comienzo vale como `0.`: `,50` y `.50` son 0,50.
 - **NF-10** Si una pantalla no se puede cargar, en la app o en el navegador, el sistema lo avisa y ofrece actualizar. La persona sigue en la pantalla en que estaba, con lo que haya escrito.

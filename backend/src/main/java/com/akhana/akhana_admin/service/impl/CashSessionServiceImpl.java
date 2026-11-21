@@ -62,7 +62,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
     static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrige el conteo o deja los cortes vacíos.";
     static final String COUNT_WITH_RESERVES_MISMATCH = "Los cortes y las reservas suman %s y el monto contado es %s; corrige el conteo o deja los cortes y las reservas vacíos.";
-    static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.";
+    static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20 o 0.10.";
     static final String CUT_DENOMINATION_REPEATED = "El corte de %s está repetido.";
     static final String FUTURE_DAY = "El día de la caja no puede ser futuro.";
     static final String DAY_NOT_AFTER_LAST = "El día debe ser posterior al de la última caja (#%d, %s).";
