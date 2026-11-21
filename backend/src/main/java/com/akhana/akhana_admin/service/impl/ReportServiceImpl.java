@@ -26,7 +26,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -96,41 +95,35 @@ public class ReportServiceImpl implements ReportService {
     @Transactional(readOnly = true)
     public SalesBySupplierReportResponse getSalesBySupplier(LocalDate from, LocalDate to) {
         Range range = Range.of(from, to);
+        return salesBySupplier(range.from(), range.to(), saleRepository.findReportLines(range.from(), range.to()));
+    }
 
-        // Lines grouped by sale, to spread each sale's general discount over its own lines
-        Map<Object, List<Object[]>> sales = new LinkedHashMap<>();
-        for (Object[] line : saleRepository.findReportLines(range.from(), range.to())) {
-            sales.computeIfAbsent(line[0], id -> new ArrayList<>()).add(line);
-        }
-
+    /**
+     * The report per supplier from the rows of {@link SaleRepository#findReportLines}, for a range already
+     * checked; the dashboard builds its suppliers with it from the same rows as its products (DSH-03).
+     */
+    static SalesBySupplierReportResponse salesBySupplier(LocalDate from, LocalDate to, List<Object[]> lines) {
         Map<SupplierKey, Map<String, SupplierSums>> bySupplier = new HashMap<>();
-        for (List<Object[]> lines : sales.values()) {
-            // P-44: free lines (POS-11) keep their exact amount; the general discount goes only to the other lines
-            List<BigDecimal> discounted = lineTotalsAfterGeneralDiscount(
-                lines.stream().filter(line -> !isFreeLine(line)).map(line -> (BigDecimal) line[7]).toList(),
-                ((BigDecimal) lines.getFirst()[3]).subtract(lines.stream().filter(ReportServiceImpl::isFreeLine)
-                    .map(line -> (BigDecimal) line[7]).reduce(BigDecimal.ZERO, BigDecimal::add)));
-            int next = 0;
-            for (Object[] line : lines) {
-                BigDecimal lineTotal = isFreeLine(line) ? (BigDecimal) line[7] : discounted.get(next++);
-                // Pending, unidentified and third-party lines are not sales of a supplier (POS-12, POS-13)
-                if (!Boolean.TRUE.equals(line[9])) {
-                    continue;
-                }
-                SupplierKey supplier = new SupplierKey((UUID) line[4], (String) line[5]);
-                SupplierSums month = bySupplier.computeIfAbsent(supplier, s -> new TreeMap<>())
-                    .computeIfAbsent((String) line[1], m -> new SupplierSums());
-                BigDecimal quantity = (BigDecimal) line[6];
-                if (SaleType.AL_COSTO.name().equals(line[2])) {
-                    month.atCostQuantity = month.atCostQuantity.add(quantity);
-                    month.atCostTotal = month.atCostTotal.add(lineTotal);
-                } else {
-                    month.normalQuantity = month.normalQuantity.add(quantity);
-                    month.normalTotal = month.normalTotal.add(lineTotal);
-                    month.normalCost = month.normalCost.add((BigDecimal) line[8]);
-                }
+        // P-44: free lines (POS-11) keep their exact amount; the general discount goes only to the other lines
+        GeneralDiscount.forEachLine(lines, (line, lineTotal) -> {
+            // Pending, unidentified and third-party lines are not sales of a supplier (POS-12, POS-13)
+            if (!Boolean.TRUE.equals(line[GeneralDiscount.NORMAL_LINE])) {
+                return;
             }
-        }
+            SupplierKey supplier = new SupplierKey((UUID) line[GeneralDiscount.SUPPLIER_ID],
+                (String) line[GeneralDiscount.SUPPLIER_NAME]);
+            SupplierSums month = bySupplier.computeIfAbsent(supplier, s -> new TreeMap<>())
+                .computeIfAbsent((String) line[GeneralDiscount.MONTH], m -> new SupplierSums());
+            BigDecimal quantity = (BigDecimal) line[GeneralDiscount.QUANTITY];
+            if (SaleType.AL_COSTO.name().equals(line[GeneralDiscount.SALE_TYPE])) {
+                month.atCostQuantity = month.atCostQuantity.add(quantity);
+                month.atCostTotal = month.atCostTotal.add(lineTotal);
+            } else {
+                month.normalQuantity = month.normalQuantity.add(quantity);
+                month.normalTotal = month.normalTotal.add(lineTotal);
+                month.normalCost = month.normalCost.add((BigDecimal) line[GeneralDiscount.COST]);
+            }
+        });
 
         List<SalesBySupplierReportResponse.Supplier> suppliers = new ArrayList<>();
         SupplierSums rangeSums = new SupplierSums();
@@ -148,7 +141,7 @@ public class ReportServiceImpl implements ReportService {
                 suppliers.add(new SalesBySupplierReportResponse.Supplier(entry.getKey().id(), entry.getKey().name(),
                     rows, supplierSums.toRow(null)));
             });
-        return new SalesBySupplierReportResponse(range.from(), range.to(), suppliers, rangeSums.toRow(null));
+        return new SalesBySupplierReportResponse(from, to, suppliers, rangeSums.toRow(null));
     }
 
     @Override
@@ -285,36 +278,6 @@ public class ReportServiceImpl implements ReportService {
             s.normalMargin(), s.atCostSales(), s.atCostTotal(), s.pendingTotal(), s.unidentifiedTotal(), s.thirdPartyTotal(),
             s.total(),
             consumptions, consumptionTotal, s.normalProfit().subtract(consumptionTotal));
-    }
-
-    /**
-     * Spreads a sale's general discount (line subtotals - sale total) over its lines in proportion to their
-     * subtotal. The rounding remainder goes to the line with the largest subtotal, so the lines always add up to
-     * the sale total and the suppliers of a day add up to that day's sales.
-     */
-    static List<BigDecimal> lineTotalsAfterGeneralDiscount(List<BigDecimal> subtotals, BigDecimal saleTotal) {
-        BigDecimal sum = subtotals.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal discount = sum.subtract(saleTotal);
-        if (discount.signum() == 0 || sum.signum() == 0) {
-            return subtotals.stream().map(ReportServiceImpl::money).toList();
-        }
-        List<BigDecimal> totals = new ArrayList<>();
-        BigDecimal spread = BigDecimal.ZERO;
-        int largest = 0;
-        for (int i = 0; i < subtotals.size(); i++) {
-            BigDecimal share = money(discount.multiply(subtotals.get(i)).divide(sum, 10, RoundingMode.HALF_UP));
-            spread = spread.add(share);
-            totals.add(money(subtotals.get(i).subtract(share)));
-            if (subtotals.get(i).compareTo(subtotals.get(largest)) > 0) {
-                largest = i;
-            }
-        }
-        totals.set(largest, totals.get(largest).subtract(discount.subtract(spread)));
-        return totals;
-    }
-
-    private static boolean isFreeLine(Object[] line) {
-        return Boolean.TRUE.equals(line[10]);
     }
 
     private static BigDecimal money(BigDecimal value) {

@@ -36,6 +36,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 // Dashboard (DSH-01 to DSH-04) on top of the real reports (FIN-10, CON-03); scenarios of specs/dashboard.md
@@ -66,7 +68,7 @@ class DashboardServiceTest {
     void setUp() {
         ReportServiceImpl reportService = new ReportServiceImpl(saleRepository, financialTransactionRepository,
                 consumptionRepository);
-        dashboardService = new DashboardServiceImpl(reportService, dashboardRepository, consumptionRepository,
+        dashboardService = new DashboardServiceImpl(reportService, dashboardRepository, saleRepository, consumptionRepository,
                 cashSessionService, financialSummaryService, purchaseService, creditorService, customerService,
                 cashNoAttentionDayRepository);
         when(dashboardRepository.sumPayments(any(), any())).thenReturn(List.<Object[]>of(
@@ -169,11 +171,13 @@ class DashboardServiceTest {
     void topProductsWithGeneralDiscount() {
         // Sale of 35: 2 x 10 of Maní (cost 6) and 0.250 kg x 80 of Nuez (cost 60/kg), general discount 5,
         // plus a pending line of 15 that keeps its amount (P-44)
-        when(dashboardRepository.findProductLines(any(), any())).thenReturn(List.of(
-                productLine("S1", "50.00", MANI, "Maní", "2", "20.00", "12.00", true, false),
-                productLine("S1", "50.00", NUEZ, "Nuez", "0.250", "20.00", "15.00", true, false),
-                productLine("S1", "50.00", NUEZ, "Libre", "1", "15.00", "0", false, true),
-                productLine("S2", "80.00", NUEZ, "Nuez", "1.000", "80.00", "60.00", true, false)));
+        // An at-cost sale of Nuez on the same rows does not count as a product sale
+        when(saleRepository.findReportLines(any(), any())).thenReturn(List.of(
+                productLine("S1", "NORMAL", "50.00", MANI, "Maní", "2", "20.00", "12.00", true, false),
+                productLine("S1", "NORMAL", "50.00", NUEZ, "Nuez", "0.250", "20.00", "15.00", true, false),
+                productLine("S1", "NORMAL", "50.00", NUEZ, "Libre", "1", "15.00", "0", false, true),
+                productLine("S2", "NORMAL", "80.00", NUEZ, "Nuez", "1.000", "80.00", "60.00", true, false),
+                productLine("S3", "AL_COSTO", "60.00", NUEZ, "Nuez", "1.000", "60.00", "60.00", true, false)));
 
         DashboardResponse dashboard = dashboardService.getDashboard(OCT_1, OCT_30);
 
@@ -186,6 +190,8 @@ class DashboardServiceTest {
         assertEquals(new BigDecimal("17.50"), mani.sales());
         assertEquals(new BigDecimal("5.50"), mani.profit());
         assertEquals(2, dashboard.topProductsBySales().size());
+        // The products and the suppliers come from one read of the range's lines
+        verify(saleRepository, times(1)).findReportLines(any(), any());
     }
 
     @Test
@@ -197,9 +203,9 @@ class DashboardServiceTest {
         UUID alma = UUID.randomUUID();
         when(saleRepository.findReportLines(any(), any())).thenReturn(List.of(
                 new Object[] {"S1", "2026-10", "NORMAL", new BigDecimal("100.00"), bohemia, "Bohemia",
-                        BigDecimal.ONE, new BigDecimal("100.00"), new BigDecimal("90.00"), true, false},
+                        BigDecimal.ONE, new BigDecimal("100.00"), new BigDecimal("90.00"), true, false, MANI, "Maní"},
                 new Object[] {"S2", "2026-10", "NORMAL", new BigDecimal("60.00"), alma, "Alma",
-                        BigDecimal.ONE, new BigDecimal("60.00"), new BigDecimal("20.00"), true, false}));
+                        BigDecimal.ONE, new BigDecimal("60.00"), new BigDecimal("20.00"), true, false, NUEZ, "Nuez"}));
         when(financialTransactionRepository.sumByMonthAndCategory(any(), any())).thenReturn(List.of(
                 new Object[] {"2026-10", "GASTO", comida, "Comida", new BigDecimal("250.00")},
                 new Object[] {"2026-10", "GASTO", pedido, "Pedido", new BigDecimal("4100.00")},
@@ -287,10 +293,11 @@ class DashboardServiceTest {
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
     }
 
-    private static Object[] productLine(String sale, String saleTotal, UUID product, String name, String quantity,
-                                        String subtotal, String cost, boolean normal, boolean free) {
-        return new Object[] {sale, new BigDecimal(saleTotal), product, name, new BigDecimal(quantity),
-                new BigDecimal(subtotal), new BigDecimal(cost), normal, free};
+    // A row of SaleRepository.findReportLines; the supplier does not matter for the products
+    private static Object[] productLine(String sale, String type, String saleTotal, UUID product, String name,
+                                        String quantity, String subtotal, String cost, boolean normal, boolean free) {
+        return new Object[] {sale, "2026-10", type, new BigDecimal(saleTotal), null, null, new BigDecimal(quantity),
+                new BigDecimal(subtotal), new BigDecimal(cost), normal, free, product, name};
     }
 
     private static CreditorResponse creditor(String debt) {
