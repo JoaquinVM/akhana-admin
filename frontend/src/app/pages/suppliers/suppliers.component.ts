@@ -1,8 +1,8 @@
 import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Supplier, SupplierRequest } from '../../core/supplier/models/supplier.models';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Supplier, SupplierRequest, SupplierStatus } from '../../core/supplier/models/supplier.models';
 import { SupplierService } from '../../core/supplier/supplier.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../shared/components/audit-modal/audit-modal.component';
@@ -60,12 +60,12 @@ export class SuppliersComponent implements OnInit {
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
 
-  supplierForm: FormGroup = this.fb.group({
+  supplierForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
     code: ['', [Validators.required, Validators.maxLength(50)]],
     phone: ['', [Validators.maxLength(30)]],
     description: ['', [Validators.maxLength(500)]],
-    status: ['ACTIVO']
+    status: ['ACTIVO' as SupplierStatus]
   });
 
   // Suppliers filtered by the selected status and sorted by name A-Z
@@ -270,11 +270,11 @@ export class SuppliersComponent implements OnInit {
 
     const formValue = this.supplierForm.value;
     const request: SupplierRequest = {
-      name: formValue.name.trim(),
-      code: formValue.code.trim(),
+      name: formValue.name!.trim(),
+      code: formValue.code!.trim(),
       phone: formValue.phone ? formValue.phone.trim() : null,
       description: formValue.description ? formValue.description.trim() : null,
-      status: this.isEditing() ? formValue.status : 'ACTIVO'
+      status: this.isEditing() ? (formValue.status ?? undefined) : 'ACTIVO'
     };
 
     if (this.isEditing() && this.selectedSupplierId()) {

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { FinanceSummaryService } from '../../../core/finance/finance-summary.service';
 import { FinancialSummary } from '../../../core/finance/models/finance.models';
@@ -35,7 +36,7 @@ export class FinanceSummaryComponent implements OnInit {
         this.summary.set(data);
         this.isLoading.set(false);
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => {
         this.errorMessage.set(err.error?.message || 'Error al cargar el resumen financiero.');
         this.isLoading.set(false);
       }

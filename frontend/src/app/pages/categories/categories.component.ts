@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Category, CategoryRequest, CategoryStatus } from '../../core/category/models/category.models';
 import { CategoryService } from '../../core/category/category.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
@@ -62,7 +62,7 @@ export class CategoriesComponent implements OnInit {
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
 
-  categoryForm: FormGroup = this.fb.group({
+  categoryForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
     description: ['', [Validators.maxLength(500)]],
     color: ['', [Validators.required, Validators.maxLength(50)]]
@@ -252,9 +252,9 @@ export class CategoriesComponent implements OnInit {
 
     const formValue = this.categoryForm.value;
     const request: CategoryRequest = {
-      name: formValue.name.trim(),
+      name: formValue.name!.trim(),
       description: formValue.description ? formValue.description.trim() : null,
-      color: formValue.color.trim()
+      color: formValue.color!.trim()
     };
 
     if (this.isEditing() && this.selectedCategoryId()) {

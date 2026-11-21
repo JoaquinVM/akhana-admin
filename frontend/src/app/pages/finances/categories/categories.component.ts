@@ -1,12 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FinancialCategory, FinancialCategoryRequest, FinancialCategoryType } from '../../../core/finance/models/finance.models';
 import { FinancialCategoryService } from '../../../core/finance/financial-category.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
-import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
+import { ColorPickerComponent, DEFAULT_COLOR } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { FormSnapshot, hasFormChanges } from '../../../shared/utils/form-changes';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
@@ -59,10 +59,10 @@ export class FinancialCategoriesComponent implements OnInit {
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
 
-  categoryForm: FormGroup = this.fb.group({
+  categoryForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
     type: ['INGRESO' as FinancialCategoryType, [Validators.required]],
-    color: ['#2E5B27', [Validators.required]],
+    color: [DEFAULT_COLOR, [Validators.required]],
     isSalesDefault: [false]
   });
 
@@ -119,7 +119,7 @@ export class FinancialCategoriesComponent implements OnInit {
     this.categoryForm.reset({
       name: '',
       type: 'INGRESO',
-      color: '#2E5B27',
+      color: DEFAULT_COLOR,
       isSalesDefault: false
     });
     this.categoryForm.get('type')?.enable();
@@ -134,7 +134,7 @@ export class FinancialCategoriesComponent implements OnInit {
     this.categoryForm.reset({
       name: category.name,
       type: category.type,
-      color: category.color || '#2E5B27',
+      color: category.color || DEFAULT_COLOR,
       isSalesDefault: category.isSalesDefault
     });
     this.categoryForm.get('type')?.disable();
@@ -184,9 +184,9 @@ export class FinancialCategoriesComponent implements OnInit {
 
     const val = this.categoryForm.getRawValue();
     const req: FinancialCategoryRequest = {
-      name: val.name.trim(),
-      type: val.type,
-      color: val.color || '#2E5B27',
+      name: val.name!.trim(),
+      type: val.type!,
+      color: val.color || DEFAULT_COLOR,
       isSalesDefault: val.type === 'INGRESO' ? !!val.isSalesDefault : false
     };
 

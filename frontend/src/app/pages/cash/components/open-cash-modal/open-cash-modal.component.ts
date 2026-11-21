@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, effect, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConnectionNoticeComponent } from '../../../../shared/components/connection-notice/connection-notice.component';
 import { CashService } from '../../../../core/cash/cash.service';
@@ -35,7 +35,7 @@ export class OpenCashModalComponent {
   // Without the proposal the amount to compare against is unknown: the form waits instead of opening with 0
   proposalFailed = signal<boolean>(false);
 
-  form: FormGroup = this.fb.group({
+  form = this.fb.group({
     operationDate: [''],
     openingAmount: [0, [Validators.required, Validators.min(0)]],
     openingComment: ['', [Validators.maxLength(500)]],
@@ -43,9 +43,9 @@ export class OpenCashModalComponent {
     noAttentionComment: ['', [Validators.maxLength(500)]]
   });
 
-  private readonly openingAmount = toSignal(this.form.get('openingAmount')!.valueChanges, { initialValue: 0 });
-  private readonly day = toSignal<string, string>(this.form.get('operationDate')!.valueChanges, { initialValue: '' });
-  private readonly noAttentionConfirmed = toSignal<boolean, boolean>(this.form.get('noAttentionConfirmed')!.valueChanges, { initialValue: false });
+  private readonly openingAmount = toSignal(this.form.controls.openingAmount.valueChanges, { initialValue: 0 });
+  private readonly day = toSignal(this.form.controls.operationDate.valueChanges, { initialValue: '' });
+  private readonly noAttentionConfirmed = toSignal(this.form.controls.noAttentionConfirmed.valueChanges, { initialValue: false });
 
   // CAJ-12: there is a day to choose unless the last session already is today's (or later)
   readonly hasDayToChoose = computed(() => {
@@ -95,7 +95,7 @@ export class OpenCashModalComponent {
   });
 
   // Until the missing days are confirmed the session does not open; another day can be chosen instead
-  readonly daysResolved = computed(() => this.missingDays().length === 0 || this.noAttentionConfirmed());
+  readonly daysResolved = computed(() => this.missingDays().length === 0 || !!this.noAttentionConfirmed());
 
   constructor() {
     effect(() => {
@@ -109,7 +109,7 @@ export class OpenCashModalComponent {
     effect(() => {
       const amount = this.openingAmount();
       const proposal = this.proposal();
-      const changed = proposal !== null && amount !== null && amount !== ''
+      const changed = proposal !== null && amount !== null
         && Math.round(Number(amount) * 100) !== Math.round(proposal.proposedAmount * 100);
       this.amountChanged.set(changed);
       const comment = this.form.get('openingComment')!;
@@ -163,7 +163,7 @@ export class OpenCashModalComponent {
       openingComment: val.openingComment ? val.openingComment.trim() : null,
       operationDate: val.operationDate || null,
       noAttentionDays: missing.length > 0 ? missing : null,
-      noAttentionComment: missing.length > 0 ? val.noAttentionComment.trim() : null
+      noAttentionComment: missing.length > 0 ? (val.noAttentionComment ?? '').trim() : null
     });
   }
 
