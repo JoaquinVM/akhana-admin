@@ -1,13 +1,13 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FinancialAccount, FinancialAccountRequest, FinancialTransaction } from '../../../core/finance/models/finance.models';
 import { FinancialAccountService } from '../../../core/finance/financial-account.service';
 import { FinancialTransactionService } from '../../../core/finance/financial-transaction.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
-import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
+import { ColorPickerComponent, DEFAULT_COLOR } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { FormSnapshot, hasFormChanges } from '../../../shared/utils/form-changes';
 import { ConnectionNoticeComponent } from '../../../shared/components/connection-notice/connection-notice.component';
@@ -78,7 +78,7 @@ export class AccountsComponent implements OnInit {
   accountForOpeningBalance = signal<FinancialAccount | null>(null);
   openingBalanceError = signal<string | null>(null);
   isSavingOpeningBalance = signal<boolean>(false);
-  openingBalanceForm: FormGroup = this.fb.group({
+  openingBalanceForm = this.fb.group({
     amount: [null as number | null, [Validators.required, Validators.min(0)]]
   });
 
@@ -86,9 +86,9 @@ export class AccountsComponent implements OnInit {
     return this.openingBalanceForm.controls['amount'];
   }
 
-  accountForm: FormGroup = this.fb.group({
+  accountForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
-    color: ['#2e5b27', [Validators.required]],
+    color: [DEFAULT_COLOR, [Validators.required]],
     initialBalance: [0, [Validators.min(0)]],
     isQrAccount: [false]
   });
@@ -123,7 +123,7 @@ export class AccountsComponent implements OnInit {
     this.formError.set(null);
     this.accountForm.reset({
       name: '',
-      color: '#2e5b27',
+      color: DEFAULT_COLOR,
       initialBalance: 0,
       isQrAccount: false
     });
@@ -138,7 +138,7 @@ export class AccountsComponent implements OnInit {
     this.formError.set(null);
     this.accountForm.reset({
       name: account.name,
-      color: account.color || '#2e5b27',
+      color: account.color || DEFAULT_COLOR,
       initialBalance: account.initialBalance,
       isQrAccount: account.isQrAccount
     });
@@ -189,10 +189,10 @@ export class AccountsComponent implements OnInit {
 
     const val = this.accountForm.getRawValue();
     const req: FinancialAccountRequest = {
-      name: val.name.trim(),
-      color: val.color,
-      initialBalance: val.initialBalance,
-      isQrAccount: val.isQrAccount
+      name: val.name!.trim(),
+      color: val.color!,
+      initialBalance: val.initialBalance ?? undefined,
+      isQrAccount: val.isQrAccount!
     };
 
     if (this.isEditing() && this.selectedAccountId()) {

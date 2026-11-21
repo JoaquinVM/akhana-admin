@@ -1,6 +1,6 @@
 import { Component, inject, input, output, computed, signal, effect, untracked, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import {
   CloseCashRequest,
@@ -72,7 +72,7 @@ export class CloseCashModalComponent {
     ) / 100;
   });
 
-  form: FormGroup = this.fb.group({
+  form = this.fb.group({
     closingAmount: [0, [Validators.required, Validators.min(0)]],
     closingComment: ['', [Validators.maxLength(500)]],
     reserveBills: [0, [Validators.min(0)]],
