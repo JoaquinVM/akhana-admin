@@ -189,7 +189,8 @@ transferencias y el consumo.
   y las validaciones son los del reporte y el nombre usa el rango resuelto (sin fechas, el mes en curso), por
   ejemplo `akhana-sales-by-day-2026-10-01-2026-10-26.xlsx`. Cada hoja tiene un título con el rango, los encabezados
   agrupados como en la pantalla (Ventas normales, Ventas al costo…) y congelados, y las filas en el mismo orden con
-  subtotales y totales en negrita. Montos con formato `#,##0.00`, cantidades `#,##0.000`, conteos enteros, días como
+  subtotales y totales en negrita. Montos con formato `"Bs "#,##0.00` (101: se leen «Bs 1,234.50»; Excel
+  muestra los separadores de la región del equipo, y en una región con coma decimal se ven al revés), cantidades `#,##0.000`, conteos enteros, días como
   fecha `dd/mm/yyyy`, margen como porcentaje con 2 decimales; un margen o un monto sin movimientos («—» en la
   pantalla) queda como celda vacía. Movimientos por categoría: una columna por mes y el total del rango, bloques
   Ingresos, Gastos, Neto, Transferencias y la línea «Consumo al costo (sin movimiento de dinero)». Consumos: dos

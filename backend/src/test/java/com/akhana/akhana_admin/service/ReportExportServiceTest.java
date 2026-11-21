@@ -36,6 +36,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ReportExportServiceTest {
 
+    // Amounts read "Bs 1,234.50" in the workbook
+    private static final String MONEY = "\"Bs \"#,##0.00";
+
     private static final LocalDate JULY_1 = LocalDate.of(2026, 7, 1);
     private static final LocalDate JULY_17 = LocalDate.of(2026, 7, 17);
     private static final LocalDate AUGUST_31 = LocalDate.of(2026, 8, 31);
@@ -71,13 +74,13 @@ class ReportExportServiceTest {
             assertEquals(JULY_17, dayRow.getCell(0).getLocalDateTimeCellValue().toLocalDate());
             assertEquals(30, dayRow.getCell(1).getNumericCellValue());
             assertNumber(dayRow.getCell(2), 74.25, "#,##0.000");
-            assertNumber(dayRow.getCell(3), 2745.00, "#,##0.00");
-            assertNumber(dayRow.getCell(5), 640.84, "#,##0.00");
+            assertNumber(dayRow.getCell(3), 2745.00, MONEY);
+            assertNumber(dayRow.getCell(5), 640.84, MONEY);
             assertNumber(dayRow.getCell(6), 0.2335, "0.00%");
-            assertNumber(dayRow.getCell(9), 104.00, "#,##0.00");
+            assertNumber(dayRow.getCell(9), 104.00, MONEY);
             assertEquals("Sin identificar", text(sheet, 3, 11));
-            assertNumber(dayRow.getCell(11), 0.00, "#,##0.00");
-            assertNumber(dayRow.getCell(13), 2849.00, "#,##0.00");
+            assertNumber(dayRow.getCell(11), 0.00, MONEY);
+            assertNumber(dayRow.getCell(13), 2849.00, MONEY);
 
             assertEquals("Total julio 2026", text(sheet, FIRST_ROW_WITH_GROUPS + 1, 0));
             assertTrue(isBold(workbook, sheet.getRow(FIRST_ROW_WITH_GROUPS + 1).getCell(3)));
@@ -122,7 +125,7 @@ class ReportExportServiceTest {
             assertEquals("Bohemia", text(sheet, FIRST_ROW_WITH_GROUPS, 0));
             assertEquals("  julio 2026", text(sheet, FIRST_ROW_WITH_GROUPS + 1, 0));
             assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS + 1).getCell(1), 2, "#,##0.000");
-            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS + 1).getCell(2), 160, "#,##0.00");
+            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS + 1).getCell(2), 160, MONEY);
             assertEquals("Total Bohemia", text(sheet, FIRST_ROW_WITH_GROUPS + 2, 0));
             assertEquals("Total del rango", text(sheet, FIRST_ROW_WITH_GROUPS + 3, 0));
         }
@@ -161,8 +164,8 @@ class ReportExportServiceTest {
             int row = FIRST_ROW_WITHOUT_GROUPS;
             assertEquals("Ingresos", text(sheet, row++, 0));
             assertEquals("  Venta", text(sheet, row, 0));
-            assertNumber(sheet.getRow(row).getCell(2), 67031.50, "#,##0.00");
-            assertNumber(sheet.getRow(row++).getCell(3), 68031.50, "#,##0.00");
+            assertNumber(sheet.getRow(row).getCell(2), 67031.50, MONEY);
+            assertNumber(sheet.getRow(row++).getCell(3), 68031.50, MONEY);
             assertEquals("Total ingresos", text(sheet, row++, 0));
             assertEquals("Gastos", text(sheet, row++, 0));
             assertEquals("  Comida", text(sheet, row, 0));
@@ -200,8 +203,8 @@ class ReportExportServiceTest {
             assertEquals("Sin identificar", text(sheet, 3, 9));
             assertEquals("Utilidad menos consumos", text(sheet, 3, 14));
             assertEquals("julio 2026", text(sheet, FIRST_ROW_WITH_GROUPS, 0));
-            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(4), 8505.78, "#,##0.00");
-            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(14), 8205.78, "#,##0.00");
+            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(4), 8505.78, MONEY);
+            assertNumber(sheet.getRow(FIRST_ROW_WITH_GROUPS).getCell(14), 8205.78, MONEY);
             assertEquals("Total del rango", text(sheet, FIRST_ROW_WITH_GROUPS + 1, 0));
         }
     }
@@ -228,7 +231,7 @@ class ReportExportServiceTest {
         try (Workbook workbook = open(file)) {
             Sheet days = workbook.getSheet("Por día");
             assertNumber(days.getRow(FIRST_ROW_WITHOUT_GROUPS).getCell(2), 1.25, "#,##0.000");
-            assertNumber(days.getRow(FIRST_ROW_WITHOUT_GROUPS).getCell(3), 45.50, "#,##0.00");
+            assertNumber(days.getRow(FIRST_ROW_WITHOUT_GROUPS).getCell(3), 45.50, MONEY);
             assertEquals("Total julio 2026", text(days, FIRST_ROW_WITHOUT_GROUPS + 1, 0));
             assertEquals("Total del rango", text(days, FIRST_ROW_WITHOUT_GROUPS + 2, 0));
 

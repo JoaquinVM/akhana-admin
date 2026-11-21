@@ -486,7 +486,7 @@ class FinancialTransactionServiceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> financialTransactionService.voidTransaction(
                 tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "admin"));
-        assertTrue(ex.getMessage().contains("Cuenta Joaco quedaría con saldo negativo (saldo disponible: Bs 30,00)"));
+        assertTrue(ex.getMessage().contains("Cuenta Joaco quedaría con saldo negativo (saldo disponible: Bs 30.00)"));
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         assertEquals(FinancialTransactionStatus.ACTIVO, tx.getStatus());
     }
@@ -886,7 +886,7 @@ class FinancialTransactionServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
-        assertTrue(ex.getMessage().contains("mayor a Bs 0,00"));
+        assertTrue(ex.getMessage().contains("mayor a Bs 0.00"));
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any(FinancialTransaction.class));
     }
@@ -1209,7 +1209,7 @@ class FinancialTransactionServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
 
-        assertEquals("El monto debe ser mayor a Bs 0,00.", ex.getMessage());
+        assertEquals("El monto debe ser mayor a Bs 0.00.", ex.getMessage());
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any());
     }
@@ -1230,7 +1230,7 @@ class FinancialTransactionServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.createTransaction(req, "admin"));
 
-        assertEquals("El monto debe ser mayor a Bs 0,00.", ex.getMessage());
+        assertEquals("El monto debe ser mayor a Bs 0.00.", ex.getMessage());
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         assertEquals(new BigDecimal("200.00"), joacoAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any());

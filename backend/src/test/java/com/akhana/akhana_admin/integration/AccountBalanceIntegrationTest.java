@@ -167,7 +167,7 @@ class AccountBalanceIntegrationTest {
     // ---- 4. A void never leaves an account negative; 0.00 is allowed ----
 
     @Test
-    @DisplayName("POS-07: anular una venta en efectivo que deja Caja justo en 0,00 se permite")
+    @DisplayName("POS-07: anular una venta en efectivo que deja Caja justo en 0.00 se permite")
     void voidCashSale_leavingZero_passes() {
         UUID product = createProduct(new BigDecimal("10.00"));
         UUID account = createAccount("Retiro anulacion", "0.00");
@@ -192,14 +192,14 @@ class AccountBalanceIntegrationTest {
 
         assertThatThrownBy(() -> saleService.voidSale(sold.id(), new VoidSaleRequest("Error"), USER))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 9,99). "
+            .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 9.99). "
                 + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(balance(cashId)).isEqualByComparingTo("9.99");
         assertThat(saleStatus(sold.id())).isEqualTo("COMPLETADA");
     }
 
     @Test
-    @DisplayName("POS-07: anular una venta QR que deja la cuenta QR justo en 0,00 se permite")
+    @DisplayName("POS-07: anular una venta QR que deja la cuenta QR justo en 0.00 se permite")
     void voidQrSale_leavingZero_passes() {
         UUID product = createProduct(new BigDecimal("10.00"));
         UUID account = createAccount("Desde QR", "0.00");
@@ -225,7 +225,7 @@ class AccountBalanceIntegrationTest {
 
         assertThatThrownBy(() -> saleService.voidSale(sold.id(), new VoidSaleRequest("Error"), USER))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("No se puede anular: la cuenta " + qrName + " quedaría con saldo negativo (saldo disponible: Bs 9,99). "
+            .hasMessage("No se puede anular: la cuenta " + qrName + " quedaría con saldo negativo (saldo disponible: Bs 9.99). "
                 + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(balance(qrId)).isEqualByComparingTo("9.99");
         assertThat(saleStatus(sold.id())).isEqualTo("COMPLETADA");
@@ -234,7 +234,7 @@ class AccountBalanceIntegrationTest {
     // ---- 6. Migration V35 ----
 
     @Test
-    @DisplayName("V35: un movimiento con monto 0 o negativo se rechaza; el saldo inicial en 0,00 sí entra")
+    @DisplayName("V35: un movimiento con monto 0 o negativo se rechaza; el saldo inicial en 0.00 sí entra")
     void amountMustBePositive_exceptAnEmptyOpeningBalance() {
         UUID account = createAccount("Montos", "0.00");
         String insert = "INSERT INTO financial_transactions (type, source_account_id, amount, transaction_date, operation_date, description, created_by) "

@@ -291,7 +291,7 @@ describe('RegisterSaleComponent', () => {
         component.updateQuantity(blueberries.id, 0.03);
       });
 
-      it('30 g salen 11,23 y el total escrito 10,00 es lo que se cobra y se envía', () => {
+      it('30 g salen 11.23 y el total escrito 10.00 es lo que se cobra y se envía', () => {
         expect(line().subtotal).toBe(11.23);
 
         component.updateLineTotal(blueberries.id, 10);
@@ -677,7 +677,7 @@ describe('RegisterSaleComponent', () => {
 
       component.updateGlobalDiscount(25);
       expect(component.globalDiscount()).toBe(20);
-      expect(component.errorMessage()).toBe('El descuento general no puede superar el subtotal de los productos normales (Bs 20,00).');
+      expect(component.errorMessage()).toBe('El descuento general no puede superar el subtotal de los productos normales (Bs 20.00).');
       expect(component.totalAmount()).toBe(30);
 
       component.removeFromCart(component.cartItems()[0].key);

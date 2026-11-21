@@ -245,9 +245,9 @@ class CreditorServiceTest {
 
         assertThatThrownBy(() -> creditorService.updateCreditor(mami.getId(),
             new CreditorRequest("Mami", null, null, CreditorStatus.INACTIVO), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvela antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150.00; devuélvela antes de darla de baja.");
         assertThatThrownBy(() -> creditorService.deleteCreditor(mami.getId(), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvela antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150.00; devuélvela antes de darla de baja.");
         assertThat(mami.getStatus()).isEqualTo(CreditorStatus.ACTIVO);
     }
 
@@ -516,7 +516,7 @@ class CreditorServiceTest {
             .hasMessage(changed);
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             pay(bisa, "0.004", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+            .hasMessage("El monto debe ser mayor a Bs 0.00.");
         verify(financialTransactionRepository, never()).save(any());
         assertThat(repayments).isEmpty();
         assertThat(rows).isEmpty();
@@ -541,7 +541,7 @@ class CreditorServiceTest {
         // Data where the computed debt is below the debt ticked (e.g. a repayment of before 062 not fully marked)
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             pay(bisa, "60", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))
-            .hasMessage("La devolución supera la deuda con Mami (Bs 50,00).");
+            .hasMessage("La devolución supera la deuda con Mami (Bs 50.00).");
         verify(financialTransactionRepository, never()).save(any());
 
         debt("60.00");
@@ -704,7 +704,7 @@ class CreditorServiceTest {
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             pay(bisa, amount, item(CreditorHistoryResponse.EntryType.PAYMENT, UUID.randomUUID())), "operator"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+            .hasMessage("El monto debe ser mayor a Bs 0.00.");
         assertThat(bisa.getCurrentBalance()).isEqualTo(before);
         verify(creditorRepaymentRepository, never()).save(any());
         verify(financialTransactionRepository, never()).save(any());

@@ -599,7 +599,7 @@
                            (input)="updatePresentation(i, 'name', $any($event.target).value)" />
                   </td>
                   <td>
-                    <input type="number" class="form-control" step="0.001" min="0.001" placeholder="0,227"
+                    <input type="number" class="form-control" step="0.001" min="0.001" placeholder="0.227"
                            [attr.aria-label]="'Peso en kilos de la presentación ' + (i + 1)"
                            [disabled]="!draft.active" [value]="draft.weightKg ?? ''"
                            (input)="updatePresentation(i, 'weightKg', $any($event.target).value)" />
