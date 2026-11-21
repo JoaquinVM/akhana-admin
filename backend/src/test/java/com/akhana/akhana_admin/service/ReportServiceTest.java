@@ -26,6 +26,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
+import org.mockito.Spy;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 // Sales per day and per supplier (FIN-10) with normal and at-cost sales apart (CON-03); scenarios of specs/reports.md
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +50,10 @@ class ReportServiceTest {
 
     @Mock
     private ConsumptionRepository consumptionRepository;
+
+    // The store's clock, handed to the service by constructor
+    @Spy
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
 
     @InjectMocks
     private ReportServiceImpl reportService;
@@ -689,5 +698,23 @@ class ReportServiceTest {
                                 String pending, String thirdParty, String unidentified) {
         return new Object[] {day, type, sales, new BigDecimal(quantity), new BigDecimal(total), new BigDecimal(cost),
                 new BigDecimal(pending), new BigDecimal(thirdParty), new BigDecimal(unidentified)};
+    }
+
+    @ParameterizedTest(name = "a las {0} el reporte va de {1} a {2}")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11-01, 2026-11-30",
+        "2026-12-01T04:00:00Z, 2026-12-01, 2026-12-01"
+    })
+    @DisplayName("Sin fechas, el mes en curso y hoy son los de La Paz: el 1 a las 00:00 ya es el mes nuevo")
+    void defaultRangeFollowsTheStoreClock(String instant, String from, String to) {
+        ReportServiceImpl service = new ReportServiceImpl(saleRepository, financialTransactionRepository,
+                consumptionRepository, StoreClocks.at(instant));
+        stubRows();
+
+        SalesByDayReportResponse report = service.getSalesByDay(null, null);
+
+        assertEquals(LocalDate.parse(from), report.from());
+        assertEquals(LocalDate.parse(to), report.to());
+        verify(saleRepository).sumByDayAndType(LocalDate.parse(from), LocalDate.parse(to));
     }
 }

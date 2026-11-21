@@ -30,6 +30,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
+import org.mockito.Spy;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAccountServiceTest {
@@ -42,6 +45,10 @@ class FinancialAccountServiceTest {
 
     @Mock
     private CashSessionRepository cashSessionRepository;
+
+    // The store's clock, handed to the service by constructor
+    @Spy
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
 
     @InjectMocks
     private FinancialAccountServiceImpl financialAccountService;

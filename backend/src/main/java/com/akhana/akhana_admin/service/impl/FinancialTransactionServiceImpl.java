@@ -19,9 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +41,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private final CashSessionRepository cashSessionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
     private final EntityManager entityManager;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String AMOUNT_EDIT = "El monto de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
@@ -132,7 +134,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         UUID sessionToLink = lockedSession.map(CashSession::getId).orElse(null);
 
         // The server dates every movement; the historical import (FIN-11) will have its own path
-        Instant txDate = Instant.now();
+        Instant txDate = Instant.now(clock);
         FinancialTransaction.FinancialTransactionBuilder builder = FinancialTransaction.builder()
                 .type(request.getType())
                 .sourceAccount(sourceAccount)
@@ -145,7 +147,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .notes(request.getNotes() != null ? request.getNotes().trim() : null)
                 .status(FinancialTransactionStatus.ACTIVO)
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
-                .createdAt(Instant.now());
+                .createdAt(Instant.now(clock));
 
         if (request.getType() == FinancialTransactionType.INGRESO_MANUAL) {
             if (Boolean.TRUE.equals(sourceAccount.getIsCashAccount())) {
@@ -293,7 +295,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         tx.setDescription(request.getDescription().trim());
         tx.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
         tx.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-        tx.setUpdatedAt(Instant.now());
+        tx.setUpdatedAt(Instant.now(clock));
 
         FinancialTransaction updatedTx = financialTransactionRepository.save(tx);
 
@@ -448,7 +450,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         }
 
         tx.setStatus(FinancialTransactionStatus.ANULADO);
-        tx.setVoidedAt(Instant.now());
+        tx.setVoidedAt(Instant.now(clock));
         tx.setVoidedBy(currentUsername != null ? currentUsername : "SYSTEM");
         tx.setVoidReason(voidReason);
 
@@ -534,11 +536,11 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     }
 
     private LocalDate getDefaultStartDate() {
-        return YearMonth.now(StoreFormat.STORE_ZONE).atDay(1);
+        return StoreFormat.currentMonth(clock).atDay(1);
     }
 
     private LocalDate getDefaultEndDate() {
-        return StoreFormat.today();
+        return StoreFormat.today(clock);
     }
 
     /** A movement as every screen gets it; the financial summary (FIN-09) uses it too, so no field is lost. */

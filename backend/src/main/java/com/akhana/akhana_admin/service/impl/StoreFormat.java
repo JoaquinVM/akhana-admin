@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 
 /**
@@ -24,9 +26,14 @@ public final class StoreFormat {
         return instant.atZone(STORE_ZONE).toLocalDate();
     }
 
-    /** Today in the store. */
-    public static LocalDate today() {
-        return LocalDate.now(STORE_ZONE);
+    /** Today in the store, by the given clock: always the America/La_Paz day, whatever zone the clock carries. */
+    public static LocalDate today(Clock clock) {
+        return LocalDate.now(clock.withZone(STORE_ZONE));
+    }
+
+    /** The current month in the store, by the given clock (America/La_Paz). */
+    public static YearMonth currentMonth(Clock clock) {
+        return YearMonth.now(clock.withZone(STORE_ZONE));
     }
 
     /** A store day for a message: "2/11", "30/10". */

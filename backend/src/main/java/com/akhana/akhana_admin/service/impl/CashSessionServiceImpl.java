@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -51,6 +52,8 @@ public class CashSessionServiceImpl implements CashSessionService {
     private final CashNoAttentionDayRepository cashNoAttentionDayRepository;
     private final CashSessionReopeningRepository cashSessionReopeningRepository;
     private final CashDenominationCutRepository cashDenominationCutRepository;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
@@ -94,7 +97,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             throw new DuplicateResourceException(ALREADY_OPEN_MESSAGE);
         }
 
-        Instant openedAt = Instant.now();
+        Instant openedAt = Instant.now(clock);
         LocalDate today = StoreFormat.storeDay(openedAt);
         LocalDate day = request.operationDate() != null ? request.operationDate() : today;
         if (day.isAfter(today)) {
@@ -203,7 +206,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     @Transactional(readOnly = true)
     public CashOpeningProposalResponse getOpeningProposal() {
         AmountProposal amount = amountProposal();
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         Optional<CashSession> last = cashSessionRepository.findFirstByOrderByOperationDateDescSessionNumberDesc();
         return new CashOpeningProposalResponse(
             amount.amount(),
@@ -263,7 +266,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         CashSession session = cashSessionRepository.findByIdForUpdate(id)
             .orElseThrow(() -> new ResourceNotFoundException("Sesión de caja no encontrada con ID: " + id));
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         CashSessionReopening reopening = cashSessionReopeningRepository.saveAndFlush(CashSessionReopening.builder()
             .cashSessionId(id)
             .reason(reason)
@@ -378,7 +381,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         session.setClosingReserveBills(reserveBills);
         session.setClosingReserveCoins(reserveCoins);
         session.setClosedBy(username);
-        session.setClosedAt(Instant.now());
+        session.setClosedAt(Instant.now(clock));
         session.setStatus(CashSessionStatus.CERRADA);
         session.setExpectedCash(expectedCash);
         session.setDifference(difference);
@@ -625,7 +628,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             : cashAccount.getCurrentBalance().subtract(amount));
         financialAccountRepository.save(cashAccount);
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         financialTransactionRepository.save(FinancialTransaction.builder()
             .type(surplus ? FinancialTransactionType.INGRESO_MANUAL : FinancialTransactionType.GASTO_MANUAL)
             .sourceAccount(cashAccount)

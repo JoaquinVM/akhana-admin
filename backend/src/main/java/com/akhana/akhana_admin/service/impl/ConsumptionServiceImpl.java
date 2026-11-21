@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -40,6 +41,8 @@ public class ConsumptionServiceImpl implements ConsumptionService {
     private final ConsumptionRepository consumptionRepository;
     private final ProductRepository productRepository;
     private final ProductPresentationService presentationService;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,7 +65,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException(NO_ITEMS);
         }
-        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
+        LocalDate today = StoreFormat.today(clock);
         LocalDate consumptionDate = request.consumptionDate() != null ? request.consumptionDate() : today;
         if (consumptionDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);
@@ -88,7 +91,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
             quantities.merge(new LineKey(product.getId(), itemReq.presentationId()), quantity, BigDecimal::add);
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Consumption consumption = Consumption.builder()
             .consumptionNumber(formatConsumptionNumber(consumptionRepository.nextConsumptionNumber()))
             .consumptionDate(consumptionDate)
@@ -144,7 +147,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         // No money to revert, so it does not depend on the cash session
         consumption.setStatus(ConsumptionStatus.ANULADO);
         consumption.setVoidedBy(username);
-        consumption.setVoidedAt(Instant.now());
+        consumption.setVoidedAt(Instant.now(clock));
         consumption.setVoidReason(voidReason);
         return ConsumptionResponse.detail(consumptionRepository.save(consumption));
     }
