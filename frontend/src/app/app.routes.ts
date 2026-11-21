@@ -110,13 +110,6 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.REPORTS }
       },
       {
-        path: 'migration',
-        // FIN-11: used only once, lazy loaded
-        loadComponent: () => import('./pages/migration/migration.component').then(m => m.MigrationComponent),
-        canActivate: [permissionGuard],
-        data: { permission: PERMISSIONS.MIGRATION }
-      },
-      {
         path: 'products',
         // Lazy so the initial bundle stays within its budget with the photo components (CAT-12)
         loadComponent: () => import('./pages/products/products.component').then(m => m.ProductsComponent),

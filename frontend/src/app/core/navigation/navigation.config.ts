@@ -23,8 +23,7 @@ export const PERMISSIONS = {
   FINANCES_CATEGORIES: 'FINANCES_CATEGORIES',
   REPORTS: 'REPORTS',
   DASHBOARD: 'DASHBOARD',
-  USERS: 'USERS',
-  MIGRATION: 'MIGRATION'
+  USERS: 'USERS'
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -44,7 +43,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'ADMINISTRATOR',
     label: 'Administrador',
-    description: 'Todas las pantallas: lo del operador más dashboard, finanzas, reportes, migración y usuarios.'
+    description: 'Todas las pantallas: lo del operador más dashboard, finanzas, reportes y usuarios.'
   }
 ];
 
@@ -117,12 +116,6 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         label: 'Reportes',
         route: '/reports',
         permissionKey: PERMISSIONS.REPORTS
-      },
-      {
-        label: 'Migración',
-        route: '/migration',
-        caption: 'Una vez',
-        permissionKey: PERMISSIONS.MIGRATION
       }
     ]
   },
