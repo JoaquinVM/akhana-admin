@@ -13,7 +13,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
-| Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA para todos los usuarios (USR-08) y contraseñas de 12 caracteres (USR-01) | `users.md` |
+| Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA para todos los usuarios (USR-08), contraseñas de 12 a 72 caracteres (USR-01) y cierre de sesiones al quitar el 2FA o cambiar el rol (094) | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
@@ -227,14 +227,14 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 
 Detalle en `users.md`.
 
-- **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña nueva de 12 a 100 caracteres, distinta del nombre de usuario, con hash BCrypt; las guardadas antes siguen sirviendo.
+- **USR-01** Usuario con nombre completo y nombre de usuario inmutable y único sin distinguir mayúsculas; contraseña nueva de 12 a 72 caracteres y hasta 72 bytes (el máximo de BCrypt), distinta del nombre de usuario, con hash BCrypt; las guardadas antes siguen sirviendo.
 - **USR-02** Permisos controlados en el frontend (menú, rutas) y en el backend (cada endpoint).
 - **USR-03** Un usuario dado de baja pierde el acceso de inmediato, aunque tenga una sesión abierta.
 - **USR-04** Nadie puede darse de baja a sí mismo ni eliminar al último administrador, tampoco con dos bajas a la vez.
-- **USR-05** Dos roles, Operador y Administrador, con permisos por pantalla según la tabla 2.2 (P-33).
-- **USR-06** El primer administrador se crea desde variables de entorno solo si no hay usuarios y debe cambiar la contraseña en su primer ingreso. Cualquier usuario puede cambiar su contraseña indicando la actual.
-- **USR-07** El login se bloquea tras varios intentos fallidos de un usuario desde una IP, o de una IP con cualquier usuario, con un mensaje que no revela si el usuario existe (T-19). Un usuario bloqueado desde una IP sigue entrando desde otra.
-- **USR-08** Todo usuario, operador o administrador, entra con la contraseña y un código de una app autenticadora (2FA), que activa con un QR en su primer ingreso. Si pierde el teléfono, otro usuario con permiso de Usuarios se lo quita, con quién y cuándo; nadie se lo quita a sí mismo.
+- **USR-05** Dos roles, Operador y Administrador, con permisos por pantalla según la tabla 2.2 (P-33). Cambiar el rol de un usuario cierra sus sesiones abiertas.
+- **USR-06** El primer administrador se crea desde variables de entorno solo si no hay usuarios y debe cambiar la contraseña en su primer ingreso. Cualquier usuario puede cambiar su contraseña indicando la actual; una actual incorrecta cuenta como fallo del login (USR-07).
+- **USR-07** El login se bloquea tras varios intentos fallidos de un usuario desde una IP, o de una IP con cualquier usuario, con un mensaje que no revela si el usuario existe (T-19). Un usuario bloqueado desde una IP sigue entrando desde otra, salvo en el código del 2FA: 10 códigos malos en una hora, desde cualquier IP, bloquean ese paso para ese usuario durante una hora. El tiempo de respuesta no revela si el usuario existe.
+- **USR-08** Todo usuario, operador o administrador, entra con la contraseña y un código de una app autenticadora (2FA), que activa con un QR en su primer ingreso. Si pierde el teléfono, otro usuario con permiso de Usuarios se lo quita, con quién y cuándo, y eso cierra sus sesiones abiertas; nadie se lo quita a sí mismo.
 
 ### 3.10 Inventario · V2
 

@@ -207,8 +207,33 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("La contraseña debe tener entre 12 y 100 caracteres."));
+                .andExpect(jsonPath("$.message").value("La contraseña debe tener entre 12 y 72 caracteres."));
         verify(userService, never()).createUser(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/users rechaza una contraseña de 73 bytes con tildes y acepta una de 72, el máximo de BCrypt")
+    void createUser_passwordUtf8BytesLimit() throws Exception {
+        // 36 «á» are 36 characters but 72 bytes in UTF-8
+        String seventyTwoBytes = "á".repeat(36);
+        String json = """
+                { "fullName": "Carlos Perez", "username": "cperez", "password": "%s", "role": "OPERATOR" }
+                """;
+
+        mockMvc.perform(post("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.formatted(seventyTwoBytes + "a")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela."));
+        verify(userService, never()).createUser(any(), any());
+
+        mockMvc.perform(post("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.formatted(seventyTwoBytes)))
+                .andExpect(status().is2xxSuccessful());
+        verify(userService).createUser(any(), any());
     }
 
     @Test

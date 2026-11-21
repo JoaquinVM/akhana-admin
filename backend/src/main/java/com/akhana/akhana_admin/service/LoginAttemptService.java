@@ -12,4 +12,13 @@ public interface LoginAttemptService {
     void recordFailure(String username, String clientIp);
 
     void recordSuccess(String username, String clientIp);
+
+    /**
+     * Throws LoginBlockedException when the username has too many wrong second factor codes from any IP. Only
+     * whoever knows the password reaches the code, so this lock cannot be used to lock out a user by its name alone.
+     */
+    void checkSecondFactorNotBlocked(String username);
+
+    /** Counts a wrong second factor code for the username from any IP; throws LoginBlockedException if it locks. */
+    void recordSecondFactorFailure(String username);
 }

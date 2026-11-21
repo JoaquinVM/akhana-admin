@@ -261,7 +261,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/change-password - Retorna 200 con el token nuevo y delega en el servicio con el usuario autenticado")
     void changePassword_Success() throws Exception {
         User user = authenticate("valid.token", true);
-        when(authService.changePassword(eq(user.getId()), any(ChangePasswordRequest.class))).thenReturn("new.token");
+        when(authService.changePassword(eq(user.getId()), any(ChangePasswordRequest.class), anyString())).thenReturn("new.token");
 
         mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
@@ -272,7 +272,7 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.token").value("new.token"));
 
-        verify(authService).changePassword(eq(user.getId()), any(ChangePasswordRequest.class));
+        verify(authService).changePassword(eq(user.getId()), any(ChangePasswordRequest.class), anyString());
     }
 
     @Test
@@ -288,9 +288,35 @@ class AuthControllerTest {
                     { "currentPassword": "initial-pass", "newPassword": "eleven-char" }
                     """))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 100 caracteres."));
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 72 caracteres."));
 
-        verify(authService, never()).changePassword(any(), any());
+        verify(authService, never()).changePassword(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/change-password - Rechaza 73 bytes con ñ y acepta 72, el máximo de BCrypt")
+    void changePassword_Utf8BytesLimit() throws Exception {
+        User user = authenticate("valid.token", true);
+        when(authService.changePassword(eq(user.getId()), any(ChangePasswordRequest.class), anyString()))
+            .thenReturn("new.token");
+        // 36 ñ are 36 characters but 72 bytes in UTF-8
+        String seventyTwoBytes = "ñ".repeat(36);
+
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"initial-pass\",\"newPassword\":\"%s\"}".formatted(seventyTwoBytes + "a")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("La nueva contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela."));
+        verify(authService, never()).changePassword(any(), any(), any());
+
+        mockMvc.perform(post("/api/auth/change-password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"initial-pass\",\"newPassword\":\"%s\"}".formatted(seventyTwoBytes)))
+            .andExpect(status().isOk());
+        verify(authService).changePassword(eq(user.getId()),
+            eq(new ChangePasswordRequest("initial-pass", seventyTwoBytes)), anyString());
     }
 
     @Test
