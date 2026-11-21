@@ -26,7 +26,8 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Migración | CAT-06, FIN-11 | ✅ Completo | FIN-11 hecha y retirada (quedan los datos); falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Probar en teléfonos reales la instalación, la zona segura del iPhone y sin conexión; reinstalarla desde el dominio al salir a internet | `mobile.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | Salida a internet por Cloudflare Tunnel (NF-02) sin publicar: falta el dominio, el túnel y pasar la caja y los teléfonos a la dirección nueva | `deploy.md` |
-| Inventario | INV, CAT-05, CAT-09, CON-04, COM-10 | V2 | — | — |
+| Inventario | INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04 | V2 | Definido; sin construir | — |
+| Contabilidad | CTB-01 a CTB-12, FIN-05 | V2 | Definido; sin construir. Arranca al terminar el conteo del inventario | — |
 
 ### 1.1 Las planillas que se reemplazan
 
@@ -82,7 +83,9 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 | Anular ventas y gastos de caja (en el POS) | Sí | Sí |
 | Anular pedidos o pagos (en Compras) | Sí | Sí |
 | Devoluciones a personas y cobros a la tienda amiga, y sus anulaciones (en Deudas) | Sí | Sí |
-| Dashboard, finanzas, reportes, usuarios | No | Sí |
+| V2 · Existencias, kardex, conteos y «Para pedir» (en Inventario) | Sí | Sí |
+| V2 · Devoluciones de clientes (en el POS), bonificaciones y devoluciones a proveedor (en Compras) | Sí | Sí |
+| Dashboard, finanzas, reportes (V2: también los de inventario), contabilidad (V2), usuarios | No | Sí |
 
 ### 2.3 Criterio para dejar las planillas
 
@@ -108,20 +111,22 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **CAT-03** · V1 — Estados: Activo, Inactivo, Eliminado. Solo los activos se venden.
 - **CAT-04** · V1 — Categorías y etiquetas con color, nombre único y baja lógica.
 - **CAT-06** · V1 — Importación de productos desde el `.xlsx` de la planilla (Grupo → categoría, Proveedor, Etiqueta, Código, Costo, Precio, «Se vende por»), con pasos Revisar e Importar, listado descargable de filas rechazadas y por qué, y sin duplicar al repetirla. Solo crea productos; las libras de frutos secos entran como presentaciones (CAT-11). Detalle en `product-import.md`.
-- **CAT-07** · V1 — El operador puede crear productos y cambiar su costo y su precio de venta, desde el catálogo o al aceptar el precio sugerido en una compra (COM-03). Todo cambio de costo o precio queda registrado con quién y cuándo, y también el costo y el precio iniciales de cada producto, creado desde el formulario o importado (CAT-06). Falta una pantalla que muestre ese historial.
+- **CAT-07** · V1 — El operador puede crear productos y cambiar su costo y su precio de venta, desde el catálogo o al aceptar el precio sugerido en una compra (COM-03). Todo cambio de costo o precio queda registrado con quién y cuándo, y también el costo y el precio iniciales de cada producto, creado desde el formulario o importado (CAT-06). Falta una pantalla que muestre ese historial. Desde la V2, el costo que se cambia es el último costo, no el promedio (INV-06).
 - **CAT-08** · V1 — Productos vendidos por peso (frutos secos y Granel, P-31): cada producto indica si se vende por unidad o por kilo; por kilo, el precio es Bs por kilo y la cantidad son kilos con hasta 3 decimales en ventas, compras y consumos. Un producto por unidad solo acepta cantidades enteras.
 - **CAT-11** · V1 — Presentaciones de productos por peso: hasta 6 por producto, con nombre, peso fijo y precio fijo opcional (sin él, peso × precio por kilo). El costo siempre es peso × costo por kilo. El POS y Consumos ofrecen las presentaciones y «Otro peso»; los reportes suman kilos. Detalle en `product-presentations.md`.
 - **CAT-12** · V1 — Cada producto admite una foto, que quien tiene acceso a Productos sube, cambia o quita. Se guarda reducida y sin metadatos; cambiarla o quitarla conserva el archivo anterior (RG-01). El listado filtra los productos sin foto. Detalle en `product-photos.md`.
 - **CAT-10** · V1 — Un producto por unidad puede tener hasta 5 códigos de barras de fábrica (EAN-8, UPC-A o EAN-13), únicos entre productos. Se cargan desde Productos, con una lista de los que faltan, de más a menos vendidos. Quien tiene acceso a Productos los agrega o los quita, y queda quién y cuándo. Detalle en `barcodes.md`.
-- **CAT-05** · V2 — Cada producto indica si controla stock (sí/no), para admitir servicios o ítems sin inventario.
-- **CAT-09** · V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33).
+- **CAT-05** · V2 — Cada producto indica si controla stock. No lo controlan los productos de terceros (POS-13) ni los que se marquen así. Los que ya existían lo controlan desde su primer conteo (INV-18); los nuevos, desde que se crean, con stock 0.
+- **CAT-14** · V2 — Cada producto tiene una unidad base, en la que se lleva su stock: unidad o kilo (CAT-08).
+- **CAT-15** · V2 — Empaques: cada producto puede tener empaques con su equivalencia en la unidad base (Caja ×12, Display ×24, Saco 25 kg, Bolsa 250 g) y código de barras opcional, único entre productos y empaques. Las presentaciones (CAT-11) pasan a ser empaques. Un empaque marcado «se vende» tiene precio propio: escanearlo lo vende entero y descuenta sus unidades, al costo promedio. Existencias y kardex muestran la equivalencia («40 = 3 cajas + 4»).
+- **CAT-09** · Después de la V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33). Hasta entonces cada variante es un producto aparte, con su propio stock.
 
 ### 3.3 Compras (pedidos) · V1
 
 Detalle en `purchases.md`.
 
 - **COM-01** Proveedores con código y nombre únicos, teléfono, descripción y baja lógica.
-- **COM-02** Pedido con número correlativo, proveedor, fecha, líneas (producto, cantidad, costo unitario), costo de envío, total y comentario. El envío se paga como gasto de Transporte vinculado al pedido (P-24), o lo paga una persona (DEU-02).
+- **COM-02** Pedido con número correlativo, proveedor, fecha, líneas (producto, cantidad, costo unitario), costo de envío, total y comentario. El envío se paga como gasto de Transporte vinculado al pedido (P-24), o lo paga una persona (DEU-02). Desde la V2, el envío entra al costo de los productos (INV-07).
 - **COM-03** Desde una línea del pedido se puede crear un producto nuevo. Si el costo de la línea difiere del registrado, se muestra una alerta; al confirmar, el costo del producto se actualiza y se propone un precio de venta que mantiene la utilidad porcentual, redondeado hacia arriba al boliviano. Quien registra la compra acepta, edita o mantiene el precio (P-29). Las ventas anteriores no cambian (POS-05).
 - **COM-04** Estado de pago calculado desde los pagos: Por pagar, A cuenta o Pagado (el envío no cuenta). Consignación queda por pagar hasta que se registre el pago (P-21).
 - **COM-05** Un pedido admite varios pagos, cada uno con fecha, monto (no mayor al saldo) y origen: Caja, otra cuenta o una persona que pagó por el negocio (DEU-02).
@@ -129,7 +134,7 @@ Detalle en `purchases.md`.
 - **COM-07** Entrega con tipo (en puerta, terminal, en tienda), estado (pendiente, entregado) y fecha.
 - **COM-08** Vista de pedidos por pagar con saldo por pedido, por proveedor y total.
 - **COM-09** Un pago se corrige anulándolo con motivo y un pedido, anulándolo o editándolo (COM-11); la anulación revierte el dinero y no se hace si hay movimientos de una caja cerrada.
-- **COM-10** · V2 — Cajas vinculadas a su unidad (Caja x12 = 12 × Barra Chia) con «Abrir caja». En la V1 la caja es un producto aparte.
+- **COM-10** · V2 — Las cajas son empaques del producto (CAT-15), sin producto Caja ni «Abrir caja». Las cajas que en la V1 son productos aparte pasan a empaques: el sistema propone cuáles y una persona confirma cada una; sus ventas y compras pasadas no cambian.
 - **COM-11** Un pedido registrado (no anulado ni histórico) se edita en cualquier estado de entrega o pago, con motivo obligatorio: cabecera, entrega, envío y líneas (agregar lo que llegó sin pedirse, cambiar cantidad o costo, quitar lo que faltó con baja lógica), con producto nuevo y precio sugerido como en COM-03 (P-51).
 - **COM-12** Al editar, el total de las líneas no puede quedar menor a lo pagado (se anula antes el pago); cambiar el envío, con alerta, anula su gasto (o lo que pagó la persona) y registra otro, y se rechaza si fue en una caja cerrada. Cada edición guarda quién, cuándo, motivo y qué cambió, visible en el detalle.
 - **COM-13** · V1 — Al registrar o editar un pedido se ve el precio de venta actual de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda en el pedido y no cambia el costo, el total ni el precio del producto. El precio se sigue cambiando solo como dice COM-03.
@@ -143,6 +148,8 @@ Detalle en `purchases.md`.
 - **COM-25** · V1 — Tope de US$10 al mes, contando también las lecturas fallidas. Al llegar, Desde foto y Desde texto se apagan hasta el mes siguiente y el formulario a mano sigue igual. El administrador ve el gasto del mes.
 - **COM-26** · V1 — El listado de pedidos muestra siempre el resultado del último filtro o búsqueda: una respuesta anterior que llega tarde no lo reemplaza.
 - **COM-27** · V1 — Reintentar el registro de un pedido nuevo no lo duplica: el formulario crea un id al abrirse y lo repite en sus reintentos, y el servidor responde como en POS-18.
+- **COM-28** · V2 — Líneas de bonificación, de un producto que ya está en el pedido (12 + 1) o de uno que no estaba: llevan cantidad y empaque, no suman al total ni a lo que se debe y no reciben parte del envío (INV-22). Lo que llegó de más sin cobrarse se registra así al editar (COM-11), y la lectura (COM-20) propone como bonificación lo que la factura o el mensaje marca así o trae con precio 0.
+- **COM-29** · V2 — Cada línea del pedido elige su empaque (CAT-15), con cantidad y costo por empaque; se ve el costo por unidad base y el stock suma en unidades base (2 cajas ×12 de Bs 120 = 24 unidades a Bs 10).
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 
@@ -205,7 +212,7 @@ Detalle en `sales.md`.
 - **POS-13** Venta de productos de terceros (hoy, de Mami): producto especial con su dueña (DEU-01); el costo de la línea es igual al precio y cada venta suma a la deuda con ella, que se le paga con «Pago a tercero» (DEU-03). Los reportes la muestran aparte, fuera de las ventas y la utilidad de la tienda.
 - **POS-14** En el POS, vaciar la cantidad de una línea o escribir 0 no la quita; al salir del campo vuelve a la última cantidad válida. La línea se quita con el − al llegar a 0 o con su X.
 - **POS-15** En la pantalla de venta, un escaneo con el lector USB agrega el producto por coincidencia exacta, esté donde esté el cursor y sin cambiar ningún campo. Un código desconocido solo avisa. Detalle en `barcodes.md`.
-- **POS-16** · V2 — Impresión de ticket de venta.
+- **POS-16** · Después de la V2 — Impresión de ticket de venta, en un trabajo aparte del inventario.
 - **POS-17** Con la conexión lenta o caída, el POS y la venta no confunden «no se pudo saber» con «no hay»: una falla de red o del servidor no da la caja por cerrada ni saca de la venta, y el catálogo, los productos rápidos y las ventas, gastos e ingresos/retiros de la sesión dicen que están cargando o, si fallan, ofrecen reintentar. Lo que sí confirma el servidor manda: la caja cerrada se muestra cerrada, y el servidor valida la caja al vender y al anular.
 - **POS-18** Reintentar un cobro no duplica la venta: cada venta lleva un id que la pantalla crea al abrir el cobro y repite en sus reintentos. Si ya existe, el servidor devuelve esa venta sin mover dinero; con otro total u otra cantidad de líneas, la rechaza. Sin respuesta (red o 5xx), la pantalla avisa que pudo quedar registrada y deja volver a cobrar.
 
@@ -217,7 +224,7 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 - **FIN-02** La cuenta Caja es única, no se elimina y solo recibe ingresos por ventas, ajustes de cierre, transferencias o cobros a la tienda amiga (DEU-06).
 - **FIN-03** Exactamente una cuenta marcada para cobros QR en todo momento.
 - **FIN-04** Una cuenta solo se elimina con saldo 0 y si no es Caja ni la cuenta QR.
-- **FIN-05** Categorías de ingreso y gasto, iniciando con las de la planilla: Venta, Otro ingreso, Pedido, Consumo, Comida, Transporte, Otro gasto, Retiro caja, Depósito, Utilidad (retiro del dueño), Ajuste y Pago a tercero (POS-13).
+- **FIN-05** Categorías de ingreso y gasto, iniciando con las de la planilla: Venta, Otro ingreso, Pedido, Consumo, Comida, Transporte, Otro gasto, Retiro caja, Depósito, Utilidad (retiro del dueño), Ajuste y Pago a tercero (POS-13). Desde la V2 (CTB): «Utilidad (retiro del dueño)» pasa a llamarse Sueldos, también en lo pasado, porque todo pago por trabajo, de un socio o no, es sueldo y no hay retiro de utilidades; se suman Alquiler, Servicios, Impuestos (la cuota del RTS), Equipo y mejoras (va al activo, sin depreciación) y Devolución (INV-13), y cada categoría de gasto se marca fija o variable (al inicio, fijas: Alquiler, Sueldos, Servicios e Impuestos).
 - **FIN-06** Ingresos y gastos manuales, transferencias con validación de saldo suficiente (también al anular una transferencia o un ingreso), anulación auditada. Un movimiento manual no usa las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste, Venta); Transporte sí.
 - **FIN-07** Cada venta genera automáticamente sus ingresos (efectivo a Caja, QR a la cuenta QR); esos movimientos no se editan desde Finanzas.
 - **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04).
@@ -240,11 +247,30 @@ Detalle en `users.md`.
 
 ### 3.10 Inventario · V2
 
+Pantallas (P-33): un grupo Inventario con Existencias, Kardex, Conteo, Para pedir y Reportes de inventario. La devolución de cliente va en el POS, las bonificaciones y la devolución a proveedor en Compras y los empaques en Productos (tabla 2.2).
+
 - **INV-01** Existencia actual por producto con control de stock, calculada desde un libro de movimientos (kardex), nunca editada a mano.
-- **INV-02** Movimientos: carga inicial, entrada por compra, salida por venta, venta al costo y consumo, reingreso por anulación, ajustes con motivo (merma, rotura, vencimiento).
-- **INV-03** Kardex por producto y rango de fechas, con saldo después de cada movimiento.
-- **INV-04** Stock mínimo por producto y listado de productos bajo mínimo.
-- **INV-05** Conteo físico: se registra lo contado, se muestra la diferencia y, al confirmar, se generan los ajustes.
+- **INV-02** Movimientos: carga inicial, entrada al marcar el pedido Entregado, bonificación, salida por venta, venta al costo y consumo, devolución de cliente y a proveedor, reingreso por anulación y ajustes con motivo (merma, rotura o vencimiento sin nadie que pague, sobrante). La rotura que alguien paga sigue siendo venta al costo (P-39).
+- **INV-03** Kardex valorado por producto y rango de fechas: cantidad, costo unitario y valor de cada movimiento, y el saldo en cantidad y costo promedio después de cada uno.
+- **INV-04** Stock mínimo sugerido: venta diaria de los últimos 60 días × días que tarda el proveedor (de la fecha del pedido a la de entrega) + 7 días de venta de colchón, ambos configurables. El mínimo fijado a mano manda.
+- **INV-05** Conteo desde el celular, por categoría o producto, con el lector o la cámara y a ciegas, en empaques y sueltas («3 cajas + 4»). Lo esperado se toma al escribir cada cantidad; quien cuenta ve la diferencia en unidades y Bs y confirma, con quién y cuándo, y eso genera los ajustes.
+- **INV-06** Costo promedio ponderado (P-07): cada entrada mezcla su costo con lo que hay y cada salida sale al promedio del momento, que es el costo de la línea (POS-05, T-07). Con stock en cero o negativo, la entrada fija el promedio. Se sigue guardando el último costo para el precio sugerido (COM-03); cambiar el costo a mano (CAT-07) cambia solo el último costo.
+- **INV-07** Costo puesto en tienda (P-24): el envío del pedido, lo pague la tienda o una persona (DEU-02), se reparte entre sus líneas según su valor. El envío registrado después de la entrega se suma al valor de lo que queda del producto; si no queda, va al costo de ventas del mes. El precio sugerido usa este costo.
+- **INV-08** La fecha de cada movimiento la pone el servidor: nada entra con fecha pasada y toda corrección es un movimiento por la diferencia, hoy.
+- **INV-09** Productos por kilo: el stock va en kg con 3 decimales; una presentación descuenta su peso y «Otro peso», lo escrito (POS-10).
+- **INV-10** Si una venta, venta al costo o consumo lleva más de lo que hay, la caja pregunta «No hay stock registrado de <producto> (quedan N). ¿Vender igual?»; confirmada, la venta queda marcada y el producto pasa a «Stock negativo, por revisar» (P-06).
+- **INV-11** El POS muestra «Quedan N» junto a cada producto con control de stock, al buscarlo y en su línea.
+- **INV-12** La venta sin identificar (POS-12) no mueve stock hasta que se asigna el producto, y entonces sale al promedio de ese momento. Las líneas libres (POS-11) y los productos de terceros (POS-13) no mueven stock.
+- **INV-13** Devolución de cliente, con la caja abierta (P-09): producto, cantidad y monto, sin buscar la venta. El dinero sale en efectivo de Caja con la categoría de sistema Devolución y resta de las ventas del día en «Devoluciones». Se elige si el producto vuelve a la venta (entra al promedio del momento) o es merma.
+- **INV-14** Un pedido Pendiente se ve como «por llegar» junto al stock. Marcarlo Entregado suma; volverlo a Pendiente o anularlo resta, con aviso aunque el stock quede negativo; editar uno entregado (COM-11) mueve solo la diferencia.
+- **INV-15** Lo que llega en consignación es de Akhana desde que llega: suma al stock y a su valor, y queda como deuda con el proveedor (P-21).
+- **INV-16** Devolución a proveedor, ligada a su pedido: sale del stock al costo de esa línea. Si el pedido no está pagado, baja su saldo; si ya lo está, se elige en cada caso saldo a favor, que se descuenta en el siguiente pedido a ese proveedor, o dinero devuelto, como ingreso en una cuenta.
+- **INV-17** Conteo cíclico: cada día el sistema propone qué contar según la utilidad de los últimos 90 días (los A, 80 % de la utilidad, cada 2 semanas; los B, el 15 % siguiente, cada mes; los C, cada trimestre) y mide la exactitud del inventario.
+- **INV-18** Arranque por categorías: cada producto que ya existía empieza a controlar stock con su primer conteo, que es su carga inicial al costo de ese día; antes, la caja no avisa y la venta toma el costo como en la V1.
+- **INV-19** Para pedir: lista por proveedor de lo que está bajo el mínimo, contando lo que está por llegar, con la cantidad sugerida redondeada hacia arriba al empaque de la última compra. Arma el pedido pendiente y el texto para WhatsApp al teléfono del proveedor; sin teléfono, el texto se copia.
+- **INV-20** Alertas en el panel: bajo mínimo, stock negativo por revisar, sin movimiento en 90 días (con su valor en Bs) y conteos de hoy.
+- **INV-21** Reportes de inventario, exportables a Excel: valor a costo y a precio de venta, días de cobertura, rotación y utilidad por cada Bs en stock, por producto, categoría y proveedor.
+- **INV-22** Lo bonificado (COM-28) entra al marcar el pedido Entregado a costo 0 y baja el promedio (12 a Bs 10 + 1 = 13 a Bs 9,23). No cambia el último costo ni dispara la alerta de costo: el precio sugerido usa lo pagado.
 
 ### 3.11 Dashboard · V1
 
@@ -263,6 +289,23 @@ Detalle en `mobile.md`. Admin instalado en el teléfono, no un sistema aparte; s
 - **MOV-02** Instalado, el Dashboard abre en Hoy y muestra «Ahora mismo» (DSH-04) antes de los demás bloques. En el navegador sigue como hasta ahora: mes en curso y el orden actual.
 - **MOV-03** Si no se llega al servidor, la app instalada muestra una página propia que dice qué revisar.
 - **MOV-04** Instalar la app no cambia lo que cada usuario puede ver o hacer (USR-05, P-33), ni las sesiones (T-19).
+
+### 3.13 Contabilidad · V2
+
+Para decidir, no para presentar al SIN: sin depreciación ni formatos del SIN, con libros exportables por si los pide un contador (P-68). Pantallas (P-33): un grupo Contabilidad, solo del administrador, con Resultados, Balance, Libros y Cierre de mes.
+
+- **CTB-01** Asientos de partida doble generados solos desde los hechos: ventas, compras, pagos, consumos, devoluciones, ajustes de stock y movimientos de Finanzas. No hay asientos a mano: se corrige anulando el hecho y registrándolo de nuevo.
+- **CTB-02** Cada asiento cuadra por una regla de la base, apunta al hecho que lo generó, así no se duplica, y nunca se edita: anular es el asiento inverso (RG-01, RG-03).
+- **CTB-03** Las ventas se resumen en un asiento por caja; el detalle queda en la venta y el kardex. Las ventas de terceros (POS-13) van contra la deuda con su dueña, fuera de los ingresos.
+- **CTB-04** Plan de cuentas chico con la numeración boliviana (1 Activo, 2 Pasivo, 3 Patrimonio, 4 Ingresos, 5 Costos y gastos). Caja, Bisa y Efectivo son cuentas contables y cada categoría de Finanzas apunta a una cuenta. Un solo patrimonio (P-69).
+- **CTB-05** Arranca el primer día del mes siguiente al conteo completo (INV-18), con un asiento de apertura: saldos de las cuentas, inventario contado, lo que se cobra (DEU-07), deudas con personas (DEU-04) y pedidos por pagar (COM-08); el patrimonio es la diferencia.
+- **CTB-06** Un administrador cierra cada mes a mano. Un mes cerrado no recibe asientos ni se reabre; lo que se corrija después entra en el mes abierto.
+- **CTB-07** Conciliación cada noche, con aviso en el panel y a la vista al cerrar el mes: cada cuenta de Finanzas contra su cuenta contable, el kardex contra Inventario, las deudas con personas contra su cuenta y los pedidos por pagar contra Proveedores.
+- **CTB-08** Estado de resultados del mes: ventas netas (sin devoluciones), costo de ventas (con envío), utilidad bruta, mermas, consumos, gastos fijos y variables y utilidad neta, contra el mes anterior y el mismo mes del año pasado. Los meses anteriores al arranque solo comparan ventas y utilidad bruta, que vienen de la V1.
+- **CTB-09** Balance: caja y bancos, inventario, por cobrar, saldo a favor con proveedores y equipo y mejoras; proveedores y personas por pagar; y el patrimonio.
+- **CTB-10** Punto de equilibrio: los gastos fijos del mes divididos entre el margen bruto dan las ventas necesarias, por día de atención y con el avance del mes.
+- **CTB-11** Margen de reposición: productos cuyo precio ya no cubre el último costo puesto en tienda más su utilidad porcentual de siempre (CAT-02), ordenados por los Bs en juego.
+- **CTB-12** Libro Diario, Mayor y Balance de sumas y saldos de cada mes, exportables a Excel y PDF.
 
 ## 4. Requerimientos técnicos y de seguridad
 
@@ -287,7 +330,7 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 | T-17 | La venta falla si falta su cuenta o su categoría (RG-05). | V1 | `sales.md` |
 | T-18 | Montos con escala 2 en el servidor, motivo obligatorio en toda anulación, saldo inicial no anulable y fecha puesta por el servidor (salvo FIN-11). | V1 | `finance.md` |
 | T-19 | Límite de intentos de login por usuario desde cada IP y por IP, y token de 12 h que deja de valer al cambiar la contraseña (USR-07). | V1 | `users.md` |
-| T-04 | Saldos derivados del libro de movimientos, o caché con reporte de conciliación. | V2 | — |
+| T-04 | Saldos y existencias derivados de su libro de movimientos; lo guardado es un atajo que se concilia cada noche (CTB-07). | V2 | — |
 | T-09 | Auditoría con referencia al id del usuario, no solo su nombre. | V2 | — |
 | T-12 | Caja por punto de venta si hay más de uno (P-01). | V3 | — |
 
@@ -312,11 +355,8 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 
 | ID | Pregunta | Supuesto mientras tanto | Se necesita antes de |
 | --- | --- | --- | --- |
-| P-06 | ¿Se permite vender sin stock? | — | V2 |
-| P-07 | ¿Costo por último precio de compra o costo promedio? | Último precio de compra. | V2 |
-| P-09 | ¿Devoluciones de clientes después de cerrar la caja? | No. | V2 |
-| P-13 | ¿Otros métodos de pago (tarjeta, transferencia)? | Solo efectivo y QR. | V2 |
-| P-33 | ¿Qué variantes hay (sabor, tamaño) y comparten costo y precio? | Hasta la V2, cada variante sigue siendo un producto aparte. | V2 |
+| P-13 | ¿Otros métodos de pago (tarjeta, transferencia)? | Solo efectivo y QR. | Trabajo aparte, después de la V2 |
+| P-33 | ¿Qué variantes hay (sabor, tamaño) y comparten costo y precio? | Cada variante sigue siendo un producto aparte, con su propio stock. | Después de la V2 (CAT-09) |
 | P-01 | ¿Habrá más tiendas, depósitos o cajas? | Una tienda, una caja. | V3 |
 | P-10 | ¿Hay que emitir factura (SIN) o solo nota de venta? | Solo nota de venta. | V3 |
 | P-12 | ¿Se vende a crédito a clientes registrados (además de la tienda amiga)? | No. | V3 |
@@ -327,9 +367,12 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | --- | --- | --- |
 | P-02 | ¿Cuántos productos hay? | 880 filas en la hoja Productos (se estimaban ~1.200). |
 | P-03 | ¿Se vende por peso? | Sí: V1 (CAT-08, POS-10). |
-| P-04 | ¿Hay variantes? | Sí; se agrupan en la V2 (CAT-09). |
+| P-04 | ¿Hay variantes? | Sí; se agrupan después de la V2 (CAT-09). |
 | P-05 | ¿Se controla lote o vencimiento? | No. |
-| P-11 | ¿Lector de código de barras o impresora de tickets? | Lector USB sí, antes de la V2 (CAT-10, POS-15). Ticket en la V2 (POS-16). |
+| P-06 | ¿Se permite vender sin stock? | Sí, con aviso y confirmación en la caja; el producto queda por revisar (INV-10). |
+| P-07 | ¿Costo por último precio de compra o costo promedio? | Promedio ponderado desde la V2; el último costo sigue para el precio sugerido (INV-06). |
+| P-09 | ¿Devoluciones de clientes después de cerrar la caja? | Sí, sin buscar la venta y en efectivo de la caja abierta (INV-13). |
+| P-11 | ¿Lector de código de barras o impresora de tickets? | Lector USB sí, antes de la V2 (CAT-10, POS-15). Ticket en un trabajo aparte, después de la V2 (POS-16). |
 | P-14 | ¿El POS debe funcionar sin internet? | No. |
 | P-15 | ¿Qué roles hay? | Operador y Administrador (tabla 2.2). |
 | P-16 | ¿Se migran datos? | Sí: productos, saldos y todos los datos de las dos planillas desde su primer registro (FIN-11). |
@@ -337,10 +380,10 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-18 | ¿La tienda amiga paga en el momento? | A veces queda debiendo: cuentas por cobrar en la V1 (DEU-05 a DEU-07). |
 | P-19 | ¿El operador registra consumos, ventas al costo y otros gastos de caja? | Sí, los tres. |
 | P-20 | ¿A quién se le debe hoy? | A nadie, salvo lo vendido de Mami y no pagado (POS-13). |
-| P-21 | ¿Cómo se paga la consignación? | Queda por pagar hasta que se registre el pago. |
+| P-21 | ¿Cómo se paga la consignación? | Queda por pagar hasta que se registre el pago. La mercadería es de Akhana desde que llega (INV-15). |
 | P-22 | ¿Dónde se aloja el sistema? | En un VPS Contabo (US East) con Ubuntu, publicado en internet en un dominio propio por Cloudflare Tunnel (sin puertos abiertos; el dominio cuesta unos US$ 11 al año); Tailscale queda solo para entrar al servidor por SSH. Respaldo diario cifrado en Backblaze B2 (`deploy.md`). |
 | P-23 | ¿Se migran ventas históricas? | Sí, todas (FIN-11). |
-| P-24 | ¿Cómo se trata el envío de un pedido? | Gasto de Transporte aparte, vinculado a su pedido. |
+| P-24 | ¿Cómo se trata el envío de un pedido? | Gasto de Transporte aparte, vinculado a su pedido. Desde la V2, su costo se reparte en el de los productos que llegaron (INV-07). |
 | P-25 | ¿El operador puede crear productos? | Sí. |
 | P-26 | Cuando una persona paga un pedido por el negocio, ¿qué es? | Una deuda del negocio con esa persona. |
 | P-27 | ¿Cómo se valoran los consumos? | Al costo. Las salidas a la tienda amiga también, como venta separada. |
@@ -383,6 +426,11 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-64 | ¿Cómo se cobra un peso que no es presentación? | En «Otro peso», el peso se escribe en kg o g solo en la venta y el total se puede subir o bajar; al cambiar el peso se vuelve a calcular. Reemplaza al descuento por kilo. No aplica a presentaciones, líneas libres ni venta al costo. |
 | P-65 | ¿Cómo se le paga a Mami y se sabe qué le falta? | Marcando las deudas que se pagan; cada una se paga completa y no hay monto libre. Si se marcan ventas y pedidos, quedan dos registros: Pago a tercero y Pedido. Anular un pago, un envío, un pedido o una venta ya pagados se rechaza hasta anular su devolución. |
 | P-66 | ¿Qué pagaron las devoluciones hechas antes de poder marcar? | Las deudas más antiguas de su concepto y, si sobra, las más antiguas de cualquier tipo; en producción calzaron exacto (`debts.md`). |
+| P-67 | ¿Los productos de terceros (Mami) llevan stock? | No (CAT-05). |
+| P-68 | ¿Para quién es la contabilidad y en qué régimen está Akhana? | Para decidir, exportable para un contador. Akhana está en el Régimen Tributario Simplificado: su cuota es un gasto, Impuestos (FIN-05, CTB). |
+| P-69 | ¿Los retiros de los socios son utilidad? | No: todo pago por trabajo, de un socio o no, es sueldo. «Utilidad (retiro del dueño)» pasa a llamarse Sueldos y hay un solo patrimonio (FIN-05, CTB-04). |
+| P-70 | ¿Cómo se valora lo que bonifica el proveedor? | A costo 0, y baja el promedio; el precio sugerido usa lo pagado (INV-22). |
+| P-71 | ¿Se vende a veces el empaque entero? | Sí: un empaque puede marcarse «se vende», con precio propio (CAT-15). |
 
 ## 6. Hoja de ruta
 
@@ -393,9 +441,11 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 2. 🟡 **Fase 1 · V1** — Compras, deudas, consumos, venta por peso, caja, historial, reportes, importación y migración. Construida.
    - Compuerta: productos, saldos y todo el historial de las dos planillas migrados en producción.
 3. ❌ **Fase 2 · Dos semanas en paralelo con las planillas** — Cancelada por decisión de Joaquín: la tienda usa solo el sistema (P-53).
-4. **Fase 3 · V2: inventario** — INV-01 a INV-05, CAT-05, CAT-09, POS-16, CON-04, COM-10, T-04. Resolver P-06, P-07, P-09, P-13 y P-33.
-   - Compuerta: un conteo físico completo cuadra con el sistema.
-5. **Fase 4 · V3: extensiones** — Facturación (P-10), clientes y crédito (P-12), varias tiendas o cajas (P-01), reportes avanzados.
+4. **Fase 3 · V2: inventario** — INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04.
+   - Compuerta: todos los productos contados (INV-18) y un conteo físico completo cuadra con el sistema.
+5. **Fase 4 · V2: contabilidad** — CTB-01 a CTB-12 y las categorías nuevas de FIN-05. Arranca el mes siguiente al conteo completo (CTB-05).
+   - Compuerta: un mes cerrado cuadra con Finanzas y con el kardex (CTB-07).
+6. **Fase 5 · V3: extensiones** — Facturación (P-10), clientes y crédito (P-12), varias tiendas o cajas (P-01), reportes avanzados. En trabajos aparte, después de la V2: ticket (POS-16), otros medios de pago (P-13) y variantes (CAT-09, P-33).
 
 ### Próximos pasos
 
