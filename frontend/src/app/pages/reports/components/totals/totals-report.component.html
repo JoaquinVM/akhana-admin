@@ -61,7 +61,7 @@
           <tbody>
             @for (month of r.months; track month.month) {
               <tr>
-                <td>{{ monthLabel(month.month!) }}</td>
+                <td>{{ monthTitle(month.month!) }}</td>
                 <ng-container *ngTemplateOutlet="cells; context: { $implicit: month }" />
               </tr>
             }

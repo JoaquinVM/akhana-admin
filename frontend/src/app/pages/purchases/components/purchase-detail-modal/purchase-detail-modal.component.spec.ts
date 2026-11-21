@@ -62,7 +62,7 @@ describe('PurchaseDetailModalComponent', () => {
 
   it('COM-05: exige cuenta antes de pagar', () => {
     component.registerPayment();
-    expect(component.paymentError()).toBe('Elija la cuenta o la persona que pagó.');
+    expect(component.paymentError()).toBe('Elige la cuenta o la persona que pagó.');
     expect(purchaseService.registerPayment).not.toHaveBeenCalled();
   });
 
@@ -124,6 +124,16 @@ describe('PurchaseDetailModalComponent', () => {
   it('COM-04: un pedido pagado no ofrece registrar pagos', () => {
     component.purchase.set({ ...basePurchase, paidAmount: 300, balance: 0, paymentStatus: 'PAGADO' });
     expect(component.canPay()).toBe(false);
+  });
+
+  it('H7: el saldo pendiente va en rojo y un saldo de 0 no', () => {
+    fixture.detectChanges();
+    const balance = (): HTMLElement => fixture.nativeElement.querySelector('.balance');
+    expect(balance().classList.contains('has-balance')).toBe(true);
+
+    component.purchase.set({ ...basePurchase, paidAmount: 300, balance: 0, paymentStatus: 'PAGADO' });
+    fixture.detectChanges();
+    expect(balance().classList.contains('has-balance')).toBe(false);
   });
 
   it('COM-07: cambia la entrega y emite el pedido actualizado', () => {
@@ -202,7 +212,7 @@ describe('PurchaseDetailModalComponent', () => {
 
     it('la opción no dice «(caja abierta)»', () => {
       const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#payment-account option')).map(o => o.textContent!.trim());
-      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa']);
+      expect(options).toEqual(['Selecciona…', 'Caja', 'Bisa']);
     });
 
     it('con la caja cerrada muestra la nota al elegir Caja', () => {

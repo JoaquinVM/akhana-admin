@@ -89,7 +89,7 @@ export class SalesHistoryComponent implements OnInit {
       },
       error: err => {
         this.sales.set([]);
-        this.errorMessage.set(err?.error?.message || 'Error al cargar las ventas. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.message || 'Error al cargar las ventas. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

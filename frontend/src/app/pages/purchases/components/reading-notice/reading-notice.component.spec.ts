@@ -33,7 +33,7 @@ describe('ReadingNoticeComponent', () => {
   });
 
   it('una nota suelta pide revisar todo', () => {
-    expect(render({ draft: draft({ reviewAll: true }) })).toContain('revise todas las líneas');
+    expect(render({ draft: draft({ reviewAll: true }) })).toContain('revisa todas las líneas');
   });
 
   it('CA-07: un proveedor que no coincide pide elegirlo', () => {
@@ -43,7 +43,7 @@ describe('ReadingNoticeComponent', () => {
   it('CA-19: propone el pago con origen vacío, y se puede quitar', () => {
     const dismissed = vi.fn();
     fixture.componentInstance.dismissPaid.subscribe(dismissed);
-    expect(render({ draft: draft({ paidNote: true }), paidProposal: true })).toContain('elija la caja, la cuenta o la persona');
+    expect(render({ draft: draft({ paidNote: true }), paidProposal: true })).toContain('elige la caja, la cuenta o la persona');
     (fixture.nativeElement.querySelector('.paid-proposal button') as HTMLButtonElement).click();
     expect(dismissed).toHaveBeenCalled();
   });

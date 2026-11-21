@@ -19,10 +19,12 @@ const STATUS_LABELS: Record<ProductImportRowStatus, string> = {
 };
 
 // CAT-06: import products from the spreadsheet .xlsx in two steps, Revisar and Importar
+import { PluralPipe } from '../../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-product-import-modal',
   standalone: true,
-  imports: [ModalComponent],
+  imports: [PluralPipe, ModalComponent],
   templateUrl: './product-import-modal.component.html',
   styleUrls: ['./product-import-modal.component.css']
 })
@@ -120,7 +122,7 @@ export class ProductImportModalComponent {
       },
       error: err => {
         this.isBusy.set(false);
-        this.errorMessage.set(err?.error?.message || 'No se pudo leer el archivo. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.message || 'No se pudo leer el archivo. Intenta nuevamente.');
       }
     });
   }

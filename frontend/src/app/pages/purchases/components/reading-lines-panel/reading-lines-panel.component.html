@@ -1,11 +1,11 @@
 <section class="unresolved" aria-label="Líneas leídas sin producto">
-  <h5 class="unresolved-title">Elija el producto de estas líneas</h5>
+  <h5 class="unresolved-title">Elige el producto de estas líneas</h5>
   @for (line of lines(); track line; let i = $index) {
     <div class="unresolved-line">
       <p class="unresolved-text">
         <strong>{{ line.quantity }} × {{ line.text }}</strong>
         @if (line.quantityDoubtful) {
-          <span class="unresolved-flag">Revise la cantidad: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
+          <span class="unresolved-flag">Revisa la cantidad: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
         }
         @if (line.costNote) {
           <span class="unresolved-flag">{{ line.costNote }}</span>

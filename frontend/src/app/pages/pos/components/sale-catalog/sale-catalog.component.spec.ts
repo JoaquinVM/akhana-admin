@@ -12,7 +12,7 @@ describe('SaleCatalogComponent', () => {
 
   const tab100: any = { id: 'p1', code: 'PAT-TAB-PIS-100G', name: 'Tab s/Pistacho 100g', sellPrice: 32 };
   const tab50: any = { id: 'p2', code: 'PAT-TAB-PIS-50G', name: 'Tab s/Pistacho 50g', sellPrice: 19 };
-  const pistacho: any = { id: 'p3', code: 'FSE-PIS', name: 'Pistacho', sellPrice: 280 };
+  const pistacho: any = { id: 'p3', code: 'FSE-PIS', name: 'Pistacho', sellPrice: 280, buyPrice: 210 };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -87,6 +87,18 @@ describe('SaleCatalogComponent', () => {
     quickService.groups.set([]);
     fixture.detectChanges();
     expect(text()).toContain(NO_GROUPS);
+  });
+
+  it('096: en una venta al costo el buscador y los rápidos muestran el costo, no el precio', () => {
+    component.productSearchTerm.set('FSE-PIS');
+    fixture.detectChanges();
+    const result = (): string => fixture.debugElement.query(By.css('.search-result-item')).nativeElement.textContent;
+    expect(result()).toContain('280.00');
+
+    fixture.componentRef.setInput('atCost', true);
+    fixture.detectChanges();
+    expect(result()).toContain('210.00');
+    expect(result()).not.toContain('280.00');
   });
 
   it('POS-01: busca por nombre o código y al elegir avisa y limpia el buscador', () => {

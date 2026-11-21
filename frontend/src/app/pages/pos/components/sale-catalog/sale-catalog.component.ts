@@ -26,6 +26,8 @@ export class SaleCatalogComponent {
   // POS-17: while it loads or if it fails, finding nothing does not mean there is nothing
   readonly catalogLoading = input<boolean>(false);
   readonly catalogFailed = input<boolean>(false);
+  // 096: in an at-cost sale the search and the quick products show the cost, the price the line will take
+  readonly atCost = input<boolean>(false);
 
   readonly add = output<Product>();
   readonly configure = output<void>();

@@ -2,9 +2,9 @@
   [isOpen]="isOpen()"
   [title]="arrival() ? 'Llegó la mercadería · ' + purchase()!.purchaseNumber : isEdit() ? 'Editar pedido ' + purchase()!.purchaseNumber : 'Nuevo pedido'"
   [subtitle]="arrival()
-    ? 'Registre lo que vino y sus costos reales. El pedido queda entregado y sin «costo por confirmar».'
+    ? 'Registra lo que vino y sus costos reales. El pedido queda entregado y sin «costo por confirmar».'
     : isEdit()
-    ? 'Agregue lo que llegó sin pedirse, cambie cantidades o costos y quite lo que faltó. Los pagos se registran y anulan desde el detalle.'
+    ? 'Agrega lo que llegó sin pedirse, cambia cantidades o costos y quita lo que faltó. Los pagos se registran y anulan desde el detalle.'
     : 'Proveedor, líneas, envío y un pago inicial opcional; los demás pagos se registran desde el detalle.'"
   size="xl"
   [closeOnBackdrop]="false"
@@ -29,7 +29,7 @@
     <div class="form-grid form-grid-3">
       <div class="form-group">
         <label class="form-label" for="purchase-supplier">Proveedor <span class="required-mark">*</span></label>
-        <app-search-select inputId="purchase-supplier" name="supplierId" placeholder="Seleccione…"
+        <app-search-select inputId="purchase-supplier" name="supplierId" placeholder="Selecciona…"
                            [options]="supplierOptions()"
                            [ngModel]="supplierId()" (ngModelChange)="onSupplierChange($event ?? '')" />
       </div>
@@ -111,7 +111,7 @@
             <label class="form-label" for="np-category">Categoría</label>
             <select id="np-category" class="form-control" name="npCategory"
                     [ngModel]="newProduct().categoryId" (ngModelChange)="patchNewProduct({ categoryId: $event })">
-              <option value="">Seleccione…</option>
+              <option value="">Selecciona…</option>
               @for (category of categories(); track category.id) {
                 <option [value]="category.id">{{ category.name }}</option>
               }
@@ -179,7 +179,7 @@
                   <span class="line-flag">Este producto es de {{ line.product.supplierName }}, no del proveedor del pedido.</span>
                 }
                 @if (line.notInInvoice) {
-                  <span class="line-flag">No está en la factura: quítela si no llegó.</span>
+                  <span class="line-flag">No está en la factura: quítala si no llegó.</span>
                 }
               </td>
               <td class="text-right" data-label="Cantidad" [class.line-doubtful]="line.quantityDoubtful">
@@ -192,7 +192,7 @@
                   (quantityChange)="onQuantityChange(i, $event)" />
                 <span class="unit-hint">{{ isWeighted(line.product) ? 'kg' : 'u' }}</span>
                 @if (line.quantityDoubtful) {
-                  <span class="line-flag">Revise: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
+                  <span class="line-flag">Revisa: decía «{{ line.quantityText || 'sin cantidad' }}»</span>
                 }
               </td>
               <td class="text-right" data-label="Costo unitario (Bs)" [class.line-doubtful]="line.costMissing">
@@ -263,7 +263,7 @@
             }
           } @empty {
             <tr>
-              <td colspan="6" class="text-center empty-lines">Busque un producto para agregar la primera línea.</td>
+              <td colspan="6" class="text-center empty-lines">Busca un producto para agregar la primera línea.</td>
             </tr>
           }
         </tbody>
@@ -284,7 +284,7 @@
           <label class="form-label" for="purchase-shipping-account">Envío pagado desde <span class="required-mark">*</span></label>
           <select id="purchase-shipping-account" class="form-control" name="shippingSource"
                   [ngModel]="shippingSource()" (ngModelChange)="onShippingSourceChange($event)">
-            <option value="">Seleccione…</option>
+            <option value="">Selecciona…</option>
             <optgroup label="Cuentas">
               @for (account of accounts(); track account.id) {
                 <option [value]="account.id">{{ account.name }}</option>

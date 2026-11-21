@@ -128,7 +128,7 @@ describe('CustomersViewComponent', () => {
   });
 
   it('el error de la pantalla se anuncia al lector de pantalla (role="alert")', () => {
-    component.errorMessage.set('Error al cargar los clientes. Intente nuevamente.');
+    component.errorMessage.set('Error al cargar los clientes. Intenta nuevamente.');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.alert-danger').getAttribute('role')).toBe('alert');
   });

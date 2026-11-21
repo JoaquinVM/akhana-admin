@@ -23,7 +23,7 @@ describe('FreeLineFormComponent', () => {
     component.confirmed.subscribe((line) => emitted.push(line));
 
     component.confirm();
-    expect(component.nameError()).toBe('Escriba el nombre.');
+    expect(component.nameError()).toBe('Escribe el nombre.');
     component.name.set('Granola');
     component.price.set(1.005);
     component.confirm();

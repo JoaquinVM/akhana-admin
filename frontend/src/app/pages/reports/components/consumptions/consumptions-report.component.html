@@ -88,7 +88,7 @@
               </tr>
               @for (month of supplier.months; track month.month) {
                 <tr>
-                  <td class="month-cell">{{ monthLabel(month.month!) }}</td>
+                  <td class="month-cell">{{ monthTitle(month.month!) }}</td>
                   <ng-container *ngTemplateOutlet="supplierCells; context: { $implicit: month }" />
                 </tr>
               }

@@ -38,7 +38,7 @@ describe('TotalsReportComponent', () => {
 
   it('CON-03: julio muestra la utilidad 8505.78, los consumos al costo y la utilidad menos consumos', () => {
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('julio 2026');
+    expect(text).toContain('Julio 2026');
     expect(text).toContain('8,505.78');
     expect(text).toContain('22.63 %');
     expect(text).toContain('Bs 37,688.00');

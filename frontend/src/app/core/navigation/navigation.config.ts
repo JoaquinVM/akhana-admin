@@ -87,7 +87,7 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     label: 'Finanzas',
     children: [
       {
-        label: 'Dashboard',
+        label: 'Tablero',
         route: '/dashboard',
         caption: 'Inicio',
         permissionKey: PERMISSIONS.DASHBOARD

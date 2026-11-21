@@ -84,7 +84,7 @@
           [class.is-invalid]="isInvalid('categoryId')">
           <option value="" disabled>Selecciona una categoría</option>
           @for (cat of categories(); track cat.id) {
-            <option [value]="cat.id">{{ cat.name }}</option>
+            <option [value]="cat.id">{{ cat | categoryLabel }}</option>
           }
         </select>
         @if (isInvalid('categoryId')) {

@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Historial de cajas</span>
       </nav>
       <h1 class="page-title">Historial de cajas</h1>
-      <p class="page-subtitle">Historial cronológico, auditoría de aperturas, cierres y balance de diferencias</p>
+      <p class="page-subtitle">Cajas abiertas y cerradas, con sus diferencias</p>
     </div>
   </div>
 
@@ -38,7 +38,7 @@
       </button>
     </div>
 
-    <span class="total-counter">{{ filteredSessions().length }} sesiones encontradas</span>
+    <span class="total-counter">{{ filteredSessions().length | plural:'caja encontrada':'cajas encontradas' }}</span>
   </div>
 
   <!-- Cash session history table -->
@@ -127,7 +127,7 @@
                 </td>
                 <td style="text-align: right">
                   <span class="price-val font-semibold">Bs {{ session.totalSales | number:'1.2-2' }}</span>
-                  <div class="sales-mini-count">{{ session.salesCount }} vts</div>
+                  <div class="sales-mini-count">{{ session.salesCount | plural:'venta':'ventas' }}</div>
                 </td>
                 <td style="text-align: right">
                   @if (session.closingAmount != null) {

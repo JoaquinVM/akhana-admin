@@ -18,7 +18,7 @@
             [openedAt]="cashService.currentSession()?.openedAt" />
         }
       </div>
-      <p class="page-subtitle">Selecciona productos, aplica descuentos y procesa el cobro directamente</p>
+      <p class="page-subtitle">Busca productos, aplica descuentos y cobra</p>
     </div>
 
     <div class="header-actions">
@@ -52,6 +52,7 @@
       [products]="catalogProducts()"
       [catalogLoading]="isLoadingCatalog()"
       [catalogFailed]="catalogLoadFailed()"
+      [atCost]="atCost()"
       (retryCatalog)="loadCatalogProducts()"
       (retryQuickGroups)="loadQuickGroups()"
       (add)="addToCart($event)"

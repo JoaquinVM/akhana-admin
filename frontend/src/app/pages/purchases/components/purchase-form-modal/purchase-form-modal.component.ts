@@ -65,7 +65,7 @@ export interface PurchaseLineDraft {
 
 // COM-22: the reason the server stores for an arrival
 export const ARRIVAL_REASON = 'Llegó la mercadería';
-export const PURCHASE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: el pedido pudo quedar registrado. Vuelva a '
+export const PURCHASE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: el pedido pudo quedar registrado. Vuelve a '
   + 'guardar: si ya se registró, no se duplica.';
 
 export interface NewProductDraft {
@@ -652,7 +652,7 @@ export class PurchaseFormModalComponent {
 
   openNewProduct(): void {
     if (!this.supplierId()) {
-      this.formError.set('Elija primero el proveedor del pedido.');
+      this.formError.set('Elige primero el proveedor del pedido.');
       return;
     }
     this.formError.set(null);
@@ -676,7 +676,7 @@ export class PurchaseFormModalComponent {
     // CAT-01: the cost may be 0 (the server warns); the price must be above 0, which the server checks
     if (!draft.code.trim() || !draft.name.trim() || !draft.categoryId || draft.buyPrice === null
         || draft.sellPrice === null) {
-      this.newProductError.set('Complete código, nombre, categoría, costo y precio de venta.');
+      this.newProductError.set('Completa código, nombre, categoría, costo y precio de venta.');
       return;
     }
     this.isCreatingProduct.set(true);
@@ -762,11 +762,11 @@ export class PurchaseFormModalComponent {
 
   submit(): void {
     if (!this.supplierId()) {
-      this.formError.set('Elija el proveedor del pedido.');
+      this.formError.set('Elige el proveedor del pedido.');
       return;
     }
     if (this.isCheckingPending()) {
-      this.formError.set('Revisando los pedidos pendientes del proveedor. Intente de nuevo.');
+      this.formError.set('Revisando los pedidos pendientes del proveedor. Intenta de nuevo.');
       return;
     }
     if (this.pendingOffer().length > 0) {
@@ -774,7 +774,7 @@ export class PurchaseFormModalComponent {
       return;
     }
     if (this.unresolvedLines().length > 0) {
-      this.formError.set('Elija el producto de las líneas leídas, o quítelas.');
+      this.formError.set('Elige el producto de las líneas leídas, o quítalas.');
       return;
     }
     const noCost = this.lines().find(line => line.costMissing);
@@ -783,7 +783,7 @@ export class PurchaseFormModalComponent {
       return;
     }
     if (this.paidProposal() && !this.isEdit() && !this.initialPaymentSource()) {
-      this.formError.set('La nota dice que está pagado: elija de dónde salió el dinero, o quite la propuesta.');
+      this.formError.set('La nota dice que está pagado: elige de dónde salió el dinero, o quita la propuesta.');
       return;
     }
     if (this.lines().length === 0) {
@@ -791,7 +791,7 @@ export class PurchaseFormModalComponent {
       return;
     }
     if (this.initialPaymentSource() && !(Number(this.initialPaymentValue()) > 0)) {
-      this.formError.set('Ingrese el monto del pago inicial.');
+      this.formError.set('Ingresa el monto del pago inicial.');
       return;
     }
     const purchase = this.purchase();
@@ -819,7 +819,7 @@ export class PurchaseFormModalComponent {
 
   private submitEdit(purchase: Purchase): void {
     if (!this.reason().trim()) {
-      this.formError.set('Escriba el motivo del cambio.');
+      this.formError.set('Escribe el motivo del cambio.');
       return;
     }
     this.isSubmitting.set(true);

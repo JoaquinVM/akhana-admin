@@ -92,11 +92,11 @@ export class CreditorRepaymentFormComponent {
 
   submit(): void {
     if (this.chosen().length === 0) {
-      this.localError.set('Marque las deudas que se pagan.');
+      this.localError.set('Marca las deudas que se pagan.');
       return;
     }
     if (!this.accountId()) {
-      this.localError.set('Elija la cuenta desde la que se paga.');
+      this.localError.set('Elige la cuenta desde la que se paga.');
       return;
     }
     this.localError.set(null);

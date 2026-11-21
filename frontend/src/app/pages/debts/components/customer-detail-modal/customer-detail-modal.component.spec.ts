@@ -77,7 +77,7 @@ describe('CustomerDetailModalComponent', () => {
     component.changed.subscribe(changed);
 
     component.registerCollection();
-    expect(component.collectionError()).toBe('Elija la cuenta a la que entra el cobro.');
+    expect(component.collectionError()).toBe('Elige la cuenta a la que entra el cobro.');
 
     component.collectionAccountId.set('acc-bisa');
     component.collectionComment.set('  QR ');
@@ -162,7 +162,7 @@ describe('CustomerDetailModalComponent', () => {
 
     it('la opción no dice «(caja abierta)»', () => {
       const options = Array.from<HTMLOptionElement>(fixture.nativeElement.querySelectorAll('#collection-account option')).map(o => o.textContent!.trim());
-      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa (QR)']);
+      expect(options).toEqual(['Selecciona…', 'Caja', 'Bisa (QR)']);
     });
 
     it('con la caja cerrada muestra la nota al elegir Caja', () => {

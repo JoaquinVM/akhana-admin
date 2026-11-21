@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Resumen</span>
       </nav>
       <h1 class="page-title">Resumen financiero</h1>
-      <p class="page-subtitle">Visión consolidada de saldos, cuentas y últimos movimientos económicos</p>
+      <p class="page-subtitle">Saldos de las cuentas y últimos movimientos</p>
     </div>
 
     <div class="header-actions">
@@ -79,7 +79,7 @@
       <div class="section-header">
         <div class="section-title-wrapper">
           <h2 class="section-title">Cuentas registradas</h2>
-          <span class="section-count">{{ data.accounts.length }} cuentas</span>
+          <span class="section-count">{{ data.accounts.length | plural:'cuenta':'cuentas' }}</span>
         </div>
         <a routerLink="/finances/accounts" class="section-link">Ver todas las cuentas →</a>
       </div>
@@ -139,7 +139,7 @@
                 </td>
                 <td>
                   <span class="tx-badge" [class]="'badge-type-' + tx.type.toLowerCase()">
-                    {{ tx.type }}
+                    {{ tx | txType }}
                   </span>
                 </td>
                 <td>
@@ -152,13 +152,11 @@
                 <td class="text-right cell-amount"
                     [class.positive]="tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO' || tx.type === 'SALDO_INICIAL'"
                     [class.negative]="tx.type === 'GASTO_MANUAL'">
-                  @if (tx.type === 'GASTO_MANUAL') { - }
-                  @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
-                  Bs {{ tx.amount | number:'1.2-2' }}
+                  {{ txSign(tx) }}Bs {{ tx.amount | number:'1.2-2' }}
                 </td>
                 <td>
                   <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
-                    {{ tx.status }}
+                    {{ tx.status | txStatus }}
                   </span>
                 </td>
               </tr>

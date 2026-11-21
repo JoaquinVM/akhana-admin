@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Categorías</span>
       </nav>
       <h1 class="page-title">Categorías financieras</h1>
-      <p class="page-subtitle">Clasifica y organiza los ingresos y gastos operativos del negocio</p>
+      <p class="page-subtitle">Categorías para ordenar los ingresos y los gastos</p>
     </div>
 
     <div class="header-actions">
@@ -61,7 +61,7 @@
           [value]="searchTerm()"
           (input)="onSearch($event)" />
       </div>
-      <span class="total-counter">{{ filteredCategories().length }} categorías</span>
+      <span class="total-counter">{{ filteredCategories().length | plural:'categoría':'categorías' }}</span>
     </div>
   </section>
 
@@ -84,7 +84,7 @@
         <table class="zen-table">
           <thead>
             <tr>
-              <th style="width: 140px;">Color</th>
+              <th style="width: 80px;">Color</th>
               <th>Nombre</th>
               <th>Tipo</th>
               <th>Propósito</th>
@@ -95,17 +95,14 @@
             @for (category of filteredCategories(); track category.id) {
               <tr>
                 <td>
-                  <div class="category-color-pill" [title]="category.color">
-                    <span class="color-dot" [style.backgroundColor]="category.color"></span>
-                    <span class="color-hex">{{ (category.color || '#2E5B27').toUpperCase() }}</span>
-                  </div>
+                  <span class="color-dot" [style.backgroundColor]="category.color || '#2E5B27'" role="img" aria-label="Color de la categoría"></span>
                 </td>
                 <td class="cell-name">
-                  <span class="category-name-text">{{ category.name }}</span>
+                  <span class="category-name-text">{{ category | categoryLabel }}</span>
                 </td>
                 <td>
                   <span class="type-pill" [class.type-ingreso]="category.type === 'INGRESO'" [class.type-gasto]="category.type === 'GASTO'">
-                    {{ category.type }}
+                    {{ category.type | categoryType }}
                   </span>
                 </td>
                 <td>
@@ -202,7 +199,7 @@
       <div class="form-group">
         <app-color-picker
           formControlName="color"
-          label="Color Identificador"
+          label="Color"
           [required]="true">
         </app-color-picker>
       </div>
@@ -260,7 +257,7 @@
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     [title]="'¿Descartar cambios?'"
-    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Descartas los cambios o sigues editando?'"
     [confirmText]="'Descartar cambios'"
     [cancelText]="'Continuar editando'"
     [variant]="'warning'"

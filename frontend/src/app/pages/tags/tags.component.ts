@@ -13,10 +13,12 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type TagStatusFilter = 'ACTIVO' | 'ELIMINADO';
 
+import { PluralPipe } from '../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-tags',
   standalone: true,
-  imports: [IconComponent, 
+  imports: [PluralPipe, IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -127,7 +129,7 @@ export class TagsComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de etiquetas. Por favor intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de etiquetas. Por favor intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -261,7 +263,7 @@ export class TagsComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al actualizar la etiqueta. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al actualizar la etiqueta. Revisa los datos.';
           this.formError.set(msg);
         }
       });
@@ -277,7 +279,7 @@ export class TagsComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al crear la etiqueta. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al crear la etiqueta. Revisa los datos.';
           this.formError.set(msg);
         }
       });

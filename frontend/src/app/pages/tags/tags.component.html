@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Etiquetas</span>
       </nav>
       <h1 class="page-title">Etiquetas</h1>
-      <p class="page-subtitle">Administración del catálogo de etiquetas y descriptores cromáticos de productos</p>
+      <p class="page-subtitle">Etiquetas para marcar productos, cada una con su color</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
@@ -76,7 +76,7 @@
         }
       </div>
       <div class="total-counter">
-        <span>{{ filteredTags().length }} etiquetas encontradas</span>
+        <span>{{ filteredTags().length | plural:'etiqueta encontrada':'etiquetas encontradas' }}</span>
       </div>
     </div>
   </div>
@@ -124,12 +124,9 @@
           } @else {
             @for (tag of filteredTags(); track tag.id) {
               <tr [attr.data-id]="tag.id">
-                <!-- Color column: color dot and code -->
+                <!-- Color column: H6, the color as a swatch, without its code -->
                 <td>
-                  <div class="category-color-pill" [title]="tag.color">
-                    <span class="color-dot" [style.backgroundColor]="tag.color"></span>
-                    <span class="color-hex">{{ tag.color.toUpperCase() }}</span>
-                  </div>
+                  <span class="color-dot" [style.backgroundColor]="tag.color" role="img" aria-label="Color de la etiqueta"></span>
                 </td>
 
                 <!-- Name column -->
@@ -203,7 +200,7 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Etiqueta' : 'Nueva etiqueta'"
-    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la etiqueta' : 'Complete la información para registrar una nueva etiqueta en el catálogo'"
+    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la etiqueta' : 'Completa la información para registrar una nueva etiqueta en el catálogo'"
     size="md"
     [closeOnBackdrop]="false"
     (close)="attemptCloseForm()">
@@ -301,7 +298,7 @@
   <app-confirm-modal
     [isOpen]="isConfirmModalOpen()"
     title="¿Eliminar Etiqueta?"
-    [message]="'¿Está seguro de eliminar la etiqueta &quot;' + (tagToDelete()?.name || '') + '&quot;? Esta acción cambiará su estado a ELIMINADO de forma lógica y no podrá ser editada.'"
+    [message]="'¿Seguro que quieres eliminar la etiqueta &quot;' + (tagToDelete()?.name || '') + '&quot;? Esta acción cambiará su estado a ELIMINADO de forma lógica y no podrá ser editada.'"
     confirmText="Eliminar"
     cancelText="Cancelar"
     variant="danger"

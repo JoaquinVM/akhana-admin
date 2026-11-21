@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Cobro de la venta"
-  subtitle="Selecciona el método de pago y confirma la transacción"
+  subtitle="Elige cómo paga el cliente y confirma la venta"
   size="md"
   [closeOnBackdrop]="false"
   (close)="handleClose()">
@@ -77,7 +77,7 @@
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <span>Elija un cliente activo para la venta a crédito.</span>
+            <span>Elige un cliente activo para la venta a crédito.</span>
           </div>
         }
 
@@ -249,7 +249,7 @@
           </div>
 
           @if (mixedNeedsBothParts()) {
-            <p class="mixed-hint" role="alert">El efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.</p>
+            <p class="mixed-hint" role="alert">El efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elige Efectivo o QR.</p>
           } @else if (mixedCashNotWholeCoins()) {
             <p class="mixed-hint" role="alert">La parte en efectivo va en múltiplos de Bs 0,10; el QR lleva los centavos.</p>
           }

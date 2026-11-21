@@ -267,7 +267,7 @@ class UserServiceTest {
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> userService.resetSecondFactor(userId, "TestUser"));
-        assertEquals("No puede quitar su propio segundo factor. Pídaselo a otro administrador.", error.getMessage());
+        assertEquals("No puedes quitar tu propio segundo factor. Pídeselo a otro administrador.", error.getMessage());
         assertNotNull(sampleUser.getTotpSecret());
         verify(userRepository, never()).save(any());
     }

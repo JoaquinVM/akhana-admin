@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Categorías</span>
       </nav>
       <h1 class="page-title">Categorías</h1>
-      <p class="page-subtitle">Administración del catálogo de familias y clasificación cromática de productos</p>
+      <p class="page-subtitle">Grupos de productos, cada uno con su color</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
@@ -76,7 +76,7 @@
         }
       </div>
       <div class="total-counter">
-        <span>{{ filteredCategories().length }} categorías encontradas</span>
+        <span>{{ filteredCategories().length | plural:'categoría encontrada':'categorías encontradas' }}</span>
       </div>
     </div>
   </div>
@@ -125,12 +125,9 @@
           } @else {
             @for (category of filteredCategories(); track category.id) {
               <tr [attr.data-id]="category.id">
-                <!-- Color column: color dot and code -->
+                <!-- Color column: H6, the color as a swatch, without its code -->
                 <td>
-                  <div class="category-color-pill" [title]="category.color">
-                    <span class="color-dot" [style.backgroundColor]="category.color"></span>
-                    <span class="color-hex">{{ category.color.toUpperCase() }}</span>
-                  </div>
+                  <span class="color-dot" [style.backgroundColor]="category.color" role="img" aria-label="Color de la categoría"></span>
                 </td>
 
                 <!-- Name column -->
@@ -211,7 +208,7 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Categoría' : 'Nueva categoría'"
-    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la categoría' : 'Complete la información para registrar una nueva categoría en el catálogo'"
+    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la categoría' : 'Completa la información para registrar una nueva categoría en el catálogo'"
     size="md"
     [closeOnBackdrop]="false"
     (close)="attemptCloseForm()">
@@ -331,7 +328,7 @@
   <app-confirm-modal
     [isOpen]="isConfirmModalOpen()"
     title="¿Eliminar Categoría?"
-    [message]="'¿Está seguro de eliminar la categoría &quot;' + (categoryToDelete()?.name || '') + '&quot;? Esta acción cambiará su estado a ELIMINADO de forma lógica y no podrá ser editada.'"
+    [message]="'¿Seguro que quieres eliminar la categoría &quot;' + (categoryToDelete()?.name || '') + '&quot;? Esta acción cambiará su estado a ELIMINADO de forma lógica y no podrá ser editada.'"
     confirmText="Eliminar"
     cancelText="Cancelar"
     variant="danger"

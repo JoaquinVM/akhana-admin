@@ -40,13 +40,13 @@ describe('SalesTableComponent', () => {
 
   it('POS-09: la columna Caja y el botón Anular son opcionales', () => {
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).not.toContain('Sesión #7');
+    expect(fixture.nativeElement.textContent).not.toContain('Caja #7');
     expect(fixture.nativeElement.querySelector('[aria-label="Anular venta"]')).toBeNull();
 
     fixture.componentRef.setInput('showSession', true);
     fixture.componentRef.setInput('showVoid', true);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Sesión #7');
+    expect(fixture.nativeElement.textContent).toContain('Caja #7');
     expect(fixture.nativeElement.querySelectorAll('[aria-label="Anular venta"]').length).toBe(4);
   });
 

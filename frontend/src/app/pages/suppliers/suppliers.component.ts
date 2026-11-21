@@ -12,10 +12,12 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type SupplierStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
+import { PluralPipe } from '../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [IconComponent, 
+  imports: [PluralPipe, IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -143,7 +145,7 @@ export class SuppliersComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de proveedores. Por favor intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de proveedores. Por favor intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -289,7 +291,7 @@ export class SuppliersComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al actualizar el proveedor. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al actualizar el proveedor. Revisa los datos.';
           this.formError.set(msg);
         }
       });
@@ -305,7 +307,7 @@ export class SuppliersComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al crear el proveedor. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al crear el proveedor. Revisa los datos.';
           this.formError.set(msg);
         }
       });

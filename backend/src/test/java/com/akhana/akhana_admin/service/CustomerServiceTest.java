@@ -309,7 +309,7 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.voidCollection(neida.getId(), k.getId(), new VoidDebtRequest("Error"), "cajero"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 49,99). "
-                + "Anule primero los gastos o transferencias que usaron ese dinero.");
+                + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
         assertThat(k.getStatus()).isEqualTo(CustomerCollectionStatus.ACTIVO);
         assertThat(caja.getCurrentBalance()).isEqualByComparingTo("49.99");

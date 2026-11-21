@@ -189,12 +189,12 @@ export class PurchaseDetailModalComponent {
       return;
     }
     if (!this.paymentSource()) {
-      this.paymentError.set('Elija la cuenta o la persona que pagó.');
+      this.paymentError.set('Elige la cuenta o la persona que pagó.');
       return;
     }
     const amount = Number(this.paymentAmount());
     if (!amount || amount <= 0) {
-      this.paymentError.set('Ingrese un monto mayor a 0.');
+      this.paymentError.set('Ingresa un monto mayor a 0.');
       return;
     }
     this.isPaying.set(true);

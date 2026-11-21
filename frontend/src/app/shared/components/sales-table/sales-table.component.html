@@ -32,7 +32,7 @@
             }
           </td>
           @if (showSession()) {
-            <td>{{ s.sessionNumber != null ? 'Sesión #' + s.sessionNumber : (s.historical ? 'Histórico' : '—') }}</td>
+            <td>{{ s.sessionNumber != null ? 'Caja #' + s.sessionNumber : (s.historical ? 'Histórico' : '—') }}</td>
           }
           <td>{{ s.createdBy }}</td>
           <td>

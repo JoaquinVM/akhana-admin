@@ -13,10 +13,12 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type CategoryStatusFilter = 'ACTIVO' | 'ELIMINADO';
 
+import { PluralPipe } from '../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [IconComponent, 
+  imports: [PluralPipe, IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -131,7 +133,7 @@ export class CategoriesComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de categorías. Por favor intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de categorías. Por favor intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -269,7 +271,7 @@ export class CategoriesComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al actualizar la categoría. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al actualizar la categoría. Revisa los datos.';
           this.formError.set(msg);
         }
       });
@@ -285,7 +287,7 @@ export class CategoriesComponent implements OnInit {
         error: (err) => {
           this.isSubmitting.set(false);
           // Show the business message returned by the backend
-          const msg = err.error?.message || 'Error al crear la categoría. Verifique los datos ingresados.';
+          const msg = err.error?.message || 'Error al crear la categoría. Revisa los datos.';
           this.formError.set(msg);
         }
       });

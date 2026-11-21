@@ -20,7 +20,7 @@ public record CreateUserRequest(
 
     @NotBlank(message = "La contraseña es obligatoria.")
     @Size(min = 12, max = 72, message = "La contraseña debe tener entre 12 y 72 caracteres.")
-    @MaxUtf8Bytes(value = 72, message = "La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela.")
+    @MaxUtf8Bytes(value = 72, message = "La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtala.")
     String password,
 
     @NotNull(message = "El rol es obligatorio.")

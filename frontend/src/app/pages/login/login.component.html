@@ -15,7 +15,7 @@
           <img src="images/akhana-rostro.webp" alt="Logo de Akhana" class="brand-logo" width="72" height="72" />
         </div>
         <h1 class="brand-title">Akhana Admin</h1>
-        <p class="brand-subtitle">Panel de Gestión Administrativa</p>
+        <p class="brand-subtitle">Administración de la tienda</p>
       </div>
 
       <!-- Error Alert Banner -->
@@ -33,19 +33,19 @@
         <form [formGroup]="codeForm" (ngSubmit)="onSubmitCode()" class="login-form" novalidate>
           @if (challenge.setupRequired) {
             <div class="step-intro">
-              <h2 class="step-title">Active el segundo factor</h2>
-              <p class="step-text">Abra su app autenticadora (Google Authenticator, Microsoft Authenticator u otra) y escanee este código.</p>
+              <h2 class="step-title">Activa el segundo factor</h2>
+              <p class="step-text">Abre tu app autenticadora (Google Authenticator, Microsoft Authenticator u otra) y escanea este código.</p>
             </div>
             @if (qrDataUrl(); as qr) {
               <img class="qr-image" [src]="qr" alt="Código QR para la app autenticadora" />
             }
-            <p class="step-text">¿No puede escanearlo? Ingrese esta clave en la app:</p>
+            <p class="step-text">¿No puede escanearlo? Ingresa esta clave en la app:</p>
             <code class="secret-key">{{ secretGroups() }}</code>
-            <p class="step-text">Después escriba el código de 6 dígitos que muestra la app.</p>
+            <p class="step-text">Después escribe el código de 6 dígitos que muestra la app.</p>
           } @else {
             <div class="step-intro">
               <h2 class="step-title">Código de verificación</h2>
-              <p class="step-text">Escriba el código de 6 dígitos de su app autenticadora.</p>
+              <p class="step-text">Escribe el código de 6 dígitos de tu app autenticadora.</p>
             </div>
           }
 
@@ -67,7 +67,7 @@
               />
             </div>
             @if (isCodeInvalid()) {
-              <span class="field-error">Escriba los 6 dígitos del código.</span>
+              <span class="field-error">Escribe los 6 dígitos del código.</span>
             }
           </div>
 

@@ -42,7 +42,7 @@ export function cartKey(product: Product, presentation: ProductPresentation | nu
 export type { CartItem } from './cart-item';
 
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
-export const SALE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: la venta pudo quedar registrada. Vuelva a cobrar: '
+export const SALE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: la venta pudo quedar registrada. Vuelve a cobrar: '
   + 'si ya se registró, no se duplica.';
 
 import { CashDayMarkComponent } from '../../../shared/components/cash-day-mark/cash-day-mark.component';

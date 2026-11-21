@@ -46,7 +46,7 @@ export class ReportExportButtonComponent {
         this.isExporting.set(false);
       },
       error: err => {
-        this.errorMessage.set(err?.error?.message || 'Error al exportar el reporte. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.message || 'Error al exportar el reporte. Intenta nuevamente.');
         this.isExporting.set(false);
       }
     });

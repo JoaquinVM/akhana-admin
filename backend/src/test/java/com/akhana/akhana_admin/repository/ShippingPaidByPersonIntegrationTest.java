@@ -92,7 +92,7 @@ class ShippingPaidByPersonIntegrationTest {
         entityManager.flush();
         assertDebt("0.00");
         PurchaseResponse current = edited;
-        String repaidMessage = "Ya se devolvió a " + mamiName + " parte de este envío; anule primero la devolución.";
+        String repaidMessage = "Ya se devolvió a " + mamiName + " parte de este envío; anula primero la devolución.";
         IllegalStateException toAccount = assertThrows(IllegalStateException.class, () -> purchaseService.updatePurchase(
                 purchase.id(), edit(current, "30.00", bisa, null, "Cambio"), "it-ship"));
         assertEquals(repaidMessage, toAccount.getMessage());

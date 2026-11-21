@@ -4,10 +4,12 @@ import { FinancialCategory, FinancialTransaction } from '../../../../../core/fin
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
 
 // Modal to edit description, category or notes; the parent owns the form and submits it
+import { CategoryLabelPipe } from '../../../../../core/finance/transaction-labels';
+
 @Component({
   selector: 'app-transaction-edit-modal',
   standalone: true,
-  imports: [ReactiveFormsModule, ModalComponent],
+  imports: [CategoryLabelPipe, ReactiveFormsModule, ModalComponent],
   templateUrl: './transaction-edit-modal.component.html',
   styleUrls: ['../transaction-modal.css']
 })

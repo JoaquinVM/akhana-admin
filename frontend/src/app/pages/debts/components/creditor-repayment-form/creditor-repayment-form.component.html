@@ -7,7 +7,7 @@
   @if (pending().length === 0) {
     <p class="hint">No tiene deudas pendientes.</p>
   } @else {
-    <p class="hint">Marque lo que se paga: el monto es la suma de lo marcado.</p>
+    <p class="hint">Marca lo que se paga: el monto es la suma de lo marcado.</p>
     <div class="table-responsive">
       <table class="table pending-table">
         <thead>
@@ -60,7 +60,7 @@
         <label class="form-label" for="repayment-account">Pagado desde <span class="required-mark">*</span></label>
         <select id="repayment-account" class="form-control" name="accountId"
                 [ngModel]="accountId()" (ngModelChange)="accountId.set($event)">
-          <option value="">Seleccione…</option>
+          <option value="">Selecciona…</option>
           @for (account of accounts(); track account.id) {
             <option [value]="account.id">{{ account.name }}</option>
           }

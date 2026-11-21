@@ -137,7 +137,7 @@ describe('CheckoutModalComponent', () => {
     fixture.detectChanges();
     expect(component.isPaymentValid()).toBe(false);
     expect(component.mixedNeedsBothParts()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('elija Efectivo o QR');
+    expect(fixture.nativeElement.textContent).toContain('elige Efectivo o QR');
 
     component.onCashPortionChange(0); // all by QR
     expect(component.isPaymentValid()).toBe(false);

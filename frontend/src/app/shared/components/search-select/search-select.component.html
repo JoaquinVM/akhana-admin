@@ -15,7 +15,7 @@
 
   @if (isOpen()) {
     <div class="search-select-panel">
-      <input type="text" class="form-control search-select-input" placeholder="Escriba para buscar…"
+      <input type="text" class="form-control search-select-input" placeholder="Escribe para buscar…"
              autocomplete="off" aria-label="Buscar en la lista"
              [value]="term()" (input)="onTermChange($any($event.target).value)" (keydown)="onKeydown($event)" />
       <ul class="search-select-list" role="listbox">

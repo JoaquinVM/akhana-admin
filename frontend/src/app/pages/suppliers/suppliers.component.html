@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Proveedores</span>
       </nav>
       <h1 class="page-title">Proveedores</h1>
-      <p class="page-subtitle">Administración del catálogo de proveedores y trazabilidad de compras</p>
+      <p class="page-subtitle">Proveedores de la tienda y sus pedidos</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
@@ -94,7 +94,7 @@
         }
       </div>
       <div class="total-counter">
-        <span>{{ filteredSuppliers().length }} proveedores encontrados</span>
+        <span>{{ filteredSuppliers().length | plural:'proveedor encontrado':'proveedores encontrados' }}</span>
       </div>
     </div>
   </div>
@@ -370,7 +370,7 @@
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     [title]="'¿Descartar cambios?'"
-    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Descartas los cambios o sigues editando?'"
     [confirmText]="'Descartar cambios'"
     [cancelText]="'Continuar editando'"
     [variant]="'warning'"
@@ -382,7 +382,7 @@
   <app-confirm-modal
     [isOpen]="isConfirmModalOpen()"
     [title]="'¿Eliminar Proveedor?'"
-    [message]="'¿Está seguro de que desea eliminar al proveedor \'' + (supplierToDelete()?.name || '') + '\'? El registro pasará a estado ELIMINADO de forma lógica y no podrá ser editado ni eliminado nuevamente.'"
+    [message]="'¿Seguro que quieres eliminar al proveedor \'' + (supplierToDelete()?.name || '') + '\'? El registro pasará a estado ELIMINADO de forma lógica y no podrá ser editado ni eliminado nuevamente.'"
     [confirmText]="'Eliminar proveedor'"
     [cancelText]="'Cancelar'"
     [variant]="'danger'"

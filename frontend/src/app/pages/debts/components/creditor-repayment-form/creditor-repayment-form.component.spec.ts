@@ -102,11 +102,11 @@ describe('CreditorRepaymentFormComponent', () => {
 
   it('DEU-03 (062): exige algo marcado y la cuenta, y envía lo marcado con el total que mostró', () => {
     component.submit();
-    expect(component.localError()).toBe('Marque las deudas que se pagan.');
+    expect(component.localError()).toBe('Marca las deudas que se pagan.');
     component.toggle(entries[1]);
     component.toggle(entries[5]);
     component.submit();
-    expect(component.localError()).toBe('Elija la cuenta desde la que se paga.');
+    expect(component.localError()).toBe('Elige la cuenta desde la que se paga.');
     expect(sent).toEqual([]);
 
     component.accountId.set('acc-bisa');
@@ -156,7 +156,7 @@ describe('CreditorRepaymentFormComponent', () => {
 
     it('la opción no dice «(caja abierta)»', () => {
       const options = Array.from<HTMLOptionElement>(el().querySelectorAll('#repayment-account option')).map(o => o.textContent!.trim());
-      expect(options).toEqual(['Seleccione…', 'Caja', 'Bisa']);
+      expect(options).toEqual(['Selecciona…', 'Caja', 'Bisa']);
     });
 
     it('con la caja cerrada muestra la nota al elegir Caja y no deja pagar', () => {

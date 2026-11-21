@@ -127,7 +127,7 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(get(path))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error").value("Conflict"))
-            .andExpect(jsonPath("$.message").value("Otra operación está en curso, intente de nuevo."));
+            .andExpect(jsonPath("$.message").value("Otra operación está en curso, intenta de nuevo."));
     }
 
     @Test

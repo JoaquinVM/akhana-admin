@@ -121,7 +121,7 @@ public class UserServiceImpl implements UserService {
 
         // Nobody deletes their own user (USR-04)
         if (user.getUsername().equalsIgnoreCase(currentUsername)) {
-            throw new IllegalArgumentException("No está permitido eliminar su propia cuenta de usuario.");
+            throw new IllegalArgumentException("No puedes eliminar tu propia cuenta de usuario.");
         }
 
         // Nor the last active administrator
@@ -147,7 +147,7 @@ public class UserServiceImpl implements UserService {
 
         // Like the user's own removal (USR-04): whoever holds a stolen session cannot drop the second factor
         if (user.getUsername().equalsIgnoreCase(currentUsername)) {
-            throw new IllegalArgumentException("No puede quitar su propio segundo factor. Pídaselo a otro administrador.");
+            throw new IllegalArgumentException("No puedes quitar tu propio segundo factor. Pídeselo a otro administrador.");
         }
         if (user.getTotpSecret() == null) {
             throw new IllegalArgumentException("Este usuario no tiene el segundo factor activo.");

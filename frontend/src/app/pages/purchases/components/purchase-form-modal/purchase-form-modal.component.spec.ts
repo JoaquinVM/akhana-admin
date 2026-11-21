@@ -236,7 +236,7 @@ describe('PurchaseFormModalComponent', () => {
 
   it('no envía sin proveedor ni líneas y muestra el error del servidor', () => {
     component.submit();
-    expect(component.formError()).toBe('Elija el proveedor del pedido.');
+    expect(component.formError()).toBe('Elige el proveedor del pedido.');
     component.supplierId.set('sup-1');
     component.submit();
     expect(component.formError()).toBe('El pedido debe tener al menos una línea.');
@@ -280,7 +280,7 @@ describe('PurchaseFormModalComponent', () => {
     component.openNewProduct();
     component.patchNewProduct({ code: 'X', name: 'X', categoryId: 'c-1', buyPrice: null, sellPrice: 12 });
     component.createProduct();
-    expect(component.newProductError()).toBe('Complete código, nombre, categoría, costo y precio de venta.');
+    expect(component.newProductError()).toBe('Completa código, nombre, categoría, costo y precio de venta.');
     expect(productService.createProduct).not.toHaveBeenCalled();
   });
 
@@ -738,7 +738,7 @@ describe('PurchaseFormModalComponent', () => {
       expect(amountInput().value).toBe('');
 
       component.submit();
-      expect(component.formError()).toBe('Ingrese el monto del pago inicial.');
+      expect(component.formError()).toBe('Ingresa el monto del pago inicial.');
       expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
 
       component.onCostChange(0, 10);
@@ -799,7 +799,7 @@ describe('PurchaseFormModalComponent', () => {
 
       expect(amountInput().value).toBe('');
       component.submit();
-      expect(component.formError()).toBe('Ingrese el monto del pago inicial.');
+      expect(component.formError()).toBe('Ingresa el monto del pago inicial.');
       expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
     });
 
@@ -961,7 +961,7 @@ describe('PurchaseFormModalComponent', () => {
     it('exige el motivo antes de guardar', () => {
       component.onQuantityChange(0, 20);
       component.submit();
-      expect(component.formError()).toBe('Escriba el motivo del cambio.');
+      expect(component.formError()).toBe('Escribe el motivo del cambio.');
       expect(purchaseService.updatePurchase).not.toHaveBeenCalled();
     });
 
@@ -979,11 +979,11 @@ describe('PurchaseFormModalComponent', () => {
 
     it('muestra el error del servidor (total menor a lo pagado)', () => {
       purchaseService.updatePurchase.mockReturnValue(throwError(() => ({ error: {
-        message: 'El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anule primero el pago.' } })));
+        message: 'El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anula primero el pago.' } })));
       component.removeLine(1);
       component.reason.set('Faltaron las nueces');
       component.submit();
-      expect(component.formError()).toContain('anule primero el pago');
+      expect(component.formError()).toContain('anula primero el pago');
     });
   });
 
@@ -1354,7 +1354,7 @@ describe('PurchaseFormModalComponent', () => {
       expect(form.unresolvedLines().length).toBe(1);
       form.submit();
       expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
-      expect(form.formError()).toContain('Elija el producto');
+      expect(form.formError()).toContain('Elige el producto');
 
       form.resolveLine(0, tea);
       expect(form.unresolvedLines().length).toBe(0);

@@ -88,7 +88,7 @@ export class ConsumptionsComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.errorMessage.set('Error al cargar los consumos. Intente nuevamente.');
+        this.errorMessage.set('Error al cargar los consumos. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

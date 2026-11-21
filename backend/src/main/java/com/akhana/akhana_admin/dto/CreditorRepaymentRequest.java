@@ -29,10 +29,10 @@ public record CreditorRepaymentRequest(
 
     /** A debt of the person: PAYMENT or SHIPPING (by its id) or SALE (by the sale id), as the history lists it. */
     public record Item(
-        @NotNull(message = "Elija las deudas que se pagan.")
+        @NotNull(message = "Elige las deudas que se pagan.")
         CreditorHistoryResponse.EntryType type,
 
-        @NotNull(message = "Elija las deudas que se pagan.")
+        @NotNull(message = "Elige las deudas que se pagan.")
         UUID id
     ) {}
 }

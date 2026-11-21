@@ -74,7 +74,7 @@ class PurchaseWriteEndpointTest extends WriteEndpointTestSupport {
     @Test
     @DisplayName("COM-27: el mismo pedido reintentado con otro contenido da 409 con su mensaje")
     void retriedPurchaseWithOtherContentIsAConflict() throws Exception {
-        String message = "Este pedido ya se registró como PED-000042 con otro contenido; revise la lista de pedidos antes de volver a guardar.";
+        String message = "Este pedido ya se registró como PED-000042 con otro contenido; revisa la lista de pedidos antes de volver a guardar.";
         when(purchaseService.registerPurchase(any(PurchaseRequest.class), eq("admin")))
             .thenAnswer(invocation -> { throw new DuplicateResourceException(message); });
 

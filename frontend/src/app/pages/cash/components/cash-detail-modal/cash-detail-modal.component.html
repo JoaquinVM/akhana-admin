@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Detalle y auditoría de caja"
-  [subtitle]="'Sesión #' + (session()?.sessionNumber || '—') + ' • Estado: ' + (session()?.status || '—')"
+  [subtitle]="'Caja #' + (session()?.sessionNumber || '—') + ' • Estado: ' + (session()?.status || '—')"
   size="xl"
   (close)="onClose()">
 

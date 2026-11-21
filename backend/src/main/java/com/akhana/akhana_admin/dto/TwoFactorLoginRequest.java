@@ -3,9 +3,9 @@ package com.akhana.akhana_admin.dto;
 import jakarta.validation.constraints.NotBlank;
 
 public record TwoFactorLoginRequest(
-    @NotBlank(message = "El ingreso venció. Vuelva a ingresar su usuario y contraseña.")
+    @NotBlank(message = "El ingreso venció. Vuelve a ingresar tu usuario y contraseña.")
     String challengeId,
 
-    @NotBlank(message = "Ingrese el código de 6 dígitos.")
+    @NotBlank(message = "Ingresa el código de 6 dígitos.")
     String code
 ) {}

@@ -252,7 +252,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.formatted(seventyTwoBytes + "a")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela."));
+                .andExpect(jsonPath("$.message").value("La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtala."));
         verify(userService, never()).createUser(any(), any());
 
         mockMvc.perform(post("/api/users")

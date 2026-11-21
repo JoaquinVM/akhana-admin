@@ -13,10 +13,12 @@ import { formatBs } from '../../../../shared/utils/money';
  * Cash expense of the shift (food, transport…): leaves Caja with an expense category. It only offers the
  * categories that take manual movements: Pedido, Pago a tercero and Ajuste are recorded by the system.
  */
+import { CategoryLabelPipe } from '../../../../core/finance/transaction-labels';
+
 @Component({
   selector: 'app-cash-expense-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
+  imports: [CategoryLabelPipe, CommonModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
   templateUrl: './cash-expense-modal.component.html',
   styleUrls: ['./cash-expense-modal.component.css']
 })

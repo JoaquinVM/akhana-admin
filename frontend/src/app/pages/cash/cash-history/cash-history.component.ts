@@ -13,10 +13,12 @@ import { ConnectionNoticeComponent } from '../../../shared/components/connection
 import { StoreDayPipe } from '../../../shared/utils/store-day.pipe';
 import { sessionDayLabel } from '../../../shared/utils/store-date';
 
+import { PluralPipe } from '../../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-cash-history',
   standalone: true,
-  imports: [CommonModule, ConnectionNoticeComponent, CashDetailModalComponent, ReopenCashModalComponent, StoreDayPipe],
+  imports: [PluralPipe, CommonModule, ConnectionNoticeComponent, CashDetailModalComponent, ReopenCashModalComponent, StoreDayPipe],
   templateUrl: './cash-history.component.html',
   styleUrls: ['./cash-history.component.css']
 })

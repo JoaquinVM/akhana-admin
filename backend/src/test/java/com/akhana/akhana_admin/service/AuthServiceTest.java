@@ -241,7 +241,7 @@ class AuthServiceTest {
 
         assertThat(response.token()).isEqualTo("token");
         assertThat(response.mustChangePassword()).isTrue();
-        assertThat(response.message()).isEqualTo("Debe cambiar su contraseña.");
+        assertThat(response.message()).isEqualTo("Debe cambiar tu contraseña.");
     }
 
     @Test
@@ -322,7 +322,7 @@ class AuthServiceTest {
         verify(userRepository, never()).save(any());
     }
 
-    private static final String BLOCKED_MESSAGE = "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente.";
+    private static final String BLOCKED_MESSAGE = "Demasiados intentos fallidos. Espera 15 minutos e intenta nuevamente.";
 
     private void failLogins(String username, String ip, int times) {
         for (int i = 0; i < times; i++) {
@@ -517,7 +517,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> secondFactor(challenge, codeNow(challenge.twoFactor().secret(), 0)))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+            .hasMessage("El ingreso venció. Vuelve a ingresar tu usuario y contraseña.");
         verifyNoInteractions(jwtService);
     }
 
@@ -562,7 +562,7 @@ class AuthServiceTest {
         clock.advance(Duration.ofMinutes(5));
         assertThatThrownBy(() -> secondFactor(expiring, codeNow(secret, 0)))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+            .hasMessage("El ingreso venció. Vuelve a ingresar tu usuario y contraseña.");
 
         LoginResponse challenge = adminPasswordStep("198.51.100.7");
         for (int i = 0; i < 4; i++) {
@@ -577,7 +577,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.loginWithSecondFactor(
                 new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), codeNow(secret, 0)), "198.51.100.7"))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+            .hasMessage("El ingreso venció. Vuelve a ingresar tu usuario y contraseña.");
     }
 
     @Test
@@ -606,7 +606,7 @@ class AuthServiceTest {
         when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
         when(jwtService.generateToken(administrator)).thenReturn("admin-token");
         when(userRepository.recordSecondFactorStep(eq(administrator.getId()), anyLong())).thenReturn(1);
-        String blocked = "Demasiados códigos incorrectos para este usuario. Espere 60 minutos e intente nuevamente.";
+        String blocked = "Demasiados códigos incorrectos para este usuario. Espera 60 minutos e intenta nuevamente.";
 
         // One wrong code from each IP: no IP reaches its own limit of 5
         for (int i = 0; i < 9; i++) {
@@ -650,7 +650,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> secondFactor(challenge, codeNow(secret, 0)))
             .isInstanceOf(AuthenticationFailedException.class)
-            .hasMessage("El ingreso venció. Vuelva a ingresar su usuario y contraseña.");
+            .hasMessage("El ingreso venció. Vuelve a ingresar tu usuario y contraseña.");
         verifyNoInteractions(jwtService);
     }
 
