@@ -65,7 +65,7 @@
   border: 1px solid rgba(46, 91, 39, 0.14);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #2e5b27;
+  color: var(--primary-hover);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -74,7 +74,7 @@
   width: 6px;
   height: 6px;
   border-radius: 9999px;
-  background-color: #7bb142;
+  background-color: var(--secondary-color);
   box-shadow: 0 0 0 0 rgba(123, 177, 66, 0.6);
   animation: pulse-ring 2s infinite;
 }
@@ -125,7 +125,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #f5b800 0%, #2e5b27 60%, #7bb142 100%);
+  background: linear-gradient(90deg, var(--accent-gold) 0%, var(--primary-hover) 60%, var(--secondary-color) 100%);
 }
 
 /* Card Header */
@@ -155,7 +155,7 @@
   margin: 0;
   font-size: 1.65rem;
   font-weight: 700;
-  color: #2e5b27;
+  color: var(--primary-hover);
   letter-spacing: -0.02em;
 }
 
@@ -220,7 +220,7 @@
   margin-bottom: 0.4rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #2e5b27;
+  color: var(--primary-hover);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -236,7 +236,7 @@
 }
 
 .input-wrapper:focus-within {
-  border-color: #2e5b27;
+  border-color: var(--primary-hover);
   box-shadow: 0 0 0 3px rgba(245, 184, 0, 0.28);
 }
 
@@ -289,7 +289,7 @@
 }
 
 .password-toggle-btn:hover {
-  color: #2e5b27;
+  color: var(--primary-hover);
   background-color: rgba(46, 91, 39, 0.08);
 }
 
@@ -314,7 +314,7 @@
   gap: 0.5rem;
   width: 100%;
   padding: 0.85rem 1.5rem;
-  background: #2e5b27;
+  background: var(--primary-hover);
   color: #ffffff;
   border: none;
   border-radius: 0.75rem;
@@ -386,7 +386,7 @@
 .security-icon {
   width: 0.95rem;
   height: 0.95rem;
-  color: #7bb142;
+  color: var(--secondary-color);
 }
 
 /* Bottom Footer */
@@ -429,7 +429,7 @@
   margin: 0 0 0.35rem 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #2e5b27;
+  color: var(--primary-hover);
 }
 
 .step-text {
@@ -460,7 +460,7 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.85rem;
   letter-spacing: 0.04em;
-  color: #2e5b27;
+  color: var(--primary-hover);
   text-align: center;
   word-break: break-all;
   user-select: all;
@@ -474,7 +474,7 @@
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #2e5b27;
+  color: var(--primary-hover);
   text-decoration: underline;
   cursor: pointer;
 }

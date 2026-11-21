@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  color: var(--primary-color, #2e5b27);
+  color: var(--primary-color);
 }
 
 .hero-lock-svg {
@@ -33,7 +33,7 @@
   font-family: var(--font-heading);
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1b3b18;
+  color: var(--primary-color);
 }
 
 .closed-hero-desc {
@@ -51,7 +51,7 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .hint-icon-svg {

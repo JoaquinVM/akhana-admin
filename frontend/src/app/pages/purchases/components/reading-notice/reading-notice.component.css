@@ -8,7 +8,7 @@
 .reading-source {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-muted);
 }
 
 .paid-proposal {

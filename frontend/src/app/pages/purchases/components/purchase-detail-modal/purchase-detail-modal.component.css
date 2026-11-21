@@ -21,7 +21,7 @@
 .audit,
 .cost-note {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .cost-note {
@@ -38,7 +38,7 @@
   font-family: var(--font-heading);
   font-size: 1rem;
   font-weight: 600;
-  color: #111f0f;
+  color: var(--text-primary);
 }
 
 .comment {
@@ -55,13 +55,13 @@
 }
 
 .loading {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .pay-POR_PAGAR { background: #fee2e2; color: #b91c1c; }
 .pay-CONSIGNACION { background: #ede9fe; color: #6d28d9; }
 .pay-A_CUENTA { background: #fef3c7; color: #a16207; }
-.pay-PAGADO { background: #dcfce7; color: #15803d; }
+.pay-PAGADO { background: #dcfce7; color: var(--color-success); }
 
 @media (max-width: 720px) {
   .summary-grid {
@@ -71,7 +71,7 @@
 
 .pay-ANULADO { background: #e2e8f0; color: #475569; }
 .delivery-PENDIENTE { background: #fef3c7; color: #a16207; }
-.delivery-ENTREGADO { background: #dcfce7; color: #15803d; }
+.delivery-ENTREGADO { background: #dcfce7; color: var(--color-success); }
 
 .delivery-summary {
   display: flex;

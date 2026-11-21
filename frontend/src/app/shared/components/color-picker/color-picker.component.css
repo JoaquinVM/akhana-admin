@@ -33,7 +33,7 @@
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
   background: rgba(217, 119, 6, 0.12);
-  color: #b45309;
+  color: var(--color-warning);
   border: 1px solid rgba(217, 119, 6, 0.3);
 }
 
@@ -108,8 +108,8 @@
   gap: 0.45rem;
   padding: 0.25rem 0.65rem;
   border-radius: 16px;
-  background: var(--color-surface, #f8fafc);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, var(--bg-canvas));
+  border: 1px solid var(--color-border, var(--border-light));
   font-size: 0.8125rem;
   color: var(--color-text-main, #334155);
 }
@@ -139,7 +139,7 @@
 
 .color-placeholder-hint {
   font-size: 0.78125rem;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, var(--text-muted));
   font-style: italic;
 }
 

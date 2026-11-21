@@ -19,7 +19,7 @@
   font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 34px;
   font-weight: 700;
-  color: #1B3B18;
+  color: var(--primary-color);
   letter-spacing: -0.02em;
 }
 
@@ -63,7 +63,7 @@
   background: rgba(46, 91, 39, 0.08);
   border: 1px solid rgba(46, 91, 39, 0.16);
   border-radius: 12px;
-  color: #2E5B27;
+  color: var(--primary-hover);
   flex-shrink: 0;
 }
 
@@ -81,7 +81,7 @@
   font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 600;
-  color: #1B3B18;
+  color: var(--primary-color);
 }
 
 .card-description {
@@ -92,7 +92,7 @@
 }
 
 .card-description strong {
-  color: #1B3B18;
+  color: var(--primary-color);
 }
 
 .meta-tags {
@@ -110,7 +110,7 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #2E5B27;
+  color: var(--primary-hover);
 }
 
 .meta-tag.zen {

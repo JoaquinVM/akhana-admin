@@ -16,7 +16,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -34,7 +34,7 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111f0f;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -67,7 +67,7 @@
 .filter-hint {
   margin: -0.75rem 0 0;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .pagination-container {
@@ -81,7 +81,7 @@
 
 .pagination-info {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .pagination-controls {
@@ -93,7 +93,7 @@
 .btn-page {
   padding: 0.35rem 0.75rem;
   border: 1px solid #cbd5e1;
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   font-weight: 500;

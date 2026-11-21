@@ -17,7 +17,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -29,7 +29,7 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111f0f;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -53,13 +53,13 @@
 
 .filter-pill {
   padding: 0.35rem 0.875rem;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-full);
   font-family: var(--font-heading);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -70,21 +70,21 @@
 }
 
 .filter-pill.active {
-  background-color: #1b3b18;
+  background-color: var(--primary-color);
   color: #ffffff;
-  border-color: #1b3b18;
+  border-color: var(--primary-color);
 }
 
 .total-counter {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .session-tag {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #2e5b27;
+  color: var(--primary-hover);
   background: rgba(46, 91, 39, 0.08);
   padding: 0.2rem 0.45rem;
   border-radius: var(--radius-sm);
@@ -99,7 +99,7 @@
 }
 
 .price-val {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: #0f172a;
 }
@@ -115,7 +115,7 @@
 
 .diff-badge {
   display: inline-block;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.1rem 0.4rem;
@@ -163,10 +163,10 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
   border-radius: var(--radius-sm);
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -193,7 +193,7 @@
   flex-direction: column;
   align-items: center;
   padding: 2.5rem 1rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .table-empty {
@@ -202,7 +202,7 @@
   align-items: center;
   padding: 3rem 1rem;
   text-align: center;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .table-empty-icon {

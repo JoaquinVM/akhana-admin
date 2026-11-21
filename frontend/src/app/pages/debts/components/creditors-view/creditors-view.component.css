@@ -22,7 +22,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 0.75rem 1rem;
@@ -32,7 +32,7 @@
 .total-card strong {
   font-family: var(--font-heading);
   font-size: 1.25rem;
-  color: #111f0f;
+  color: var(--text-primary);
 }
 
 .creditor-name {
@@ -43,7 +43,7 @@
 .creditor-description {
   display: block;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .has-debt {

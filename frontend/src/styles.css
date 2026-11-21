@@ -145,7 +145,7 @@ html, body {
   justify-content: center;
   border: 1px solid transparent;
   background: transparent;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -219,7 +219,7 @@ html, body {
   font-size: 0.875rem;
   padding: 0.625rem 0.875rem;
   color: var(--text-primary);
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -260,7 +260,7 @@ html, body {
   font-family: var(--font-body);
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-warning);
   background-color: #fef3c7;
   padding: 0.125rem 0.45rem;
   border-radius: var(--radius-sm);
@@ -331,7 +331,7 @@ textarea.form-control {
 }
 
 .table thead th {
-  background-color: #f8fafc;
+  background-color: var(--bg-canvas);
   color: #475569;
   font-family: var(--font-heading);
   font-size: 0.75rem;
@@ -353,7 +353,7 @@ textarea.form-control {
 }
 
 .table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--bg-canvas);
 }
 
 .table tbody td {
@@ -490,7 +490,7 @@ textarea.form-control {
   background-color: #f1f5f9;
   padding: 0.25rem;
   border-radius: var(--radius-md);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-light);
   gap: 0.25rem;
 }
 
@@ -514,7 +514,7 @@ textarea.form-control {
   font-family: var(--font-heading);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-muted);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -530,7 +530,7 @@ textarea.form-control {
 }
 
 .filter-pill.active {
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   color: #0f172a;
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);

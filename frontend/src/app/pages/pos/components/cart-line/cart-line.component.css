@@ -14,8 +14,8 @@
 }
 
 .cart-item-row:hover {
-  background-color: #f8fafc;
-  border-color: #e2e8f0;
+  background-color: var(--bg-canvas);
+  border-color: var(--border-light);
 }
 
 .item-identity {
@@ -25,7 +25,7 @@
 }
 
 .item-code {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: #94a3b8;
   line-height: 1.1;
@@ -44,7 +44,7 @@
   display: block;
   margin-top: 0.2rem;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 /* POS-10: kilos or grams on a line by weight */
@@ -52,7 +52,7 @@
   display: inline-flex;
   width: fit-content;
   margin-top: 0.2rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -62,8 +62,8 @@
   min-height: 24px;
   padding: 0 0.4rem;
   border: none;
-  background: #fff;
-  color: #64748b;
+  background: var(--bg-surface);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -83,7 +83,7 @@
 
 .discount-lbl {
   font-size: 0.6875rem;
-  color: #64748b;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -142,7 +142,7 @@
 
 .final-unit-price {
   font-size: 0.6875rem;
-  color: #64748b;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -159,7 +159,7 @@
 }
 
 .item-subtotal {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   color: #0f172a;
   line-height: 1.2;

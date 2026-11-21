@@ -5,8 +5,8 @@
 }
 
 .sale-summary-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 12px 14px;
   display: flex;
@@ -21,7 +21,7 @@
 }
 
 .summary-row .lbl {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .summary-row .val {
@@ -40,7 +40,7 @@
   background: #fffbeb;
   border: 1px solid #fef3c7;
   border-radius: 8px;
-  color: #b45309;
+  color: var(--color-warning);
   font-size: 0.8rem;
   line-height: 1.35;
 }

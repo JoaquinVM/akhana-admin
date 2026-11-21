@@ -3,9 +3,9 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.875rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-light);
   border-radius: 0.75rem;
-  background: #f8fafc;
+  background: var(--bg-canvas);
   font-family: var(--font-body);
 }
 
@@ -19,14 +19,14 @@
 .picker-title {
   font-family: var(--font-heading);
   font-size: 0.95rem;
-  color: var(--primary-color, #1b3b18);
+  color: var(--primary-color);
 }
 
 .picker-close {
   display: inline-flex;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0.25rem;
 }
@@ -45,7 +45,7 @@
   padding: 0.625rem 0.75rem;
   border: 1px solid #cbd5e1;
   border-radius: 0.5rem;
-  background: #ffffff;
+  background: var(--bg-surface);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -53,7 +53,7 @@
 
 .picker-option:hover,
 .picker-option:focus-visible {
-  border-color: var(--primary-color, #1b3b18);
+  border-color: var(--primary-color);
   background: rgba(27, 59, 24, 0.05);
 }
 
