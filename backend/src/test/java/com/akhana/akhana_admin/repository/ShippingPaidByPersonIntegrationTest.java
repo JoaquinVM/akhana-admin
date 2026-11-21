@@ -68,7 +68,7 @@ class ShippingPaidByPersonIntegrationTest {
         assertBalance("975.00", bisa);
         assertEquals("IT Bisa " + suffix(), edited.shippingAccountName());
         assertNull(edited.shippingCreditorId());
-        assertTrue(edited.revisions().get(0).changes().contains("Envío: Bs 25,00 (" + mamiName + ") → Bs 25,00 (IT Bisa "),
+        assertTrue(edited.revisions().get(0).changes().contains("Envío: Bs 25.00 (" + mamiName + ") → Bs 25.00 (IT Bisa "),
                 edited.revisions().get(0).changes());
         history = creditorService.getHistory(mami);
         assertTrue(history.entries().get(0).voided());

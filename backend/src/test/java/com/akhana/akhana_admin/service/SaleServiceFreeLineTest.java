@@ -173,7 +173,7 @@ class SaleServiceFreeLineTest {
         assertThatThrownBy(() -> saleService.registerSale(cashSale(null, discounted), "op"))
             .hasMessage("Una línea libre no admite descuentos.");
         assertThatThrownBy(() -> saleService.registerSale(cashSale(new BigDecimal("1.00"), free(unidentified, "1", "Té", "10")), "op"))
-            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 0,00).");
+            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 0.00).");
         SaleDetailRequest atCost = new SaleDetailRequest(List.of(free(mamiProduct, "1", "Té", "10")), null,
             PaymentMethod.EFECTIVO, null, null, null, null, SaleType.AL_COSTO, null, null);
         assertThatThrownBy(() -> saleService.registerSale(atCost, "op"))
@@ -212,7 +212,7 @@ class SaleServiceFreeLineTest {
         SaleItemRequest discountedNormal = new SaleItemRequest(normal.getId(), new BigDecimal("2"), new BigDecimal("1.00"));
         assertThatThrownBy(() -> saleService.registerSale(cashSale(new BigDecimal("48.01"), discountedNormal,
             free(mamiProduct, "1", "Mermelada de Mami", "30")), "op"))
-            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 48,00).");
+            .hasMessage("El descuento general no puede superar el subtotal de los productos normales (Bs 48.00).");
         verify(saleRepository, never()).save(any());
     }
 

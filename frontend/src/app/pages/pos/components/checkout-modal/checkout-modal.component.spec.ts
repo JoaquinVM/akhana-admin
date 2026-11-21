@@ -71,7 +71,7 @@ describe('CheckoutModalComponent', () => {
     expect(billButtons().map((b) => b.textContent!.trim())).toEqual(['Bs 20', 'Bs 50', 'Bs 100', 'Bs 200']);
   });
 
-  it('097: en efectivo se cobra el total redondeado a Bs 0,10 y se avisa el redondeo', () => {
+  it('097: en efectivo se cobra el total redondeado a Bs 0.10 y se avisa el redondeo', () => {
     open(15.09);
     component.setPaymentMethod('EFECTIVO');
     fixture.detectChanges();
@@ -92,7 +92,7 @@ describe('CheckoutModalComponent', () => {
     expect(emitted.amountCash).toBe(15.1);
   });
 
-  it('097: 15,04 se cobra 15,00 y sin centavos no hay aviso de redondeo', () => {
+  it('097: 15.04 se cobra 15.00 y sin centavos no hay aviso de redondeo', () => {
     open(15.04);
     component.setPaymentMethod('EFECTIVO');
     expect(component.cashDue()).toBe(15);
@@ -105,7 +105,7 @@ describe('CheckoutModalComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('redondeo');
   });
 
-  it('097: en el pago mixto el efectivo va en múltiplos de Bs 0,10', () => {
+  it('097: en el pago mixto el efectivo va en múltiplos de Bs 0.10', () => {
     open(15.09);
     component.setPaymentMethod('MIXTO');
     expect(component.amountCash()).toBe(7.6);
@@ -114,7 +114,7 @@ describe('CheckoutModalComponent', () => {
     component.onCashPortionChange(10.05);
     fixture.detectChanges();
     expect(component.isPaymentValid()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('múltiplos de Bs 0,10');
+    expect(fixture.nativeElement.textContent).toContain('múltiplos de Bs 0.10');
   });
 
   it('debe procesar el método de pago EFECTIVO calculando el cambio', () => {

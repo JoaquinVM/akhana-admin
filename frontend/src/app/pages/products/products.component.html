@@ -573,7 +573,7 @@
           </label>
           <span class="text-muted-sm">
             @if (isKilogramForm()) {
-              Equivalencia en kilos (1/2 libra = 0,227). Sin precio propio, el precio es peso × precio por kilo; el costo
+              Equivalencia en kilos (1/2 libra = 0.227). Sin precio propio, el precio es peso × precio por kilo; el costo
               siempre es peso × costo por kilo.
             } @else {
               Equivalencia en unidades (Caja ×12 = 12). Sin precio propio, el precio es equivalencia × precio; el costo
@@ -605,7 +605,7 @@
                   <td>
                     <input type="number" class="form-control"
                            [attr.step]="isKilogramForm() ? '0.001' : '1'" [attr.min]="isKilogramForm() ? '0.001' : '2'"
-                           [placeholder]="isKilogramForm() ? '0,227' : '12'"
+                           [placeholder]="isKilogramForm() ? '0.227' : '12'"
                            [attr.aria-label]="(isKilogramForm() ? 'Peso en kilos del empaque ' : 'Unidades del empaque ') + (i + 1)"
                            [disabled]="!draft.active" [value]="draft.baseQuantity ?? ''"
                            (input)="updatePresentation(i, 'baseQuantity', $any($event.target).value)" />

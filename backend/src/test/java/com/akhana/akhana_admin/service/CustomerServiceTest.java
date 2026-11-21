@@ -169,7 +169,7 @@ class CustomerServiceTest {
         balance("80.00");
         assertThatThrownBy(() -> customerService.deleteCustomer(neida.getId(), "admin"))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Tía Neida tiene un saldo por cobrar de Bs 80,00.");
+            .hasMessage("Tía Neida tiene un saldo por cobrar de Bs 80.00.");
         assertThatThrownBy(() -> customerService.updateCustomer(neida.getId(),
                 new CustomerRequest("Tía Neida", null, null, CustomerStatus.INACTIVO), "admin"))
             .isInstanceOf(IllegalStateException.class);
@@ -255,7 +255,7 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.registerCollection(neida.getId(),
                 new CustomerCollectionRequest(qr.getId(), new BigDecimal("30.01"), null), "cajero"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("El cobro supera el saldo por cobrar de Tía Neida (Bs 30,00).");
+            .hasMessage("El cobro supera el saldo por cobrar de Tía Neida (Bs 30.00).");
         assertThatThrownBy(() -> customerService.registerCollection(neida.getId(),
                 new CustomerCollectionRequest(qr.getId(), new BigDecimal("0.004"), null), "cajero"))
             .isInstanceOf(IllegalArgumentException.class);
@@ -284,7 +284,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("DEU-06, FIN-06: anular un cobro QR que deja la cuenta justo en 0,00 se permite")
+    @DisplayName("DEU-06, FIN-06: anular un cobro QR que deja la cuenta justo en 0.00 se permite")
     void voidQrCollection_leavingZero_passes() {
         qr.setCurrentBalance(new BigDecimal("50.00"));
         CustomerCollection k = collection(qr, "50.00", Instant.now());
@@ -308,7 +308,7 @@ class CustomerServiceTest {
 
         assertThatThrownBy(() -> customerService.voidCollection(neida.getId(), k.getId(), new VoidDebtRequest("Error"), "cajero"))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 49,99). "
+            .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 49.99). "
                 + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
         assertThat(k.getStatus()).isEqualTo(CustomerCollectionStatus.ACTIVO);
@@ -403,7 +403,7 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.registerCollection(neida.getId(),
             new CustomerCollectionRequest(qr.getId(), new BigDecimal(amount), null), "cajero"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+            .hasMessage("El monto debe ser mayor a Bs 0.00.");
         assertThat(qr.getCurrentBalance()).isEqualTo(before);
         verify(customerCollectionRepository, never()).save(any());
         verify(financialTransactionRepository, never()).save(any());

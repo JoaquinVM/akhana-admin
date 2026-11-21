@@ -173,7 +173,7 @@ describe('ConsumptionFormModalComponent', () => {
   it('CON-01: advierte cuando el producto no tiene costo', () => {
     component.addProduct(gift);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('no tiene costo registrado; el consumo vale Bs 0,00');
+    expect(fixture.nativeElement.textContent).toContain('no tiene costo registrado; el consumo vale Bs 0.00');
   });
 
   it('CON-01: sin líneas no envía', () => {

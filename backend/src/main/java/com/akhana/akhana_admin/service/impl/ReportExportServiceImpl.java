@@ -305,7 +305,8 @@ public class ReportExportServiceImpl implements ReportExportService {
                     case DATE -> "dd/mm/yyyy";
                     case COUNT -> "#,##0";
                     case QUANTITY -> "#,##0.000";
-                    case MONEY -> "#,##0.00";
+                    // The amounts read "Bs 1,234.50"; Excel shows the separators of its own region
+                    case MONEY -> "\"Bs \"#,##0.00";
                     case PERCENT -> "0.00%";
                     case TEXT -> null;
                 };

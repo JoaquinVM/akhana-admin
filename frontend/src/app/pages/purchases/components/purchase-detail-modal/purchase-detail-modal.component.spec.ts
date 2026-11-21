@@ -168,7 +168,7 @@ describe('PurchaseDetailModalComponent', () => {
     const payment = { id: 'pay-1', amount: 100, accountName: 'Caja', status: 'ACTIVO' } as PurchasePayment;
     purchaseService.voidPayment.mockReturnValue(throwError(() => ({ error: { message: 'El pago se hizo en una caja cerrada; no se puede anular.' } })));
     component.openVoid(payment);
-    expect(component.voidMessage()).toContain('Bs 100,00 desde Caja');
+    expect(component.voidMessage()).toContain('Bs 100.00 desde Caja');
     component.confirmVoid('Duplicado');
 
     expect(purchaseService.voidPayment).toHaveBeenCalledWith('pur-1', 'pay-1', { voidReason: 'Duplicado' });
@@ -177,7 +177,7 @@ describe('PurchaseDetailModalComponent', () => {
   });
   it('COM-11 y COM-12: «Editar pedido» emite el pedido y el historial muestra los cambios', () => {
     purchaseService.getPurchaseById.mockReturnValue(of({ ...basePurchase, revisions: [{
-      id: 'rev-1', reason: 'Faltó la miel', changes: 'Línea quitada: Miel · Total: Bs 320,00 → Bs 300,00',
+      id: 'rev-1', reason: 'Faltó la miel', changes: 'Línea quitada: Miel · Total: Bs 320.00 → Bs 300.00',
       revisedBy: 'operator', revisedAt: '2026-10-26T15:00:00Z' }] }));
     fixture.componentRef.setInput('purchaseId', 'pur-2');
     fixture.detectChanges();

@@ -200,7 +200,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.openSession(
                 new OpenCashRequest(new BigDecimal("200.00"), " "), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("Bs 245,50")
+            .hasMessageContaining("Bs 245.50")
             .hasMessageContaining("comentario de apertura");
         verify(cashSessionRepository, never()).saveAndFlush(any());
     }
@@ -265,7 +265,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.openSession(
                 new OpenCashRequest(new BigDecimal("250.00"), null), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("saldo de la cuenta Caja (Bs 300,00)");
+            .hasMessageContaining("saldo de la cuenta Caja (Bs 300.00)");
         verify(cashSessionRepository, never()).saveAndFlush(any());
     }
 
@@ -355,7 +355,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
                 new CloseCashRequest(new BigDecimal("3500.00"), null, cuts, null, null), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrige el conteo o deja los cortes vacíos.");
+            .hasMessage("Los cortes suman Bs 100.00 y el monto contado es Bs 3,500.00; corrige el conteo o deja los cortes vacíos.");
         assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
         verify(cashSessionRepository, never()).save(any());
     }
@@ -367,10 +367,10 @@ class CashSessionServiceTest {
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("3.00"), null,
                 List.of(new CashCutDto(new BigDecimal("3"), 1, 0, null)), null, null), "cajero1"))
-            .hasMessage("El corte de Bs 3,00 no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.");
+            .hasMessage("El corte de Bs 3.00 no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20 o 0.10.");
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("20.00"), null,
                 List.of(new CashCutDto(new BigDecimal("10"), 1, 0, null), new CashCutDto(new BigDecimal("10.00"), 0, 1, null)), null, null), "cajero1"))
-            .hasMessage("El corte de Bs 10,00 está repetido.");
+            .hasMessage("El corte de Bs 10.00 está repetido.");
 
         List<CashDenominationCut> cuts = CashSessionServiceImpl.buildCuts(activeSession, List.of(
             new CashCutDto(new BigDecimal("0.5"), 3, 1, null),
@@ -407,7 +407,7 @@ class CashSessionServiceTest {
                 new BigDecimal("1300.00"), null, List.of(new CashCutDto(new BigDecimal("200"), 4, 1, null)),
                 new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Los cortes y las reservas suman Bs 1.350,00 y el monto contado es Bs 1.300,00; corrige el conteo o deja los cortes y las reservas vacíos.");
+            .hasMessage("Los cortes y las reservas suman Bs 1,350.00 y el monto contado es Bs 1,300.00; corrige el conteo o deja los cortes y las reservas vacíos.");
         assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
         assertThat(activeSession.getClosingReserveBills()).isNull();
         verify(cashSessionRepository, never()).save(any());
@@ -436,7 +436,7 @@ class CashSessionServiceTest {
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("500.00"), null,
                 null, new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
-            .hasMessage("Los cortes y las reservas suman Bs 350,00 y el monto contado es Bs 500,00; corrige el conteo o deja los cortes y las reservas vacíos.");
+            .hasMessage("Los cortes y las reservas suman Bs 350.00 y el monto contado es Bs 500.00; corrige el conteo o deja los cortes y las reservas vacíos.");
         verify(cashSessionRepository, never()).save(any());
     }
 
