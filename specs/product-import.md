@@ -66,6 +66,11 @@ Miranda, por kilo con 100 g y 1/2 libra. Ojo: en la hoja en vivo la celda A1 dic
   hoja llamada Productos; si no existe, la primera hoja.
 - **Cuando** el archivo no es `.xlsx`, pesa más de 5 MB o tiene más de 5.000 filas **entonces** «El archivo debe
   ser un .xlsx de hasta 5 MB y 5.000 filas.» y no se importa nada.
+- **Cuando** un `.xlsx` de menos de 5 MB se descomprime a mucho más de lo que ocupa un catálogo (una entrada de más de
+  50 MB, más de 20 millones de caracteres de texto o una entrada que crece más de 100 veces lo que pesa comprimida)
+  **entonces** «El archivo se expande a mucho más de lo que ocupa un catálogo de 5.000 filas: guárdalo de nuevo desde
+  Excel o Google Sheets y vuelve a subirlo.» y no se importa nada. Los límites se fijan al arrancar (`ZipSecureFile`);
+  un catálogo de 5.000 filas cabe holgado. Pruebas en `ProductImportServiceTest`.
 - **Cuando** la fila 1 no tiene las columnas Grupo, Proveedor, Nombre, Codigo, Costo y Precio Venta **entonces**
   «Faltan las columnas: <lista>.» Las columnas se buscan por nombre (sin distinguir mayúsculas ni tildes), no por
   posición; Etiqueta y Se vende por son opcionales; las demás se ignoran.

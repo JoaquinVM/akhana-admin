@@ -24,10 +24,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -102,6 +106,43 @@ class ProductImportServiceTest {
 
     private static byte[] xlsx(Object[]... rows) {
         return xlsx(HEADER, rows);
+    }
+
+    // The same .xlsx with the Productos sheet padded before its end: blocks of `random` characters inside a comment,
+    // each followed by `spaces` spaces, until the sheet grows by `extraBytes`
+    private static byte[] padded(byte[] file, long extraBytes, int random, int spaces) {
+        Random generator = new Random(7);
+        try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(file));
+             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             ZipOutputStream out = new ZipOutputStream(bytes)) {
+            for (ZipEntry entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
+                byte[] content = in.readAllBytes();
+                out.putNextEntry(new ZipEntry(entry.getName()));
+                if (entry.getName().equals("xl/worksheets/sheet2.xml")) {
+                    String xml = new String(content, java.nio.charset.StandardCharsets.UTF_8);
+                    int end = xml.lastIndexOf("</worksheet>");
+                    out.write(xml.substring(0, end).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    byte[] block = new byte[random + spaces + 7];
+                    for (long written = 0; written < extraBytes; written += block.length) {
+                        System.arraycopy("<!--".getBytes(), 0, block, 0, 4);
+                        for (int i = 0; i < random; i++) {
+                            block[4 + i] = (byte) ('a' + generator.nextInt(26));
+                        }
+                        System.arraycopy("-->".getBytes(), 0, block, 4 + random, 3);
+                        Arrays.fill(block, 7 + random, block.length, (byte) ' ');
+                        out.write(block);
+                    }
+                    out.write(xml.substring(end).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                } else {
+                    out.write(content);
+                }
+                out.closeEntry();
+            }
+            out.finish();
+            return bytes.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static Row rowAt(ProductImportResponse response, int rowNumber) {
@@ -379,4 +420,39 @@ class ProductImportServiceTest {
         assertThatThrownBy(() -> importService.preview("p.xlsx", xlsx(rows)))
             .hasMessage("El archivo debe ser un .xlsx de hasta 5 MB y 5.000 filas.");
     }
+
+    @Test
+    @DisplayName("Un .xlsx de menos de 5 MB que se expande sin medida se rechaza con un mensaje en español")
+    void fileThatExpandsTooMuch_isRejected() {
+        byte[] base = xlsx(row("Bebidas", "Prov", null, "Café", "C1", 5, 10, "Unidad"));
+        // Spaces only: more than 100 times its compressed size (POI's ratio)
+        byte[] bomb = padded(base, 60L * 1024 * 1024, 0, 4096);
+        // Text that compresses about 30 times: within the ratio, but above the 50 MB a sheet may unpack to
+        byte[] large = padded(base, 60L * 1024 * 1024, 120, 3000);
+        assertThat(bomb.length).isLessThan(5 * 1024 * 1024);
+        assertThat(large.length).isLessThan(5 * 1024 * 1024);
+
+        for (byte[] file : List.of(bomb, large)) {
+            assertThatThrownBy(() -> importService.preview("p.xlsx", file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageStartingWith("El archivo se expande a mucho más de lo que ocupa un catálogo de 5.000 filas");
+        }
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un catálogo de 5.000 filas cabe holgado en los límites de expansión")
+    void fullCatalog_isWithinTheExpansionLimits() {
+        Object[][] rows = new Object[5000][];
+        for (int i = 0; i < rows.length; i++) {
+            rows[i] = row("Grupo " + (i % 40), "Proveedor " + (i % 60), "Etiqueta " + (i % 20),
+                "Producto de prueba con un nombre largo número " + i, "COD-" + i, 5.5, 12.75, "Unidad");
+        }
+
+        ProductImportResponse response = importService.preview("p.xlsx", xlsx(rows));
+
+        assertThat(response.totalRows()).isEqualTo(5000);
+        assertThat(response.importedCount()).isEqualTo(5000);
+    }
+
 }

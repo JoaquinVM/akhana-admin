@@ -12,6 +12,7 @@ import com.akhana.akhana_admin.repository.TagRepository;
 import com.akhana.akhana_admin.service.ProductImportService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,20 @@ public class ProductImportServiceImpl implements ProductImportService {
 
     static final int MAX_BYTES = 5 * 1024 * 1024;
     static final int MAX_ROWS = 5000;
+    // A catalog of 5.000 rows unpacks to a few MB of XML: ten times that is still far from what fills the memory.
+    // The ratio is POI's own (an entry may grow 100 times its compressed size), now written down here
+    static final long MAX_ENTRY_BYTES = 50L * 1024 * 1024;
+    static final long MAX_TEXT_CHARS = 20_000_000L;
+    static final double MIN_INFLATE_RATIO = 0.01;
+    static final String TOO_LARGE_INSIDE = "El archivo se expande a mucho más de lo que ocupa un catálogo de 5.000 filas: "
+        + "guárdalo de nuevo desde Excel o Google Sheets y vuelve a subirlo.";
+
+    // When the application starts: POI reads these limits for every .xlsx it opens
+    static {
+        ZipSecureFile.setMaxEntrySize(MAX_ENTRY_BYTES);
+        ZipSecureFile.setMaxTextSize(MAX_TEXT_CHARS);
+        ZipSecureFile.setMinInflateRatio(MIN_INFLATE_RATIO);
+    }
     static final String DEFAULT_COLOR = "#475569";
     static final BigDecimal MIN_UNIT_PRICE = BigDecimal.ONE;
     static final BigDecimal MIN_KILO_PRICE = BigDecimal.TEN;
@@ -227,9 +242,22 @@ public class ProductImportServiceImpl implements ProductImportService {
         } catch (FileRejected e) {
             throw e;
         } catch (Exception e) {
+            if (expandsTooMuch(e)) {
+                throw new IllegalArgumentException(TOO_LARGE_INSIDE);
+            }
             // POI rejects a file that is not an .xlsx with its own exceptions
             throw new IllegalArgumentException(INVALID_FILE);
         }
+    }
+
+    // POI names the ZipSecureFile limit that stopped the file in its message
+    private static boolean expandsTooMuch(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause.getMessage() != null && cause.getMessage().contains("ZipSecureFile")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Sheet productsSheet(Workbook workbook) {

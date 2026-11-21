@@ -123,7 +123,9 @@ cliente (`deploy/nginx.conf`):
 
 - **Cuando** se responde cualquier página, por cualquiera de las dos entradas
 - **Entonces** lleva `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
-  `Referrer-Policy: same-origin` y una `Content-Security-Policy` que solo admite el propio sitio y Google Fonts (`data:` y
+  `Referrer-Policy: same-origin`, `Permissions-Policy: camera=(self), microphone=(), geolocation=()` (la app no usa
+  cámara, micrófono ni ubicación: los códigos se leen con lector USB y las fotos se eligen con el selector de archivos;
+  la cámara queda permitida solo para el propio sitio) y una `Content-Security-Policy` que solo admite el propio sitio y Google Fonts (`data:` y
   `blob:` para el QR del 2FA y las fotos). El build de Angular no incrusta el CSS crítico, cuyo `onload` la política
   bloquearía, y la página sin conexión reintenta con un enlace (`mobile.md`).
 
@@ -167,7 +169,7 @@ Si no queda ningún administrador que pueda quitarle el 2FA a otro (USR-08), Joa
 | `DB_NAME`, `DB_USERNAME` | `akhana` |
 | `DB_PASSWORD` | Nuevo, 32+ caracteres |
 | `DB_URL` | `jdbc:postgresql://db:5432/akhana` (lo fija el compose) |
-| `JWT_SECRET` | Nuevo, `openssl rand -hex 32` |
+| `JWT_SECRET` | Nuevo, `openssl rand -hex 32`. El backend no arranca con el valor de ejemplo que el repo tuvo público (el que empieza con `404E6352`) |
 | `OPENAI_API_KEY` | La crea Joaquín en OpenAI; opcional (COM-20) |
 | `JWT_EXPIRATION` | `12h` |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Primer admin; cambia la contraseña al entrar (USR-06) |
@@ -268,6 +270,16 @@ VPS · akhana-deploy.timer ─► deploy-watch.sh ─► deploy.sh --ref <commit
   `HEALTHCHECK_DEPLOY_URL`: verde si el último despliegue salió bien, rojo (con el final del log) si falló. Si el aviso
   deja de llegar, el VPS o el timer están caídos y healthchecks.io manda un correo. El log queda en
   `journalctl -u akhana-deploy`.
+
+- **Cuando** `production` apunta a un commit sin un tag `v*` o que no está en `main` (alguien la movió a mano)
+- **Entonces** `deploy-watch.sh` repite en el VPS la comprobación del CI y no despliega: lo anota en el log como
+  «RECHAZADO» con el motivo y el aviso queda en rojo hasta que llegue un tag válido. Sigue la versión anterior.
+  Comprobado en la Mac con un origen falso: sin tag, con tag fuera de `main` y con tag en `main` (este sí despliega).
+
+- **Cuando** una corrida avisa a healthchecks.io
+- **Entonces** manda solo las últimas 60 líneas de los propios scripts (las que empiezan con la fecha), con las IP
+  enmascaradas: nunca el log del backend (`compose logs api`), que trae nombres de usuario e IP. Ese log queda
+  completo en el VPS, en `journalctl -u akhana-deploy`.
 
 - **Cuando** una versión falla al desplegarse
 - **Entonces** se intenta una sola vez: el timer no la reintenta cada 2 minutos. La siguiente versión llega con un tag

@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.service.impl;
 
+import com.akhana.akhana_admin.exception.InternalErrorException;
 import com.akhana.akhana_admin.service.TotpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -85,7 +86,7 @@ public class TotpServiceImpl implements TotpService {
                 | ((hash[offset + 2] & 0xff) << 8) | (hash[offset + 3] & 0xff);
             return String.format("%06d", binary % 1_000_000);
         } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("HmacSHA1 is not available", e);
+            throw new InternalErrorException("HmacSHA1 is not available", e);
         }
     }
 
@@ -116,7 +117,7 @@ public class TotpServiceImpl implements TotpService {
         for (char c : text.toUpperCase(Locale.ROOT).toCharArray()) {
             int value = BASE32.indexOf(c);
             if (value < 0) {
-                throw new IllegalArgumentException("The second factor secret is not Base32");
+                throw new InternalErrorException("The second factor secret is not Base32");
             }
             buffer = (buffer << 5) | value;
             bits += 5;

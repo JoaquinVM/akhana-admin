@@ -16,6 +16,10 @@ import java.util.UUID;
 @Repository
 public interface CashSessionRepository extends JpaRepository<CashSession, UUID> {
 
+    // Sales per session in one query, for the session list (each row is {sessionId, count})
+    @Query("SELECT s.cashSession.id, COUNT(s) FROM Sale s WHERE s.cashSession IS NOT NULL GROUP BY s.cashSession.id")
+    List<Object[]> countSalesBySession();
+
     Optional<CashSession> findByStatus(CashSessionStatus status);
 
     boolean existsByStatus(CashSessionStatus status);
