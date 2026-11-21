@@ -934,7 +934,9 @@ class SaleServiceTest {
         Sale sale = registerCapturing(presentationSale(box, "1", SaleType.AL_COSTO));
 
         assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("25.56");
-        assertThat(sale.getTotalAmount()).isEqualByComparingTo("25.56");
+        // 097: paid in cash, 25.56 is charged as 25.60
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("25.60");
+        assertThat(sale.getCashRounding()).isEqualByComparingTo("0.04");
     }
 
     @Test
