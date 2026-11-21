@@ -1,6 +1,8 @@
 package com.akhana.akhana_admin.repository;
 
 import com.akhana.akhana_admin.model.FinancialTransaction;
+import com.akhana.akhana_admin.model.FinancialTransactionStatus;
+import com.akhana.akhana_admin.model.FinancialTransactionType;
 import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +20,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -30,34 +31,48 @@ class FinancialTransactionRepositoryTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    // The Finanzas list filters by days of operation (CAJ-11), type, account (source or destination), category, status
+    // and text in the description or the notes. The year 2002 is only this test's, so every list is exact
     @Test
-    void testFilterTransactionsWithNullSearch() {
-        LocalDate today = LocalDate.now();
-        List<FinancialTransaction> result = financialTransactionRepository.filterTransactions(
-                today.minusDays(30),
-                today,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-        assertNotNull(result);
-    }
+    @Transactional
+    void filterTransactionsAppliesEveryFilter() {
+        UUID bisa = newAccount("IT bisa ");
+        UUID joaco = newAccount("IT joaco ");
+        UUID luz = newCategory("IT Luz ", "GASTO", null);
+        UUID agua = newCategory("IT Agua ", "GASTO", null);
+        LocalDate march10 = LocalDate.of(2002, 3, 10);
+        LocalDate march11 = LocalDate.of(2002, 3, 11);
+        LocalDate march12 = LocalDate.of(2002, 3, 12);
+        UUID light = insertDescribed("GASTO_MANUAL", bisa, null, luz, "ACTIVO", march10, "Luz de marzo", null);
+        UUID water = insertDescribed("GASTO_MANUAL", joaco, null, agua, "ANULADO", march11, "Agua", "Factura duplicada");
+        UUID transfer = insertDescribed("TRANSFERENCIA", bisa, joaco, null, "ACTIVO", march12, "Reparto", null);
+        insertDescribed("GASTO_MANUAL", bisa, null, luz, "ACTIVO", LocalDate.of(2002, 4, 1), "Luz de abril", null);
+        LocalDate from = LocalDate.of(2002, 3, 1);
+        LocalDate to = LocalDate.of(2002, 3, 31);
 
-    @Test
-    void testFilterTransactionsWithNonNullSearch() {
-        LocalDate today = LocalDate.now();
-        List<FinancialTransaction> result = financialTransactionRepository.filterTransactions(
-                today.minusDays(30),
-                today,
-                null,
-                null,
-                null,
-                null,
-                "venta"
-        );
-        assertNotNull(result);
+        // Newest day of operation first; April is out of the range
+        assertEquals(List.of(transfer, water, light), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, null, null, null, null)));
+        // Both ends of the range are included
+        assertEquals(List.of(water), ids(financialTransactionRepository.filterTransactions(
+                march11, march11, null, null, null, null, null)));
+        assertEquals(List.of(transfer), ids(financialTransactionRepository.filterTransactions(
+                from, to, FinancialTransactionType.TRANSFERENCIA, null, null, null, null)));
+        // An account matches as source or as destination
+        assertEquals(List.of(transfer, water), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, joaco, null, null, null)));
+        assertEquals(List.of(light), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, null, luz, null, null)));
+        assertEquals(List.of(water), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, null, null, FinancialTransactionStatus.ANULADO, null)));
+        // The text is looked for without case in the description and in the notes
+        assertEquals(List.of(light), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, null, null, null, "LUZ")));
+        assertEquals(List.of(water), ids(financialTransactionRepository.filterTransactions(
+                from, to, null, null, null, null, "factura")));
+        // The filters add up
+        assertEquals(List.of(), ids(financialTransactionRepository.filterTransactions(
+                from, to, FinancialTransactionType.GASTO_MANUAL, bisa, agua, null, null)));
     }
 
     @Test
@@ -197,6 +212,20 @@ class FinancialTransactionRepositoryTest {
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, 'IT', ?, 'it-repo') RETURNING id",
                 UUID.class, type, source, destination, category, new BigDecimal(amount), java.sql.Timestamp.from(date),
                 operationDate, status);
+    }
+
+    private UUID insertDescribed(String type, UUID source, UUID destination, UUID category, String status,
+                                 LocalDate operationDate, String description, String notes) {
+        return jdbc.queryForObject("INSERT INTO financial_transactions (type, source_account_id, destination_account_id, category_id, amount, "
+                        + "transaction_date, operation_date, description, notes, status, created_by) "
+                        + "VALUES (?, ?, ?, ?, 10.00, ?, ?, ?, ?, ?, 'it-repo') RETURNING id",
+                UUID.class, type, source, destination, category,
+                java.sql.Timestamp.from(operationDate.atTime(12, 0).atZone(StoreFormat.STORE_ZONE).toInstant()),
+                operationDate, description, notes, status);
+    }
+
+    private static List<UUID> ids(List<FinancialTransaction> transactions) {
+        return transactions.stream().map(FinancialTransaction::getId).toList();
     }
 
     private UUID newAccount(String prefix) {
