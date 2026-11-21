@@ -86,6 +86,8 @@ export interface FinancialTransaction {
   purchaseId?: string | null;
   // Expense of a repayment to a person (DEU-03): managed from Deudas
   creditorRepaymentId?: string | null;
+  // Income of a customer's collection (DEU-06): managed from Deudas
+  customerCollectionId?: string | null;
   cashSessionId?: string;
   // FIN-11: migrated from Transacc.; not part of balances, never edited or voided
   historical?: boolean;
