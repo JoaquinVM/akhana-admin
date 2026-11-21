@@ -1,7 +1,7 @@
 // MOV-03 (specs/mobile.md): the only thing this worker does is show offline.html when the server cannot be reached.
 // It keeps that page and its icon, never screens or API data (CA-11), so a new version is used as soon as it opens.
 // Change CACHE_NAME when offline.html or the icon change: otherwise phones keep the old copy.
-const CACHE_NAME = 'akhana-offline-v2';
+const CACHE_NAME = 'akhana-offline-v3';
 const OFFLINE_PAGE = '/offline.html';
 const OFFLINE_ICON = '/icons/icon-192.png';
 // With a weak signal or the server down the request can hang instead of failing

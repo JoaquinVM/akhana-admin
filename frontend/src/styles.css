@@ -1,12 +1,12 @@
 /* =============================================================================
    AKHANA ADMIN DESIGN SYSTEM & REUSABLE STYLES
-   Inspirado en el diseño Corporate Organic Glassmorphism (Google Stitch)
+   Paleta Akhana: Selva, Terra, Herval y Marfil sobre neutros cálidos
    ============================================================================= */
 
 :root {
   /* Paleta Corporativa Akhana */
-  --primary-color: #1b3b18;
-  --primary-hover: #2e5b27;
+  --primary-color: #283835; /* Selva */
+  --primary-hover: #3a514c;
   --secondary-color: #7bb142;
   --accent-gold: #f5b800;
   --accent-gold-deep: #d99b00;
@@ -18,20 +18,29 @@
   --color-warning: #b45309;
   --color-warning-bg: rgba(245, 184, 0, 0.14);
 
+  /* Paleta de marca (Herval y Miel nunca como texto) */
+  --color-terra: #713c21;
+  --color-herval: #818956;
+  --color-marfil: #f9e8c0;
+  --color-marfil-soft: #fdf6e6;
+  --color-marfil-border: #f1dfb2;
+  --bg-subtle: #f5f2ea;
+
   /* Superficies y Neutrales */
-  --bg-canvas: #f8fafc;
+  --bg-canvas: #faf8f3;
   --bg-surface: #ffffff;
   --bg-surface-elevated: rgba(255, 255, 255, 0.88);
   --text-primary: #111f0f;
-  --text-secondary: #414754;
-  --text-muted: #64748b;
-  --border-light: #e2e8f0;
-  --border-focus: #1b3b18;
+  --text-secondary: #3c4744;
+  --text-muted: #5f6660;
+  --border-light: #ebe5d8;
+  --border-focus: #283835;
 
   /* Tipografías */
   --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   --font-body: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --font-brand: 'Calistoga', Georgia, serif; /* solo la palabra «Akhana» del logo */
 
   /* Radios y Sombras */
   --radius-sm: 0.25rem;
@@ -41,9 +50,9 @@
   --radius-full: 9999px;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(17, 31, 15, 0.08), 0 2px 4px -2px rgba(17, 31, 15, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(17, 31, 15, 0.1), 0 4px 6px -4px rgba(17, 31, 15, 0.05);
-  --shadow-card: 0 4px 20px -2px rgba(27, 59, 24, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(40, 56, 53, 0.08), 0 2px 4px -2px rgba(40, 56, 53, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(40, 56, 53, 0.1), 0 4px 6px -4px rgba(40, 56, 53, 0.05);
+  --shadow-card: 0 4px 20px -2px rgba(40, 56, 53, 0.06);
 }
 
 /* =============================================================================
@@ -57,6 +66,22 @@ html, body {
   background-color: var(--bg-canvas);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Foco de teclado con la marca: anillo Herval en lugar del azul del navegador.
+   Los campos de formulario usan su propio halo Marfil (.form-control:focus). */
+:focus-visible {
+  outline: 2px solid var(--color-herval);
+  outline-offset: 2px;
+}
+
+.form-control:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background-color: var(--color-marfil);
+  color: var(--text-primary);
 }
 
 /* =============================================================================
@@ -92,27 +117,27 @@ html, body {
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(27, 59, 24, 0.2);
+  box-shadow: 0 4px 12px rgba(40, 56, 53, 0.2);
 }
 
 .btn-secondary {
-  background-color: #e2e8f0;
-  color: #1e293b;
+  background-color: #efe9dc;
+  color: var(--text-primary);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #cbd5e1;
+  background-color: #e4dccb;
 }
 
 .btn-outline {
   background-color: transparent;
-  border-color: #cbd5e1;
-  color: #334155;
+  border-color: #ddd4c2;
+  color: var(--text-secondary);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
+  background-color: var(--bg-subtle);
+  border-color: #c2b89f;
 }
 
 .btn-danger {
@@ -151,8 +176,8 @@ html, body {
 }
 
 .btn-icon:hover {
-  background-color: #f1f5f9;
-  color: #1e293b;
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
 }
 
 .btn-icon svg {
@@ -229,7 +254,7 @@ html, body {
 .form-control:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(123, 177, 66, 0.2);
+  box-shadow: 0 0 0 3px var(--color-marfil);
 }
 
 .form-control.is-invalid {
@@ -332,7 +357,7 @@ textarea.form-control {
 
 .table thead th {
   background-color: var(--bg-canvas);
-  color: #475569;
+  color: var(--text-muted);
   font-family: var(--font-heading);
   font-size: 0.75rem;
   font-weight: 600;
@@ -353,7 +378,7 @@ textarea.form-control {
 }
 
 .table tbody tr:hover {
-  background-color: var(--bg-canvas);
+  background-color: var(--color-marfil-soft);
 }
 
 .table tbody td {
@@ -419,11 +444,13 @@ textarea.form-control {
 }
 
 .badge-closed {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
 }
 .badge-closed::before {
-  background-color: #94a3b8;
+  background-color: transparent;
+  border: 1.5px solid var(--text-muted);
+  box-sizing: border-box;
 }
 
 /* =============================================================================
@@ -487,7 +514,7 @@ textarea.form-control {
 .filter-pill-group {
   display: inline-flex;
   align-items: center;
-  background-color: #f1f5f9;
+  background-color: var(--bg-subtle);
   padding: 0.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
@@ -525,13 +552,13 @@ textarea.form-control {
 }
 
 .filter-pill:hover {
-  color: #0f172a;
+  color: var(--text-primary);
   background-color: rgba(255, 255, 255, 0.5);
 }
 
 .filter-pill.active {
   background-color: var(--bg-surface);
-  color: #0f172a;
+  color: var(--text-primary);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -573,12 +600,12 @@ textarea.form-control {
   background-color: var(--bg-canvas);
   text-align: left;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-muted);
   border-bottom: 2px solid var(--border-light);
 }
 
 .zen-table td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f0ebe0;
 }
 
 .loading-state,
