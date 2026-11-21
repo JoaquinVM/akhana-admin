@@ -16,9 +16,11 @@ import com.akhana.akhana_admin.dto.DashboardResponse.RankRow;
 import com.akhana.akhana_admin.dto.FinancialSummaryResponse;
 import com.akhana.akhana_admin.dto.SalesByDayReportResponse;
 import com.akhana.akhana_admin.dto.TransactionsByCategoryReportResponse;
+import com.akhana.akhana_admin.model.SaleType;
 import com.akhana.akhana_admin.repository.CashNoAttentionDayRepository;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.DashboardRepository;
+import com.akhana.akhana_admin.repository.SaleRepository;
 import com.akhana.akhana_admin.service.CashSessionService;
 import com.akhana.akhana_admin.service.CreditorService;
 import com.akhana.akhana_admin.service.CustomerService;
@@ -39,7 +41,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -57,6 +58,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final ReportService reportService;
     private final DashboardRepository dashboardRepository;
+    private final SaleRepository saleRepository;
     private final ConsumptionRepository consumptionRepository;
     private final CashSessionService cashSessionService;
     private final FinancialSummaryService financialSummaryService;
@@ -82,8 +84,10 @@ public class DashboardServiceImpl implements DashboardService {
             .sorted(Comparator.comparing(CategoryAmount::amount).reversed())
             .toList();
 
-        List<RankRow> products = productRows(dashboardRepository.findProductLines(start, end));
-        List<RankRow> suppliers = reportService.getSalesBySupplier(start, end).suppliers().stream()
+        // One read of the range's lines for the products and the suppliers, spread like the report per supplier
+        List<Object[]> lines = saleRepository.findReportLines(start, end);
+        List<RankRow> products = productRows(lines);
+        List<RankRow> suppliers = ReportServiceImpl.salesBySupplier(start, end, lines).suppliers().stream()
             .map(supplier -> new RankRow(supplier.supplierId(), supplier.supplierName(),
                 supplier.totals().normalQuantity(), supplier.totals().normalTotal(), supplier.totals().normalProfit()))
             .filter(row -> row.sales().signum() > 0)
@@ -165,30 +169,21 @@ public class DashboardServiceImpl implements DashboardService {
      * supplier (P-44: free lines keep their exact amount), so the products of a period add up to its sales.
      */
     private static List<RankRow> productRows(List<Object[]> lines) {
-        Map<Object, List<Object[]>> sales = new LinkedHashMap<>();
-        for (Object[] line : lines) {
-            sales.computeIfAbsent(line[0], id -> new ArrayList<>()).add(line);
-        }
         Map<UUID, ProductSums> products = new HashMap<>();
-        for (List<Object[]> saleLines : sales.values()) {
-            BigDecimal freeTotal = saleLines.stream().filter(DashboardServiceImpl::isFreeLine)
-                .map(line -> (BigDecimal) line[5]).reduce(BigDecimal.ZERO, BigDecimal::add);
-            List<BigDecimal> discounted = ReportServiceImpl.lineTotalsAfterGeneralDiscount(
-                saleLines.stream().filter(line -> !isFreeLine(line)).map(line -> (BigDecimal) line[5]).toList(),
-                ((BigDecimal) saleLines.getFirst()[1]).subtract(freeTotal));
-            int next = 0;
-            for (Object[] line : saleLines) {
-                BigDecimal lineTotal = isFreeLine(line) ? (BigDecimal) line[5] : discounted.get(next++);
-                // Pending, unidentified and third-party lines are not sales of a product (POS-12, POS-13)
-                if (!Boolean.TRUE.equals(line[7])) {
-                    continue;
-                }
-                ProductSums product = products.computeIfAbsent((UUID) line[2], id -> new ProductSums((String) line[3]));
-                product.quantity = product.quantity.add((BigDecimal) line[4]);
-                product.total = product.total.add(lineTotal);
-                product.cost = product.cost.add((BigDecimal) line[6]);
+        List<Object[]> normalSales = lines.stream()
+            .filter(line -> SaleType.NORMAL.name().equals(line[GeneralDiscount.SALE_TYPE]))
+            .toList();
+        GeneralDiscount.forEachLine(normalSales, (line, lineTotal) -> {
+            // Pending, unidentified and third-party lines are not sales of a product (POS-12, POS-13)
+            if (!Boolean.TRUE.equals(line[GeneralDiscount.NORMAL_LINE])) {
+                return;
             }
-        }
+            ProductSums product = products.computeIfAbsent((UUID) line[GeneralDiscount.PRODUCT_ID],
+                id -> new ProductSums((String) line[GeneralDiscount.PRODUCT_NAME]));
+            product.quantity = product.quantity.add((BigDecimal) line[GeneralDiscount.QUANTITY]);
+            product.total = product.total.add(lineTotal);
+            product.cost = product.cost.add((BigDecimal) line[GeneralDiscount.COST]);
+        });
         return products.entrySet().stream().map(entry -> {
             ProductSums sums = entry.getValue();
             BigDecimal total = money(sums.total);
@@ -225,10 +220,6 @@ public class DashboardServiceImpl implements DashboardService {
         return new CashNow(true, session.sessionNumber(), session.openedBy(), session.openedAt(),
             session.openingAmount(), session.totalSales(), session.salesCount(), session.expectedCash(),
             session.operationDate());
-    }
-
-    private static boolean isFreeLine(Object[] line) {
-        return Boolean.TRUE.equals(line[8]);
     }
 
     private static BigDecimal money(BigDecimal value) {

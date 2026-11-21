@@ -17,7 +17,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-// Payments and product lines of the dashboard (DSH-02, DSH-03); every row is rolled back at the end of each test
+// Payments of the dashboard and the report lines its products come from (DSH-02, DSH-03); every row is rolled back
+// at the end of each test
 @SpringBootTest
 @Transactional
 class DashboardRepositoryTest {
@@ -29,6 +30,9 @@ class DashboardRepositoryTest {
 
     @Autowired
     private DashboardRepository dashboardRepository;
+
+    @Autowired
+    private SaleRepository saleRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -82,7 +86,7 @@ class DashboardRepositoryTest {
     }
 
     @Test
-    void productLinesOnlyOfActiveNormalSales() {
+    void reportLinesBringTheProductOfActiveSales() {
         UUID normal = insertSale("N1", "EFECTIVO", "NORMAL", "20.00", "0.00", "0.00", DAY);
         insertItem(normal, "2", "20.00", "6.00");
         UUID atCost = insertSale("AC1", "EFECTIVO", "AL_COSTO", "6.00", "0.00", "0.00", DAY);
@@ -91,18 +95,21 @@ class DashboardRepositoryTest {
         insertItem(voided, "1", "10.00", "6.00");
         jdbc.update("UPDATE sales SET status = 'ANULADA', voided_by = 'it-repo', voided_at = now(), void_reason = 'IT' WHERE id = ?", voided);
 
-        List<Object[]> lines = dashboardRepository.findProductLines(DAY_OF_OPERATION, DAY_OF_OPERATION);
+        // The dashboard keeps the normal sales of the same rows the report per supplier reads (DSH-03)
+        List<Object[]> lines = saleRepository.findReportLines(DAY_OF_OPERATION, DAY_OF_OPERATION);
 
-        assertEquals(1, lines.size());
-        Object[] line = lines.getFirst();
-        assertEquals(normal, line[0]);
-        assertEquals(product, line[2]);
-        assertEquals("IT producto " + suffix, line[3]);
-        assertEquals("2", plain(line[4]));
-        assertEquals("20", plain(line[5]));
-        assertEquals("12", plain(line[6]));
-        assertEquals(true, line[7]);
-        assertEquals(false, line[8]);
+        assertEquals(List.of(atCost, normal), lines.stream().sorted((a, b) -> ((String) a[2]).compareTo((String) b[2]))
+                .map(line -> line[0]).toList());
+        Object[] line = lines.stream().filter(row -> normal.equals(row[0])).findFirst().orElseThrow();
+        assertEquals("NORMAL", line[2]);
+        assertEquals("20", plain(line[3]));
+        assertEquals("2", plain(line[6]));
+        assertEquals("20", plain(line[7]));
+        assertEquals("12", plain(line[8]));
+        assertEquals(true, line[9]);
+        assertEquals(false, line[10]);
+        assertEquals(product, line[11]);
+        assertEquals("IT producto " + suffix, line[12]);
     }
 
     @Test
@@ -112,11 +119,11 @@ class DashboardRepositoryTest {
         insertItem(late, "1", "12.00", "6.00");
 
         assertEquals("12", plain(dashboardRepository.sumPayments(DAY_OF_OPERATION, DAY_OF_OPERATION).getFirst()[1]));
-        assertEquals(List.of(late), dashboardRepository.findProductLines(DAY_OF_OPERATION, DAY_OF_OPERATION).stream()
+        assertEquals(List.of(late), saleRepository.findReportLines(DAY_OF_OPERATION, DAY_OF_OPERATION).stream()
                 .map(line -> line[0]).toList());
         LocalDate next = DAY_OF_OPERATION.plusDays(1);
         assertEquals("0", plain(dashboardRepository.sumPayments(next, next).getFirst()[1]));
-        assertEquals(0, dashboardRepository.findProductLines(next, next).size());
+        assertEquals(0, saleRepository.findReportLines(next, next).size());
     }
 
     private static String plain(Object value) {
