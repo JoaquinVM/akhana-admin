@@ -430,35 +430,16 @@
                 <span class="field-modified-badge">Modificado</span>
               }
             </label>
-            <div
-              id="product-status-trigger"
-              class="custom-select-trigger"
-              tabindex="0"
-              [class.is-modified]="isFieldModified('status')"
-              (click)="toggleStatusDropdown()"
-              (keydown.enter)="toggleStatusDropdown()"
-              (keydown.space)="toggleStatusDropdown()">
-              <span class="category-color-pill">
-                <span class="color-dot" [style.backgroundColor]="productForm.get('status')?.value === 'ACTIVO' ? '#16a34a' : '#94a3b8'"></span>
-                <span>{{ productForm.get('status')?.value === 'ACTIVO' ? 'Activo' : 'Inactivo' }}</span>
-              </span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+            <!-- H16: a native select, chosen with the keyboard like any other field -->
+            <div class="status-select">
+              <span class="color-dot" aria-hidden="true"
+                    [style.backgroundColor]="productForm.get('status')?.value === 'ACTIVO' ? '#16a34a' : '#94a3b8'"></span>
+              <select id="product-status-trigger" class="form-control" formControlName="status"
+                      [class.is-modified]="isFieldModified('status')">
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
             </div>
-
-            @if (isStatusDropdownOpen()) {
-              <div class="custom-dropdown-menu">
-                <div class="dropdown-item" (click)="selectStatus('ACTIVO')">
-                  <span class="color-dot" style="background-color: #16a34a"></span>
-                  <span>Activo</span>
-                </div>
-                <div class="dropdown-item" (click)="selectStatus('INACTIVO')">
-                  <span class="color-dot" style="background-color: #94a3b8"></span>
-                  <span>Inactivo</span>
-                </div>
-              </div>
-            }
           </div>
         }
       </div>

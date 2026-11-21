@@ -117,6 +117,17 @@ describe('CheckoutModalComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('múltiplos de Bs 0,10');
   });
 
+  it('H22: al abrir en efectivo el foco va a «Monto recibido»; en QR, a «Confirmar venta»', async () => {
+    open(38);
+    await fixture.whenStable();
+    expect(document.activeElement?.id).toBe('amountReceived');
+
+    component.setPaymentMethod('QR');
+    open(38);
+    await fixture.whenStable();
+    expect((document.activeElement as HTMLElement)?.classList.contains('btn-confirm-checkout')).toBe(true);
+  });
+
   it('debe procesar el método de pago EFECTIVO calculando el cambio', () => {
     component.setPaymentMethod('EFECTIVO');
 

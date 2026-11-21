@@ -104,6 +104,16 @@ describe('PurchaseFormModalComponent', () => {
     expect(labels).toContain(`Costo unitario (Bs) de ${nuts.name}`);
   });
 
+  it('H23: la X de la línea queda fuera del orden de Tab y sigue quitando la línea con el clic', () => {
+    component.addProduct(nuts);
+    fixture.detectChanges();
+    const remove = document.querySelector('button[aria-label="Quitar línea"]') as HTMLButtonElement;
+    expect(remove.tabIndex).toBe(-1);
+    remove.click();
+    fixture.detectChanges();
+    expect(document.querySelector('button[aria-label="Quitar línea"]')).toBeNull();
+  });
+
   it('COM-02: seleccionar de nuevo un producto por unidad suma una unidad', () => {
     component.addProduct(tea);
     component.addProduct(tea);

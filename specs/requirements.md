@@ -94,7 +94,7 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 
 ## 3. Requerimientos por versión
 
-Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz). Los textos tratan de tú y sin jerga, los contadores van en singular o plural según la cantidad («1 venta», «3 ventas») y una caja se nombra siempre «Caja #N».
+Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz). Los textos tratan de tú y sin jerga, los contadores van en singular o plural según la cantidad («1 venta», «3 ventas») y una caja se nombra siempre «Caja #N». Todo se opera con el teclado: las listas se eligen con flechas y Enter, al abrir el cobro el foco va a «Monto recibido» (efectivo) o a «Confirmar venta» (QR) y la X de una línea de pedido queda fuera del orden de Tab.
 
 ### 3.1 Principios transversales · V1
 
