@@ -1,0 +1,41 @@
+{
+  "id" : "f1000000-0000-0000-0000-000000000001",
+  "type" : "TRANSFERENCIA",
+  "amount" : 150.00,
+  "transactionDate" : "2026-11-30T23:30:00Z",
+  "operationDate" : "2026-11-30",
+  "description" : "Retiro de caja a Cuenta bancaria BISA",
+  "notes" : "Depósito",
+  "status" : "ACTIVO",
+  "saleId" : null,
+  "cashSessionId" : "ca5e0000-0000-0000-0000-000000000001",
+  "purchaseId" : null,
+  "creditorRepaymentId" : null,
+  "customerCollectionId" : null,
+  "historical" : false,
+  "sourceAccount" : {
+    "id" : "acc00000-0000-0000-0000-000000000001",
+    "name" : "Caja",
+    "color" : "#2E5B27",
+    "cashAccount" : true
+  },
+  "destinationAccount" : {
+    "id" : "acc00000-0000-0000-0000-000000000002",
+    "name" : "Cuenta bancaria BISA",
+    "color" : "#1B3B18",
+    "cashAccount" : false
+  },
+  "category" : {
+    "id" : "ca700000-0000-0000-0000-000000000001",
+    "name" : "Servicios",
+    "type" : "GASTO",
+    "color" : "#F5B800"
+  },
+  "createdBy" : "cajero",
+  "createdAt" : "2026-11-30T23:30:00Z",
+  "updatedBy" : null,
+  "updatedAt" : null,
+  "voidedBy" : null,
+  "voidedAt" : null,
+  "voidReason" : null
+}
