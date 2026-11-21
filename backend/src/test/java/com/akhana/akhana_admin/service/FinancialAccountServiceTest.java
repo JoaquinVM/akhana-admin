@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -158,8 +159,9 @@ class FinancialAccountServiceTest {
                 .isQrAccount(false)
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joaco.getId())).thenReturn(Optional.of(joaco));
-        when(financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()).thenReturn(Optional.of(bisaAccount));
+        when(financialAccountRepository.findCurrentQrAccountId()).thenReturn(Optional.of(bisaAccount.getId()));
+        when(financialAccountRepository.findAllByIdForUpdate(Set.of(joaco.getId(), bisaAccount.getId())))
+                .thenReturn(List.of(joaco, bisaAccount));
         when(financialAccountRepository.save(any(FinancialAccount.class))).thenAnswer(i -> i.getArgument(0));
 
         FinancialAccountResponse res = financialAccountService.setQrAccount(joaco.getId(), "admin");
@@ -171,7 +173,7 @@ class FinancialAccountServiceTest {
     @Test
     @DisplayName("Debe impedir eliminar cuenta Caja")
     void testDeleteCajaForbidden() {
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
+        when(financialAccountRepository.findActiveByIdForUpdate(cajaAccount.getId())).thenReturn(Optional.of(cajaAccount));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialAccountService.deleteAccount(cajaAccount.getId(), "admin"));
@@ -182,7 +184,7 @@ class FinancialAccountServiceTest {
     @DisplayName("Debe impedir eliminar cuenta QR")
     void testDeleteQrAccountForbidden() {
         bisaAccount.setCurrentBalance(BigDecimal.ZERO);
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
+        when(financialAccountRepository.findActiveByIdForUpdate(bisaAccount.getId())).thenReturn(Optional.of(bisaAccount));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialAccountService.deleteAccount(bisaAccount.getId(), "admin"));
@@ -200,7 +202,7 @@ class FinancialAccountServiceTest {
                 .isQrAccount(false)
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joaco.getId())).thenReturn(Optional.of(joaco));
+        when(financialAccountRepository.findActiveByIdForUpdate(joaco.getId())).thenReturn(Optional.of(joaco));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> financialAccountService.deleteAccount(joaco.getId(), "admin"));
@@ -218,7 +220,7 @@ class FinancialAccountServiceTest {
                 .isQrAccount(false)
                 .build();
 
-        when(financialAccountRepository.findByIdAndDeletedAtIsNull(joaco.getId())).thenReturn(Optional.of(joaco));
+        when(financialAccountRepository.findActiveByIdForUpdate(joaco.getId())).thenReturn(Optional.of(joaco));
 
         financialAccountService.deleteAccount(joaco.getId(), "admin");
 

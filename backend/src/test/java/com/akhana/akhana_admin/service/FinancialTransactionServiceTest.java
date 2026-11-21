@@ -58,7 +58,7 @@ class FinancialTransactionServiceTest {
     void setUp() {
         financialTransactionService = new FinancialTransactionServiceImpl(financialTransactionRepository,
                 financialAccountRepository, financialCategoryRepository, cashSessionRepository,
-                new ExpectedCashCalculator(financialTransactionRepository));
+                new ExpectedCashCalculator(financialTransactionRepository), mock(jakarta.persistence.EntityManager.class));
 
         bisaAccount = FinancialAccount.builder()
                 .id(UUID.randomUUID())

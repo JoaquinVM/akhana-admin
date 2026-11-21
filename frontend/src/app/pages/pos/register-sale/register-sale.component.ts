@@ -469,7 +469,7 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   private priceFor(product: Product, presentation: ProductPresentation | null): number {
-    if (presentation) return presentationPrice(presentation, product, this.atCost());
+    if (presentation) return presentationPrice(presentation, this.atCost());
     return this.atCost() ? product.buyPrice : product.sellPrice;
   }
 

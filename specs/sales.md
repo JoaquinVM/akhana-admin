@@ -298,6 +298,10 @@ El sistema SHALL permitir la anulación justificada de una venta únicamente si 
 - **WHEN** un usuario solicita anular una venta de la sesión activa ingresando el motivo obligatorio "Error en digitación de productos"
 - **THEN** el sistema cambia el estado de la venta a `ANULADO`, registra la fecha/hora actual, el usuario que anula, el motivo, genera la transacción de tipo `ANULACIÓN` en la caja, revierte los montos en los saldos de caja y anula automáticamente los movimientos financieros generados por la venta restituyendo los saldos de las cuentas involucradas con el mismo motivo y usuario de anulación
 
+#### Scenario: Anular no deja una cuenta en negativo (POS-07, FIN-06)
+- **WHEN** se anula una venta cuyo efectivo o QR ya salió de la cuenta (un retiro de caja, un gasto, una transferencia) y la cuenta quedaría por debajo de 0,00
+- **THEN** se rechaza y no se anula nada: «No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 5,00). Anule primero los gastos o transferencias que usaron ese dinero.», el mismo mensaje que Finanzas; si la cuenta queda justo en 0,00, se anula. En una venta mixta se mira cada cuenta. La reapertura de caja (CAJ-14) no sigue esta regla: puede dejar Caja en negativo. Pruebas en `AccountBalanceIntegrationTest`.
+
 #### Scenario: Rechazo estricto de anulación en caja cerrada
 - **WHEN** se intenta solicitar la anulación de una venta cuya sesión de caja ya fue cerrada
 - **THEN** el sistema rechaza la operación indicando que no se permite anular ventas de cajas cerradas

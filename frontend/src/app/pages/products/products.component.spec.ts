@@ -392,6 +392,11 @@ describe('ProductsComponent', () => {
       expect(component.presentationPricePreview(component.presentations()[0])).toBe(21);
       expect(component.presentationPricePreview(component.presentations()[1])).toBe(45);
       expect(component.presentationCostPreview(component.presentations()[1])).toBe(29.51);
+      // Rounded like the server (HALF_UP): 100 g at Bs 40,15/kg is Bs 4,02, not 4,01
+      component.productForm.patchValue({ buyPrice: 40.15, sellPrice: 60.05 });
+      expect(component.presentationCostPreview(component.presentations()[0])).toBe(4.02);
+      expect(component.presentationPricePreview(component.presentations()[0])).toBe(6.01);
+      component.productForm.patchValue({ buyPrice: 130, sellPrice: 210 });
       component.removePresentation(0);
 
       mockProductService.createProduct.mockReturnValue(of({ ...mockProducts[0], warnings: ['La presentación \'x\' se vende a pérdida.'] }));

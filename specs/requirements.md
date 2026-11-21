@@ -152,7 +152,7 @@ Detalle en `debts.md`. Los saldos no se guardan: se calculan desde los registros
 - **DEU-03** A la persona se le paga marcando sus deudas pendientes, cada una completa: el monto es la suma de lo marcado. Sale de Caja o de una cuenta y baja la deuda sin superarla; las ventas de sus productos (POS-13) van como Pago a tercero y los pedidos y envíos como gasto Pedido (P-34). Solo se anula desde Deudas, y lo pagado no se anula mientras su devolución siga (P-65, P-66).
 - **DEU-04** Saldo por persona, sus deudas pendientes y el historial de pagos, envíos, ventas y devoluciones con el saldo después de cada registro; cada deuda se ve pagada (con el día) o pendiente, y cada devolución dice qué pagó.
 - **DEU-05** Una venta al costo puede quedar total o parcialmente a crédito de un cliente registrado; solo la venta al costo admite crédito (P-12).
-- **DEU-06** Los cobros se registran en Caja o en la cuenta QR, bajan el saldo sin superarlo y son un ingreso con categoría Venta (P-34).
+- **DEU-06** Los cobros se registran en Caja o en la cuenta QR, bajan el saldo sin superarlo y son un ingreso con categoría Venta (P-34). Anular un cobro no deja la cuenta en negativo (en 0,00 sí), como en FIN-06.
 - **DEU-07** Saldos por cobrar por cliente, con historial de ventas al costo y cobros; las pagadas en el momento se ven «pagadas» sin cambiar el saldo (P-49).
 
 ### 3.5 Consumos y ventas al costo · V1
@@ -195,7 +195,7 @@ Detalle en `sales.md`.
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.
 - **POS-06** Numeración de venta única y correlativa. En desarrollo los números saltan porque las pruebas consumen las secuencias; en producción no.
-- **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33).
+- **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33); como en FIN-06, ninguna cuenta puede quedar en negativo (en 0,00 sí).
 - **POS-08** Detalle de venta de solo lectura (ítems, descuentos, pagos, auditoría de anulación), reutilizable en POS e historial.
 - **POS-09** Historial de ventas paginado con filtros por fecha (día de operación, CAJ-11), estado, tipo de venta, método de pago y usuario.
 - **POS-10** Venta por peso: cantidades decimales en kilos y presentaciones del producto (CAT-11). «Otro peso» se escribe en kilos o gramos y su total se puede cambiar al centavo, hacia arriba o hacia abajo (P-64).
@@ -211,7 +211,7 @@ Detalle en `sales.md`.
 
 Detalle en `finance.md`, `reports.md` y `migration.md`.
 
-- **FIN-01** Cuentas Caja, Bisa y Efectivo, cada una con color y saldo inicial registrado como movimiento. El saldo al corte se carga una sola vez desde Finanzas → Cuentas, mientras la cuenta no tenga otros movimientos.
+- **FIN-01** Cuentas Caja, Bisa y Efectivo, cada una con color y saldo inicial (0 o más) registrado como movimiento; el nombre es único entre las cuentas activas, sin distinguir mayúsculas, y el de una eliminada se puede reutilizar. El saldo al corte se carga una sola vez desde Finanzas → Cuentas, mientras la cuenta no tenga otros movimientos.
 - **FIN-02** La cuenta Caja es única, no se elimina y solo recibe ingresos por ventas, ajustes de cierre, transferencias o cobros a la tienda amiga (DEU-06).
 - **FIN-03** Exactamente una cuenta marcada para cobros QR en todo momento.
 - **FIN-04** Una cuenta solo se elimina con saldo 0 y si no es Caja ni la cuenta QR.

@@ -24,6 +24,10 @@ public interface FinancialAccountRepository extends JpaRepository<FinancialAccou
 
     Optional<FinancialAccount> findByIsQrAccountTrueAndDeletedAtIsNull();
 
+    // Only the id: loading the entity before locking it would keep a balance read without the lock
+    @Query("SELECT a.id FROM FinancialAccount a WHERE a.isQrAccount = true AND a.deletedAt IS NULL")
+    Optional<UUID> findCurrentQrAccountId();
+
     boolean existsByNameIgnoreCaseAndDeletedAtIsNull(String name);
 
     boolean existsByNameIgnoreCaseAndDeletedAtIsNullAndIdNot(String name, UUID id);
