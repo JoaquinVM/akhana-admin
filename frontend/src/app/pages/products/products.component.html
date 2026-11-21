@@ -12,6 +12,7 @@
     </div>
     <div class="header-actions">
       <a class="btn btn-outline" routerLink="/products/barcodes">Cargar códigos</a>
+      <a class="btn btn-outline" routerLink="/products/boxes">Cajas a empaques</a>
       <button type="button" class="btn btn-outline" (click)="isImportModalOpen.set(true)">Importar</button>
       <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
@@ -561,26 +562,34 @@
         [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
         (photoChange)="onPhotoChange($event)" />
 
-      <!-- Presentations of the product by kilo (CAT-11) -->
-      @if (isKilogramForm() && !isSpecialForm()) {
+      <!-- Packages of the product, by unit or by kilo (CAT-15; the presentations of CAT-11 are the ones sold) -->
+      @if (!isSpecialForm()) {
         <div class="form-group presentations-section">
           <label class="form-label">
-            <span>Presentaciones</span>
+            <span>Empaques</span>
             @if (presentationsModified()) {
               <span class="field-modified-badge">Modificado</span>
             }
           </label>
           <span class="text-muted-sm">
-            Peso fijo en kilos. Sin precio fijo, el precio es peso × precio por kilo; el costo siempre es peso × costo por kilo.
+            @if (isKilogramForm()) {
+              Equivalencia en kilos (1/2 libra = 0,227). Sin precio propio, el precio es peso × precio por kilo; el costo
+              siempre es peso × costo por kilo.
+            } @else {
+              Equivalencia en unidades (Caja ×12 = 12). Sin precio propio, el precio es equivalencia × precio; el costo
+              siempre es equivalencia × costo. Solo los que se venden salen en el POS.
+            }
           </span>
           <table class="presentations-table">
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Peso (kg)</th>
-                <th>Precio fijo (Bs)</th>
+                <th>{{ isKilogramForm() ? 'Peso (kg)' : 'Unidades' }}</th>
+                <th>Se vende</th>
+                <th>Precio propio (Bs)</th>
                 <th class="text-right">Precio</th>
                 <th class="text-right">Costo</th>
+                <th>Código de barras</th>
                 <th></th>
               </tr>
             </thead>
@@ -588,21 +597,29 @@
               @for (draft of presentations(); track $index; let i = $index) {
                 <tr [class.presentation-inactive]="!draft.active">
                   <td>
-                    <input type="text" class="form-control" maxlength="50" placeholder="1/2 libra"
-                           [attr.aria-label]="'Nombre de la presentación ' + (i + 1)"
+                    <input type="text" class="form-control" maxlength="50" [placeholder]="isKilogramForm() ? '1/2 libra' : 'Caja ×12'"
+                           [attr.aria-label]="'Nombre del empaque ' + (i + 1)"
                            [disabled]="!draft.active" [value]="draft.name"
                            (input)="updatePresentation(i, 'name', $any($event.target).value)" />
                   </td>
                   <td>
-                    <input type="number" class="form-control" step="0.001" min="0.001" placeholder="0,227"
-                           [attr.aria-label]="'Peso en kilos de la presentación ' + (i + 1)"
-                           [disabled]="!draft.active" [value]="draft.weightKg ?? ''"
-                           (input)="updatePresentation(i, 'weightKg', $any($event.target).value)" />
+                    <input type="number" class="form-control"
+                           [attr.step]="isKilogramForm() ? '0.001' : '1'" [attr.min]="isKilogramForm() ? '0.001' : '2'"
+                           [placeholder]="isKilogramForm() ? '0,227' : '12'"
+                           [attr.aria-label]="(isKilogramForm() ? 'Peso en kilos del empaque ' : 'Unidades del empaque ') + (i + 1)"
+                           [disabled]="!draft.active" [value]="draft.baseQuantity ?? ''"
+                           (input)="updatePresentation(i, 'baseQuantity', $any($event.target).value)" />
                   </td>
                   <td>
-                    <input type="number" class="form-control" step="0.01" min="0.01" placeholder="Calculado"
-                           [attr.aria-label]="'Precio fijo de la presentación ' + (i + 1)"
-                           [disabled]="!draft.active" [value]="draft.fixedPrice ?? ''"
+                    <input type="checkbox" [attr.aria-label]="'El empaque ' + (i + 1) + ' se vende entero'"
+                           [disabled]="!draft.active" [checked]="draft.sold"
+                           (change)="setPresentationSold(i, $any($event.target).checked)" />
+                  </td>
+                  <td>
+                    <input type="number" class="form-control" step="0.01" min="0.01"
+                           [placeholder]="draft.sold ? 'Calculado' : '—'"
+                           [attr.aria-label]="'Precio propio del empaque ' + (i + 1)"
+                           [disabled]="!draft.active || !draft.sold" [value]="draft.fixedPrice ?? ''"
                            (input)="updatePresentation(i, 'fixedPrice', $any($event.target).value)" />
                   </td>
                   <td class="text-right">
@@ -610,6 +627,13 @@
                   </td>
                   <td class="text-right">
                     {{ presentationCostPreview(draft) !== null ? ('Bs ' + (presentationCostPreview(draft) | number:'1.2-2')) : '—' }}
+                  </td>
+                  <td>
+                    <input type="text" class="form-control" inputmode="numeric" maxlength="13" placeholder="Opcional"
+                           [attr.data-package-barcode]="i"
+                           [attr.aria-label]="'Código de barras del empaque ' + (i + 1)"
+                           [disabled]="!draft.active" [value]="draft.barcode"
+                           (input)="updatePresentation(i, 'barcode', $any($event.target).value)" />
                   </td>
                   <td class="text-right">
                     @if (draft.active) {
@@ -622,14 +646,16 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="text-muted-sm">Sin presentaciones: en el POS se vende escribiendo los kilos.</td>
+                  <td colspan="8" class="text-muted-sm">
+                    {{ isKilogramForm() ? 'Sin empaques: en el POS se vende escribiendo los kilos.' : 'Sin empaques: se vende y se compra por unidad.' }}
+                  </td>
                 </tr>
               }
             </tbody>
           </table>
           <button type="button" class="btn btn-outline btn-sm"
                   [disabled]="activePresentationCount() >= maxActivePresentations"
-                  (click)="addPresentation()">Agregar presentación</button>
+                  (click)="addPresentation()">Agregar empaque</button>
         </div>
       }
 

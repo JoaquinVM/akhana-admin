@@ -38,22 +38,22 @@
     @if (filteredSearchResults().length > 0) {
       <div class="search-dropdown-results">
         <div class="search-results-count">{{ filteredSearchResults().length }} {{ filteredSearchResults().length === 1 ? 'resultado' : 'resultados' }}</div>
-        @for (prod of filteredSearchResults(); track prod.id) {
-          <div class="search-result-item" (click)="choose(prod)">
+        @for (entry of filteredSearchResults(); track entry.key) {
+          <div class="search-result-item" (click)="chooseEntry(entry)">
             <div class="res-info">
               <span class="res-meta">
-                <span class="res-code">{{ prod.code }}</span>
-                @if (prod.supplierName) {
-                  <span class="res-supplier"> · {{ prod.supplierName }}</span>
+                <span class="res-code">{{ entry.code }}</span>
+                @if (entry.supplierName) {
+                  <span class="res-supplier"> · {{ entry.supplierName }}</span>
                 }
               </span>
-              <strong class="res-name">{{ prod.name }}</strong>
+              <strong class="res-name">{{ entry.name }}</strong>
             </div>
             <div class="res-price">
-              @if (prod.specialType) {
+              @if (entry.product.specialType) {
                 <span class="free-line-badge">Precio libre</span>
               } @else {
-                <span>Bs {{ (atCost() ? prod.buyPrice : prod.sellPrice) | number:'1.2-2' }}</span>
+                <span>Bs {{ entryPrice(entry) | number:'1.2-2' }}</span>
               }
               <button type="button" class="btn-add-result">+ Añadir</button>
             </div>

@@ -35,7 +35,7 @@ public record ProductResponse(
     Instant updatedAt,
     String deletedBy,
     Instant deletedAt,
-    // CAT-11: active and inactive, lightest first; the POS shows only the active ones
+    // CAT-15: the packages, active and inactive, smallest first; the POS shows only the active ones that are sold
     List<ProductPresentationResponse> presentations,
     // Non-blocking notices of a save (loss-making presentation, fixed prices left unchanged); empty otherwise
     List<String> warnings,
@@ -45,7 +45,7 @@ public record ProductResponse(
     String ownerCreditorName,
     // CAT-12: reference to the active photo; the catalog never carries image data (NF-04)
     UUID photoId,
-    // CAT-10: the active barcodes, and whether it is marked «No trae»
+    // CAT-10: the product's own active barcodes (those of its packages come with each package), and «No trae»
     List<String> barcodes,
     boolean noBarcode
 ) {
@@ -121,7 +121,8 @@ public record ProductResponse(
             product.getOwnerCreditor() != null ? product.getOwnerCreditor().getName() : null,
             product.getActivePhotoId(),
             product.getBarcodes() != null
-                ? product.getBarcodes().stream().filter(ProductBarcode::isActive).map(ProductBarcode::getBarcode).toList()
+                ? product.getBarcodes().stream().filter(b -> b.isActive() && b.getPresentationId() == null)
+                    .map(ProductBarcode::getBarcode).toList()
                 : List.of(),
             product.getNoBarcodeMarkedAt() != null
         );

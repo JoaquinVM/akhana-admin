@@ -347,3 +347,20 @@ app-quantity-stepper {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* COM-29: the package of a line, under its name; its base units and their cost under the quantity and the cost */
+.line-package {
+  display: block;
+  width: auto;
+  max-width: 14rem;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.4rem;
+}
+
+.unit-hint.base-units {
+  display: block;
+  width: auto;
+  margin-left: 0;
+  text-align: right;
+}

@@ -86,7 +86,7 @@ describe('ConsumptionFormModalComponent', () => {
   });
 
   describe('CON-05: columna Precio de venta', () => {
-    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
+    const halfPound = { id: 'pres-half', name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true, sold: true };
     const nut = product({ id: 'p-4', code: 'FSE-NUE', name: 'Nuez pelada', saleUnit: 'KILOGRAM', buyPrice: 130,
       sellPrice: 210, presentations: [halfPound] });
 
@@ -145,7 +145,7 @@ describe('ConsumptionFormModalComponent', () => {
   });
 
   it('CAT-11: elige la presentación y la vale a peso × costo por kilo', () => {
-    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
+    const halfPound = { id: 'pres-half', name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true, sold: true };
     const nut = product({ id: 'p-4', code: 'FSE-NUE', name: 'Nuez pelada', saleUnit: 'KILOGRAM', buyPrice: 130,
       sellPrice: 210, presentations: [halfPound] });
 

@@ -1,7 +1,7 @@
 import { Component, DOCUMENT, DestroyRef, OnInit, computed, inject, input, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Product } from '../../../../core/product/models/product.models';
+import { Product, ProductPresentation, presentationByBarcode } from '../../../../core/product/models/product.models';
 import { ProductService } from '../../../../core/product/product.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { canonicalBarcode, looksLikeBarcode } from '../../../../shared/utils/barcode';
@@ -19,8 +19,15 @@ export function inactiveProductMessage(product: Product): string {
   return `${product.name} está inactivo y no se vende.`;
 }
 
+// CAT-15: a package that is only bought (Display ×24) has a code but is not sold whole
+export function packageNotSoldMessage(product: Product, presentation: ProductPresentation): string {
+  return `El empaque ${presentation.name} de ${product.name} no se vende entero.`;
+}
+
 export interface ScannedProduct {
   product: Product;
+  // CAT-15: the package whose code was read; null for the product's own code
+  presentation?: ProductPresentation | null;
   // Not in the catalog the screen loaded: the code was registered after opening it
   fromServer: boolean;
 }
@@ -45,11 +52,17 @@ export class BarcodeScannerComponent implements OnInit {
 
   readonly scanned = output<ScannedProduct>();
 
+  // The codes of the products and of their active packages (CAT-15)
   private readonly byBarcode = computed(() => {
     const index = new Map<string, Product>();
     for (const product of this.products()) {
       for (const barcode of product.barcodes ?? []) {
         index.set(barcode, product);
+      }
+      for (const presentation of product.presentations ?? []) {
+        if (presentation.active && presentation.barcode) {
+          index.set(presentation.barcode, product);
+        }
       }
     }
     return index;
@@ -63,9 +76,10 @@ export class BarcodeScannerComponent implements OnInit {
 
   private onScan(code: string): void {
     if (!this.canAdd()) return;
-    const known = this.byBarcode().get(canonicalBarcode(code));
+    const canonical = canonicalBarcode(code);
+    const known = this.byBarcode().get(canonical);
     if (known) {
-      this.scanned.emit({ product: known, fromServer: false });
+      this.emitScan(known, canonical, false);
       return;
     }
     // A label with letters or symbols is no code of ours, and some of them make the server refuse the whole request
@@ -80,12 +94,21 @@ export class BarcodeScannerComponent implements OnInit {
           this.warn(inactiveProductMessage(product));
           return;
         }
-        this.scanned.emit({ product, fromServer: true });
+        this.emitScan(product, canonical, true);
       },
       error: (error: HttpErrorResponse) => {
         this.warn(error.status === 404 ? unknownBarcodeMessage(code) : SCAN_LOOKUP_FAILED);
       }
     });
+  }
+
+  private emitScan(product: Product, barcode: string, fromServer: boolean): void {
+    const presentation = presentationByBarcode(product, barcode);
+    if (presentation && !presentation.sold) {
+      this.warn(packageNotSoldMessage(product, presentation));
+      return;
+    }
+    this.scanned.emit({ product, presentation, fromServer });
   }
 
   private canAdd(): boolean {

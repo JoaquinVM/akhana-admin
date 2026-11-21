@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import {
   Product,
   ProductPresentation,
-  activePresentations,
-  presentationPrice
+  presentationPrice,
+  soldPresentations
 } from '../../../core/product/models/product.models';
 
 /**
- * CAT-11: choosing a product by kilo asks for its presentation (lightest first) or «Otro peso».
- * Emits the chosen presentation, or null for «Otro peso» (kilos typed by hand).
+ * CAT-11, CAT-15: choosing a product by kilo asks for one of its packages that are sold (lightest first) or «Otro
+ * peso». A package only bought (Saco 25 kg) is not offered. Emits the chosen package, or null for «Otro peso».
  */
 @Component({
   selector: 'app-presentation-picker',
@@ -29,9 +29,9 @@ export class PresentationPickerComponent {
   cancelled = output<void>();
 
   options = computed(() =>
-    activePresentations(this.product())
+    soldPresentations(this.product())
       .slice()
-      .sort((a, b) => a.weightKg - b.weightKg)
+      .sort((a, b) => a.baseQuantity - b.baseQuantity)
       .map((presentation) => ({ presentation, amount: this.amountOf(presentation) }))
   );
 

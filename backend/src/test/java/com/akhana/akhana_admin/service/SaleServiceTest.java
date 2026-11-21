@@ -95,7 +95,8 @@ class SaleServiceTest {
     void setUp() {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
-            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
             new TransactionTemplate(mock(PlatformTransactionManager.class)));
         activeSession = CashSession.builder()
@@ -793,7 +794,7 @@ class SaleServiceTest {
         product1.setBuyPrice(new BigDecimal("130.00"));
         product1.setSellPrice(new BigDecimal("210.00"));
         ProductPresentation presentation = ProductPresentation.builder().id(UUID.randomUUID()).product(product1)
-            .name(name).weightKg(new BigDecimal(weight)).fixedPrice(fixedPrice != null ? new BigDecimal(fixedPrice) : null)
+            .name(name).baseQuantity(new BigDecimal(weight)).fixedPrice(fixedPrice != null ? new BigDecimal(fixedPrice) : null)
             .active(active).build();
         lenient().when(presentationRepository.findById(presentation.getId())).thenReturn(Optional.of(presentation));
         return presentation;
@@ -828,10 +829,10 @@ class SaleServiceTest {
         assertThat(item.getQuantity()).isEqualByComparingTo("2");
         assertThat(item.getSubtotal()).isEqualByComparingTo("90.00");
         assertThat(item.getUnitCost()).isEqualByComparingTo("130.00");
-        assertThat(item.getWeightKg()).isEqualByComparingTo("0.454");
+        assertThat(item.getBaseQuantity()).isEqualByComparingTo("0.454");
         assertThat(item.getPresentation()).isSameAs(halfPound);
         assertThat(item.getPresentationName()).isEqualTo("1/2 libra");
-        assertThat(item.getPresentationWeightKg()).isEqualByComparingTo("0.227");
+        assertThat(item.getPresentationBaseQuantity()).isEqualByComparingTo("0.227");
         assertThat(sale.getTotalAmount()).isEqualByComparingTo("90.00");
     }
 
@@ -845,7 +846,7 @@ class SaleServiceTest {
         SaleItemResponse response = SaleItemResponse.fromEntity(otherWeight);
 
         assertThat(response.saleUnit()).isEqualTo(SaleUnit.KILOGRAM);
-        assertThat(response.weightKg()).isNull();
+        assertThat(response.baseQuantity()).isNull();
     }
 
     @Test
@@ -882,10 +883,70 @@ class SaleServiceTest {
 
         assertThatThrownBy(() -> saleService.registerSale(presentationSale(inactive, "1", SaleType.NORMAL), "cajero"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("La presentación '1 libra' de 'Nuez pelada' ya no está disponible.");
+            .hasMessage("El empaque '1 libra' de 'Nuez pelada' ya no está disponible.");
         assertThatThrownBy(() -> saleService.registerSale(presentationSale(halfPound, "1.5", SaleType.NORMAL), "cajero"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("La cantidad de 'Nuez pelada · 1/2 libra' debe ser entera: se vende por presentación.");
+            .hasMessage("La cantidad de 'Nuez pelada · 1/2 libra' debe ser entera: va por empaque.");
+        verify(saleRepository, never()).save(any(Sale.class));
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // CAT-15 packages of a product by unit: Barra Chia at 2,13 cost and 4,00 price, Caja ×12 at Bs 44
+    // ---------------------------------------------------------------------------------------------
+
+    private ProductPresentation barPackage(String name, String units, String fixedPrice, boolean sold) {
+        product1.setName("Barra Chia");
+        product1.setSaleUnit(SaleUnit.UNIT);
+        product1.setBuyPrice(new BigDecimal("2.13"));
+        product1.setSellPrice(new BigDecimal("4.00"));
+        ProductPresentation presentation = ProductPresentation.builder().id(UUID.randomUUID()).product(product1)
+            .name(name).baseQuantity(new BigDecimal(units)).fixedPrice(fixedPrice != null ? new BigDecimal(fixedPrice) : null)
+            .active(true).sold(sold).build();
+        lenient().when(presentationRepository.findById(presentation.getId())).thenReturn(Optional.of(presentation));
+        return presentation;
+    }
+
+    @Test
+    @DisplayName("CAT-15: 2 cajas ×12 de Barra Chia cobran 88, guardan 24 unidades y el costo por unidad (24 × 2,13)")
+    void shouldSellUnitPackageWithItsBaseQuantity() {
+        ProductPresentation box = barPackage("Caja ×12", "12", "44.00", true);
+
+        Sale sale = registerCapturing(presentationSale(box, "2", SaleType.NORMAL));
+
+        SaleItem item = sale.getItems().get(0);
+        assertThat(item.getUnitPrice()).isEqualByComparingTo("44.00");
+        assertThat(item.getQuantity()).isEqualByComparingTo("2");
+        assertThat(item.getSubtotal()).isEqualByComparingTo("88.00");
+        assertThat(item.getUnitCost()).isEqualByComparingTo("2.13");
+        assertThat(item.getBaseQuantity()).isEqualByComparingTo("24");
+        assertThat(item.getPresentationName()).isEqualTo("Caja ×12");
+        assertThat(item.getPresentationBaseQuantity()).isEqualByComparingTo("12");
+        // The line cost the reports use: base quantity x unit cost
+        assertThat(item.getBaseQuantity().multiply(item.getUnitCost())).isEqualByComparingTo("51.12");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("88.00");
+    }
+
+    @Test
+    @DisplayName("CAT-15: al costo, la caja ×12 cobra 12 × 2,13 = 25,56 e ignora su precio propio")
+    void shouldSellUnitPackageAtCost() {
+        ProductPresentation box = barPackage("Caja ×12", "12", "44.00", true);
+
+        Sale sale = registerCapturing(presentationSale(box, "1", SaleType.AL_COSTO));
+
+        assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("25.56");
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("25.56");
+    }
+
+    @Test
+    @DisplayName("CAT-15: rechaza vender un empaque que no se vende (Display ×24 solo se compra)")
+    void shouldRejectPackageThatIsNotSold() {
+        ProductPresentation display = barPackage("Display ×24", "24", null, false);
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+
+        assertThatThrownBy(() -> saleService.registerSale(presentationSale(display, "1", SaleType.NORMAL), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("El empaque 'Display ×24' de 'Barra Chia' ya no está disponible.");
         verify(saleRepository, never()).save(any(Sale.class));
     }
 

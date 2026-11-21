@@ -86,9 +86,9 @@ public class Product {
     @Builder.Default
     private Set<Tag> tags = new HashSet<>();
 
-    // CAT-11: only products sold by weight have them; batch-loaded so the product list stays one query per page
+    // CAT-15: packages (the presentations of CAT-11); batch-loaded so the product list stays one query per page
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    @OrderBy("weightKg ASC")
+    @OrderBy("baseQuantity ASC")
     @BatchSize(size = 100)
     @Builder.Default
     private List<ProductPresentation> presentations = new ArrayList<>();
@@ -97,7 +97,8 @@ public class Product {
     @Formula("(SELECT pp.id FROM product_photos pp WHERE pp.product_id = id AND pp.active)")
     private UUID activePhotoId;
 
-    // CAT-10: factory barcodes, active and removed; batch-loaded like the presentations
+    // CAT-10: factory barcodes of the product and of its packages (CAT-15), active and removed; batch-loaded like the
+    // presentations
     @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @BatchSize(size = 100)
     @Builder.Default

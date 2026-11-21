@@ -92,7 +92,7 @@ class ProductImportIntegrationTest {
         assertThat(product.get("created_by")).isEqualTo("it-import");
 
         List<Map<String, Object>> presentations = jdbc.queryForList(
-            "SELECT name, weight_kg, fixed_price FROM product_presentations WHERE product_id = ? AND active ORDER BY weight_kg",
+            "SELECT name, base_quantity, fixed_price FROM product_presentations WHERE product_id = ? AND active ORDER BY base_quantity",
             product.get("id"));
         assertThat(presentations).extracting(p -> p.get("name"))
             .containsExactly("100 g", "1/4 libra", "1/2 libra", "1 libra");

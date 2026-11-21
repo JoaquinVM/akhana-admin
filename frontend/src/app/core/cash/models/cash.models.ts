@@ -62,8 +62,8 @@ export interface SaleItem {
   // CAT-11: copy of the sold presentation and the line's kilos
   presentationId?: string | null;
   presentationName?: string | null;
-  presentationWeightKg?: number | null;
-  weightKg?: number | null;
+  presentationBaseQuantity?: number | null;
+  baseQuantity?: number | null;
   // POS-11 to POS-13: free line with its typed name, its assignment and the owner
   freeLineType?: 'UNIDENTIFIED' | 'THIRD_PARTY' | null;
   freeName?: string | null;

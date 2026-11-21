@@ -26,7 +26,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Migración | CAT-06, FIN-11 | ✅ Completo | FIN-11 hecha y retirada (quedan los datos); falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Probar en teléfonos reales la instalación, la zona segura del iPhone y sin conexión; reinstalarla desde el dominio al salir a internet | `mobile.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | Salida a internet por Cloudflare Tunnel (NF-02) sin publicar: falta el dominio, el túnel y pasar la caja y los teléfonos a la dirección nueva | `deploy.md` |
-| Inventario | INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04 | V2 | Definido; sin construir | — |
+| Inventario | INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04 | V2 | Trabajo 1 de 4 (empaques: CAT-15, COM-10, COM-29) construido, sin publicar. Faltan el núcleo con el conteo y el arranque, bonificaciones y devoluciones, y reposición y análisis | `inventory.md` |
 | Contabilidad | CTB-01 a CTB-12, FIN-05 | V2 | Definido; sin construir. Arranca al terminar el conteo del inventario | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -417,7 +417,7 @@ Cada respuesta se convierte en requerimientos de la sección 3; el detalle de c�
 | P-55 | ¿Dónde se guardan las fotos? | En un volumen del VPS, con copia cifrada en B2 (NF-08). |
 | P-56 | ¿Se conserva el original de la foto? | No: hasta 1600 px y una miniatura, sin metadatos. |
 | P-57 | ¿Cómo verá la web las fotos? | Se decide en un trabajo de Akhana Web; aquí no se abre nada a internet. |
-| P-58 | ¿Los productos por kilo y las presentaciones llevan código de barras? | Por ahora no; se buscan como hoy. |
+| P-58 | ¿Los productos por kilo y las presentaciones llevan código de barras? | El producto por kilo no; desde la V2, sus empaques sí (CAT-15). |
 | P-59 | ¿Se asigna un código desconocido desde la caja? | No: la caja solo avisa, y se carga desde Productos. |
 | P-60 | ¿Qué IA lee los pedidos? | OpenAI con `gpt-6.1-terra`, sin que entrene con los datos; los nombres en fotos y textos pueden salir. Lo leído siempre es un borrador. |
 | P-61 | ¿Cómo entran el texto y la foto? | Texto al pedir: pedido pendiente con costos del sistema. Foto al llegar: precios reales. Foto sin pedido: pedido entregado. Un proveedor por mensaje. |
@@ -451,6 +451,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
+- [ ] COM-10: publicado el trabajo de empaques, revisar «Cajas a empaques» en Productos y confirmar o descartar cada caja antes de empezar el conteo (INV-18).
 - [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
 - [ ] Salir a internet (NF-02, `deploy.md` «Paso a internet»): publicada la versión, cada administrador activa su 2FA y todos cambian la contraseña por la dirección de Tailscale; Joaquín compra el dominio, crea el túnel y pone el token; la caja y los teléfonos pasan a `admin.<dominio>`; Joaquín apaga `tailscale serve` y saca de Tailscale los equipos de la tienda.
 - [ ] Al publicar el 2FA para todos (USR-08): antes de su turno, cada operador instala una app autenticadora y activa el 2FA con el QR en su primer ingreso.

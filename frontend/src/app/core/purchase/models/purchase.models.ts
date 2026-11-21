@@ -39,6 +39,12 @@ export interface PurchaseItem {
   subtotal: number;
   previousUnitCost: number;
   costUpdated: boolean;
+  // COM-29: the package bought (null for a line in base units), the base units of the line and the cost of one
+  presentationId?: string | null;
+  presentationName?: string | null;
+  presentationBaseQuantity?: number | null;
+  baseQuantity?: number | null;
+  baseUnitCost?: number | null;
 }
 
 export interface PurchasePayment {
@@ -124,6 +130,8 @@ export interface PurchaseItemRequest {
   newSellPrice: number | null;
   // COM-11: the line it keeps when editing; absent for a new line
   itemId?: string | null;
+  // COM-29: bought by package: quantity is whole packs and unitCost the cost of one package
+  presentationId?: string | null;
 }
 
 export interface PurchaseRequest {

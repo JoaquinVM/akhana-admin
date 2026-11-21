@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
+import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -74,6 +75,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final PurchasePhotoRepository purchasePhotoRepository;
     private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
+    private final ProductPresentationService presentationService;
     private final TransactionTemplate transactionTemplate;
     // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
     private final Clock clock;
@@ -85,7 +87,26 @@ public class PurchaseServiceImpl implements PurchaseService {
     private record Payer(FinancialAccount account, CashSession session) {}
 
     /** Validated quantity, cost and subtotal of a purchase line (COM-02). */
-    private record LineValues(BigDecimal quantity, BigDecimal unitCost, BigDecimal subtotal) {}
+    // COM-29: with a package, quantity is packs, unitCost the cost of one package and baseUnitCost that of one base
+    // unit, the one compared with the product cost (COM-03); without it, baseUnitCost is unitCost
+    private record LineValues(BigDecimal quantity, BigDecimal unitCost, BigDecimal subtotal, ProductPresentation presentation,
+                              String presentationName, BigDecimal presentationBaseQuantity, BigDecimal baseUnitCost) {
+
+        BigDecimal baseQuantity() {
+            return presentationBaseQuantity == null ? null
+                : quantity.multiply(presentationBaseQuantity).setScale(3, RoundingMode.HALF_UP);
+        }
+
+        void applyTo(PurchaseItem item) {
+            item.setQuantity(quantity);
+            item.setUnitCost(unitCost);
+            item.setSubtotal(subtotal);
+            item.setPresentation(presentation);
+            item.setPresentationName(presentationName);
+            item.setPresentationBaseQuantity(presentationBaseQuantity);
+            item.setBaseQuantity(baseQuantity());
+        }
+    }
 
     /** Validated delivery of a purchase (COM-07). */
     private record Delivery(DeliveryType type, DeliveryStatus status, LocalDate date) {}
@@ -407,7 +428,9 @@ public class PurchaseServiceImpl implements PurchaseService {
                 item.setPurchase(purchase);
                 addedLines.add(item);
                 itemsTotal = itemsTotal.add(item.getSubtotal());
-                changes.add("Línea agregada: " + item.getProductName() + " × " + quantityText(item.getQuantity())
+                changes.add("Línea agregada: " + item.getProductName()
+                    + (item.getPresentationName() != null ? " · " + item.getPresentationName() : "")
+                    + " × " + quantityText(item.getQuantity())
                     + " a " + StoreFormat.money(item.getUnitCost()));
                 continue;
             }
@@ -422,9 +445,13 @@ public class PurchaseServiceImpl implements PurchaseService {
                 throw new IllegalArgumentException(LINE_PRODUCT_CHANGED);
             }
             Product product = item.getProduct();
-            LineValues values = lineValues(product, itemReq);
-            if (planCostUpdateIfConfirmed(product, values.unitCost(), itemReq, costUpdates, updatedProducts)) {
+            LineValues values = lineValues(product, itemReq, item);
+            if (planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts)) {
                 item.setCostUpdated(true);
+            }
+            if (!Objects.equals(values.presentationName(), item.getPresentationName())) {
+                changes.add("Empaque de " + item.getProductName() + ": " + packageText(item.getPresentationName(), product)
+                    + " → " + packageText(values.presentationName(), product));
             }
             if (values.quantity().compareTo(item.getQuantity()) != 0) {
                 changes.add("Cantidad de " + item.getProductName() + ": " + quantityText(item.getQuantity())
@@ -434,9 +461,7 @@ public class PurchaseServiceImpl implements PurchaseService {
                 changes.add("Costo de " + item.getProductName() + ": " + StoreFormat.money(item.getUnitCost())
                     + " → " + StoreFormat.money(values.unitCost()));
             }
-            item.setQuantity(values.quantity());
-            item.setUnitCost(values.unitCost());
-            item.setSubtotal(values.subtotal());
+            values.applyTo(item);
             itemsTotal = itemsTotal.add(values.subtotal());
         }
         for (PurchaseItem item : activeLines.values()) {
@@ -831,7 +856,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         for (PurchaseItemRequest itemReq : request.items()) {
             Product product = productRepository.findById(itemReq.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemReq.productId()));
-            total = total.add(lineValues(product, itemReq).subtotal());
+            total = total.add(lineValues(product, itemReq, null).subtotal());
         }
         if (purchase.getTotalAmount().compareTo(total) != 0 || purchase.getItems().size() != request.items().size()) {
             throw new DuplicateResourceException(String.format(CLIENT_REQUEST_MISMATCH, purchase.getPurchaseNumber()));
@@ -847,23 +872,51 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
         ProductServiceImpl.ensureNotSpecial(product);
 
-        LineValues values = lineValues(product, itemReq);
+        LineValues values = lineValues(product, itemReq, null);
         BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
-        boolean costChanges = planCostUpdateIfConfirmed(product, values.unitCost(), itemReq, costUpdates, updatedProducts);
-        return PurchaseItem.builder()
+        boolean costChanges = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
+        PurchaseItem item = PurchaseItem.builder()
             .product(product)
             .productName(product.getName())
             .productCode(product.getCode())
-            .quantity(values.quantity())
-            .unitCost(values.unitCost())
-            .subtotal(values.subtotal())
             .previousUnitCost(currentCost)
             .costUpdated(costChanges)
             .build();
+        values.applyTo(item);
+        return item;
     }
 
-    private static LineValues lineValues(Product product, PurchaseItemRequest itemReq) {
-        BigDecimal quantity = SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
+    // «Unidad», «Kilo» or the package name, for the changes of an edit (COM-11, COM-29)
+    private static String packageText(String presentationName, Product product) {
+        if (presentationName != null) {
+            return presentationName;
+        }
+        return product.getSaleUnit() == SaleUnit.KILOGRAM ? "Kilo" : "Unidad";
+    }
+
+    /**
+     * The values of a line. A kept line (COM-11) that asks for the package it already has keeps its copy, even if the
+     * package was deactivated or changed since; any other package must be active (COM-29).
+     */
+    private LineValues lineValues(Product product, PurchaseItemRequest itemReq, PurchaseItem keptLine) {
+        ProductPresentation presentation = null;
+        String presentationName = null;
+        BigDecimal presentationBaseQuantity = null;
+        if (itemReq.presentationId() != null) {
+            if (keptLine != null && keptLine.getPresentation() != null
+                    && keptLine.getPresentation().getId().equals(itemReq.presentationId())) {
+                presentation = keptLine.getPresentation();
+                presentationName = keptLine.getPresentationName();
+                presentationBaseQuantity = keptLine.getPresentationBaseQuantity();
+            } else {
+                presentation = presentationService.findActivePresentation(product, itemReq.presentationId());
+                presentationName = presentation.getName();
+                presentationBaseQuantity = presentation.getBaseQuantity();
+            }
+        }
+        BigDecimal quantity = presentation != null
+            ? SaleServiceImpl.normalizePackQuantity(itemReq.quantity(), product.getName(), presentationName)
+            : SaleServiceImpl.normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
         if (itemReq.unitCost() == null || itemReq.unitCost().signum() < 0) {
             throw new IllegalArgumentException("El costo unitario de '" + product.getName() + "' no puede ser negativo.");
         }
@@ -872,7 +925,11 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException(String.format(COST_SCALE, product.getName()));
         }
         BigDecimal unitCost = itemReq.unitCost().setScale(2, RoundingMode.HALF_UP);
-        return new LineValues(quantity, unitCost, unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP));
+        BigDecimal baseUnitCost = presentationBaseQuantity != null
+            ? unitCost.divide(presentationBaseQuantity, 2, RoundingMode.HALF_UP)
+            : unitCost;
+        return new LineValues(quantity, unitCost, unitCost.multiply(quantity).setScale(2, RoundingMode.HALF_UP),
+            presentation, presentationName, presentationBaseQuantity, baseUnitCost);
     }
 
     // COM-03: only when the user confirmed it and the line cost differs from the product cost

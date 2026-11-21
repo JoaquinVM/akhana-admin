@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
 import { CashService } from '../../../../core/cash/cash.service';
-import { Product, ProductPresentation, activePresentations } from '../../../../core/product/models/product.models';
+import { Product, ProductPresentation, soldPresentations } from '../../../../core/product/models/product.models';
 import { Consumption, ConsumptionRequest } from '../../../../core/consumption/models/consumption.models';
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
 import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
@@ -117,7 +117,7 @@ export class ConsumptionFormModalComponent {
   // With a presentation, the cost per kilo applies to the packs' kilos, like the server (CAT-11)
   lineSubtotal(line: ConsumptionLineDraft): number {
     const quantity = Number(line.quantity) || 0;
-    const kilos = line.presentation ? Math.round(quantity * line.presentation.weightKg * 1000) / 1000 : quantity;
+    const kilos = line.presentation ? Math.round(quantity * line.presentation.baseQuantity * 1000) / 1000 : quantity;
     return round2(kilos * (line.product.buyPrice || 0));
   }
 
@@ -142,7 +142,7 @@ export class ConsumptionFormModalComponent {
 
   addProduct(product: Product): void {
     this.productSearch.set('');
-    if (this.isWeighted(product) && activePresentations(product).length > 0) {
+    if (this.isWeighted(product) && soldPresentations(product).length > 0) {
       this.pickerProduct.set(product);
       return;
     }

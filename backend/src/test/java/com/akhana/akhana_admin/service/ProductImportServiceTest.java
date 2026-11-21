@@ -175,7 +175,7 @@ class ProductImportServiceTest {
         assertThat(preview.rejectedCount()).isZero();
         // 1 libra = 0,454 x 95 = 43,13 de costo: a Bs 10 se vende a pérdida
         assertThat(rowAt(preview, 5).status()).isEqualTo(RowStatus.WARNING);
-        assertThat(rowAt(preview, 5).messages()).containsExactly("La presentación '1 libra' se vende a pérdida.");
+        assertThat(rowAt(preview, 5).messages()).containsExactly("El empaque '1 libra' se vende a pérdida.");
         verify(productRepository, never()).save(any());
 
         importService.importProducts("Productos.xlsx", file, "admin");
@@ -189,8 +189,8 @@ class ProductImportServiceTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<ProductPresentationRequest>> captor = ArgumentCaptor.forClass(List.class);
-        verify(presentationService).applyPresentations(eq(arandano), captor.capture(), isNull(), eq("admin"));
-        assertThat(captor.getValue()).extracting(ProductPresentationRequest::name, ProductPresentationRequest::weightKg,
+        verify(presentationService).applyPresentations(eq(arandano), captor.capture(), isNull(), isNull(), eq("admin"));
+        assertThat(captor.getValue()).extracting(ProductPresentationRequest::name, ProductPresentationRequest::baseQuantity,
                 ProductPresentationRequest::fixedPrice)
             .containsExactlyInAnyOrder(
                 org.assertj.core.groups.Tuple.tuple("100 g", new BigDecimal("0.100"), null),
@@ -274,7 +274,7 @@ class ProductImportServiceTest {
         assertThat(saved("GRA-ESP").getSaleUnit()).isEqualTo(SaleUnit.KILOGRAM);
         assertThat(saved("GRA-ESP").getBuyPrice()).isEqualByComparingTo("300.00");
         assertThat(saved("GRA-ESP").getSellPrice()).isEqualByComparingTo("455.00");
-        verify(presentationService, never()).applyPresentations(eq(saved("GRA-PSY")), any(), any(), any());
+        verify(presentationService, never()).applyPresentations(eq(saved("GRA-PSY")), any(), any(), any(), any());
     }
 
     @Test

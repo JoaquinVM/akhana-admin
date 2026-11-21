@@ -178,9 +178,9 @@ export class PurchaseDetailModalComponent {
     this.paymentNotes.set('');
   }
 
-  // COM-03: the line cost differed from the registered one when buying
+  // COM-03: the cost of one base unit differed from the registered one when buying (COM-29: not the package cost)
   costChanged(item: Purchase['items'][number]): boolean {
-    return item.unitCost !== item.previousUnitCost;
+    return (item.baseUnitCost ?? item.unitCost) !== item.previousUnitCost;
   }
 
   registerPayment(): void {

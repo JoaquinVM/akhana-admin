@@ -438,19 +438,19 @@ describe('ProductsComponent', () => {
       component.productForm.patchValue({ buyPrice: 130, sellPrice: 210 });
       component.removePresentation(0);
 
-      mockProductService.createProduct.mockReturnValue(of({ ...mockProducts[0], warnings: ['La presentación \'x\' se vende a pérdida.'] }));
+      mockProductService.createProduct.mockReturnValue(of({ ...mockProducts[0], warnings: ['El empaque \'x\' se vende a pérdida.'] }));
       component.saveProduct();
 
       expect(mockProductService.createProduct).toHaveBeenCalledWith(expect.objectContaining({
-        presentations: [{ id: null, name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, active: true }]
+        presentations: [{ id: null, name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, active: true, sold: true, barcode: '' }]
       }));
-      expect(component.saveWarnings()).toEqual(['La presentación \'x\' se vende a pérdida.']);
+      expect(component.saveWarnings()).toEqual(['El empaque \'x\' se vende a pérdida.']);
     });
 
     it('en edición, una guardada se desactiva en vez de quitarse y cuenta como cambio', () => {
       const nut: Product = {
         ...mockProducts[0], saleUnit: 'KILOGRAM',
-        presentations: [{ id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true }]
+        presentations: [{ id: 'pres-half', name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true, sold: true }]
       };
       component.openEditModal(nut);
       expect(component.hasFormChanges()).toBe(false);
@@ -461,14 +461,55 @@ describe('ProductsComponent', () => {
       expect(component.hasFormChanges()).toBe(true);
     });
 
-    it('un producto por unidad no envía presentaciones', () => {
+    it('CAT-15: un producto por unidad envía sus empaques; uno nuevo no se vende hasta marcarlo', () => {
       component.openCreateModal();
       component.productForm.patchValue({
-        code: 'P-U', name: 'Por unidad', categoryId: 'cat-1', supplierId: 'sup-1', buyPrice: 1, sellPrice: 2
+        code: 'NSE-BAR-CHI', name: 'Barra Chia', categoryId: 'cat-1', supplierId: 'sup-1', buyPrice: 2.13, sellPrice: 4
       });
+      expect(component.presentations()).toEqual([]);
+      component.addPresentation();
+      component.updatePresentation(0, 'name', 'Caja ×12');
+      component.updatePresentation(0, 'baseQuantity', '12');
+      expect(component.presentations()[0].sold).toBe(false);
+      expect(component.presentationPricePreview(component.presentations()[0])).toBeNull();
+      expect(component.presentationCostPreview(component.presentations()[0])).toBe(25.56);
+      component.setPresentationSold(0, true);
+      // Without its own price: 12 x Bs 4 = Bs 48; with it, Bs 44
+      expect(component.presentationPricePreview(component.presentations()[0])).toBe(48);
+      component.updatePresentation(0, 'fixedPrice', '44');
+      component.updatePresentation(0, 'barcode', ' 7790000000017 ');
       mockProductService.createProduct.mockReturnValue(of(mockProducts[0]));
       component.saveProduct();
-      expect(mockProductService.createProduct.mock.calls[0][0].presentations).toBeUndefined();
+      expect(mockProductService.createProduct.mock.calls[0][0].presentations).toEqual([
+        { id: null, name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, active: true, sold: true, barcode: '7790000000017' }
+      ]);
+    });
+
+    it('CAT-15: un empaque que deja de venderse pierde su precio propio', () => {
+      component.openCreateModal();
+      component.addPresentation();
+      component.setPresentationSold(0, true);
+      component.updatePresentation(0, 'fixedPrice', '44');
+      component.setPresentationSold(0, false);
+      expect(component.presentations()[0].fixedPrice).toBeNull();
+    });
+
+    it('CAT-15: al cambiar de unidad a kilo, los empaques guardados se desactivan y se proponen 100 g y 1/2 libra', () => {
+      const bar: Product = {
+        ...mockProducts[0], saleUnit: 'UNIT',
+        presentations: [{ id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, price: 44, cost: 25.56, active: true, sold: true, barcode: null }]
+      };
+      component.openEditModal(bar);
+      expect(component.presentations()).toEqual([
+        { id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, active: true, sold: true, barcode: '' }
+      ]);
+      expect(component.hasFormChanges()).toBe(false);
+
+      component.productForm.patchValue({ saleUnit: 'KILOGRAM' });
+
+      expect(component.presentations().map(p => [p.name, p.active])).toEqual([
+        ['Caja ×12', false], ['100 g', true], ['1/2 libra', true]
+      ]);
     });
   });
 

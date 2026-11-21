@@ -32,7 +32,8 @@ public interface ProductBarcodeRepository extends JpaRepository<ProductBarcode, 
             + "           GROUP BY si.product_id) sold ON sold.product_id = p.id "
             + "WHERE p.status = 'ACTIVO' AND p.sale_unit = 'UNIT' AND p.special_type IS NULL "
             + "AND p.no_barcode_marked_at IS NULL "
-            + "AND NOT EXISTS (SELECT 1 FROM product_barcodes b WHERE b.product_id = p.id AND b.active) "
+            + "AND NOT EXISTS (SELECT 1 FROM product_barcodes b WHERE b.product_id = p.id AND b.active "
+            + "                AND b.presentation_id IS NULL) "
             + "ORDER BY COALESCE(sold.line_count, 0) DESC, p.name ASC",
             nativeQuery = true)
     List<PendingRow> findPending(@Param("from") LocalDate from);

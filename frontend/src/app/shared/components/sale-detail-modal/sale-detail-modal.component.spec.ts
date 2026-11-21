@@ -217,7 +217,7 @@ describe('SaleDetailModalComponent', () => {
       ...mockCompletedSale,
       items: [
         { ...nut, id: 'item-bag', unitPrice: 45, finalUnitPrice: 45, quantity: 2, subtotal: 90,
-          presentationId: 'pres-1', presentationName: '1/2 libra', presentationWeightKg: 0.227, weightKg: 0.454 },
+          presentationId: 'pres-1', presentationName: '1/2 libra', presentationBaseQuantity: 0.227, baseQuantity: 0.454 },
         { ...nut, id: 'item-weight', unitPrice: 210, finalUnitPrice: 210, quantity: 0.3, subtotal: 63 }
       ]
     }));

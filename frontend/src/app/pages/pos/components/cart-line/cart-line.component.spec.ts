@@ -51,7 +51,7 @@ describe('CartLineComponent', () => {
 
   it('CAT-11 y POS-11: una presentación muestra su peso, una línea libre su dueña, y al costo no hay descuento', () => {
     fixture.componentRef.setInput('item', {
-      ...unitLine, key: 'p2:pr', presentation: { id: 'pr', name: '1/2 libra', weightKg: 0.227 } as any,
+      ...unitLine, key: 'p2:pr', presentation: { id: 'pr', name: '1/2 libra', baseQuantity: 0.227 } as any,
       product: { ...unitLine.product, name: 'Pistacho', saleUnit: 'KILOGRAM' }
     });
     fixture.componentRef.setInput('atCost', true);
@@ -167,7 +167,7 @@ describe('CartLineComponent', () => {
       expect(query('.weight-unit-switch')).toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Desc/u');
 
-      fixture.componentRef.setInput('item', { ...weightLine, presentation: { id: 'pr', name: '100 g', weightKg: 0.1 } as any, quantity: 1 });
+      fixture.componentRef.setInput('item', { ...weightLine, presentation: { id: 'pr', name: '100 g', baseQuantity: 0.1 } as any, quantity: 1 });
       fixture.detectChanges();
       expect(query('.line-total-input')).toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Desc/u');

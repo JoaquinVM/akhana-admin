@@ -681,11 +681,20 @@
   }
 }
 
-/* CAT-11: presentations of the product by kilo */
+/* CAT-15: packages of the product (the presentations of CAT-11); eight columns scroll sideways on a narrow screen */
 .presentations-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.presentations-table input[type="number"] {
+  min-width: 5.5rem;
+}
+
+.presentations-table input[data-package-barcode] {
+  min-width: 9rem;
 }
 
 .presentations-table {

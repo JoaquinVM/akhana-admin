@@ -110,7 +110,7 @@ class ReportNumbersCharacterizationIntegrationTest {
         UUID p2 = product("P2", category, supplierB);
         UUID p3 = product("P3", category, supplierA);
         UUID p4 = product("P4", category, supplierB);
-        UUID presentation = id("INSERT INTO product_presentations (product_id, name, weight_kg, fixed_price, created_by) "
+        UUID presentation = id("INSERT INTO product_presentations (product_id, name, base_quantity, fixed_price, created_by) "
                 + "VALUES ('" + p4 + "', '1/2 libra', 0.227, 45.00, 'it-chr') RETURNING id");
         UUID mami = id("INSERT INTO creditors (name, created_by) VALUES ('CHR Mami', 'it-chr') RETURNING id");
         UUID customer = id("INSERT INTO customers (name, created_by) VALUES ('CHR Cliente', 'it-chr') RETURNING id");
@@ -137,7 +137,7 @@ class ReportNumbersCharacterizationIntegrationTest {
         item(s5, p3, "10.00", "0", "10.00", "1", "10.00", "4.50");
         UUID s6 = sale("S6", "2003-03-11", "EFECTIVO", "NORMAL", "90.00", "85.50", "85.50", "0", "0", null);
         jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
-                + "quantity, subtotal, presentation_id, presentation_name, presentation_weight_kg, weight_kg) "
+                + "quantity, subtotal, presentation_id, presentation_name, presentation_base_quantity, base_quantity) "
                 + "VALUES (?, ?, 'CHR P4', 45.00, 130.00, 45.00, 2, 90.00, ?, '1/2 libra', 0.227, 0.454)", s6, p4, presentation);
         UUID s7 = sale("S7", "2003-03-11", "EFECTIVO", "NORMAL", "15.00", "15.00", "15.00", "0", "0", null);
         free(s7, p1, "THIRD_PARTY", "15.00", "15.00", null, mami);
@@ -159,7 +159,7 @@ class ReportNumbersCharacterizationIntegrationTest {
         jdbc.update("INSERT INTO consumption_items (consumption_id, product_id, product_name, quantity, unit_cost, subtotal) "
                 + "VALUES (?, ?, 'CHR P1', 1, 6.00, 6.00)", c1, p1);
         jdbc.update("INSERT INTO consumption_items (consumption_id, product_id, product_name, quantity, unit_cost, subtotal, "
-                + "presentation_id, presentation_name, presentation_weight_kg, weight_kg) "
+                + "presentation_id, presentation_name, presentation_base_quantity, base_quantity) "
                 + "VALUES (?, ?, 'CHR P4', 1, 130.00, 29.51, ?, '1/2 libra', 0.227, 0.227)", c1, p4, presentation);
         UUID c2 = id("INSERT INTO consumptions (consumption_number, consumption_date, total_amount, status, created_by, "
                 + "voided_by, voided_at, void_reason) VALUES ('CHR-C2', '2003-03-11', 9.00, 'ANULADO', 'it-chr', 'it-chr', now(), 'CHR') RETURNING id");

@@ -55,7 +55,7 @@ public class SaleItem {
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal quantity;
 
-    // CAT-11: a line sold by presentation keeps a copy of it; quantity is then the number of packs and weightKg
+    // CAT-11: a line sold by presentation keeps a copy of it; quantity is then the number of packs and baseQuantity
     // the kilos (quantity x presentation weight) that reports and cost use. All null for other lines
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "presentation_id", updatable = false)
@@ -64,11 +64,11 @@ public class SaleItem {
     @Column(name = "presentation_name", length = 50, updatable = false)
     private String presentationName;
 
-    @Column(name = "presentation_weight_kg", precision = 12, scale = 3, updatable = false)
-    private BigDecimal presentationWeightKg;
+    @Column(name = "presentation_base_quantity", precision = 12, scale = 3, updatable = false)
+    private BigDecimal presentationBaseQuantity;
 
-    @Column(name = "weight_kg", precision = 12, scale = 3, updatable = false)
-    private BigDecimal weightKg;
+    @Column(name = "base_quantity", precision = 12, scale = 3, updatable = false)
+    private BigDecimal baseQuantity;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;

@@ -1,5 +1,10 @@
 # Presentaciones de productos por peso
 
+> Desde la V2 las presentaciones son los empaques que se venden de un producto por kilo (CAT-15). Los empaques, también
+> de los productos por unidad, su código de barras y las compras por empaque están en `inventory.md`. Con la migración
+> `V38__product_packaging.sql`, `weight_kg` y `presentation_weight_kg` se llaman `base_quantity` y
+> `presentation_base_quantity`, y los mensajes dicen «empaque» en vez de «presentación».
+
 Detalle de CAT-11 (sección 3.2 de `specs/requirements.md`), que amplía la venta por peso de CAT-08 y POS-10.
 Decidido con el dueño el 26-10-2026 al revisar la importación de productos (CAT-06), que queda en pausa hasta
 tener esto: la importación creará las presentaciones de los frutos secos directamente.

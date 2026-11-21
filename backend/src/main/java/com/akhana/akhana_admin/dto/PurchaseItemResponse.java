@@ -16,7 +16,14 @@ public record PurchaseItemResponse(
     BigDecimal unitCost,
     BigDecimal subtotal,
     BigDecimal previousUnitCost,
-    boolean costUpdated
+    boolean costUpdated,
+    // COM-29: copy of the package bought, the base units of the line and the cost of one; the package fields are
+    // null for a line in base units, whose base quantity is its quantity
+    UUID presentationId,
+    String presentationName,
+    BigDecimal presentationBaseQuantity,
+    BigDecimal baseQuantity,
+    BigDecimal baseUnitCost
 ) {
     public static PurchaseItemResponse fromEntity(PurchaseItem item) {
         return new PurchaseItemResponse(
@@ -29,7 +36,12 @@ public record PurchaseItemResponse(
             item.getUnitCost(),
             item.getSubtotal(),
             item.getPreviousUnitCost(),
-            Boolean.TRUE.equals(item.getCostUpdated())
+            Boolean.TRUE.equals(item.getCostUpdated()),
+            item.getPresentation() != null ? item.getPresentation().getId() : null,
+            item.getPresentationName(),
+            item.getPresentationBaseQuantity(),
+            item.getBaseQuantity() != null ? item.getBaseQuantity() : item.getQuantity(),
+            item.baseUnitCost()
         );
     }
 }

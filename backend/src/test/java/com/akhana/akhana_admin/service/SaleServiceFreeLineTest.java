@@ -63,7 +63,8 @@ class SaleServiceFreeLineTest {
     void setUp() {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
-            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
             new TransactionTemplate(mock(PlatformTransactionManager.class)));
         session = CashSession.builder().id(UUID.randomUUID()).sessionNumber(1L).status(CashSessionStatus.ABIERTA)

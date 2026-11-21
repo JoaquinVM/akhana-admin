@@ -497,7 +497,7 @@ class ProductServiceTest {
         assertThat(response.buyPrice()).isEqualByComparingTo("0");
         assertThat(response.sellPrice()).isEqualByComparingTo("0");
         assertThat(response.saleUnit()).isEqualTo(SaleUnit.UNIT);
-        verify(presentationService, never()).applyPresentations(any(), any(), any(), any());
+        verify(presentationService, never()).applyPresentations(any(), any(), any(), any(), any());
     }
 
     @Test

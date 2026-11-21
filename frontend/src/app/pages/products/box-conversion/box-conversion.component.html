@@ -1,0 +1,88 @@
+<div class="box-conversion-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span class="breadcrumb-item">Catálogo</span>
+        <span class="breadcrumb-separator">/</span>
+        <a class="breadcrumb-link" routerLink="/products">Productos</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active">Cajas a empaques</span>
+      </nav>
+      <h1 class="page-title">Cajas a empaques</h1>
+      <p class="page-subtitle">
+        Las cajas que hoy son un producto aparte pasan a ser un empaque de su producto. Sus ventas y compras pasadas no
+        cambian.
+      </p>
+    </div>
+    @if (!isLoading() && !loadError()) {
+      <span class="pending-count">Faltan {{ remaining() }}</span>
+    }
+  </header>
+
+  @if (isLoading()) {
+    <div class="state-card">Cargando...</div>
+  } @else if (loadError(); as message) {
+    <div class="alert alert-danger" role="alert">{{ message }}</div>
+  } @else if (proposals().length === 0) {
+    <div class="state-card">No quedan cajas por revisar.</div>
+  } @else {
+    <ul class="box-list">
+      @for (proposal of proposals(); track proposal.boxProductId) {
+        <li class="box-card" [attr.aria-label]="proposal.boxName">
+          <div class="box-products">
+            <strong>{{ proposal.boxName }}</strong>
+            <span class="box-meta">{{ proposal.boxCode }} · Bs {{ proposal.boxSellPrice | number:'1.2-2' }}</span>
+            <span class="arrow" aria-hidden="true">→</span>
+            <span>empaque de <strong>{{ proposal.baseName }}</strong></span>
+            <span class="box-meta">{{ proposal.baseCode }} · Bs {{ proposal.baseSellPrice | number:'1.2-2' }} c/u</span>
+          </div>
+          @if (proposal.supplierName) {
+            <span class="box-meta">Proveedor: {{ proposal.supplierName }}</span>
+          }
+          <div class="box-fields">
+            <label>
+              Nombre del empaque
+              <input type="text" class="form-control" maxlength="50" [value]="draft(proposal).name"
+                     (input)="update(proposal, 'name', $any($event.target).value)" />
+            </label>
+            <label>
+              Unidades
+              <input type="number" class="form-control" step="1" min="2" [value]="draft(proposal).baseQuantity ?? ''"
+                     (input)="update(proposal, 'baseQuantity', $any($event.target).value)" />
+            </label>
+            <label>
+              Precio propio (Bs)
+              <input type="number" class="form-control" step="0.01" min="0.01" placeholder="Calculado"
+                     [value]="draft(proposal).fixedPrice ?? ''"
+                     (input)="update(proposal, 'fixedPrice', $any($event.target).value)" />
+            </label>
+            @if (proposal.boxBarcodes.length > 0) {
+              <label>
+                Código de barras que pasa
+                <select class="form-control" [value]="draft(proposal).barcode"
+                        (change)="update(proposal, 'barcode', $any($event.target).value)">
+                  @for (code of proposal.boxBarcodes; track code) {
+                    <option [value]="code">{{ code }}</option>
+                  }
+                  <option value="">Ninguno</option>
+                </select>
+              </label>
+            }
+          </div>
+          @if (packageCost(proposal) !== null) {
+            <span class="box-meta">Costo del empaque: Bs {{ packageCost(proposal) | number:'1.2-2' }} (unidades × costo de {{ proposal.baseName }}).</span>
+          }
+          @if (errors()[proposal.boxProductId]; as message) {
+            <div class="alert alert-danger" role="alert">{{ message }}</div>
+          }
+          <div class="box-actions">
+            <button type="button" class="btn btn-primary" [disabled]="savingId() !== null"
+                    (click)="confirm(proposal)">Confirmar</button>
+            <button type="button" class="btn btn-outline" [disabled]="savingId() !== null"
+                    (click)="discard(proposal)">Descartar</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

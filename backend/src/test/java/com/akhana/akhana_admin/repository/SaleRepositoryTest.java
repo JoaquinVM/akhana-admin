@@ -155,12 +155,12 @@ class SaleRepositoryTest {
     void countsTheKilosOfALineSoldByPresentation() {
         UUID product = insertProduct();
         UUID presentation = jdbc.queryForObject(
-                "INSERT INTO product_presentations (product_id, name, weight_kg, fixed_price, created_by) "
+                "INSERT INTO product_presentations (product_id, name, base_quantity, fixed_price, created_by) "
                         + "VALUES (?, '1/2 libra', 0.227, 45.00, 'it-repo') RETURNING id", UUID.class, product);
         // 2 x Nuez pelada 1/2 libra at Bs 45 with cost 130 per kilo: 0.454 kg, cost 59.02 (CAT-11)
         UUID sale = insertSale("P1", "EFECTIVO", "NORMAL", "90.00", "0.00", "0.00", null, DAY);
         jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
-                        + "quantity, subtotal, presentation_id, presentation_name, presentation_weight_kg, weight_kg) "
+                        + "quantity, subtotal, presentation_id, presentation_name, presentation_base_quantity, base_quantity) "
                         + "VALUES (?, ?, 'Nuez pelada', 45.00, 130.00, 45.00, 2, 90.00, ?, '1/2 libra', 0.227, 0.454)",
                 sale, product, presentation);
 
@@ -173,6 +173,27 @@ class SaleRepositoryTest {
                 .stream().filter(row -> sale.equals(row[0])).findFirst().orElseThrow();
         assertEquals("0.454", plain(line[6]));
         assertEquals("59.02", plain(line[8]));
+    }
+
+    @Test
+    void countsTheUnitsOfALineSoldByAUnitPackage() {
+        UUID product = insertProduct();
+        UUID box = jdbc.queryForObject(
+                "INSERT INTO product_presentations (product_id, name, base_quantity, fixed_price, created_by) "
+                        + "VALUES (?, 'Caja ×12', 12, 44.00, 'it-repo') RETURNING id", UUID.class, product);
+        // 2 x Barra Chia Caja ×12 at Bs 44 with cost 2,13 per unit: 24 units, cost 51,12 (CAT-15)
+        UUID sale = insertSale("B1", "EFECTIVO", "NORMAL", "88.00", "0.00", "0.00", null, DAY);
+        jdbc.update("INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, unit_cost, final_unit_price, "
+                        + "quantity, subtotal, presentation_id, presentation_name, presentation_base_quantity, base_quantity) "
+                        + "VALUES (?, ?, 'Barra Chia', 44.00, 2.13, 44.00, 2, 88.00, ?, 'Caja ×12', 12, 24)",
+                sale, product, box);
+
+        Object[] day = saleRepository.sumByDayAndType(D10, D10)
+                .stream().filter(row -> "NORMAL".equals(row[1])).findFirst().orElseThrow();
+        assertEquals("24", plain(day[3]));
+        assertEquals("51.12", plain(day[5]));
+        // A presentation inserted as before V38 is a package that is sold (CAT-15)
+        assertEquals(Boolean.TRUE, jdbc.queryForObject("SELECT sold FROM product_presentations WHERE id = ?", Boolean.class, box));
     }
 
     @Test
