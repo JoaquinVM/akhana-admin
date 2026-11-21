@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 
-// Shows an amount exactly as the number pipe writes it ("Bs 1.234,50"), only with the "Bs" and the cents smaller
+// Shows an amount exactly as the number pipe writes it ("Bs 1,234.50"), only with the "Bs" and the cents smaller
 // and softer so the bolivianos read first. The text, and so the format, does not change.
 @Component({
   selector: 'app-money',

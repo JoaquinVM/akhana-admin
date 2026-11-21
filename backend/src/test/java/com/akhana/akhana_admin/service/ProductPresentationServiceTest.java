@@ -95,7 +95,7 @@ class ProductPresentationServiceTest {
             .hasMessage("Ya existe la presentación '1/2 LIBRA' en este producto.");
         assertThatThrownBy(() -> service.applyPresentations(nut, List.of(
             request("1/2 libra", "0.227", null), request("Media libra", "0.2270", null)), null, "admin"))
-            .hasMessage("Ya existe una presentación de 0,227 kg en este producto.");
+            .hasMessage("Ya existe una presentación de 0.227 kg en este producto.");
         assertThatThrownBy(() -> service.applyPresentations(nut, List.of(request("x", "0.1005", null)), null, "admin"))
             .hasMessage("El peso admite hasta 3 decimales (gramos).");
         assertThatThrownBy(() -> service.applyPresentations(nut, List.of(request("x", "0", null)), null, "admin"))
@@ -172,6 +172,6 @@ class ProductPresentationServiceTest {
 
         assertThat(warnings).containsExactly(
             "La presentación '1 kilo' se vende a pérdida.",
-            "Estas presentaciones tienen precio fijo y no cambian: 1/4 libra (Bs 23,00), 1/2 libra (Bs 45,00), 1 kilo (Bs 100,00).");
+            "Estas presentaciones tienen precio fijo y no cambian: 1/4 libra (Bs 23.00), 1/2 libra (Bs 45.00), 1 kilo (Bs 100.00).");
     }
 }

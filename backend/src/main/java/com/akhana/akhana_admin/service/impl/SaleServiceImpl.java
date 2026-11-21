@@ -65,14 +65,14 @@ public class SaleServiceImpl implements SaleService {
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
     static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
     static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
-    static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elige Efectivo o QR.";
-    static final String MIXED_CASH_NOT_ROUND = "En un pago mixto la parte en efectivo debe ir en múltiplos de Bs 0,10; el QR lleva los centavos.";
+    static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0.00; si se paga todo de una forma, elige Efectivo o QR.";
+    static final String MIXED_CASH_NOT_ROUND = "En un pago mixto la parte en efectivo debe ir en múltiplos de Bs 0.10; el QR lleva los centavos.";
     // POS-04 (097): the smallest coin; cash is always charged in multiples of it
     static final BigDecimal SMALLEST_COIN = new BigDecimal("0.10");
     static final String AT_COST_NO_DISCOUNTS = "Una venta al costo no admite descuentos.";
     static final String CREDIT_ONLY_AT_COST = "Solo una venta al costo puede quedar a crédito.";
     static final String CREDIT_CUSTOMER_REQUIRED = "Elige un cliente activo para la venta a crédito.";
-    static final String CREDIT_OUT_OF_RANGE = "El crédito debe estar entre Bs 0,00 y el total de la venta.";
+    static final String CREDIT_OUT_OF_RANGE = "El crédito debe estar entre Bs 0.00 y el total de la venta.";
     static final String CREDIT_METHOD_INCOMPLETE = "El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.";
     static final String FREE_NAME_REQUIRED = "Escribe el nombre de la línea libre.";
     static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";

@@ -149,7 +149,7 @@ describe('SaleDetailModalComponent', () => {
     expect(compiled.textContent).toContain('(10%)');
     // Producto sin descuento
     expect(compiled.textContent).toContain('Miel de Abeja');
-    expect(compiled.textContent).toContain('Bs 0,00');
+    expect(compiled.textContent).toContain('Bs 0.00');
   });
 
   it('debe mostrar el resumen de descuentos acumulados y total neto', async () => {

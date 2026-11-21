@@ -397,7 +397,7 @@ class SaleServiceTest {
                 BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal(cash), null, new BigDecimal(cash), null);
             assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elige Efectivo o QR.");
+                .hasMessage("En un pago mixto el efectivo y el QR deben ser mayores a Bs 0.00; si se paga todo de una forma, elige Efectivo o QR.");
         }
         verify(saleRepository, never()).save(any(Sale.class));
     }
@@ -672,7 +672,7 @@ class SaleServiceTest {
     }
 
     @Test
-    @DisplayName("POS-10: 30 g que salen 11,23 se cobran 10,00; la caja y el descuento quedan con ese monto")
+    @DisplayName("POS-10: 30 g que salen 11.23 se cobran 10.00; la caja y el descuento quedan con ese monto")
     void shouldChargeTheTypedTotalWhenLowered() {
         Sale sale = registerCapturing(typedTotalSale("0.030", "10.00"));
 
@@ -817,7 +817,7 @@ class SaleServiceTest {
     }
 
     @Test
-    @DisplayName("CAT-11: 2 x 1/2 libra con precio fijo cobra 90, guarda 0,454 kg y el costo por kilo")
+    @DisplayName("CAT-11: 2 x 1/2 libra con precio fijo cobra 90, guarda 0.454 kg y el costo por kilo")
     void shouldSellByPresentationWithFixedPrice() {
         ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
 
@@ -849,7 +849,7 @@ class SaleServiceTest {
     }
 
     @Test
-    @DisplayName("CAT-11: sin precio fijo, 100 g cuesta 0,100 x 210 = 21,00")
+    @DisplayName("CAT-11: sin precio fijo, 100 g cuesta 0.100 x 210 = 21.00")
     void shouldSellByPresentationWithComputedPrice() {
         ProductPresentation hundredGrams = nutPresentation("100 g", "0.100", null, true);
 
@@ -860,7 +860,7 @@ class SaleServiceTest {
     }
 
     @Test
-    @DisplayName("CAT-11: al costo, la 1/2 libra cobra 0,227 x 130 = 29,51 e ignora el precio fijo")
+    @DisplayName("CAT-11: al costo, la 1/2 libra cobra 0.227 x 130 = 29.51 e ignora el precio fijo")
     void shouldSellPresentationAtCostIgnoringFixedPrice() {
         ProductPresentation halfPound = nutPresentation("1/2 libra", "0.227", "45.00", true);
 
@@ -1131,7 +1131,7 @@ class SaleServiceTest {
             assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, null, neida.getId(),
                     new BigDecimal(credit), BigDecimal.ONE), "cajero"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("El crédito debe estar entre Bs 0,00 y el total de la venta.");
+                .hasMessage("El crédito debe estar entre Bs 0.00 y el total de la venta.");
         }
         assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.CREDITO, null, null, neida.getId(),
                 new BigDecimal("5.00"), BigDecimal.ONE), "cajero"))

@@ -523,10 +523,10 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("200.01"), null), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200,00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("0.004"), null), "operator"))
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+            .hasMessage("El monto debe ser mayor a Bs 0.00.");
         verify(financialTransactionRepository, never()).save(any());
 
         PurchaseResponse res = purchaseService.registerPayment(purchase.getId(),
@@ -536,7 +536,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal("1"), null), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 0,00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 0.00).");
     }
 
     @Test
@@ -924,7 +924,7 @@ class PurchaseServiceTest {
         Purchase purchase = existingPurchase("300.00", "100.00");
 
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("200.01"), "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200,00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200.00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), mami.getId(), new BigDecimal("10"), null), "operator"))
             .hasMessage("Elige una cuenta o una persona como origen del pago.");
@@ -977,7 +977,7 @@ class PurchaseServiceTest {
         PurchaseRequest tooMuch = new PurchaseRequest(supplier.getId(), null, List.of(line(tea, "1", "10")), null, null,
             false, null, null, null, null, byMami("11"));
         assertThatThrownBy(() -> purchaseService.registerPurchase(tooMuch, "operator"))
-            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 10,00).");
+            .hasMessage("El pago supera el saldo pendiente del pedido (Bs 10.00).");
     }
 
     @Test
@@ -1112,7 +1112,7 @@ class PurchaseServiceTest {
         assertThat(res.revisions().get(0).reason()).isEqualTo("Faltaron las nueces y llegaron 2 barras");
         assertThat(res.revisions().get(0).revisedBy()).isEqualTo("operator");
         assertThat(res.revisions().get(0).changes()).isEqualTo("Cantidad de Té verde: 24 → 20 · "
-            + "Línea agregada: Barra Chia × 2 a Bs 5,00 · Línea quitada: Nueces · Total: Bs 300,00 → Bs 210,00");
+            + "Línea agregada: Barra Chia × 2 a Bs 5.00 · Línea quitada: Nueces · Total: Bs 300.00 → Bs 210.00");
         verifyNoInteractions(financialAccountRepository);
     }
 
@@ -1139,7 +1139,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase,
             List.of(kept(teaLine, "24", "10")), "0", null, "Faltaron las nueces"), "operator"))
-            .hasMessage("El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anula primero el pago.");
+            .hasMessage("El total del pedido (Bs 240.00) no puede ser menor a lo pagado (Bs 300.00); anula primero el pago.");
         verify(purchaseRepository, never()).save(any());
 
         // A rejected edit rolls back; the unit test starts again from the same purchase
@@ -1148,7 +1148,7 @@ class PurchaseServiceTest {
             kept(nutsLine, "1", "60"), kept(teaLine, "24", "10")), "0", null, "Otro costo de nueces"), "operator");
         assertThat(res.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAGADO);
         assertThat(res.revisions().get(0).changes()).isEqualTo(
-            "Cantidad de Nueces: 1,500 → 1 · Costo de Nueces: Bs 40,00 → Bs 60,00");
+            "Cantidad de Nueces: 1.500 → 1 · Costo de Nueces: Bs 40.00 → Bs 60.00");
     }
 
     @Test
@@ -1211,7 +1211,7 @@ class PurchaseServiceTest {
         assertThat(res.shippingCost()).isEqualByComparingTo("30.00");
         assertThat(res.totalAmount()).isEqualByComparingTo("330.00");
         assertThat(res.itemsTotal()).isEqualByComparingTo("300.00");
-        assertThat(res.revisions().get(0).changes()).isEqualTo("Envío: Bs 25,00 (Bisa) → Bs 30,00 (Caja)");
+        assertThat(res.revisions().get(0).changes()).isEqualTo("Envío: Bs 25.00 (Bisa) → Bs 30.00 (Caja)");
         var order = inOrder(purchaseRepository, cashSessionRepository, financialAccountRepository);
         order.verify(purchaseRepository).findByIdForUpdate(purchase.getId());
         order.verify(cashSessionRepository).findByStatusForUpdate(CashSessionStatus.ABIERTA);
@@ -1258,8 +1258,8 @@ class PurchaseServiceTest {
         assertThat(change.getValue().getPurchaseId()).isEqualTo(purchase.getId());
         assertThat(change.getValue().getSource()).isEqualTo(PriceChangeSource.PURCHASE);
         assertThat(res.itemsTotal()).isEqualByComparingTo("348.00");
-        assertThat(res.revisions().get(0).changes()).contains("Costo de Té verde: Bs 10,00 → Bs 12,00",
-            "Producto Té verde: costo Bs 10,00 → Bs 12,00, precio Bs 15,00 → Bs 18,00");
+        assertThat(res.revisions().get(0).changes()).contains("Costo de Té verde: Bs 10.00 → Bs 12.00",
+            "Producto Té verde: costo Bs 10.00 → Bs 12.00, precio Bs 15.00 → Bs 18.00");
     }
 
     // --- COM-22, COM-24: a purchase from a reading ---
@@ -1355,7 +1355,7 @@ class PurchaseServiceTest {
         assertThat(res.itemsTotal()).isEqualByComparingTo("300.00");
         assertThat(teaLine.getUnitCost()).isEqualByComparingTo("12.00");
         assertThat(res.revisions().get(0).reason()).isEqualTo("Llegó la mercadería");
-        assertThat(res.revisions().get(0).changes()).contains("Costos confirmados", "Costo de Té verde: Bs 10,00 → Bs 12,00");
+        assertThat(res.revisions().get(0).changes()).contains("Costos confirmados", "Costo de Té verde: Bs 10.00 → Bs 12.00");
         assertThat(reading.getPurchaseId()).isEqualTo(purchase.getId());
     }
 
@@ -1508,7 +1508,7 @@ class PurchaseServiceTest {
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal(amount), null), "operator"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+            .hasMessage("El monto debe ser mayor a Bs 0.00.");
         assertThat(bisa.getCurrentBalance()).isEqualTo(before);
         assertThat(purchase.getPaidAmount()).isEqualByComparingTo("0.00");
         verify(financialTransactionRepository, never()).save(any());

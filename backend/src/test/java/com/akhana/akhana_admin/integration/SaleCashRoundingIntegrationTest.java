@@ -81,7 +81,7 @@ class SaleCashRoundingIntegrationTest {
     }
 
     @Test
-    @DisplayName("097: Bs 15,09 en efectivo se cobra 15,10; el redondeo queda en la venta, la caja y la cuenta Caja")
+    @DisplayName("097: Bs 15.09 en efectivo se cobra 15.10; el redondeo queda en la venta, la caja y la cuenta Caja")
     void cashSale_isRoundedUpToTheNearestTenCents() {
         BigDecimal before = cashBalance();
         SaleResponse sale = sell("15.09", PaymentMethod.EFECTIVO, null, "20.00", null);
@@ -97,7 +97,7 @@ class SaleCashRoundingIntegrationTest {
     }
 
     @Test
-    @DisplayName("097: Bs 15,04 se cobra 15,00 y 15,05 se cobra 15,10 (al más cercano)")
+    @DisplayName("097: Bs 15.04 se cobra 15.00 y 15.05 se cobra 15.10 (al más cercano)")
     void cashSale_isRoundedToTheNearest() {
         SaleResponse down = sell("15.04", PaymentMethod.EFECTIVO, null, null, null);
         SaleResponse up = sell("15.05", PaymentMethod.EFECTIVO, null, null, null);
@@ -119,7 +119,7 @@ class SaleCashRoundingIntegrationTest {
     }
 
     @Test
-    @DisplayName("097: en el pago mixto el efectivo va en múltiplos de Bs 0,10 y el QR lleva los centavos")
+    @DisplayName("097: en el pago mixto el efectivo va en múltiplos de Bs 0.10 y el QR lleva los centavos")
     void mixedSale_cashPartInTenCents() {
         SaleResponse sale = sell("15.09", PaymentMethod.MIXTO, "10.00", "10.00", null);
         assertThat(sale.totalAmount()).isEqualByComparingTo("15.09");
@@ -128,7 +128,7 @@ class SaleCashRoundingIntegrationTest {
 
         assertThatThrownBy(() -> sell("15.09", PaymentMethod.MIXTO, "10.05", "10.05", null))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("múltiplos de Bs 0,10");
+            .hasMessageContaining("múltiplos de Bs 0.10");
     }
 
     @Test
