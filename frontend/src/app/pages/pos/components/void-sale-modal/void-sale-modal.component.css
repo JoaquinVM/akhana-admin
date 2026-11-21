@@ -60,7 +60,6 @@
 
 .form-label {
   font-size: 0.825rem;
-  font-weight: 600;
   color: #334155;
 }
 
@@ -89,6 +88,3 @@
   margin-right: 6px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}

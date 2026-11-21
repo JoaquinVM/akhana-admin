@@ -13,9 +13,6 @@
 
 .form-label {
   font-family: var(--font-heading);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .required-mark {
@@ -100,10 +97,6 @@
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   margin-right: 0.35rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 .form-hint-warning {

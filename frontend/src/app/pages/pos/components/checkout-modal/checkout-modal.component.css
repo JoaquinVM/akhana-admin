@@ -447,10 +447,6 @@
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 /* At-cost sale: customer and credit (CON-02, DEU-05) */
 .checkout-credit-panel {
   display: flex;

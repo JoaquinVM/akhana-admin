@@ -352,9 +352,6 @@
 
 .form-label {
   font-family: var(--font-heading);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .required-mark {
@@ -458,6 +455,3 @@
   margin-right: 0.35rem;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}

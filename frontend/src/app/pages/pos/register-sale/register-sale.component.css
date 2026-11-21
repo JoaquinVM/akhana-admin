@@ -8,13 +8,6 @@
   font-family: var(--font-body);
 }
 
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
 .breadcrumb {
   display: flex;
   align-items: center;

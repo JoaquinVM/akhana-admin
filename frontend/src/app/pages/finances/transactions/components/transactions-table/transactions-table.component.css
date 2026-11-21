@@ -12,25 +12,13 @@
   overflow-x: auto;
 }
 
-.zen-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-}
-
 .zen-table th {
-  background-color: #f8fafc;
   padding: 0.75rem 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 2px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .zen-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   vertical-align: middle;
 }
