@@ -39,7 +39,5 @@ public enum Permission {
     /** Dashboard with the period's indicators, charts and current balances (DSH-01 to DSH-04). */
     DASHBOARD,
     /** Users and their roles. */
-    USERS,
-    /** One-time historical migration of the spreadsheets (FIN-11). */
-    MIGRATION
+    USERS
 }
