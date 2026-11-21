@@ -28,6 +28,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 import { PresentationPickerComponent } from '../../../shared/components/presentation-picker/presentation-picker.component';
 import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/free-line-form.component';
 import { formatBs } from '../../../shared/utils/money';
+import { isRetryableError, newClientRequestId } from '../../../shared/utils/client-request-id';
 import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
 
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
@@ -41,6 +42,8 @@ export function cartKey(product: Product, presentation: ProductPresentation | nu
 export type { CartItem } from './cart-item';
 
 export const AT_COST_NO_FREE_LINES = 'Una venta al costo no admite líneas libres.';
+export const SALE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: la venta pudo quedar registrada. Vuelva a cobrar: '
+  + 'si ya se registró, no se duplica.';
 
 import { CashDayMarkComponent } from '../../../shared/components/cash-day-mark/cash-day-mark.component';
 import { BarcodeScannerComponent, ScannedProduct } from '../components/barcode-scanner/barcode-scanner.component';
@@ -100,6 +103,8 @@ export class RegisterSaleComponent implements OnInit {
 
   // Submit state
   isSubmitting = signal<boolean>(false);
+  // POS-18: id of the sale being charged, sent again on its retries
+  private clientRequestId: string | null = null;
   errorMessage = signal<string | null>(null);
 
   // Computed: cart totals
@@ -419,6 +424,8 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   clearCart(): void {
+    // POS-18: an emptied cart starts another sale
+    this.clientRequestId = null;
     this.cartItems.set([]);
     this.globalDiscount.set(0);
     this.errorMessage.set(null);
@@ -496,6 +503,8 @@ export class RegisterSaleComponent implements OnInit {
       return;
     }
     this.errorMessage.set(null);
+    // POS-18: one id per sale; kept while it is retried, also after reopening the checkout
+    this.clientRequestId ??= newClientRequestId();
     this.isCheckoutModalOpen.set(true);
   }
 
@@ -529,7 +538,8 @@ export class RegisterSaleComponent implements OnInit {
         : `Venta POS (${payment.paymentMethod})`,
       saleType: this.atCost() ? 'AL_COSTO' : 'NORMAL',
       customerId: this.atCost() ? payment.customerId : null,
-      creditAmount: this.atCost() ? payment.creditAmount : 0
+      creditAmount: this.atCost() ? payment.creditAmount : 0,
+      clientRequestId: this.clientRequestId ??= newClientRequestId()
     };
 
     this.saleService.registerSale(payload).subscribe({
@@ -545,7 +555,10 @@ export class RegisterSaleComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        const msg = err.error?.message || 'Error al registrar la venta. Inténtalo nuevamente.';
+        // POS-18: without an answer the sale may exist; the same id makes the retry safe
+        const msg = isRetryableError(err)
+          ? SALE_RETRY_MESSAGE
+          : err.error?.message || 'Error al registrar la venta. Inténtalo nuevamente.';
         this.errorMessage.set(msg);
       }
     });

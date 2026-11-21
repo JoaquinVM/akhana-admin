@@ -4,6 +4,7 @@ import com.akhana.akhana_admin.dto.SaleDetailRequest;
 import com.akhana.akhana_admin.dto.SaleItemRequest;
 import com.akhana.akhana_admin.dto.SaleResponse;
 import com.akhana.akhana_admin.dto.VoidSaleRequest;
+import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CashSessionRepository;
@@ -22,8 +23,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,6 +59,7 @@ public class SaleServiceImpl implements SaleService {
     private final SaleItemRepository saleItemRepository;
     private final CreditorRepository creditorRepository;
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
+    private final TransactionTemplate transactionTemplate;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
@@ -78,14 +83,26 @@ public class SaleServiceImpl implements SaleService {
     static final String VOIDED_SALE_ASSIGNMENT = "Una venta anulada no se asigna.";
     static final String ASSIGNABLE_PRODUCT_REQUIRED = "Elija un producto activo que se venda por unidad.";
     static final int FREE_NAME_MAX = 150;
+    static final String CLIENT_REQUEST_MISMATCH = "Esta venta ya se registró como %s con otro contenido; revise el historial antes de volver a cobrar.";
+    static final String CLIENT_REQUEST_INDEX = "ux_sales_client_request_id";
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
+    // POS-18: its own transaction, so a retry after the unique index of the client request id can run in a new one
     @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
     public SaleResponse registerSale(SaleDetailRequest request, String username) {
-        // Lock order for every money operation: cash session, then customer, then accounts by id (T-14)
-        CashSession session = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)
-            .orElseThrow(() -> new IllegalStateException("Para registrar una venta debe existir una caja abierta."));
+        return ClientRequestRetry.run(transactionTemplate, () -> recordSale(request, username));
+    }
+
+    private SaleResponse recordSale(SaleDetailRequest request, String username) {
+        UUID clientRequestId = request.clientRequestId();
+        // Lock order for every money operation: cash session, then customer, then accounts by id (T-14). A retry of
+        // the same id waits here for the first one and then finds it (POS-18)
+        Optional<CashSession> openSession = cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA);
+        if (openSession.isEmpty() && clientRequestId == null) {
+            throw new IllegalStateException(NO_OPEN_SESSION);
+        }
 
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException("La venta debe contener al menos un producto.");
@@ -230,6 +247,15 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal discountTotal = discountItemsTotal.add(globalDiscount).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalAmount = subtotalPostItems.subtract(globalDiscount).setScale(2, RoundingMode.HALF_UP);
 
+        // POS-18: a repeated id gets its sale back, without a new sale or money; with other content it is rejected
+        if (clientRequestId != null) {
+            Optional<Sale> existing = saleRepository.findByClientRequestId(clientRequestId);
+            if (existing.isPresent()) {
+                return replayedSale(existing.get(), totalAmount, request.items().size());
+            }
+        }
+        CashSession session = openSession.orElseThrow(() -> new IllegalStateException(NO_OPEN_SESSION));
+
         // Credit only on at-cost sales (DEU-05, P-12); the payment method covers the part paid now
         BigDecimal creditAmount = request.creditAmount() != null
             ? request.creditAmount().setScale(2, RoundingMode.HALF_UP)
@@ -313,6 +339,7 @@ public class SaleServiceImpl implements SaleService {
         String saleNumber = formatSaleNumber(saleRepository.nextSaleNumber());
 
         Sale sale = Sale.builder()
+            .clientRequestId(clientRequestId)
             .saleNumber(saleNumber)
             .cashSession(session)
             .status(SaleStatus.COMPLETADA)
@@ -342,6 +369,12 @@ public class SaleServiceImpl implements SaleService {
         sale.setItems(saleItems);
 
         Sale savedSale = saleRepository.save(sale);
+        try {
+            // The insert runs here, so a request with the same id at the same time is caught by its index (POS-18)
+            saleRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw ClientRequestRetry.translate(e, CLIENT_REQUEST_INDEX);
+        }
 
         // Update the running totals of the open session
         session.setTotalSalesCash(session.getTotalSalesCash().add(amountCash));
@@ -360,6 +393,14 @@ public class SaleServiceImpl implements SaleService {
         }
 
         return SaleResponse.fromEntity(savedSale);
+    }
+
+    // POS-18: the same checkout sent again; the total and the number of lines tell it apart from another sale
+    private static SaleResponse replayedSale(Sale existing, BigDecimal totalAmount, int lines) {
+        if (existing.getTotalAmount().compareTo(totalAmount) != 0 || existing.getItems().size() != lines) {
+            throw new DuplicateResourceException(String.format(CLIENT_REQUEST_MISMATCH, existing.getSaleNumber()));
+        }
+        return SaleResponse.fromEntity(existing);
     }
 
     @Override
@@ -620,6 +661,7 @@ public class SaleServiceImpl implements SaleService {
         return packs.multiply(presentation.getWeightKg()).setScale(3, RoundingMode.HALF_UP);
     }
 
+    static final String NO_OPEN_SESSION = "Para registrar una venta debe existir una caja abierta.";
     static final String HISTORICAL_SALE = "La venta es histórica (migrada de la planilla): no se puede anular.";
 
     static String formatSaleNumber(long sequenceValue) {

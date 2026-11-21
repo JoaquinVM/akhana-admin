@@ -143,6 +143,8 @@ export interface PurchaseRequest {
   initialPayment: PurchasePaymentRequest | null;
   // COM-20: the reading this purchase comes from
   readingId?: string;
+  // COM-27: id of this new purchase, kept on its retries so it is recorded once
+  clientRequestId?: string;
 }
 
 // COM-11: the whole purchase as it should be, without payments, with a mandatory reason

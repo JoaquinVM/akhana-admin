@@ -39,6 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -75,7 +77,8 @@ class PurchaseServiceTest {
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
-            purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository);
+            purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository,
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -1433,5 +1436,59 @@ class PurchaseServiceTest {
             assertThat(p.id()).isEqualTo(pending.getId());
             assertThat(p.costToConfirm()).isTrue();
         });
+    }
+
+    // ---------------------------------------------------------------- COM-27
+
+    private PurchaseRequest requestWithId(UUID clientRequestId, String quantity) {
+        return new PurchaseRequest(supplier.getId(), null, List.of(line(tea, quantity, "10.00")), null, null, false, null,
+            null, null, null, null, null, null, clientRequestId);
+    }
+
+    private Purchase recordedPurchase(UUID clientRequestId) {
+        Purchase purchase = existingPurchase("20.00", "0.00");
+        purchase.setClientRequestId(clientRequestId);
+        purchase.getItems().add(PurchaseItem.builder().purchase(purchase).product(tea).productName(tea.getName())
+            .quantity(new BigDecimal("2.000")).unitCost(new BigDecimal("10.00")).subtotal(new BigDecimal("20.00")).build());
+        when(purchaseRepository.findByClientRequestId(clientRequestId)).thenReturn(Optional.of(purchase));
+        return purchase;
+    }
+
+    @Test
+    @DisplayName("COM-27: el id del formulario queda guardado en el pedido")
+    void registerPurchase_keepsClientRequestId() {
+        UUID clientRequestId = UUID.randomUUID();
+
+        purchaseService.registerPurchase(requestWithId(clientRequestId, "2"), "operator");
+
+        org.mockito.ArgumentCaptor<Purchase> saved = org.mockito.ArgumentCaptor.forClass(Purchase.class);
+        verify(purchaseRepository).save(saved.capture());
+        assertThat(saved.getValue().getClientRequestId()).isEqualTo(clientRequestId);
+    }
+
+    @Test
+    @DisplayName("COM-27: un id repetido devuelve el pedido ya registrado, sin crear otro ni mover dinero")
+    void registerPurchase_repeatedIdReturnsExistingPurchase() {
+        UUID clientRequestId = UUID.randomUUID();
+        Purchase existing = recordedPurchase(clientRequestId);
+
+        PurchaseResponse response = purchaseService.registerPurchase(requestWithId(clientRequestId, "2"), "operator");
+
+        assertThat(response.id()).isEqualTo(existing.getId());
+        verify(purchaseRepository, never()).save(any());
+        verify(purchaseRepository, never()).nextPurchaseNumber();
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("COM-27: un id repetido con otro contenido se rechaza con un conflicto en español")
+    void registerPurchase_repeatedIdWithOtherContentIsRejected() {
+        UUID clientRequestId = UUID.randomUUID();
+        recordedPurchase(clientRequestId);
+
+        assertThatThrownBy(() -> purchaseService.registerPurchase(requestWithId(clientRequestId, "3"), "operator"))
+            .isInstanceOf(com.akhana.akhana_admin.exception.DuplicateResourceException.class)
+            .hasMessage("Este pedido ya se registró como PED-000001 con otro contenido; revise la lista de pedidos antes de volver a guardar.");
+        verify(purchaseRepository, never()).save(any());
     }
 }

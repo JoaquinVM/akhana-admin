@@ -36,6 +36,7 @@ import { CashLimitWarningComponent } from '../../../../shared/components/cash-li
 import { CashClosedNoteComponent } from '../../../../shared/components/cash-closed-note/cash-closed-note.component';
 import { ReadingLinesPanelComponent } from '../reading-lines-panel/reading-lines-panel.component';
 import { ReadingNoticeComponent } from '../reading-notice/reading-notice.component';
+import { isRetryableError, newClientRequestId } from '../../../../shared/utils/client-request-id';
 
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
@@ -64,6 +65,8 @@ export interface PurchaseLineDraft {
 
 // COM-22: the reason the server stores for an arrival
 export const ARRIVAL_REASON = 'Llegó la mercadería';
+export const PURCHASE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: el pedido pudo quedar registrado. Vuelva a '
+  + 'guardar: si ya se registró, no se duplica.';
 
 export interface NewProductDraft {
   code: string;
@@ -148,6 +151,8 @@ export class PurchaseFormModalComponent {
 
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+  // COM-27: id of the new purchase, sent again on its retries
+  private clientRequestId = newClientRequestId();
 
   // COM-20: lines of the reading without a product yet (CA-03); they block the button
   unresolvedLines = signal<PurchaseDraftLine[]>([]);
@@ -275,6 +280,8 @@ export class PurchaseFormModalComponent {
       }
       return;
     }
+    // COM-27: one id per new purchase form, kept on its retries
+    this.clientRequestId = newClientRequestId();
     this.supplierId.set('');
     this.purchaseDate.set(todayIso());
     this.consignment.set(false);
@@ -794,7 +801,7 @@ export class PurchaseFormModalComponent {
     }
     this.isSubmitting.set(true);
     this.formError.set(null);
-    this.purchaseService.registerPurchase(this.buildRequest()).subscribe({
+    this.purchaseService.registerPurchase({ ...this.buildRequest(), clientRequestId: this.clientRequestId }).subscribe({
       next: purchase => {
         this.toast.success(`Pedido ${purchase.purchaseNumber} registrado.`);
         this.isSubmitting.set(false);
@@ -802,7 +809,10 @@ export class PurchaseFormModalComponent {
       },
       error: err => {
         this.isSubmitting.set(false);
-        this.formError.set(err.error?.message || 'No se pudo registrar el pedido.');
+        // COM-27: without an answer the purchase may exist; the same id makes the retry safe
+        this.formError.set(isRetryableError(err)
+          ? PURCHASE_RETRY_MESSAGE
+          : err.error?.message || 'No se pudo registrar el pedido.');
       }
     });
   }

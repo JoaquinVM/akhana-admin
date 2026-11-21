@@ -42,6 +42,8 @@ import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class SaleServiceTest {
@@ -94,7 +96,8 @@ class SaleServiceTest {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
-            saleItemRepository, creditorRepository, creditorRepaymentItemRepository);
+            saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)
@@ -1230,5 +1233,86 @@ class SaleServiceTest {
         assertThat(saleCaptor.getValue().getItems().get(0).isScanned()).isFalse();
 
         assertThat(withScan.totalAmount()).isEqualByComparingTo(withoutScan.totalAmount());
+    }
+
+    // ---------------------------------------------------------------- POS-18
+
+    private SaleDetailRequest saleWithId(UUID clientRequestId, String quantity) {
+        return new SaleDetailRequest(List.of(new SaleItemRequest(product1.getId(), new BigDecimal(quantity), BigDecimal.ZERO)),
+            BigDecimal.ZERO, PaymentMethod.EFECTIVO, null, null, null, null, null, null, null, clientRequestId);
+    }
+
+    private Sale recordedSale(UUID clientRequestId, String total) {
+        Sale sale = Sale.builder().id(UUID.randomUUID()).saleNumber("VTA-000041").clientRequestId(clientRequestId)
+            .cashSession(activeSession).totalAmount(new BigDecimal(total)).paymentMethod(PaymentMethod.EFECTIVO)
+            .createdBy("cajero").build();
+        sale.getItems().add(SaleItem.builder().sale(sale).product(product1).productName(product1.getName())
+            .unitPrice(new BigDecimal("20.00")).unitCost(BigDecimal.ZERO).discountPerUnit(BigDecimal.ZERO)
+            .finalUnitPrice(new BigDecimal("20.00")).quantity(new BigDecimal("2.000")).subtotal(new BigDecimal(total)).build());
+        return sale;
+    }
+
+    @Test
+    @DisplayName("POS-18: el id del cobro queda guardado en la venta")
+    void registerSale_keepsClientRequestId() {
+        UUID clientRequestId = UUID.randomUUID();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        stubSaleFinance(List.of(cashAcc, qrAcc), Optional.of(salesCat));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.findByClientRequestId(clientRequestId)).thenReturn(Optional.empty());
+        when(saleRepository.nextSaleNumber()).thenReturn(5L);
+        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        saleService.registerSale(saleWithId(clientRequestId, "2"), "cajero");
+
+        ArgumentCaptor<Sale> saved = ArgumentCaptor.forClass(Sale.class);
+        verify(saleRepository).save(saved.capture());
+        assertThat(saved.getValue().getClientRequestId()).isEqualTo(clientRequestId);
+    }
+
+    @Test
+    @DisplayName("POS-18: un id repetido devuelve la venta ya registrada, sin crear otra ni mover dinero")
+    void registerSale_repeatedIdReturnsExistingSale() {
+        UUID clientRequestId = UUID.randomUUID();
+        Sale existing = recordedSale(clientRequestId, "40.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.findByClientRequestId(clientRequestId)).thenReturn(Optional.of(existing));
+
+        SaleResponse response = saleService.registerSale(saleWithId(clientRequestId, "2"), "cajero");
+
+        assertThat(response.id()).isEqualTo(existing.getId());
+        assertThat(response.saleNumber()).isEqualTo("VTA-000041");
+        verify(saleRepository, never()).save(any());
+        verify(saleRepository, never()).nextSaleNumber();
+        verify(financialTransactionRepository, never()).save(any());
+        verify(financialAccountRepository, never()).save(any());
+        assertThat(activeSession.getTotalSales()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("POS-18: también devuelve la venta si la caja ya se cerró entre el cobro y el reintento")
+    void registerSale_repeatedIdWithoutOpenSessionReturnsExistingSale() {
+        UUID clientRequestId = UUID.randomUUID();
+        Sale existing = recordedSale(clientRequestId, "40.00");
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.empty());
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.findByClientRequestId(clientRequestId)).thenReturn(Optional.of(existing));
+
+        assertThat(saleService.registerSale(saleWithId(clientRequestId, "2"), "cajero").id()).isEqualTo(existing.getId());
+    }
+
+    @Test
+    @DisplayName("POS-18: un id repetido con otro contenido se rechaza con un conflicto en español")
+    void registerSale_repeatedIdWithOtherContentIsRejected() {
+        UUID clientRequestId = UUID.randomUUID();
+        when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
+        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
+        when(saleRepository.findByClientRequestId(clientRequestId)).thenReturn(Optional.of(recordedSale(clientRequestId, "40.00")));
+
+        assertThatThrownBy(() -> saleService.registerSale(saleWithId(clientRequestId, "3"), "cajero"))
+            .isInstanceOf(com.akhana.akhana_admin.exception.DuplicateResourceException.class)
+            .hasMessage("Esta venta ya se registró como VTA-000041 con otro contenido; revise el historial antes de volver a cobrar.");
+        verify(saleRepository, never()).save(any());
     }
 }
