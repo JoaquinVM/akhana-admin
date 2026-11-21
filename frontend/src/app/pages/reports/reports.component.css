@@ -7,13 +7,6 @@
   padding: 1.5rem 1rem;
 }
 
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
 .breadcrumb {
   display: flex;
   align-items: center;
