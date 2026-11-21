@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -74,6 +75,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     private final TransactionTemplate transactionTemplate;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -205,7 +208,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException(TEXT_STAYS_PENDING);
         }
 
-        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
+        LocalDate today = StoreFormat.today(clock);
         LocalDate purchaseDate = request.purchaseDate() != null ? request.purchaseDate() : today;
         if (purchaseDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);
@@ -269,7 +272,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             shippingPayer = lockPayer(shippingAccountId);
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Purchase purchase = Purchase.builder()
             .clientRequestId(request.clientRequestId())
             .purchaseNumber(formatPurchaseNumber(purchaseRepository.nextPurchaseNumber()))
@@ -368,7 +371,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             }
             changes.add("Proveedor: " + purchase.getSupplier().getName() + " → " + supplier.getName());
         }
-        LocalDate today = LocalDate.now(StoreFormat.STORE_ZONE);
+        LocalDate today = StoreFormat.today(clock);
         LocalDate purchaseDate = request.purchaseDate() != null ? request.purchaseDate() : purchase.getPurchaseDate();
         if (purchaseDate.isAfter(today)) {
             throw new IllegalArgumentException(FUTURE_DATE);
@@ -396,7 +399,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         List<CostUpdate> costUpdates = new ArrayList<>();
         Set<UUID> updatedProducts = new HashSet<>();
         BigDecimal itemsTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         for (PurchaseItemRequest itemReq : request.items()) {
             if (itemReq.itemId() == null) {
@@ -606,7 +609,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El pago supera el saldo pendiente del pedido (" + StoreFormat.money(balance) + ").");
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         PurchasePayment.PurchasePaymentBuilder payment = PurchasePayment.builder()
             .purchase(purchase)
             .amount(amount)
@@ -647,12 +650,12 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
         Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
-            purchase.getPurchaseDate(), LocalDate.now(StoreFormat.STORE_ZONE));
+            purchase.getPurchaseDate(), StoreFormat.today(clock));
         purchase.setDeliveryType(delivery.type());
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setUpdatedBy(username);
-        purchase.setUpdatedAt(Instant.now());
+        purchase.setUpdatedAt(Instant.now(clock));
         purchaseRepository.save(purchase);
         return getPurchaseById(purchaseId);
     }
@@ -677,7 +680,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalStateException("El pago es histórico (migrado de la planilla): no se puede anular.");
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         if (payment.getCreditor() != null) {
             // DEU-02: no movement to revert; the debt drops, but never below what was already repaid
             ensureDebtCovers(lockCreditor(payment.getCreditor().getId()), payment.getAmount(), PAYMENT_REPAID);
@@ -742,7 +745,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
 
         // Payments and shipping: every movement linked to the purchase (P-24, COM-06)
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         voidExpenses(movements, CLOSED_SESSION_PURCHASE, voidReason, username, now);
         purchase.getPayments().stream()
             .filter(p -> p.getStatus() == PurchasePaymentRecordStatus.ACTIVO)
@@ -1000,7 +1003,7 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     // DEU-02: the shipping paid by a person moves no money; it raises the debt with them until it is repaid
     private void recordShippingCharge(Purchase purchase, Creditor creditor, BigDecimal amount, String username) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         purchaseShippingChargeRepository.save(PurchaseShippingCharge.builder()
             .purchase(purchase)
             .creditor(creditor)
@@ -1151,7 +1154,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         account.setCurrentBalance(account.getCurrentBalance().subtract(amount));
         financialAccountRepository.save(account);
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         FinancialTransaction tx = financialTransactionRepository.save(FinancialTransaction.builder()
             .type(FinancialTransactionType.GASTO_MANUAL)
             .sourceAccount(account)

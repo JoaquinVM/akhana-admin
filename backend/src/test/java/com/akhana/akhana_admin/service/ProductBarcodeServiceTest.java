@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
 
 /** CAT-10 and the lookup of POS-15. */
 @ExtendWith(MockitoExtension.class)
@@ -42,9 +44,12 @@ class ProductBarcodeServiceTest {
     private ProductBarcodeServiceImpl service;
     private Product shampoo;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
-        service = new ProductBarcodeServiceImpl(barcodeRepository, productRepository);
+        service = new ProductBarcodeServiceImpl(barcodeRepository, productRepository, clock);
         shampoo = product("NEF-SHA", "Shampoo", SaleUnit.UNIT);
         when(productRepository.findByIdWithRelations(shampoo.getId())).thenReturn(Optional.of(shampoo));
         when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));

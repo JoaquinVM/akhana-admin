@@ -9,6 +9,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import java.time.YearMonth;
 
 class StoreFormatTest {
 
@@ -46,5 +49,31 @@ class StoreFormatTest {
         assertThat(StoreFormat.storeDay(Instant.parse("2026-11-01T03:59:00Z"))).isEqualTo(LocalDate.of(2026, 10, 31));
         // 00:20 of 01-11 in La Paz
         assertThat(StoreFormat.storeDay(Instant.parse("2026-11-01T04:20:00Z"))).isEqualTo(LocalDate.of(2026, 11, 1));
+    }
+
+    @ParameterizedTest(name = "{0} es el día {1} en la tienda")
+    @CsvSource({
+        "2026-11-21T03:59:59Z, 2026-11-20",
+        "2026-11-21T04:00:00Z, 2026-11-21",
+        "2026-12-01T03:59:59Z, 2026-11-30",
+        "2026-12-01T04:00:00Z, 2026-12-01",
+        "2027-01-01T03:59:59Z, 2026-12-31",
+        "2027-01-01T04:00:00Z, 2027-01-01"
+    })
+    @DisplayName("Hoy es el día de La Paz: 23:59 sigue siendo ayer y 00:00 (04:00Z) ya es el día nuevo")
+    void todayFollowsTheStoreMidnight(String instant, String day) {
+        assertThat(StoreFormat.today(StoreClocks.at(instant))).isEqualTo(LocalDate.parse(day));
+    }
+
+    @ParameterizedTest(name = "{0} es el mes {1} en la tienda")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11",
+        "2026-12-01T04:00:00Z, 2026-12",
+        "2027-01-01T03:59:59Z, 2026-12",
+        "2027-01-01T04:00:00Z, 2027-01"
+    })
+    @DisplayName("El mes actual cambia a la medianoche de La Paz del primer día, también con el año")
+    void currentMonthFollowsTheStoreMidnight(String instant, String month) {
+        assertThat(StoreFormat.currentMonth(StoreClocks.at(instant))).isEqualTo(YearMonth.parse(month));
     }
 }

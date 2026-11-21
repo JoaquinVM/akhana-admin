@@ -34,6 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @ExtendWith(MockitoExtension.class)
 class CashSessionServiceTest {
@@ -70,12 +73,15 @@ class CashSessionServiceTest {
     private UUID sessionId;
     private CashSession activeSession;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         cashSessionService = new CashSessionServiceImpl(cashSessionRepository, saleRepository,
             new ExpectedCashCalculator(financialTransactionRepository),
             financialAccountRepository, financialCategoryRepository, financialTransactionRepository, entityManager,
-            cashNoAttentionDayRepository, cashSessionReopeningRepository, cashDenominationCutRepository);
+            cashNoAttentionDayRepository, cashSessionReopeningRepository, cashDenominationCutRepository, clock);
         sessionId = UUID.randomUUID();
         activeSession = CashSession.builder()
             .id(sessionId)
@@ -673,7 +679,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: abrir con el día de hoy no pide comentario por el día")
     void openSession_today_noCommentNeeded() {
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         stubLastSession(lastSession(148, today.minusDays(1)));
         stubOpeningGoesThrough();
 
@@ -686,7 +692,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: sin día en el pedido, la caja es de hoy")
     void openSession_noDay_isToday() {
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         stubLastSession(lastSession(148, today.minusDays(1)));
         stubOpeningGoesThrough();
 
@@ -719,7 +725,7 @@ class CashSessionServiceTest {
         assertThat(response.openingComment()).isEqualTo("Carga atrasada");
         // CAJ-11: everything of the session counts for its day; the opening keeps the real date and time and who opened
         assertThat(response.operationDate()).isEqualTo(SAT_31);
-        assertThat(StoreFormat.storeDay(response.openedAt())).isEqualTo(StoreFormat.today());
+        assertThat(StoreFormat.storeDay(response.openedAt())).isEqualTo(StoreFormat.today(clock));
         assertThat(response.openedBy()).isEqualTo("cajero1");
         assertThat(captureAdjustment().getOperationDate()).isEqualTo(SAT_31);
     }
@@ -727,7 +733,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: un día futuro se rechaza, también llamando directo a la API")
     void openSession_futureDay_rejected() {
-        assertOpeningRejected(openOn(StoreFormat.today().plusDays(1), "Mañana"), "El día de la caja no puede ser futuro.");
+        assertOpeningRejected(openOn(StoreFormat.today(clock).plusDays(1), "Mañana"), "El día de la caja no puede ser futuro.");
     }
 
     @Test
@@ -759,7 +765,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: si la caja de hoy está cerrada no se abre otra hoy")
     void openSession_todayAlreadyClosed_rejected() {
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         stubLastSession(lastSession(151, today));
 
         assertOpeningRejected(openOn(today, null), "El día debe ser posterior al de la última caja (#151, "
@@ -769,13 +775,13 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: el índice de un día por caja responde con el mensaje del día, no con el de caja abierta")
     void openSession_dayIndexViolated_answersDayTaken() {
-        stubLastSession(lastSession(148, StoreFormat.today().minusDays(1)));
+        stubLastSession(lastSession(148, StoreFormat.today(clock).minusDays(1)));
         when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
             .thenReturn(Optional.of(closedSession("150.00")));
         when(cashSessionRepository.saveAndFlush(any(CashSession.class))).thenThrow(new DataIntegrityViolationException(
             "duplicate", new RuntimeException("violates unique constraint \"uq_cash_sessions_operation_date\"")));
 
-        assertThatThrownBy(() -> cashSessionService.openSession(openOn(StoreFormat.today(), null), "cajero1"))
+        assertThatThrownBy(() -> cashSessionService.openSession(openOn(StoreFormat.today(clock), null), "cajero1"))
             .isInstanceOf(DuplicateResourceException.class)
             .hasMessage("Ya existe una caja de ese día.");
     }
@@ -785,7 +791,7 @@ class CashSessionServiceTest {
     void openSession_takesTheOpeningLockFirst() {
         stubOpeningGoesThrough();
 
-        cashSessionService.openSession(openOn(StoreFormat.today(), null), "cajero1");
+        cashSessionService.openSession(openOn(StoreFormat.today(clock), null), "cajero1");
 
         var order = inOrder(cashSessionRepository);
         order.verify(cashSessionRepository).lockCashOpening();
@@ -956,7 +962,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12, CAJ-13: la propuesta trae hoy, el primer día posible y los días sin resolver hasta ayer")
     void getOpeningProposal_daysFromTheLastSession() {
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         LocalDate lastDay = today.minusDays(8);
         stubLastSession(lastSession(148, lastDay));
 
@@ -976,7 +982,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: la propuesta avisa que la caja de hoy ya se cerró")
     void getOpeningProposal_todayClosed() {
-        LocalDate today = StoreFormat.today();
+        LocalDate today = StoreFormat.today(clock);
         stubLastSession(lastSession(151, today));
 
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
@@ -989,7 +995,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-12: una caja histórica de hoy no se puede reabrir, así que la propuesta no la ofrece")
     void getOpeningProposal_todayHistorical_notOffered() {
-        CashSession historical = lastSession(90, StoreFormat.today());
+        CashSession historical = lastSession(90, StoreFormat.today(clock));
         historical.setHistoricalImportId(UUID.randomUUID());
         stubLastSession(historical);
 
@@ -1001,7 +1007,7 @@ class CashSessionServiceTest {
     void getOpeningProposal_noSessions() {
         CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
 
-        assertThat(proposal.today()).isEqualTo(StoreFormat.today());
+        assertThat(proposal.today()).isEqualTo(StoreFormat.today(clock));
         assertThat(proposal.minDay()).isNull();
         assertThat(proposal.lastSessionNumber()).isNull();
         assertThat(proposal.unresolvedDays()).isEmpty();
@@ -1010,7 +1016,7 @@ class CashSessionServiceTest {
     @Test
     @DisplayName("CAJ-13: con solo históricas tampoco hay días por resolver, pero sí el límite")
     void getOpeningProposal_onlyHistorical() {
-        LocalDate lastDay = StoreFormat.today().minusDays(8);
+        LocalDate lastDay = StoreFormat.today(clock).minusDays(8);
         CashSession historical = lastSession(90, lastDay);
         historical.setHistoricalImportId(UUID.randomUUID());
         stubLastSession(historical);
@@ -1354,5 +1360,22 @@ class CashSessionServiceTest {
         ArgumentCaptor<FinancialTransaction> captor = ArgumentCaptor.forClass(FinancialTransaction.class);
         verify(financialTransactionRepository).save(captor.capture());
         return captor.getValue();
+    }
+
+    @ParameterizedTest(name = "a las {0} propone abrir el {1}")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11-30",
+        "2026-12-01T04:00:00Z, 2026-12-01"
+    })
+    @DisplayName("CAJ-12: el día propuesto al abrir caja es hoy en La Paz: a las 23:59 sigue siendo el día anterior")
+    void getOpeningProposal_todayFollowsTheStoreMidnight(String instant, String day) {
+        clock = StoreClocks.at(instant);
+        setUp();
+        when(cashSessionRepository.findFirstByStatusAndHistoricalImportIdIsNullOrderByClosedAtDesc(CashSessionStatus.CERRADA))
+            .thenReturn(Optional.empty());
+
+        CashOpeningProposalResponse proposal = cashSessionService.getOpeningProposal();
+
+        assertThat(proposal.today()).isEqualTo(LocalDate.parse(day));
     }
 }

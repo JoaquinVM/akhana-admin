@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -46,6 +47,8 @@ public class CreditorServiceImpl implements CreditorService {
     private final ExpectedCashCalculator expectedCashCalculator;
     private final ProductRepository productRepository;
     private final SaleItemRepository saleItemRepository;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -79,7 +82,7 @@ public class CreditorServiceImpl implements CreditorService {
             .description(trimToNull(request.description()))
             .status(status)
             .createdBy(username)
-            .createdAt(Instant.now())
+            .createdAt(Instant.now(clock))
             .build());
         return CreditorResponse.fromEntity(saved, ZERO);
     }
@@ -107,7 +110,7 @@ public class CreditorServiceImpl implements CreditorService {
             creditor.setStatus(request.status());
         }
         creditor.setUpdatedBy(username);
-        creditor.setUpdatedAt(Instant.now());
+        creditor.setUpdatedAt(Instant.now(clock));
         return CreditorResponse.fromEntity(creditorRepository.save(creditor), debt);
     }
 
@@ -122,7 +125,7 @@ public class CreditorServiceImpl implements CreditorService {
         // Logical delete: the history stays visible (RG-03)
         creditor.setStatus(CreditorStatus.ELIMINADO);
         creditor.setDeletedBy(username);
-        creditor.setDeletedAt(Instant.now());
+        creditor.setDeletedAt(Instant.now(clock));
         creditorRepository.save(creditor);
     }
 
@@ -252,7 +255,7 @@ public class CreditorServiceImpl implements CreditorService {
         FinancialAccount account = financialAccountRepository.findActiveByIdForUpdate(request.accountId())
             .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con ID: " + request.accountId()));
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         // CAJ-11: from Caja it counts for the day of the session; from another account, for the day it is recorded
         LocalDate operationDate = session != null ? session.getOperationDate() : StoreFormat.storeDay(now);
         String comment = trimToNull(request.comment());
@@ -338,7 +341,7 @@ public class CreditorServiceImpl implements CreditorService {
             .findFirst()
             .orElse(tx.getSourceAccount());
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         account.setCurrentBalance(account.getCurrentBalance().add(tx.getAmount()));
         financialAccountRepository.save(account);
         tx.setStatus(FinancialTransactionStatus.ANULADO);

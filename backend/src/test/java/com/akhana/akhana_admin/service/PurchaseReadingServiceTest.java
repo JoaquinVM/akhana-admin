@@ -30,6 +30,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import com.akhana.akhana_admin.service.impl.StoreFormat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import java.time.Instant;
 
 // COM-20 to COM-22, COM-25: what a reading proposes, with the AI simulated. No test here reaches OpenAI (CA-29)
 @ExtendWith(MockitoExtension.class)
@@ -50,10 +56,13 @@ class PurchaseReadingServiceTest {
     private Product cepilloAzul;
     private Product cepilloRojo;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         service = new PurchaseReadingServiceImpl(reader, readingRepository, purchaseRepository, productRepository,
-            supplierRepository, photoProcessor, new BigDecimal("10.00"), new BigDecimal("1.00"), new BigDecimal("5.00"));
+            supplierRepository, photoProcessor, new BigDecimal("10.00"), new BigDecimal("1.00"), new BigDecimal("5.00"), clock);
         flora = Supplier.builder().id(UUID.randomUUID()).name("Flora").code("FL").status(SupplierStatus.ACTIVO).build();
         other = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         jamaica = product("Jamaica 130ml", "JAM", "12.50", flora);
@@ -460,5 +469,21 @@ class PurchaseReadingServiceTest {
 
         assertThat(line.productId()).isNull();
         assertThat(line.suggestions().get(0).name()).isEqualTo("Crema Dental Menta");
+    }
+
+    @ParameterizedTest(name = "a las {0} suma el gasto desde {1} hasta {2}")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11-01T04:00:00Z, 2026-12-01T04:00:00Z",
+        "2026-12-01T04:00:00Z, 2026-12-01T04:00:00Z, 2027-01-01T04:00:00Z"
+    })
+    @DisplayName("COM-25: el tope cuenta el gasto del mes de La Paz, de medianoche a medianoche de la tienda")
+    void theCapCountsTheStoreMonth(String instant, String from, String to) {
+        service = new PurchaseReadingServiceImpl(reader, readingRepository, purchaseRepository, productRepository,
+            supplierRepository, photoProcessor, new BigDecimal("10.00"), new BigDecimal("1.00"), new BigDecimal("5.00"),
+            StoreClocks.at(instant));
+
+        service.getStatus(true);
+
+        verify(readingRepository).sumCostBetween(Instant.parse(from), Instant.parse(to));
     }
 }

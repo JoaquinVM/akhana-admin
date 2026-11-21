@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -59,12 +60,15 @@ class CreditorServiceTest {
     private final List<SaleItem> saleLines = new ArrayList<>();
     private final List<CreditorRepaymentItem> rows = new ArrayList<>();
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         creditorService = new CreditorServiceImpl(creditorRepository, creditorRepaymentRepository, creditorRepaymentItemRepository,
             purchasePaymentRepository,
             purchaseShippingChargeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository, financialTransactionRepository,
-            new ExpectedCashCalculator(financialTransactionRepository), productRepository, saleItemRepository);
+            new ExpectedCashCalculator(financialTransactionRepository), productRepository, saleItemRepository, clock);
 
         mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
         bisa = FinancialAccount.builder().id(UUID.randomUUID()).name("Bisa")

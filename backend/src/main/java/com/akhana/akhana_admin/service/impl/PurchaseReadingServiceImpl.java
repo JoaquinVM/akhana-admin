@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -48,6 +49,8 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
     private final BigDecimal monthlyCapUsd;
     private final BigDecimal inputPricePerMillion;
     private final BigDecimal outputPricePerMillion;
+    // The store's clock (America/La_Paz): decides the month whose spend counts for the cap (COM-25)
+    private final Clock clock;
     private final Semaphore permits = new Semaphore(MAX_READINGS_IN_PROCESS);
 
     public PurchaseReadingServiceImpl(PurchaseReader reader,
@@ -58,7 +61,8 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
                                       ProductPhotoProcessor photoProcessor,
                                       @Value("${app.openai.monthly-cap-usd:10.00}") BigDecimal monthlyCapUsd,
                                       @Value("${app.openai.input-price-per-million:1.00}") BigDecimal inputPricePerMillion,
-                                      @Value("${app.openai.output-price-per-million:5.00}") BigDecimal outputPricePerMillion) {
+                                      @Value("${app.openai.output-price-per-million:5.00}") BigDecimal outputPricePerMillion,
+                                      Clock clock) {
         this.reader = reader;
         this.readingRepository = readingRepository;
         this.purchaseRepository = purchaseRepository;
@@ -68,6 +72,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
         this.monthlyCapUsd = monthlyCapUsd;
         this.inputPricePerMillion = inputPricePerMillion;
         this.outputPricePerMillion = outputPricePerMillion;
+        this.clock = clock;
     }
 
     @Override
@@ -149,7 +154,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
     }
 
     private BigDecimal monthSpend() {
-        YearMonth month = YearMonth.now(StoreFormat.STORE_ZONE);
+        YearMonth month = StoreFormat.currentMonth(clock);
         return readingRepository.sumCostBetween(
             month.atDay(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant(),
             month.plusMonths(1).atDay(1).atStartOfDay(StoreFormat.STORE_ZONE).toInstant());

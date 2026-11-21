@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -42,11 +43,13 @@ public class ReportServiceImpl implements ReportService {
     private final SaleRepository saleRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ConsumptionRepository consumptionRepository;
+    // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
     public SalesByDayReportResponse getSalesByDay(LocalDate from, LocalDate to) {
-        Range range = Range.of(from, to);
+        Range range = Range.of(from, to, StoreFormat.today(clock));
 
         Map<LocalDate, Sums> days = new TreeMap<>();
         for (Object[] row : saleRepository.sumByDayAndType(range.from(), range.to())) {
@@ -94,7 +97,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public SalesBySupplierReportResponse getSalesBySupplier(LocalDate from, LocalDate to) {
-        Range range = Range.of(from, to);
+        Range range = Range.of(from, to, StoreFormat.today(clock));
         return salesBySupplier(range.from(), range.to(), saleRepository.findReportLines(range.from(), range.to()));
     }
 
@@ -147,7 +150,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public TransactionsByCategoryReportResponse getTransactionsByCategory(LocalDate from, LocalDate to) {
-        Range range = Range.of(from, to);
+        Range range = Range.of(from, to, StoreFormat.today(clock));
 
         Map<String, MovementSums> months = new TreeMap<>();
         for (Object[] row : financialTransactionRepository.sumByMonthAndCategory(range.from(), range.to())) {
@@ -210,7 +213,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public ConsumptionsReportResponse getConsumptions(LocalDate from, LocalDate to) {
-        Range range = Range.of(from, to);
+        Range range = Range.of(from, to, StoreFormat.today(clock));
 
         Map<YearMonth, List<ConsumptionsReportResponse.DayRow>> byMonth = new TreeMap<>();
         for (Object[] row : consumptionRepository.sumByDay(range.from(), range.to())) {
@@ -291,8 +294,8 @@ public class ReportServiceImpl implements ReportService {
     /** A range of days of operation (CAJ-11): "to" includes the whole day, like the sales history (POS-09). */
     private record Range(LocalDate from, LocalDate to) {
 
-        static Range of(LocalDate from, LocalDate to) {
-            LocalDate end = to != null ? to : LocalDate.now(StoreFormat.STORE_ZONE);
+        static Range of(LocalDate from, LocalDate to, LocalDate today) {
+            LocalDate end = to != null ? to : today;
             LocalDate start = from != null ? from : end.withDayOfMonth(1);
             if (start.isAfter(end)) {
                 throw new IllegalArgumentException("La fecha desde no puede ser posterior a la fecha hasta.");

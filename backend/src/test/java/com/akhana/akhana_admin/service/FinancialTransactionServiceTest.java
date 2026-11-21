@@ -30,6 +30,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialTransactionServiceTest {
@@ -54,11 +57,14 @@ class FinancialTransactionServiceTest {
     private FinancialCategory incomeCat;
     private FinancialCategory expenseCat;
 
+    // The store's clock; a test of a day boundary fixes it and builds the service again
+    private Clock clock = Clock.system(StoreFormat.STORE_ZONE);
+
     @BeforeEach
     void setUp() {
         financialTransactionService = new FinancialTransactionServiceImpl(financialTransactionRepository,
                 financialAccountRepository, financialCategoryRepository, cashSessionRepository,
-                new ExpectedCashCalculator(financialTransactionRepository), mock(jakarta.persistence.EntityManager.class));
+                new ExpectedCashCalculator(financialTransactionRepository), mock(jakarta.persistence.EntityManager.class), clock);
 
         bisaAccount = FinancialAccount.builder()
                 .id(UUID.randomUUID())
@@ -1141,5 +1147,48 @@ class FinancialTransactionServiceTest {
         assertThrows(IllegalStateException.class, () -> financialTransactionService.voidCashTransfer(
                 tx.getId(), VoidFinancialTransactionRequest.builder().voidReason("Error").build(), "operador"));
         verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "a las {0} el rango por defecto es {1} a {2}")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11-01, 2026-11-30",
+        "2026-12-01T04:00:00Z, 2026-12-01, 2026-12-01",
+        "2026-12-15T15:00:00Z, 2026-12-01, 2026-12-15"
+    })
+    @DisplayName("Sin fechas, los movimientos van del primer día del mes de La Paz hasta hoy en La Paz")
+    void testDefaultRangeFollowsTheStoreClock(String instant, String from, String to) {
+        clock = StoreClocks.at(instant);
+        setUp();
+
+        financialTransactionService.getTransactions(null, null, null, null, null, null, null);
+
+        verify(financialTransactionRepository).filterTransactions(LocalDate.parse(from), LocalDate.parse(to),
+                null, null, null, null, null);
+    }
+
+    @ParameterizedTest(name = "registrado a las {0} cuenta para el {1}")
+    @CsvSource({
+        "2026-12-01T03:59:59Z, 2026-11-30",
+        "2026-12-01T04:00:00Z, 2026-12-01"
+    })
+    @DisplayName("CAJ-11: un movimiento fuera de Caja cuenta para el día de La Paz en que se registra")
+    void testNonCashMovementCountsForTheStoreDay(String instant, String day) {
+        clock = StoreClocks.at(instant);
+        setUp();
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal("30.00"))
+                .description("Comisión bancaria")
+                .build();
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        when(financialCategoryRepository.findByIdAndDeletedAtIsNull(expenseCat.getId())).thenReturn(Optional.of(expenseCat));
+        when(financialTransactionRepository.save(any(FinancialTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        FinancialTransactionResponse res = financialTransactionService.createTransaction(req, "admin");
+
+        assertEquals(Instant.parse(instant), res.getTransactionDate());
+        assertEquals(LocalDate.parse(day), res.getOperationDate());
     }
 }
