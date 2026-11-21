@@ -15,7 +15,7 @@
     <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
   }
 
-  <div class="filters-card">
+  <div class="filters-card filters-stacked">
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
       @for (filter of statusFilters; track filter.value) {
         <button type="button" role="tab" class="filter-pill"
@@ -26,40 +26,57 @@
         </button>
       }
     </div>
-    <div class="filters-right">
-      <input type="date" class="form-control date-filter" aria-label="Desde"
-             [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
-      <input type="date" class="form-control date-filter" aria-label="Hasta"
-             [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
-      <select class="form-control select-filter" aria-label="Filtrar por tipo de venta"
-              [ngModel]="saleType()" (ngModelChange)="onSaleType($event)">
-        <option value="">Todos los tipos</option>
-        @for (type of saleTypes; track type.value) {
-          <option [value]="type.value">{{ type.label }}</option>
+    <div class="labeled-filters">
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="sales-from">Desde</label>
+        <input id="sales-from" type="date" class="form-control" aria-label="Desde"
+               [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="sales-to">Hasta</label>
+        <input id="sales-to" type="date" class="form-control" aria-label="Hasta"
+               [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="sales-type">Tipo de venta</label>
+        <select id="sales-type" class="form-control" aria-label="Filtrar por tipo de venta"
+                [ngModel]="saleType()" (ngModelChange)="onSaleType($event)">
+          <option value="">Todos los tipos</option>
+          @for (type of saleTypes; track type.value) {
+            <option [value]="type.value">{{ type.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="sales-method">Método de pago</label>
+        <select id="sales-method" class="form-control" aria-label="Filtrar por método de pago"
+                [ngModel]="paymentMethod()" (ngModelChange)="onPaymentMethod($event)">
+          <option value="">Todos los métodos</option>
+          @for (method of paymentMethods; track method.value) {
+            <option [value]="method.value">{{ method.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="sales-user">Usuario</label>
+        <select id="sales-user" class="form-control" aria-label="Filtrar por usuario"
+                [ngModel]="createdBy()" (ngModelChange)="onCreatedBy($event)">
+          <option value="">Todos los usuarios</option>
+          @for (seller of sellers(); track seller) {
+            <option [value]="seller">{{ seller }}</option>
+          }
+        </select>
+      </div>
+      <div class="labeled-filter">
+        <!-- POS-12: sales with unidentified lines waiting for their product -->
+        <label class="pending-filter">
+          <input type="checkbox" [checked]="pendingAssignment()" (change)="onPendingAssignment($any($event.target).checked)" />
+          Por asignar
+        </label>
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">Limpiar filtros</button>
         }
-      </select>
-      <select class="form-control select-filter" aria-label="Filtrar por método de pago"
-              [ngModel]="paymentMethod()" (ngModelChange)="onPaymentMethod($event)">
-        <option value="">Todos los métodos</option>
-        @for (method of paymentMethods; track method.value) {
-          <option [value]="method.value">{{ method.label }}</option>
-        }
-      </select>
-      <select class="form-control select-filter" aria-label="Filtrar por usuario"
-              [ngModel]="createdBy()" (ngModelChange)="onCreatedBy($event)">
-        <option value="">Todos los usuarios</option>
-        @for (seller of sellers(); track seller) {
-          <option [value]="seller">{{ seller }}</option>
-        }
-      </select>
-      <!-- POS-12: sales with unidentified lines waiting for their product -->
-      <label class="pending-filter">
-        <input type="checkbox" [checked]="pendingAssignment()" (change)="onPendingAssignment($any($event.target).checked)" />
-        Por asignar
-      </label>
-      @if (hasFilters()) {
-        <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">Limpiar filtros</button>
-      }
+      </div>
     </div>
   </div>
   @if (paymentMethod() === 'EFECTIVO' || paymentMethod() === 'QR' || paymentMethod() === 'CREDITO') {

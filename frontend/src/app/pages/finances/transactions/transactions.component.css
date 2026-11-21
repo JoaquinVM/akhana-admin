@@ -80,14 +80,15 @@
 }
 
 .btn-expense {
-  background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-  color: #ffffff;
+  /* H21: registering an expense is not destructive, so it is not red */
+  background: var(--bg-surface);
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   border-radius: var(--radius-md);
-  border: none;
+  border: 1px solid #cbd5e1;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -97,18 +98,18 @@
 
 .btn-expense:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .btn-transfer {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  color: #ffffff;
+  background: var(--bg-surface);
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   border-radius: var(--radius-md);
-  border: none;
+  border: 1px solid #cbd5e1;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -118,7 +119,7 @@
 
 .btn-transfer:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 /* Balances summary bar */
