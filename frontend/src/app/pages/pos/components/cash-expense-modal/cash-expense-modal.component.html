@@ -92,6 +92,7 @@
       </button>
       <button type="submit" class="btn btn-danger" [disabled]="isLoading()">
         @if (isLoading()) {
+          <span class="busy-ring" aria-hidden="true"></span>
           <span>Registrando...</span>
         } @else {
           <span>Registrar gasto</span>

@@ -9,7 +9,7 @@
         </svg>
       </span>
     </div>
-    <div class="kpi-value">Bs {{ session().openingAmount | number:'1.2-2' }}</div>
+    <div class="kpi-value"><app-money [value]="session().openingAmount" /></div>
     <span class="kpi-caption">Fondo físico de apertura</span>
   </div>
 
@@ -24,7 +24,7 @@
         </svg>
       </span>
     </div>
-    <div class="kpi-value text-green">Bs {{ session().totalSalesCash | number:'1.2-2' }}</div>
+    <div class="kpi-value"><app-money [value]="session().totalSalesCash" /></div>
     <span class="kpi-caption">Cobros físicos ingresados</span>
   </div>
 
@@ -40,7 +40,7 @@
         </svg>
       </span>
     </div>
-    <div class="kpi-value text-blue">Bs {{ session().totalSalesQr | number:'1.2-2' }}</div>
+    <div class="kpi-value"><app-money [value]="session().totalSalesQr" /></div>
     <span class="kpi-caption">Cobros digitales directos</span>
   </div>
 
@@ -54,10 +54,10 @@
       </span>
     </div>
     @if (expensesTotal() === null) {
-      <div class="kpi-value text-red">—</div>
+      <div class="kpi-value">—</div>
       <span class="kpi-caption">Sin datos por ahora</span>
     } @else {
-      <div class="kpi-value text-red">Bs {{ expensesTotal() | number:'1.2-2' }}</div>
+      <div class="kpi-value"><app-money [value]="expensesTotal()" /></div>
       <span class="kpi-caption">Salidas físicas en gaveta</span>
     }
   </div>
@@ -73,7 +73,7 @@
         </svg>
       </span>
     </div>
-    <div class="kpi-value highlight-value">Bs {{ expectedCash() | number:'1.2-2' }}</div>
+    <div class="kpi-value highlight-value"><app-money [value]="expectedCash()" /></div>
     <span class="kpi-caption highlight-caption">Inicial + Efectivo + Ingresos − Gastos − Retiros</span>
   </div>
 </div>

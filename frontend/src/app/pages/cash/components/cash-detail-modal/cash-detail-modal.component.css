@@ -190,8 +190,9 @@
 }
 
 .empty-icon {
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 0.5rem;
+  color: var(--color-herval);
 }
 
 .sale-tag {

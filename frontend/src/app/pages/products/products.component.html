@@ -152,7 +152,7 @@
           @if (isLoading()) {
             <tr>
               <td colspan="8">
-                <div class="table-state-container">
+                <div class="table-state-container table-loading" role="status">
                   <div class="spinner-large"></div>
                   <p>Cargando catálogo de productos...</p>
                 </div>
@@ -162,7 +162,7 @@
             <tr>
               <td colspan="8">
                 <div class="table-empty">
-                  <div class="table-empty-icon"><app-icon name="inbox" /></div>
+                  <div class="table-empty-icon"><app-icon name="empty" /></div>
                   <h4 class="table-empty-title">No se encontraron productos</h4>
                   <p class="table-empty-desc">
                     @if (searchTerm()) {

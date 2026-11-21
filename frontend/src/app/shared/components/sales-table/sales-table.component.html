@@ -37,9 +37,9 @@
           <td>{{ s.createdBy }}</td>
           <td>
             @if (s.status === 'ANULADA') {
-              <span class="status-badge-sale badge-voided">Anulada</span>
+              <span class="status-badge-sale badge-voided"><span class="state-dot" aria-hidden="true"></span>Anulada</span>
             } @else {
-              <span class="status-badge-sale badge-completed">Completada</span>
+              <span class="status-badge-sale badge-completed"><span class="state-dot" aria-hidden="true"></span>Completada</span>
             }
           </td>
           <td>
@@ -96,7 +96,7 @@
           </td>
           <td style="text-align: right">
             <strong class="sale-amount-val" [class.line-through]="s.status === 'ANULADA'">
-              Bs {{ s.totalAmount | number:'1.2-2' }}
+              <app-money [value]="s.totalAmount" />
             </strong>
           </td>
           <td style="text-align: right">

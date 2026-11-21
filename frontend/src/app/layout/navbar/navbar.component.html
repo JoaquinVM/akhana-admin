@@ -1,10 +1,10 @@
 <header class="top-navbar">
   <div class="navbar-left">
     <a routerLink="/pos" class="brand-link" (click)="closeAllMenus()" title="Akhana Admin POS">
-      <img src="images/akhana-logo.png" alt="Akhana Logo" class="brand-logo" />
+      <span class="brand-logo" aria-hidden="true"><img src="images/akhana-rostro.webp" alt="" width="36" height="36" /></span>
       <div class="brand-text">
-        <span class="brand-title">Akhana Admin</span>
-        <span class="brand-subtitle">PUNTO DE VENTA ZEN</span>
+        <span class="brand-title">Akhana</span>
+        <span class="brand-subtitle">Admin</span>
       </div>
     </a>
   </div>
@@ -47,6 +47,9 @@
                       class="item-badge"
                       [class.badge-cash-open]="item.route === '/pos' && isCashOpen()"
                       [class.badge-cash-closed]="item.route === '/pos' && !isCashOpen()">
+                      @if (item.route === '/pos') {
+                        <span class="cash-dot" aria-hidden="true"></span>
+                      }
                       {{ badgeText }}
                     </span>
                   }

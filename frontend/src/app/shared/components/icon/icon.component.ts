@@ -1,7 +1,8 @@
 import { Component, input } from '@angular/core';
 
 export type IconName = 'close' | 'tag' | 'package' | 'chart' | 'receipt' | 'users' | 'lock' | 'unlock' | 'bag'
-  | 'coins' | 'inbox' | 'check-circle' | 'handshake' | 'star' | 'cash' | 'qr' | 'leaf';
+  | 'coins' | 'inbox' | 'check-circle' | 'handshake' | 'star' | 'cash' | 'qr' | 'leaf'
+  | 'empty';
 
 /**
  * Line icons drawn as SVG, the same style as the POS (no emojis: they look different on each phone). Sized by

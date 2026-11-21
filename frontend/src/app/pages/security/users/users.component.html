@@ -86,7 +86,7 @@
           @if (isLoading()) {
             <tr>
               <td colspan="6">
-                <div class="table-state-container">
+                <div class="table-state-container table-loading" role="status">
                   <div class="spinner-large"></div>
                   <p>Cargando lista de usuarios...</p>
                 </div>
@@ -96,7 +96,7 @@
             <tr>
               <td colspan="6">
                 <div class="table-empty">
-                  <div class="table-empty-icon"><app-icon name="users" /></div>
+                  <div class="table-empty-icon"><app-icon name="empty" /></div>
                   <p class="table-empty-title">No se encontraron usuarios</p>
                   <p class="table-empty-subtitle">
                     {{ searchTerm() ? 'No hay coincidencias con la búsqueda realizada.' : 'Aún no hay usuarios registrados.' }}

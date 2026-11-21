@@ -3,7 +3,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--primary-color);
-  background-color: #f1f5f9;
+  background-color: var(--bg-subtle);
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-sm);
 }
@@ -20,27 +20,37 @@
   color: #9a3412;
 }
 
-/* Sale status badges */
+/* Sale state: a dot and a word, Herval filled when completed, a ring when voided */
 .status-badge-sale {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-full);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-sizing: border-box;
 }
 
 .status-badge-sale.badge-completed {
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  color: var(--text-primary);
+}
+
+.badge-completed .state-dot {
+  background-color: var(--color-herval);
 }
 
 .status-badge-sale.badge-voided {
-  background-color: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  color: var(--text-muted);
+}
+
+.badge-voided .state-dot {
+  border: 1.5px solid var(--text-soft);
 }
 
 .row-voided {
@@ -88,8 +98,9 @@
 
 .sale-amount-val {
   font-family: var(--font-mono);
-  font-size: 0.875rem;
-  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .sale-amount-val.line-through {

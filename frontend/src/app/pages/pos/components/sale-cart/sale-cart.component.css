@@ -75,7 +75,7 @@
 
 .empty-icon-wrap {
   margin-bottom: 0.5rem;
-  color: #cbd5e1;
+  color: var(--color-herval);
 }
 
 .empty-cart-svg {
@@ -86,7 +86,7 @@
 .cart-empty-state h4 {
   margin: 0 0 0.2rem;
   font-size: 0.9375rem;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .cart-empty-state p {

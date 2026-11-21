@@ -173,6 +173,9 @@
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" (click)="closeForm()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="isLoading()">
+        @if (isLoading()) {
+          <span class="busy-ring" aria-hidden="true"></span>
+        }
         {{ isLoading() ? 'Registrando...' : (formDirection() === 'INGRESO' ? 'Registrar ingreso' : 'Registrar retiro') }}
       </button>
     </div>
@@ -207,6 +210,9 @@
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" (click)="closeVoid()" [disabled]="isLoading()">Cancelar</button>
     <button type="button" class="btn btn-danger" (click)="confirmVoid()" [disabled]="isLoading() || !voidReason().trim()">
+      @if (isLoading()) {
+        <span class="busy-ring" aria-hidden="true"></span>
+      }
       {{ isLoading() ? 'Anulando...' : 'Confirmar anulación' }}
     </button>
   </div>

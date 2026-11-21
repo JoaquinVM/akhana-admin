@@ -21,7 +21,7 @@
   margin-bottom: 0.25rem;
 }
 
-.breadcrumb-separator { color: #cbd5e1; }
+.breadcrumb-separator { color: #c2b89f; }
 .breadcrumb-item.active { color: var(--primary-color); font-weight: 600; }
 
 .title-with-badge {
@@ -43,29 +43,64 @@
   margin: 0.25rem 0 0;
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #545f73;
+  color: var(--text-muted);
 }
 
+/* Cash state: a dot and a word. Herval dot that beats once when open, a ring when closed */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.625rem;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.625rem;
   border-radius: var(--radius-full);
-  font-family: var(--font-heading);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.status-badge::before {
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
 }
 
 .status-badge.badge-active {
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background-color: #f2f3ea;
+  color: var(--primary-color);
+}
+
+.status-badge.badge-active::before {
+  background-color: var(--color-herval);
+  animation: cash-open-beat 1.6s ease-out 1;
 }
 
 .status-badge.badge-closed {
-  background-color: #f1f5f9;
-  color: var(--text-muted);
-  border: 1px solid #cbd5e1;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+@keyframes cash-open-beat {
+  0% { box-shadow: 0 0 0 0 rgba(129, 137, 86, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(129, 137, 86, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(129, 137, 86, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-badge.badge-active::before { animation: none; }
+}
+
+/* Close cash: Terra border and text, not a filled red button */
+.btn-close-cash {
+  background-color: var(--bg-surface);
+  border-color: rgba(113, 60, 33, 0.45);
+  color: var(--color-terra);
+}
+
+.btn-close-cash:hover:not(:disabled) {
+  background-color: var(--color-marfil-soft);
+  border-color: var(--color-terra);
 }
 
 .header-actions {
