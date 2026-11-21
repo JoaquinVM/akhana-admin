@@ -697,6 +697,10 @@
   min-width: 9rem;
 }
 
+.presentations-table input[maxlength="50"] {
+  min-width: 8rem;
+}
+
 .presentations-table {
   width: 100%;
   border-collapse: collapse;
