@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormBuilder, Validators } from '@angular/forms';
 import {
   FinancialAccount,
   FinancialCategory,
@@ -85,31 +86,31 @@ export class TransactionsComponent implements OnInit {
   auditModalSubtitle = signal<string>('');
 
   // Formularios
-  incomeForm: FormGroup = this.fb.group({
+  incomeForm = this.fb.group({
     accountId: ['', Validators.required],
     categoryId: ['', Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     description: ['', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
 
-  expenseForm: FormGroup = this.fb.group({
+  expenseForm = this.fb.group({
     accountId: ['', Validators.required],
     categoryId: ['', Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     description: ['', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
 
-  transferForm: FormGroup = this.fb.group({
+  transferForm = this.fb.group({
     sourceAccountId: ['', Validators.required],
     destinationAccountId: ['', Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     description: ['Transferencia entre cuentas', [Validators.required, Validators.maxLength(255)]],
     notes: ['']
   });
 
-  editForm: FormGroup = this.fb.group({
+  editForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
     notes: [''],
     categoryId: ['']
@@ -277,10 +278,10 @@ export class TransactionsComponent implements OnInit {
     const val = this.incomeForm.value;
     const req: FinancialTransactionRequest = {
       type: 'INGRESO_MANUAL',
-      sourceAccountId: val.accountId,
-      categoryId: val.categoryId,
+      sourceAccountId: val.accountId!,
+      categoryId: val.categoryId!,
       amount: Number(val.amount),
-      description: val.description.trim(),
+      description: val.description!.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
 
@@ -292,7 +293,7 @@ export class TransactionsComponent implements OnInit {
         this.loadTransactions();
         this.loadMetadata();
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         this.modalFormError.set(err.error?.message || 'Error al registrar el ingreso.');
       }
@@ -310,10 +311,10 @@ export class TransactionsComponent implements OnInit {
     const val = this.expenseForm.value;
     const req: FinancialTransactionRequest = {
       type: 'GASTO_MANUAL',
-      sourceAccountId: val.accountId,
-      categoryId: val.categoryId,
+      sourceAccountId: val.accountId!,
+      categoryId: val.categoryId!,
       amount: Number(val.amount),
-      description: val.description.trim(),
+      description: val.description!.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
 
@@ -325,7 +326,7 @@ export class TransactionsComponent implements OnInit {
         this.loadTransactions();
         this.loadMetadata();
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         this.modalFormError.set(err.error?.message || 'Error al registrar el gasto.');
       }
@@ -349,10 +350,10 @@ export class TransactionsComponent implements OnInit {
 
     const req: FinancialTransactionRequest = {
       type: 'TRANSFERENCIA',
-      sourceAccountId: val.sourceAccountId,
-      destinationAccountId: val.destinationAccountId,
+      sourceAccountId: val.sourceAccountId!,
+      destinationAccountId: val.destinationAccountId!,
       amount: Number(val.amount),
-      description: val.description.trim(),
+      description: val.description!.trim(),
       notes: val.notes ? val.notes.trim() : undefined
     };
 
@@ -364,7 +365,7 @@ export class TransactionsComponent implements OnInit {
         this.loadTransactions();
         this.loadMetadata();
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         this.modalFormError.set(err.error?.message || 'Error al registrar la transferencia.');
       }
@@ -389,7 +390,7 @@ export class TransactionsComponent implements OnInit {
       sourceAccountId: tx.sourceAccount.id,
       destinationAccountId: tx.destinationAccount?.id,
       amount: tx.amount,
-      description: val.description.trim(),
+      description: val.description!.trim(),
       notes: val.notes ? val.notes.trim() : undefined,
       categoryId: val.categoryId || undefined
     };
@@ -401,7 +402,7 @@ export class TransactionsComponent implements OnInit {
         this.closeActionModal();
         this.loadTransactions();
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         this.modalFormError.set(err.error?.message || 'Error al actualizar la transacción.');
       }

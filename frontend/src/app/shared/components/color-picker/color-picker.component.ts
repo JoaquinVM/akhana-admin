@@ -7,6 +7,9 @@ export interface ColorOption {
   name: string;
 }
 
+// Default color for new accounts and financial categories (Verde Oliva)
+export const DEFAULT_COLOR = '#2e5b27';
+
 export const PRESET_COLORS: ColorOption[] = [
   { hex: '#164312', name: 'Bosque Profundo' },
   { hex: '#2e5b27', name: 'Verde Oliva' },

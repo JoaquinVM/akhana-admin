@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 import { searchDebouncer } from '../../../shared/utils/search-debounce';
@@ -58,7 +58,7 @@ export class UsersComponent implements OnInit {
   isCreating = signal<boolean>(false);
   createFormError = signal<string | null>(null);
 
-  createForm: FormGroup = this.fb.group({
+  createForm = this.fb.group({
     fullName: ['', [Validators.required, Validators.maxLength(150)]],
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
     password: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(72)]],
@@ -74,7 +74,7 @@ export class UsersComponent implements OnInit {
   originalFormValues = signal<{ fullName: string; role: Role } | null>(null);
   formVersion = signal<number>(0);
 
-  editForm: FormGroup = this.fb.group({
+  editForm = this.fb.group({
     fullName: ['', [Validators.required, Validators.maxLength(150)]],
     role: ['OPERATOR' as Role, [Validators.required]]
   });
@@ -191,10 +191,10 @@ export class UsersComponent implements OnInit {
     this.createFormError.set(null);
 
     const request: CreateUserRequest = {
-      fullName: fullName.trim(),
-      username: username.trim(),
-      password,
-      role
+      fullName: fullName!.trim(),
+      username: username!.trim(),
+      password: password!,
+      role: role!
     };
 
     this.userService.createUser(request).subscribe({
@@ -287,8 +287,8 @@ export class UsersComponent implements OnInit {
     this.editFormError.set(null);
 
     const request: UpdateUserRequest = {
-      fullName: this.editForm.value.fullName.trim(),
-      role: this.editForm.value.role
+      fullName: this.editForm.value.fullName!.trim(),
+      role: this.editForm.value.role!
     };
 
     this.userService.updateUser(user.id, request).subscribe({

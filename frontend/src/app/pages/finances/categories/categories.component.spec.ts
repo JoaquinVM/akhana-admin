@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FinancialCategoriesComponent } from './categories.component';
 import { FinancialCategoryService } from '../../../core/finance/financial-category.service';
 import { of } from 'rxjs';
+import { DEFAULT_COLOR } from '../../../shared/components/color-picker/color-picker.component';
 import { FinancialCategory } from '../../../core/finance/models/finance.models';
 
 describe('FinancialCategoriesComponent', () => {
@@ -88,7 +89,7 @@ describe('FinancialCategoriesComponent', () => {
     component.openCreateModal();
     expect(component.isFormModalOpen()).toBe(true);
     expect(component.isEditing()).toBe(false);
-    expect(component.categoryForm.get('color')?.value).toBe('#2E5B27');
+    expect(component.categoryForm.get('color')?.value).toBe(DEFAULT_COLOR);
 
     component.categoryForm.setValue({
       name: 'Servicios Básicos',

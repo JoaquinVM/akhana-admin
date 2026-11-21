@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Tag, TagRequest, TagStatus } from '../../core/tag/models/tag.models';
 import { TagService } from '../../core/tag/tag.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
@@ -62,7 +62,7 @@ export class TagsComponent implements OnInit {
   selectedAuditData = signal<Record<string, any> | null>(null);
   auditModalSubtitle = signal<string>('');
 
-  tagForm: FormGroup = this.fb.group({
+  tagForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
     color: ['', [Validators.required, Validators.maxLength(50)]]
   });
@@ -245,8 +245,8 @@ export class TagsComponent implements OnInit {
 
     const formValue = this.tagForm.value;
     const request: TagRequest = {
-      name: formValue.name.trim(),
-      color: formValue.color.trim()
+      name: formValue.name!.trim(),
+      color: formValue.color!.trim()
     };
 
     if (this.isEditing() && this.selectedTagId()) {
