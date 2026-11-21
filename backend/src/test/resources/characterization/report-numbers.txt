@@ -1,0 +1,82 @@
+== salesByDay
+SalesByDayReportResponse{from=2003-03-10, to=2003-03-12, months=[Month{month=2003-03, days=[Row{date=2003-03-10, normalSales=2, normalQuantity=4.000, normalTotal=43.33, normalCost=25.50, normalProfit=17.83, normalMargin=41.15, atCostSales=1, atCostQuantity=3.000, atCostTotal=18.00, pendingTotal=20.00, unidentifiedTotal=0.00, thirdPartyTotal=7.00, total=81.33, profit=17.83},
+ Row{date=2003-03-11, normalSales=2, normalQuantity=3.454, normalTotal=105.50, normalCost=78.52, normalProfit=26.98, normalMargin=25.57, atCostSales=0, atCostQuantity=0.000, atCostTotal=0.00, pendingTotal=0.00, unidentifiedTotal=0.00, thirdPartyTotal=15.00, total=105.50, profit=26.98},
+ Row{date=2003-03-12, normalSales=2, normalQuantity=5.000, normalTotal=89.99, normalCost=54.99, normalProfit=35.00, normalMargin=38.89, atCostSales=0, atCostQuantity=0.000, atCostTotal=0.00, pendingTotal=0.00, unidentifiedTotal=20.00, thirdPartyTotal=0.00, total=109.99, profit=35.00}], totals=Row{date=null, normalSales=6, normalQuantity=12.454, normalTotal=238.82, normalCost=159.01, normalProfit=79.81, normalMargin=33.42, atCostSales=1, atCostQuantity=3.000, atCostTotal=18.00, pendingTotal=20.00, unidentifiedTotal=20.00, thirdPartyTotal=22.00, total=296.82, profit=79.81}}], totals=Row{date=null, normalSales=6, normalQuantity=12.454, normalTotal=238.82, normalCost=159.01, normalProfit=79.81, normalMargin=33.42, atCostSales=1, atCostQuantity=3.000, atCostTotal=18.00, pendingTotal=20.00, unidentifiedTotal=20.00, thirdPartyTotal=22.00, total=296.82, profit=79.81}}
+== salesBySupplier
+SalesBySupplierReportResponse{from=2003-03-10, to=2003-03-12, suppliers=[Supplier{supplierId=supplierA, supplierName=CHR Proveedor A, months=[Row{month=2003-03, normalQuantity=9.000, normalTotal=82.37, normalCost=51.99, normalProfit=30.38, normalMargin=36.88, atCostQuantity=3.000, atCostTotal=18.00, total=100.37}], totals=Row{month=null, normalQuantity=9.000, normalTotal=82.37, normalCost=51.99, normalProfit=30.38, normalMargin=36.88, atCostQuantity=3.000, atCostTotal=18.00, total=100.37}},
+ Supplier{supplierId=supplierB, supplierName=CHR Proveedor B, months=[Row{month=2003-03, normalQuantity=3.454, normalTotal=156.45, normalCost=107.02, normalProfit=49.43, normalMargin=31.59, atCostQuantity=0.000, atCostTotal=0.00, total=156.45}], totals=Row{month=null, normalQuantity=3.454, normalTotal=156.45, normalCost=107.02, normalProfit=49.43, normalMargin=31.59, atCostQuantity=0.000, atCostTotal=0.00, total=156.45}}], totals=Row{month=null, normalQuantity=12.454, normalTotal=238.82, normalCost=159.01, normalProfit=79.81, normalMargin=33.42, atCostQuantity=3.000, atCostTotal=18.00, total=256.82}}
+== totals
+TotalsReportResponse{from=2003-03-10, to=2003-03-12, months=[Row{month=2003-03, normalSales=6, normalTotal=238.82, normalCost=159.01, normalProfit=79.81, normalMargin=33.42, atCostSales=1, atCostTotal=18.00, pendingTotal=20.00, unidentifiedTotal=20.00, thirdPartyTotal=22.00, total=296.82, consumptions=1, consumptionTotal=35.51, profitAfterConsumptions=44.30}], totals=Row{month=null, normalSales=6, normalTotal=238.82, normalCost=159.01, normalProfit=79.81, normalMargin=33.42, atCostSales=1, atCostTotal=18.00, pendingTotal=20.00, unidentifiedTotal=20.00, thirdPartyTotal=22.00, total=296.82, consumptions=1, consumptionTotal=35.51, profitAfterConsumptions=44.30}}
+== consumptions
+ConsumptionsReportResponse{from=2003-03-10, to=2003-03-12, months=[Month{month=2003-03, days=[DayRow{date=2003-03-12, consumptions=1, quantity=1.227, total=35.51}], totals=DayRow{date=null, consumptions=1, quantity=1.227, total=35.51}}], totals=DayRow{date=null, consumptions=1, quantity=1.227, total=35.51}, suppliers=[Supplier{supplierId=supplierA, supplierName=CHR Proveedor A, months=[SupplierRow{month=2003-03, quantity=1.000, total=6.00}], totals=SupplierRow{month=null, quantity=1.000, total=6.00}},
+ Supplier{supplierId=supplierB, supplierName=CHR Proveedor B, months=[SupplierRow{month=2003-03, quantity=0.227, total=29.51}], totals=SupplierRow{month=null, quantity=0.227, total=29.51}}], supplierTotals=SupplierRow{month=null, quantity=1.227, total=35.51}}
+== transactionsByCategory
+TransactionsByCategoryReportResponse{from=2003-03-10, to=2003-03-12, months=[Month{month=2003-03, incomes=[], incomeTotal=0.00, expenses=[CategoryRow{categoryId=expenseCategory, categoryName=CHR Gasto, amount=-12.50}], expenseTotal=-12.50, net=-12.50, transfers=[], consumptions=1, consumptionTotal=35.51}], totals=Month{month=null, incomes=[], incomeTotal=0.00, expenses=[CategoryRow{categoryId=expenseCategory, categoryName=CHR Gasto, amount=-12.50}], expenseTotal=-12.50, net=-12.50, transfers=[], consumptions=1, consumptionTotal=35.51}}
+== dashboard
+DashboardResponse{from=2003-03-10, to=2003-03-12, previousFrom=2003-03-03, previousTo=2003-03-05, current=Indicators{sales=238.82, cost=159.01, profit=79.81, margin=33.42, tickets=6, averageTicket=39.80, atCostSales=1, atCostTotal=18.00, consumptionTotal=35.51}, previous=Indicators{sales=10.00, cost=6.00, profit=4.00, margin=40.00, tickets=1, averageTicket=10.00, atCostSales=0, atCostTotal=0.00, consumptionTotal=0.00}, days=[DayPoint{date=2003-03-10, sales=43.33, profit=17.83},
+ DayPoint{date=2003-03-11, sales=105.50, profit=26.98},
+ DayPoint{date=2003-03-12, sales=89.99, profit=35.00}], previousDays=[DayPoint{date=2003-03-03, sales=0.00, profit=0.00},
+ DayPoint{date=2003-03-04, sales=10.00, profit=4.00},
+ DayPoint{date=2003-03-05, sales=0.00, profit=0.00}], payments=Payments{cash=220.83, qr=79.99, credit=18.00, historicalTotal=0.00, historicalSales=0}, topProductsBySales=[RankRow{id=P4, name=CHR P4, quantity=0.454, sales=85.50, profit=26.48},
+ RankRow{id=P2, name=CHR P2, quantity=3.000, sales=70.95, profit=22.95},
+ RankRow{id=P3, name=CHR P3, quantity=6.000, sales=56.66, profit=22.67},
+ RankRow{id=P1, name=CHR P1, quantity=3.000, sales=25.71, profit=7.71}], topProductsByProfit=[RankRow{id=P4, name=CHR P4, quantity=0.454, sales=85.50, profit=26.48},
+ RankRow{id=P2, name=CHR P2, quantity=3.000, sales=70.95, profit=22.95},
+ RankRow{id=P3, name=CHR P3, quantity=6.000, sales=56.66, profit=22.67},
+ RankRow{id=P1, name=CHR P1, quantity=3.000, sales=25.71, profit=7.71}], topSuppliersBySales=[RankRow{id=supplierB, name=CHR Proveedor B, quantity=3.454, sales=156.45, profit=49.43},
+ RankRow{id=supplierA, name=CHR Proveedor A, quantity=9.000, sales=82.37, profit=30.38}], topSuppliersByProfit=[RankRow{id=supplierB, name=CHR Proveedor B, quantity=3.454, sales=156.45, profit=49.43},
+ RankRow{id=supplierA, name=CHR Proveedor A, quantity=9.000, sales=82.37, profit=30.38}], expenses=[CategoryAmount{categoryId=expenseCategory, categoryName=CHR Gasto, amount=12.50}], expenseTotal=12.50, noAttentionDays=[]}
+== exportSalesByDay
+akhana-sales-by-day-2003-03-10-2003-03-12.xlsx
+# Ventas por día
+0: Ventas por día del 10/03/2003 al 12/03/2003
+2:  | Ventas normales |  |  |  |  |  | Ventas al costo |  |  |  |  |  | Total | 
+3: Día | Ventas | Cantidad | Total | Costo | Utilidad | Margen | Ventas | Cantidad | Total | Por asignar | Sin identificar | De terceros | Total | Utilidad
+4: 37690.0 | 2.0 | 4.0 | 43.33 | 25.5 | 17.83 | 0.4115 | 1.0 | 3.0 | 18.0 | 20.0 | 0.0 | 7.0 | 81.33 | 17.83
+5: 37691.0 | 2.0 | 3.454 | 105.5 | 78.52 | 26.98 | 0.2557 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 15.0 | 105.5 | 26.98
+6: 37692.0 | 2.0 | 5.0 | 89.99 | 54.99 | 35.0 | 0.3889 | 0.0 | 0.0 | 0.0 | 0.0 | 20.0 | 0.0 | 109.99 | 35.0
+7: Total marzo 2003 | 6.0 | 12.454 | 238.82 | 159.01 | 79.81 | 0.3342 | 1.0 | 3.0 | 18.0 | 20.0 | 20.0 | 22.0 | 296.82 | 79.81
+8: Total del rango | 6.0 | 12.454 | 238.82 | 159.01 | 79.81 | 0.3342 | 1.0 | 3.0 | 18.0 | 20.0 | 20.0 | 22.0 | 296.82 | 79.81
+
+== exportSalesBySupplier
+akhana-sales-by-supplier-2003-03-10-2003-03-12.xlsx
+# Ventas por proveedor
+0: Ventas por proveedor y mes del 10/03/2003 al 12/03/2003
+2:  | Ventas normales |  |  |  |  | Ventas al costo |  | 
+3: Proveedor / mes | Cantidad | Total | Costo | Utilidad | Margen | Cantidad | Total | Total
+4: CHR Proveedor A
+5:   marzo 2003 | 9.0 | 82.37 | 51.99 | 30.38 | 0.3688 | 3.0 | 18.0 | 100.37
+6: Total CHR Proveedor A | 9.0 | 82.37 | 51.99 | 30.38 | 0.3688 | 3.0 | 18.0 | 100.37
+7: CHR Proveedor B
+8:   marzo 2003 | 3.454 | 156.45 | 107.02 | 49.43 | 0.3159 | 0.0 | 0.0 | 156.45
+9: Total CHR Proveedor B | 3.454 | 156.45 | 107.02 | 49.43 | 0.3159 | 0.0 | 0.0 | 156.45
+10: Total del rango | 12.454 | 238.82 | 159.01 | 79.81 | 0.3342 | 3.0 | 18.0 | 256.82
+
+== exportTotals
+akhana-totals-2003-03-10-2003-03-12.xlsx
+# Totales
+0: Totales de ventas y utilidad del 10/03/2003 al 12/03/2003
+2:  | Ventas normales |  |  |  |  | Ventas al costo |  |  |  |  |  | Consumos al costo |  | 
+3: Mes | Ventas | Total | Costo | Utilidad | Margen | Ventas | Total | Por asignar | Sin identificar | De terceros | Total ventas | Consumos | Total | Utilidad menos consumos
+4: marzo 2003 | 6.0 | 238.82 | 159.01 | 79.81 | 0.3342 | 1.0 | 18.0 | 20.0 | 20.0 | 22.0 | 296.82 | 1.0 | 35.51 | 44.3
+5: Total del rango | 6.0 | 238.82 | 159.01 | 79.81 | 0.3342 | 1.0 | 18.0 | 20.0 | 20.0 | 22.0 | 296.82 | 1.0 | 35.51 | 44.3
+
+== exportConsumptions
+akhana-consumptions-2003-03-10-2003-03-12.xlsx
+# Por día
+0: Consumos al costo por día del 10/03/2003 al 12/03/2003
+2: Día | Consumos | Productos | Total al costo
+3: 37692.0 | 1.0 | 1.227 | 35.51
+4: Total marzo 2003 | 1.0 | 1.227 | 35.51
+5: Total del rango | 1.0 | 1.227 | 35.51
+# Por proveedor y mes
+0: Consumos al costo por proveedor y mes del 10/03/2003 al 12/03/2003
+2: Proveedor / mes | Productos | Total al costo
+3: CHR Proveedor A
+4:   marzo 2003 | 1.0 | 6.0
+5: Total CHR Proveedor A | 1.0 | 6.0
+6: CHR Proveedor B
+7:   marzo 2003 | 0.227 | 29.51
+8: Total CHR Proveedor B | 0.227 | 29.51
+9: Total del rango | 1.227 | 35.51
+
