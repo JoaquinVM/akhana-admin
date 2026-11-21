@@ -59,16 +59,6 @@ describe('TagService', () => {
     req.flush([mockTag]);
   });
 
-  it('debe obtener una etiqueta por id', () => {
-    service.getTagById('tag-1').subscribe(tag => {
-      expect(tag.id).toBe('tag-1');
-      expect(tag.name).toBe('Vegano');
-    });
-
-    const req = httpTesting.expectOne('/api/tags/tag-1');
-    expect(req.request.method).toBe('GET');
-    req.flush(mockTag);
-  });
 
   it('debe crear una etiqueta por POST', () => {
     const request: TagRequest = {

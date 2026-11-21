@@ -58,7 +58,6 @@ describe('UsersComponent', () => {
   beforeEach(async () => {
     mockUserService = {
       getUsers: vi.fn().mockReturnValue(of(mockPageResponse)),
-      getUserById: vi.fn().mockReturnValue(of(mockUsersList[0])),
       createUser: vi.fn().mockReturnValue(of(mockUsersList[0])),
       updateUser: vi.fn().mockReturnValue(of(mockUsersList[0])),
       deleteUser: vi.fn().mockReturnValue(of(void 0))

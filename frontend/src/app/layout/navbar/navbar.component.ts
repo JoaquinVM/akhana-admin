@@ -20,9 +20,6 @@ export class NavbarComponent implements OnInit {
 
   // Menu filtered by the permissions of the signed-in user
   readonly visibleNavGroups = computed<NavGroup[]>(() => {
-    if (typeof this.authService.permissions === 'function') {
-      this.authService.permissions();
-    }
     return NAVIGATION_CONFIG.map(group => {
       const authorizedChildren = group.children.filter(item => this.hasItemPermission(item));
       return {
@@ -31,10 +28,6 @@ export class NavbarComponent implements OnInit {
       };
     }).filter(group => group.children.length > 0);
   });
-
-  get navGroups(): NavGroup[] {
-    return this.visibleNavGroups();
-  }
 
   // Only one dropdown open at a time
   openGroupId = signal<string | null>(null);
@@ -70,10 +63,7 @@ export class NavbarComponent implements OnInit {
     if (!item.permissionKey) {
       return true;
     }
-    if (typeof this.authService.hasPermission === 'function') {
-      return this.authService.hasPermission(item.permissionKey);
-    }
-    return true;
+    return this.authService.hasPermission(item.permissionKey);
   }
 
   isGroupActive(group: NavGroup): boolean {

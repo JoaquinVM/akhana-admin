@@ -29,7 +29,6 @@ export class AuthService {
   readonly currentUser = this._currentUser.asReadonly();
 
   readonly isAuthenticated = computed(() => !!this._currentUser() && !!this.getToken());
-  readonly userRole = computed(() => this._currentUser()?.role ?? null);
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
   readonly mustChangePassword = computed(() => !!this._currentUser()?.mustChangePassword);
 
@@ -101,10 +100,6 @@ export class AuthService {
     } catch {
       return null;
     }
-  }
-
-  getCurrentUser(): UserSession | null {
-    return this._currentUser();
   }
 
   markSessionEnded(): void {
