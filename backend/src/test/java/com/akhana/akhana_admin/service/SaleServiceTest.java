@@ -397,7 +397,7 @@ class SaleServiceTest {
                 BigDecimal.ZERO, PaymentMethod.MIXTO, new BigDecimal(cash), null, new BigDecimal(cash), null);
             assertThatThrownBy(() -> saleService.registerSale(req, "cajero"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.");
+                .hasMessage("En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elige Efectivo o QR.");
         }
         verify(saleRepository, never()).save(any(Sale.class));
     }
@@ -1115,7 +1115,7 @@ class SaleServiceTest {
             assertThatThrownBy(() -> saleService.registerSale(atCostSale(PaymentMethod.EFECTIVO, null, null, customerId,
                     new BigDecimal("5.00"), BigDecimal.ONE), "cajero"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Elija un cliente activo para la venta a crédito.");
+                .hasMessage("Elige un cliente activo para la venta a crédito.");
         }
         verify(saleRepository, never()).save(any(Sale.class));
     }
@@ -1167,7 +1167,7 @@ class SaleServiceTest {
 
         assertThatThrownBy(() -> saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "cajero"))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Ya se cobró parte de esta venta a Tía Neida; anule primero el cobro.");
+            .hasMessage("Ya se cobró parte de esta venta a Tía Neida; anula primero el cobro.");
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
     }
 
@@ -1316,7 +1316,7 @@ class SaleServiceTest {
 
         assertThatThrownBy(() -> saleService.registerSale(saleWithId(clientRequestId, "3"), "cajero"))
             .isInstanceOf(com.akhana.akhana_admin.exception.DuplicateResourceException.class)
-            .hasMessage("Esta venta ya se registró como VTA-000041 con otro contenido; revise el historial antes de volver a cobrar.");
+            .hasMessage("Esta venta ya se registró como VTA-000041 con otro contenido; revisa el historial antes de volver a cobrar.");
         verify(saleRepository, never()).save(any());
     }
 }

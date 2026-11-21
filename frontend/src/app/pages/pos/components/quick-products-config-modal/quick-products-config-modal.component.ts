@@ -15,10 +15,12 @@ import { searchProducts } from '../../../../shared/utils/product-search';
 // Without a search the grid only suggests a few products; a search shows every match (POS-02)
 const SUGGESTIONS_WITHOUT_SEARCH = 10;
 
+import { PluralPipe } from '../../../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-quick-products-config-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, ModalComponent, ConfirmModalComponent],
+  imports: [PluralPipe, CommonModule, FormsModule, DragDropModule, ModalComponent, ConfirmModalComponent],
   templateUrl: './quick-products-config-modal.component.html',
   styleUrls: ['./quick-products-config-modal.component.css']
 })

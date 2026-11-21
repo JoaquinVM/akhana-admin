@@ -131,7 +131,7 @@ export class UsersComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de usuarios. Por favor, intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de usuarios. Por favor, intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -206,7 +206,7 @@ export class UsersComponent implements OnInit {
       },
       error: (err) => {
         this.isCreating.set(false);
-        this.createFormError.set(err.error?.message || 'Error al registrar el usuario. Verifique los datos.');
+        this.createFormError.set(err.error?.message || 'Error al registrar el usuario. Revisa los datos.');
       }
     });
   }

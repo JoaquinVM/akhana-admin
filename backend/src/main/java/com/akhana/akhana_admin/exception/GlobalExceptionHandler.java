@@ -32,15 +32,15 @@ import java.util.regex.Pattern;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    static final String UNREADABLE_REQUEST = "Los datos enviados no son válidos; revise el formulario e intente de nuevo.";
+    static final String UNREADABLE_REQUEST = "Los datos enviados no son válidos; revisa el formulario e intenta de nuevo.";
     static final String INVALID_PARAMETER = "El valor de «%s» no es válido.";
     static final String MISSING_PARAMETER = "Falta el dato «%s».";
-    static final String CONFLICT_WITH_ANOTHER_SAVE = "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualice la pantalla y revise antes de intentar de nuevo.";
-    static final String UNEXPECTED_ERROR = "Ocurrió un error inesperado. Intente de nuevo; si se repite, avise al administrador.";
+    static final String CONFLICT_WITH_ANOTHER_SAVE = "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualiza la pantalla y revisa antes de intentar de nuevo.";
+    static final String UNEXPECTED_ERROR = "Ocurrió un error inesperado. Intenta de nuevo; si se repite, avisa al administrador.";
     static final String NOT_FOUND = "No existe la dirección solicitada.";
     static final String METHOD_NOT_ALLOWED = "La operación no está permitida en esta dirección.";
     static final String MISSING_FILE = "Falta el archivo «%s».";
-    static final String OPERATION_IN_PROGRESS = "Otra operación está en curso, intente de nuevo.";
+    static final String OPERATION_IN_PROGRESS = "Otra operación está en curso, intenta de nuevo.";
     static final String FILE_TOO_LARGE = "El archivo supera el tamaño máximo de 10 MB.";
     private static final String OWN_PACKAGE = "com.akhana.akhana_admin.";
 

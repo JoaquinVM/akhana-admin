@@ -127,7 +127,7 @@ describe('DashboardComponent', () => {
 
   it('DSH-04: muestra la caja abierta, los saldos y las deudas', () => {
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Abierta · caja N.º 412');
+    expect(text).toContain('Abierta · Caja #412');
     expect(text).toContain('Bs 1,200.00');
     expect(text).toContain('Bisa');
     expect(text).toContain('Bs 5,000.00');
@@ -440,6 +440,6 @@ describe('DashboardComponent instalado (MOV-02)', () => {
     const browser = create(false);
     browser.getDashboard.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
     browser.fixture.componentInstance.selectPeriod('WEEK');
-    expect(browser.fixture.componentInstance.errorMessage()).toBe('Error al cargar el dashboard. Intente nuevamente.');
+    expect(browser.fixture.componentInstance.errorMessage()).toBe('Error al cargar el dashboard. Intenta nuevamente.');
   });
 });

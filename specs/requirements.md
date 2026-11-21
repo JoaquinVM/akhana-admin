@@ -94,7 +94,7 @@ El administrador puede hacer todo; el operador, lo del día a día de la tienda.
 
 ## 3. Requerimientos por versión
 
-Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz).
+Cada requerimiento indica su versión; los **V1** son los necesarios para dejar las planillas. Moneda: bolivianos (Bs), 2 decimales, redondeo HALF_UP; los montos se leen igual en la pantalla y en los mensajes del servidor, con formato boliviano (Bs 1.234,50), y las fechas son días de la tienda (America/La_Paz). Los textos tratan de tú y sin jerga, los contadores van en singular o plural según la cantidad («1 venta», «3 ventas») y una caja se nombra siempre «Caja #N».
 
 ### 3.1 Principios transversales · V1
 
@@ -168,7 +168,7 @@ Detalle en `debts.md`. Los saldos no se guardan: se calculan desde los registros
 Detalle en `consumptions.md`.
 
 - **CON-01** Consumo interno: productos y cantidades valorados al costo del momento, con «Para quién» y comentario. No mueve dinero ni pasa por Caja (P-35, P-36).
-- **CON-02** Venta al costo desde el POS: precio igual al costo, utilidad cero, sin descuentos ni productos con costo 0, con comentario opcional. Es para cualquiera (P-39), se paga en el momento o queda a crédito (DEU-05) y propone «Sin cliente» (P-49). Regalos y roturas son ventas al costo.
+- **CON-02** Venta al costo desde el POS: precio igual al costo, utilidad cero, sin descuentos ni productos con costo 0, con comentario opcional. Es para cualquiera (P-39), se paga en el momento o queda a crédito (DEU-05) y propone «Sin cliente» (P-49). Regalos y roturas son ventas al costo. En una venta al costo, el buscador y los productos rápidos muestran el costo.
 - **CON-03** Los reportes muestran por separado ventas normales, ventas al costo y consumos.
 - **CON-04** · V2 — Consumos y ventas al costo generan salidas de stock.
 - **CON-05** · V1 — Al registrar un consumo se ve el precio de venta de cada producto, en el buscador y en la tabla de líneas. Es solo una referencia: no se edita, no se guarda y no cambia el valor del consumo, que sigue siendo al costo (CON-01, P-27, P-35).
@@ -227,7 +227,7 @@ Detalle en `finance.md`, `reports.md` y `migration.md`.
 - **FIN-05** Categorías de ingreso y gasto, iniciando con las de la planilla: Venta, Otro ingreso, Pedido, Consumo, Comida, Transporte, Otro gasto, Retiro caja, Depósito, Utilidad (retiro del dueño), Ajuste y Pago a tercero (POS-13). Desde la V2 (CTB): «Utilidad (retiro del dueño)» pasa a llamarse Sueldos, también en lo pasado, porque todo pago por trabajo, de un socio o no, es sueldo y no hay retiro de utilidades; se suman Alquiler, Servicios, Impuestos (la cuota del RTS), Equipo y mejoras (va al activo, sin depreciación) y Devolución (INV-13), y cada categoría de gasto se marca fija o variable (al inicio, fijas: Alquiler, Sueldos, Servicios e Impuestos).
 - **FIN-06** Ingresos y gastos manuales, transferencias con validación de saldo suficiente (también al anular una transferencia o un ingreso), anulación auditada. Un movimiento manual no usa las categorías que registra el sistema (Pedido, Pago a tercero, Ajuste, Venta); Transporte sí.
 - **FIN-07** Cada venta genera automáticamente sus ingresos (efectivo a Caja, QR a la cuenta QR); esos movimientos no se editan desde Finanzas.
-- **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04).
+- **FIN-08** El saldo de una cuenta es la suma de sus movimientos activos (ver T-04). Los movimientos se muestran con su tipo en español (Venta, Gasto de caja, Pago de pedido, Transferencia…) y con signo: en una cuenta, la transferencia que sale va con − y la que entra con +. Las dos categorías «Ajuste» se leen «Ajuste (ingreso)» y «Ajuste (gasto)».
 - **FIN-09** Resumen con saldo por cuenta y saldo consolidado.
 - **FIN-10** Reportes (solo Administrador): ventas por día; ventas, cantidad y utilidad por proveedor y mes; movimientos por categoría y mes; totales de ventas y utilidad por mes; consumos al costo. Cada uno exportable a Excel. Detalle en `reports.md`.
 - **FIN-11** ✅ Hecha y retirada: quedan los datos marcados «Histórico» y `HistoricalImport`; ya no hay pantalla ni permiso. Migración histórica, una sola vez, de todos los datos de las dos planillas (ventas, movimientos, cierres de caja, pedidos con líneas, pagos y entrega, y consumos) desde su primer registro. Entran marcados «Histórico», de solo lectura, alimentan los reportes y no alteran saldos ni cajas; los saldos de hoy entran como saldo al corte (FIN-01). Cada día de Ventas es una venta histórica (P-32). Única corrección posterior: tres ingresos de la caja #142 que eran parte de su sobrante. Detalle en `migration.md`.

@@ -6,7 +6,7 @@ import { ReportService } from '../../../../core/report/report.service';
 import {
   CategoryAmount, TransactionsByCategoryMonth, TransactionsByCategoryReport, TransferAmount
 } from '../../../../core/report/models/report.models';
-import { monthLabel } from '../../../../core/report/report-labels';
+import { monthLabel, monthTitle } from '../../../../core/report/report-labels';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 interface ReportLine {
@@ -56,6 +56,7 @@ export class TransactionsByCategoryReportComponent implements OnInit {
   nets = computed(() => this.columns().map(column => column.net));
 
   readonly monthLabel = monthLabel;
+  readonly monthTitle = monthTitle;
 
   ngOnInit(): void {
     // Without dates the server proposes the current month up to today and returns them for the filters
@@ -75,7 +76,7 @@ export class TransactionsByCategoryReportComponent implements OnInit {
         },
         error: err => {
           this.report.set(null);
-          this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intente nuevamente.');
+          this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intenta nuevamente.');
           this.isLoading.set(false);
         }
       });

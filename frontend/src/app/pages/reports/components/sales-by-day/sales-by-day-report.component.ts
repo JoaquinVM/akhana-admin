@@ -41,7 +41,7 @@ export class SalesByDayReportComponent implements OnInit {
       },
       error: err => {
         this.report.set(null);
-        this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

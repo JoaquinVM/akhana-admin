@@ -130,7 +130,7 @@ describe('SaleDetailModalComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Venta #125');
     expect(compiled.textContent).toContain('Juan Pérez');
-    expect(compiled.textContent).toContain('Sesión #5');
+    expect(compiled.textContent).toContain('Caja #5');
     expect(compiled.textContent).toContain('Completada');
   });
 

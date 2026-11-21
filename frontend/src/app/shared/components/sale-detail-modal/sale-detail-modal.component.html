@@ -48,7 +48,7 @@
 
         <div class="info-field">
           <span class="field-label">Sesión de caja</span>
-          <span class="field-value session-badge">{{ sale.historical ? 'Histórico (planilla)' : 'Sesión #' + (sale.sessionNumber != null ? sale.sessionNumber : '—') }}</span>
+          <span class="field-value session-badge">{{ sale.historical ? 'Histórico (planilla)' : 'Caja #' + (sale.sessionNumber != null ? sale.sessionNumber : '—') }}</span>
         </div>
 
         @if (sale.saleType === 'AL_COSTO') {
@@ -117,7 +117,7 @@
       <div class="products-section">
         <div class="section-header">
           <h4 class="section-title">Productos</h4>
-          <span class="items-count-badge">{{ sale.items?.length || 0 }} ítems</span>
+          <span class="items-count-badge">{{ sale.items?.length || 0 | plural:'producto':'productos' }}</span>
         </div>
 
         <div class="table-responsive">

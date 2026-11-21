@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Registrar gasto de caja"
-  subtitle="Registra una salida de dinero directo de la gaveta de caja física"
+  subtitle="Dinero que sale de la caja para pagar algo"
   [size]="'md'"
   (close)="close.emit()">
 
@@ -32,7 +32,7 @@
         [class.is-invalid]="form.get('categoryId')?.invalid && (form.get('categoryId')?.touched || form.get('categoryId')?.dirty)">
         <option value="" disabled>Selecciona una categoría de gasto</option>
         @for (cat of categories(); track cat.id) {
-          <option [value]="cat.id">{{ cat.name }}</option>
+          <option [value]="cat.id">{{ cat | categoryLabel }}</option>
         }
       </select>
       @if (form.get('categoryId')?.invalid && (form.get('categoryId')?.touched || form.get('categoryId')?.dirty)) {

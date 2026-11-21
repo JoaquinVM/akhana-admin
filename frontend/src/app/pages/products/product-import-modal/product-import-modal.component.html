@@ -114,7 +114,7 @@
         @if (isBusy() && result()) {
           <span>Importando…</span>
         } @else if (result(); as r) {
-          <span>Importar {{ r.importedCount }} productos y {{ r.presentationCount }} presentaciones</span>
+          <span>Importar {{ r.importedCount | plural:'producto':'productos' }} y {{ r.presentationCount | plural:'presentación':'presentaciones' }}</span>
         } @else {
           <span>Importar</span>
         }

@@ -20,7 +20,7 @@ final class ClientRequestRetry {
     /** Thrown when the unique index of the client request id rejected the save. */
     static final class TakenException extends DuplicateResourceException {
         TakenException() {
-            super("Otra pantalla registró lo mismo al mismo tiempo; revise antes de volver a intentar.");
+            super("Otra pantalla registró lo mismo al mismo tiempo; revisa antes de volver a intentar.");
         }
     }
 

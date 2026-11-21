@@ -87,7 +87,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/login - A un administrador le pide el segundo factor sin entregar token (USR-08)")
     void login_Administrator_GetsSecondFactorChallenge() throws Exception {
         when(authService.login(any(LoginRequest.class), anyString())).thenReturn(LoginResponse.secondFactor(
-            "admin", "Ingrese el código de su app autenticadora.", new TwoFactorChallengeResponse("c-1", false, null, null)));
+            "admin", "Escribe el código de tu app autenticadora.", new TwoFactorChallengeResponse("c-1", false, null, null)));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -132,14 +132,14 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/login - Retorna 429 con mensaje en español cuando el login está bloqueado")
     void login_TooManyRequests_WhenBlocked() throws Exception {
         when(authService.login(any(LoginRequest.class), anyString()))
-            .thenThrow(new LoginBlockedException("Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente."));
+            .thenThrow(new LoginBlockedException("Demasiados intentos fallidos. Espera 15 minutos e intenta nuevamente."));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\": \"admin\", \"password\": \"x\"}"))
             .andExpect(status().isTooManyRequests())
             .andExpect(jsonPath("$.error").value("Too Many Requests"))
-            .andExpect(jsonPath("$.message").value("Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente."));
+            .andExpect(jsonPath("$.message").value("Demasiados intentos fallidos. Espera 15 minutos e intenta nuevamente."));
     }
 
     @Test
@@ -307,7 +307,7 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"initial-pass\",\"newPassword\":\"%s\"}".formatted(seventyTwoBytes + "a")))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La nueva contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela."));
+            .andExpect(jsonPath("$.message").value("La nueva contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtala."));
         verify(authService, never()).changePassword(any(), any(), any());
 
         mockMvc.perform(post("/api/auth/change-password")

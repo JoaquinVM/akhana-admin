@@ -53,7 +53,7 @@
               @if (prod.specialType) {
                 <span class="free-line-badge">Precio libre</span>
               } @else {
-                <span>Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
+                <span>Bs {{ (atCost() ? prod.buyPrice : prod.sellPrice) | number:'1.2-2' }}</span>
               }
               <button type="button" class="btn-add-result">+ Añadir</button>
             </div>
@@ -108,7 +108,7 @@
               </span>
               <span class="card-title">{{ prod.name }}</span>
               <span class="card-footer">
-                <span class="card-price">Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
+                <span class="card-price">Bs {{ (atCost() ? prod.buyPrice : prod.sellPrice) | number:'1.2-2' }}</span>
                 <span class="card-add-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
                     <line x1="12" y1="5" x2="12" y2="19" />

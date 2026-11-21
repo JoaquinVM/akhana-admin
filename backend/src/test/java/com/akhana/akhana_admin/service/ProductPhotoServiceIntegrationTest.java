@@ -249,7 +249,7 @@ class ProductPhotoServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("Si falta el archivo responde no encontrado, para que la pantalla marque «Sin foto»")
+    @DisplayName("Si falta el archivo responde no encontrado, para que la pantalla marca «Sin foto»")
     void missingFile_isNotFound() throws IOException {
         UUID photoId = photoService.upload(productId, photo(), null, "ana");
         Files.delete(photosDir.resolve(photoId + "-thumb.jpg"));

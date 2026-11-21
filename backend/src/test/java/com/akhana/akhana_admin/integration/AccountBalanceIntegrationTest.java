@@ -193,7 +193,7 @@ class AccountBalanceIntegrationTest {
         assertThatThrownBy(() -> saleService.voidSale(sold.id(), new VoidSaleRequest("Error"), USER))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 9,99). "
-                + "Anule primero los gastos o transferencias que usaron ese dinero.");
+                + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(balance(cashId)).isEqualByComparingTo("9.99");
         assertThat(saleStatus(sold.id())).isEqualTo("COMPLETADA");
     }
@@ -226,7 +226,7 @@ class AccountBalanceIntegrationTest {
         assertThatThrownBy(() -> saleService.voidSale(sold.id(), new VoidSaleRequest("Error"), USER))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("No se puede anular: la cuenta " + qrName + " quedaría con saldo negativo (saldo disponible: Bs 9,99). "
-                + "Anule primero los gastos o transferencias que usaron ese dinero.");
+                + "Anula primero los gastos o transferencias que usaron ese dinero.");
         assertThat(balance(qrId)).isEqualByComparingTo("9.99");
         assertThat(saleStatus(sold.id())).isEqualTo("COMPLETADA");
     }

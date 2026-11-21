@@ -109,7 +109,7 @@ public class FinancialCategoryServiceImpl implements FinancialCategoryService {
                         });
                 category.setIsSalesDefault(true);
             } else if (!requestedSalesDefault && Boolean.TRUE.equals(category.getIsSalesDefault())) {
-                throw new IllegalStateException("Debe existir siempre una categoría configurada como categoría de ventas. Seleccione otra categoría de ingreso antes de desactivarla.");
+                throw new IllegalStateException("Debe existir siempre una categoría configurada como categoría de ventas. Selecciona otra categoría de ingreso antes de desactivarla.");
             }
         }
 

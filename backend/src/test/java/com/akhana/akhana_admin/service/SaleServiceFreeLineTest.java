@@ -147,7 +147,7 @@ class SaleServiceFreeLineTest {
     @DisplayName("POS-11: sin nombre, con precio 0 o con 3 decimales se rechaza")
     void freeLineNeedsNameAndPrice() {
         assertThatThrownBy(() -> saleService.registerSale(cashSale(null, free(unidentified, "1", "  ", "10")), "op"))
-            .hasMessage("Escriba el nombre de la línea libre.");
+            .hasMessage("Escribe el nombre de la línea libre.");
         assertThatThrownBy(() -> saleService.registerSale(cashSale(null, free(unidentified, "1", "Té", "0")), "op"))
             .hasMessage("El precio de 'Té' debe ser mayor a 0, con hasta 2 decimales.");
         assertThatThrownBy(() -> saleService.registerSale(cashSale(null, free(unidentified, "1", "Té", "1.005")), "op"))
@@ -225,7 +225,7 @@ class SaleServiceFreeLineTest {
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("40.00"));
 
         assertThatThrownBy(() -> saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "op"))
-            .hasMessage("Ya se devolvió a Mami parte de esta venta; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de esta venta; anula primero la devolución.");
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
 
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("60.00"));
@@ -244,7 +244,7 @@ class SaleServiceFreeLineTest {
         when(creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), mami.getId())).thenReturn(true);
 
         assertThatThrownBy(() -> saleService.voidSale(sale.getId(), new VoidSaleRequest("Error"), "op"))
-            .hasMessage("Ya se devolvió a Mami parte de esta venta; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de esta venta; anula primero la devolución.");
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.COMPLETADA);
 
         when(creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), mami.getId())).thenReturn(false);
@@ -280,7 +280,7 @@ class SaleServiceFreeLineTest {
             .hasMessage("'Producto de Mami' es un producto especial: solo se vende en el POS con nombre y precio.");
         normal.setSaleUnit(SaleUnit.KILOGRAM);
         assertThatThrownBy(() -> saleService.assignItem(sale.getId(), line.getId(), normal.getId(), "admin"))
-            .hasMessage("Elija un producto activo que se venda por unidad.");
+            .hasMessage("Elige un producto activo que se venda por unidad.");
         sale.setStatus(SaleStatus.ANULADA);
         assertThatThrownBy(() -> saleService.closeUnidentified(sale.getId(), line.getId(), "admin"))
             .hasMessage("Una venta anulada no se asigna.");

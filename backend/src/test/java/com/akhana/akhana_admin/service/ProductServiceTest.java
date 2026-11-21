@@ -510,7 +510,7 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.createProduct(specialRequest(ProductSpecialType.UNIDENTIFIED, null), "admin"))
                 .hasMessage("Ya existe un producto sin identificar.");
         assertThatThrownBy(() -> productService.createProduct(specialRequest(ProductSpecialType.THIRD_PARTY, null), "admin"))
-                .hasMessage("Elija la dueña del producto de tercero.");
+                .hasMessage("Elige la dueña del producto de tercero.");
 
         Creditor mami = Creditor.builder().id(UUID.randomUUID()).name("Mami").status(CreditorStatus.ACTIVO).build();
         when(creditorRepository.findById(mami.getId())).thenReturn(Optional.of(mami));

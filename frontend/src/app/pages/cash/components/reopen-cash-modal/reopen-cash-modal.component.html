@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Reabrir caja"
-  [subtitle]="'Sesión #' + (session()?.sessionNumber || '—')"
+  [subtitle]="'Caja #' + (session()?.sessionNumber || '—')"
   size="md"
   [closeOnBackdrop]="false"
   (close)="onCancel()">

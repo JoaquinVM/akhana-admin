@@ -388,7 +388,7 @@ class FinancialTransactionServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
-        assertTrue(ex.getMessage().contains("anúlelo y regístrelo de nuevo"));
+        assertTrue(ex.getMessage().contains("anúlalo y regístralo de nuevo"));
         assertEquals(new BigDecimal("100.00"), tx.getAmount());
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         verify(financialTransactionRepository, never()).save(any());
@@ -411,7 +411,7 @@ class FinancialTransactionServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> financialTransactionService.updateTransaction(tx.getId(), req, "admin"));
-        assertTrue(ex.getMessage().contains("anúlelo y regístrelo de nuevo"));
+        assertTrue(ex.getMessage().contains("anúlalo y regístralo de nuevo"));
         assertEquals(bisaAccount, tx.getSourceAccount());
         assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
         assertEquals(new BigDecimal("500.00"), cajaAccount.getCurrentBalance());

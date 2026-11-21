@@ -134,7 +134,7 @@ export class PurchasesComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.errorMessage.set('Error al cargar los pedidos. Intente nuevamente.');
+        this.errorMessage.set('Error al cargar los pedidos. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

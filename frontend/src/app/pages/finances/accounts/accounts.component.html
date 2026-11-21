@@ -8,7 +8,7 @@
         <span class="breadcrumb-item active">Cuentas</span>
       </nav>
       <h1 class="page-title">Cuentas</h1>
-      <p class="page-subtitle">Administra las cuentas de efectivo, bancos y billeteras electrónicas del negocio</p>
+      <p class="page-subtitle">Cuentas de efectivo, bancos y billeteras del negocio</p>
     </div>
 
     <div class="header-actions">
@@ -235,7 +235,7 @@
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     [title]="'¿Descartar cambios?'"
-    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Descartas los cambios o sigues editando?'"
     [confirmText]="'Descartar cambios'"
     [cancelText]="'Continuar editando'"
     [variant]="'warning'"
@@ -269,7 +269,7 @@
           formControlName="amount"
           placeholder="0.00" />
         @if (openingBalanceControl.touched && openingBalanceControl.invalid) {
-          <span class="field-error">Ingrese un monto mayor o igual a 0.</span>
+          <span class="field-error">Ingresa un monto mayor o igual a 0.</span>
         }
         <span class="form-hint">
           Reemplaza el saldo inicial. Solo se puede cargar mientras la cuenta no tenga otros movimientos
@@ -337,16 +337,17 @@
                   </td>
                   <td>
                     <span class="tx-badge" [class]="'tx-type-' + tx.type.toLowerCase()">
-                      {{ tx.type }}
+                      {{ tx | txType }}
                     </span>
                   </td>
                   <td class="cell-desc">{{ tx.description }}</td>
-                  <td class="cell-amount" [class.negative]="tx.type === 'GASTO_MANUAL'">
-                    Bs {{ tx.amount | number:'1.2-2' }}
+                  @let sign = txSign(tx);
+                  <td class="cell-amount" [class.negative]="sign === '-'" [class.positive]="sign === '+'">
+                    {{ sign }}Bs {{ tx.amount | number:'1.2-2' }}
                   </td>
                   <td>
                     <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
-                      {{ tx.status }}
+                      {{ tx.status | txStatus }}
                     </span>
                   </td>
                 </tr>

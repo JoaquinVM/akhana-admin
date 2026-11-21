@@ -24,7 +24,7 @@ public class CreditorServiceImpl implements CreditorService {
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar la devolución.";
-    static final String NO_DEBTS_CHOSEN = "Elija las deudas que se pagan.";
+    static final String NO_DEBTS_CHOSEN = "Elige las deudas que se pagan.";
     static final String DEBTS_CHANGED = "Las deudas elegidas cambiaron; vuelva a abrir el detalle.";
     static final String THIRD_PARTY_CATEGORY_MISSING = "No existe la categoría Pago a tercero; no se puede registrar la devolución.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
@@ -482,7 +482,7 @@ public class CreditorServiceImpl implements CreditorService {
     private static void ensureNoDebt(Creditor creditor, BigDecimal debt) {
         if (debt.signum() > 0) {
             throw new IllegalStateException(creditor.getName() + " tiene una deuda de " + StoreFormat.money(debt)
-                + "; devuélvala antes de darla de baja.");
+                + "; devuélvela antes de darla de baja.");
         }
     }
 

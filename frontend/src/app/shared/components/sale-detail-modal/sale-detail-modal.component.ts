@@ -13,10 +13,12 @@ export interface PaymentMethodItem {
   amount: number;
 }
 
+import { PluralPipe } from '../../utils/plural.pipe';
+
 @Component({
   selector: 'app-sale-detail-modal',
   standalone: true,
-  imports: [CommonModule, ModalComponent],
+  imports: [PluralPipe, CommonModule, ModalComponent],
   templateUrl: './sale-detail-modal.component.html',
   styleUrls: ['./sale-detail-modal.component.css']
 })

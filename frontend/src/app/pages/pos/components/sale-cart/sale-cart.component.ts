@@ -12,10 +12,12 @@ export interface CartLineChange<T = number> {
  * The cart of the register-sale screen: item count, empty cart, at-cost switch (CON-02) and the lines. The cart
  * lives in register-sale; this card only shows it and reports what the user does.
  */
+import { PluralPipe } from '../../../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-sale-cart',
   standalone: true,
-  imports: [CartLineComponent],
+  imports: [PluralPipe, CartLineComponent],
   templateUrl: './sale-cart.component.html',
   styleUrls: ['./sale-cart.component.css']
 })

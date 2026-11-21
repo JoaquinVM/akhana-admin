@@ -7,9 +7,12 @@ import {
 } from '../../../../../core/finance/models/finance.models';
 
 // Transaction list filters; the parent keeps the values and queries again
+import { CategoryLabelPipe } from '../../../../../core/finance/transaction-labels';
+
 @Component({
   selector: 'app-transactions-filters',
   standalone: true,
+  imports: [CategoryLabelPipe],
   templateUrl: './transactions-filters.component.html',
   styleUrls: ['./transactions-filters.component.css']
 })

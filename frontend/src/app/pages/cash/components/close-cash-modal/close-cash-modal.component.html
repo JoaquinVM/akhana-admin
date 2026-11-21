@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Cierre y arqueo de caja"
-  subtitle="Conteo físico de gaveta por cortes o declaración directa del monto final"
+  subtitle="Cuenta los billetes y monedas, o escribe el monto contado"
   size="xl"
   [closeOnBackdrop]="false"
   (close)="onCancel()">
@@ -99,7 +99,7 @@
       @if (activeMode() === 'ARQUEO') {
         <div class="cuts-sync-badge">
           <span class="sync-dot"></span>
-          <span>Sincronización en vivo activada</span>
+          <span>El total se suma solo al contar</span>
         </div>
       }
     </div>

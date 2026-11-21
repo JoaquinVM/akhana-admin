@@ -59,7 +59,7 @@
         (change)="selectedCategoryId.set($any($event.target).value); filterChange.emit()">
         <option value="">Todas las categorías</option>
         @for (cat of categories(); track cat.id) {
-          <option [value]="cat.id">{{ cat.name }} ({{ cat.type }})</option>
+          <option [value]="cat.id">{{ cat | categoryLabel }}</option>
         }
       </select>
     </div>

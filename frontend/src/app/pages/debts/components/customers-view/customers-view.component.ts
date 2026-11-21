@@ -114,7 +114,7 @@ export class CustomersViewComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: err => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar los clientes. Intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar los clientes. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

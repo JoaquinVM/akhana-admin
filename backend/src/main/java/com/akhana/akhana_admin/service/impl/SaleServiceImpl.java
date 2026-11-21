@@ -65,16 +65,16 @@ public class SaleServiceImpl implements SaleService {
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
     static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
     static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
-    static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.";
+    static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elige Efectivo o QR.";
     static final String MIXED_CASH_NOT_ROUND = "En un pago mixto la parte en efectivo debe ir en múltiplos de Bs 0,10; el QR lleva los centavos.";
     // POS-04 (097): the smallest coin; cash is always charged in multiples of it
     static final BigDecimal SMALLEST_COIN = new BigDecimal("0.10");
     static final String AT_COST_NO_DISCOUNTS = "Una venta al costo no admite descuentos.";
     static final String CREDIT_ONLY_AT_COST = "Solo una venta al costo puede quedar a crédito.";
-    static final String CREDIT_CUSTOMER_REQUIRED = "Elija un cliente activo para la venta a crédito.";
+    static final String CREDIT_CUSTOMER_REQUIRED = "Elige un cliente activo para la venta a crédito.";
     static final String CREDIT_OUT_OF_RANGE = "El crédito debe estar entre Bs 0,00 y el total de la venta.";
     static final String CREDIT_METHOD_INCOMPLETE = "El pago no cubre el total: lo cobrado más el crédito debe ser igual al total de la venta.";
-    static final String FREE_NAME_REQUIRED = "Escriba el nombre de la línea libre.";
+    static final String FREE_NAME_REQUIRED = "Escribe el nombre de la línea libre.";
     static final String FREE_LINE_ONLY_SPECIAL = "Solo un producto especial lleva nombre y precio escritos.";
     static final String FREE_LINE_NO_DISCOUNT = "Una línea libre no admite descuentos.";
     static final String LINE_TOTAL_ONLY_BY_WEIGHT = "Solo se puede escribir el total en una línea de «Otro peso».";
@@ -84,9 +84,9 @@ public class SaleServiceImpl implements SaleService {
     static final String AT_COST_NO_FREE_LINES = "Una venta al costo no admite líneas libres.";
     static final String ALREADY_ASSIGNED = "La línea ya fue asignada.";
     static final String VOIDED_SALE_ASSIGNMENT = "Una venta anulada no se asigna.";
-    static final String ASSIGNABLE_PRODUCT_REQUIRED = "Elija un producto activo que se venda por unidad.";
+    static final String ASSIGNABLE_PRODUCT_REQUIRED = "Elige un producto activo que se venda por unidad.";
     static final int FREE_NAME_MAX = 150;
-    static final String CLIENT_REQUEST_MISMATCH = "Esta venta ya se registró como %s con otro contenido; revise el historial antes de volver a cobrar.";
+    static final String CLIENT_REQUEST_MISMATCH = "Esta venta ya se registró como %s con otro contenido; revisa el historial antes de volver a cobrar.";
     static final String CLIENT_REQUEST_INDEX = "ux_sales_client_request_id";
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -458,7 +458,7 @@ public class SaleServiceImpl implements SaleService {
             BigDecimal balance = Optional.ofNullable(customerRepository.computeBalance(customer.getId())).orElse(BigDecimal.ZERO);
             if (balance.subtract(sale.getCreditAmount()).signum() < 0) {
                 throw new IllegalStateException("Ya se cobró parte de esta venta a " + customer.getName()
-                    + "; anule primero el cobro.");
+                    + "; anula primero el cobro.");
             }
         }
 
@@ -476,7 +476,7 @@ public class SaleServiceImpl implements SaleService {
                 if (debt.subtract(owed.get(owner.getId())).signum() < 0
                         || creditorRepaymentItemRepository.existsActiveForSale(sale.getId(), owner.getId())) {
                     throw new IllegalStateException("Ya se devolvió a " + owner.getName()
-                        + " parte de esta venta; anule primero la devolución.");
+                        + " parte de esta venta; anula primero la devolución.");
                 }
             }
         }

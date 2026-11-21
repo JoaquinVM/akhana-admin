@@ -245,9 +245,9 @@ class CreditorServiceTest {
 
         assertThatThrownBy(() -> creditorService.updateCreditor(mami.getId(),
             new CreditorRequest("Mami", null, null, CreditorStatus.INACTIVO), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvala antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvela antes de darla de baja.");
         assertThatThrownBy(() -> creditorService.deleteCreditor(mami.getId(), "admin"))
-            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvala antes de darla de baja.");
+            .hasMessage("Mami tiene una deuda de Bs 150,00; devuélvela antes de darla de baja.");
         assertThat(mami.getStatus()).isEqualTo(CreditorStatus.ACTIVO);
     }
 
@@ -496,10 +496,10 @@ class CreditorServiceTest {
         String changed = "Las deudas elegidas cambiaron; vuelva a abrir el detalle.";
 
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(), pay(bisa, "100"), "operator"))
-            .hasMessage("Elija las deudas que se pagan.");
+            .hasMessage("Elige las deudas que se pagan.");
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             new CreditorRepaymentRequest(bisa.getId(), new BigDecimal("100"), null, null), "operator"))
-            .hasMessage("Elija las deudas que se pagan.");
+            .hasMessage("Elige las deudas que se pagan.");
         // The screen showed another total
         assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
             pay(bisa, "99.99", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator"))

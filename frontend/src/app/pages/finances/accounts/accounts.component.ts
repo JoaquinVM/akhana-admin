@@ -13,10 +13,14 @@ import { FormSnapshot, hasFormChanges } from '../../../shared/utils/form-changes
 import { ConnectionNoticeComponent } from '../../../shared/components/connection-notice/connection-notice.component';
 import { operationDayLabel } from '../../../shared/utils/store-date';
 
+import { TransactionStatusPipe, TransactionTypePipe, transactionSign } from '../../../core/finance/transaction-labels';
+
 @Component({
   selector: 'app-accounts',
   standalone: true,
   imports: [
+    TransactionTypePipe,
+    TransactionStatusPipe,
     ConnectionNoticeComponent,
     CommonModule,
     ReactiveFormsModule,
@@ -60,6 +64,11 @@ export class AccountsComponent implements OnInit {
   isMovementsModalOpen = signal<boolean>(false);
   selectedAccountForMovements = signal<FinancialAccount | null>(null);
   accountTransactions = signal<FinancialTransaction[]>([]);
+
+  // H6: seen from the account, a transfer out is - and one in is +
+  txSign(tx: FinancialTransaction): string {
+    return transactionSign(tx, this.selectedAccountForMovements()?.id);
+  }
   isLoadingMovements = signal<boolean>(false);
   movementsLoadFailed = signal<boolean>(false);
 

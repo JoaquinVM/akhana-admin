@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ReportExportButtonComponent } from '../export-button/report-export-button.component';
 import { ReportService } from '../../../../core/report/report.service';
 import { TotalsReport } from '../../../../core/report/models/report.models';
-import { monthLabel } from '../../../../core/report/report-labels';
+import { monthLabel, monthTitle } from '../../../../core/report/report-labels';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 
 // FIN-10 / CON-03: sales and profit totals per month, with consumptions at cost and profit minus consumptions
@@ -41,7 +41,7 @@ export class TotalsReportComponent implements OnInit {
       },
       error: err => {
         this.report.set(null);
-        this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.message || 'Error al cargar el reporte. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -58,4 +58,5 @@ export class TotalsReportComponent implements OnInit {
   }
 
   readonly monthLabel = monthLabel;
+  readonly monthTitle = monthTitle;
 }

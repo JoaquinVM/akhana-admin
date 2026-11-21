@@ -45,8 +45,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private final Clock clock;
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
-    static final String AMOUNT_EDIT = "El monto de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
-    static final String ACCOUNT_EDIT = "La cuenta de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
+    static final String AMOUNT_EDIT = "El monto de un movimiento registrado no se puede editar; si hay un error, anúlalo y regístralo de nuevo.";
+    static final String ACCOUNT_EDIT = "La cuenta de un movimiento registrado no se puede editar; si hay un error, anúlalo y regístralo de nuevo.";
     static final String CLOSED_SESSION_EDIT = "No se pueden editar movimientos de una caja cerrada; corríjalos en la caja actual.";
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String INITIAL_BALANCE_VOID = "El saldo inicial de una cuenta no se puede anular.";
@@ -58,9 +58,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
     static final String CASH_TRANSFER_SAME_ACCOUNT = "Elige una cuenta distinta de Caja para el ingreso o retiro.";
     static final String CASH_TRANSFER_ONLY = "Solo se pueden anular desde el POS los ingresos y retiros de caja.";
-    static final String SYSTEM_CATEGORY = "La categoría «%s» la registra el sistema (pagos de pedidos en Compras, devoluciones en Deudas, ajustes al abrir o cerrar la caja, ventas en el POS); elija otra categoría.";
+    static final String SYSTEM_CATEGORY = "La categoría «%s» la registra el sistema (pagos de pedidos en Compras, devoluciones en Deudas, ajustes al abrir o cerrar la caja, ventas en el POS); elige otra categoría.";
     static final String CASH_ADJUSTMENT_MOVEMENT = "Los ajustes de caja se generan al abrir o cerrar la caja y no se pueden editar ni anular.";
-    static final String VOID_LEAVES_NEGATIVE = "No se puede anular: la cuenta %s quedaría con saldo negativo (saldo disponible: %s). Anule primero los gastos o transferencias que usaron ese dinero.";
+    static final String VOID_LEAVES_NEGATIVE = "No se puede anular: la cuenta %s quedaría con saldo negativo (saldo disponible: %s). Anula primero los gastos o transferencias que usaron ese dinero.";
 
     @Override
     @Transactional(readOnly = true)

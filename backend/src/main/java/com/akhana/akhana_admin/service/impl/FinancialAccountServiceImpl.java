@@ -193,7 +193,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         }
         Optional<FinancialAccount> currentQr = qrId.map(locked::get);
         if (currentQr.isPresent() && !Boolean.TRUE.equals(currentQr.get().getIsQrAccount())) {
-            throw new IllegalStateException("La cuenta de cobros QR cambió mientras se guardaba. Intente de nuevo.");
+            throw new IllegalStateException("La cuenta de cobros QR cambió mientras se guardaba. Intenta de nuevo.");
         }
         return new LockedAccounts(target, currentQr);
     }
@@ -211,7 +211,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
             throw new IllegalStateException("Ya se abrió una caja: el saldo al corte de Caja solo se carga antes de la primera apertura.");
         }
         if (financialTransactionRepository.existsMovementsBesidesOpeningBalance(id)) {
-            throw new IllegalStateException("La cuenta ya tiene movimientos: el saldo al corte solo se carga antes de operar. Corrija con un ingreso, gasto o transferencia.");
+            throw new IllegalStateException("La cuenta ya tiene movimientos: el saldo al corte solo se carga antes de operar. Corrige con un ingreso, gasto o transferencia.");
         }
 
         Instant now = Instant.now(clock);

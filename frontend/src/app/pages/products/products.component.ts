@@ -503,7 +503,7 @@ export class ProductsComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.errorMessage.set('Error al cargar el catálogo de productos. Por favor intente nuevamente.');
+        this.errorMessage.set('Error al cargar el catálogo de productos. Por favor intenta nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -768,7 +768,7 @@ export class ProductsComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          this.formError.set(err.error?.message || 'Error al actualizar el producto. Verifique los datos.');
+          this.formError.set(err.error?.message || 'Error al actualizar el producto. Revisa los datos.');
         }
       });
     } else {
@@ -783,7 +783,7 @@ export class ProductsComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          this.formError.set(err.error?.message || 'Error al crear el producto. Verifique los datos.');
+          this.formError.set(err.error?.message || 'Error al crear el producto. Revisa los datos.');
         }
       });
     }

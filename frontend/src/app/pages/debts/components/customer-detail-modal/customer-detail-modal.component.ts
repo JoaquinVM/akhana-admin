@@ -101,12 +101,12 @@ export class CustomerDetailModalComponent {
       return;
     }
     if (!this.collectionAccountId()) {
-      this.collectionError.set('Elija la cuenta a la que entra el cobro.');
+      this.collectionError.set('Elige la cuenta a la que entra el cobro.');
       return;
     }
     const amount = Number(this.collectionAmount());
     if (!amount || amount <= 0) {
-      this.collectionError.set('Ingrese un monto mayor a 0.');
+      this.collectionError.set('Ingresa un monto mayor a 0.');
       return;
     }
     this.isCollecting.set(true);

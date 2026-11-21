@@ -115,7 +115,7 @@ export class CreditorsViewComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: err => {
-        this.errorMessage.set(err.error?.message ?? 'Error al cargar las personas. Intente nuevamente.');
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar las personas. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

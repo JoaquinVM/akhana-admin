@@ -14,7 +14,7 @@ import { IconComponent } from '../icon/icon.component';
 export class ConfirmModalComponent {
   isOpen = input<boolean>(false);
   title = input<string>('¿Confirmar acción?');
-  message = input<string>('¿Está seguro de continuar con esta operación?');
+  message = input<string>('¿Seguro que quieres continuar?');
   confirmText = input<string>('Confirmar');
   cancelText = input<string>('Cancelar');
   variant = input<'danger' | 'warning' | 'primary'>('danger');

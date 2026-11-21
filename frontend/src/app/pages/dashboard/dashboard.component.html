@@ -1,7 +1,7 @@
 <div class="dashboard-page">
   <header class="page-header">
     <div class="header-content">
-      <h1 class="page-title">Dashboard</h1>
+      <h1 class="page-title">Tablero</h1>
       <p class="page-subtitle">Ventas normales; al costo y consumos aparte. Lo anulado no cuenta.</p>
     </div>
   </header>
@@ -221,7 +221,7 @@
             }
           </ul>
         }
-        <p class="aside-line">Sin transferencias entre cuentas.</p>
+        <p class="aside-line">No incluye las transferencias entre cuentas ni los retiros de caja.</p>
       </section>
 
       @if (!installed) {
@@ -271,7 +271,7 @@
   <section class="card" aria-labelledby="cash-title">
     <h2 id="cash-title" class="card-title">Caja actual</h2>
     @if (d.now.cash.open) {
-      <p class="status status-open">Abierta · caja N.º {{ d.now.cash.sessionNumber }}</p>
+      <p class="status status-open">Abierta · Caja #{{ d.now.cash.sessionNumber }}</p>
       <app-cash-day-mark [operationDate]="d.now.cash.operationDate" [openedAt]="d.now.cash.openedAt" />
       <ul class="value-list">
         <li>Abrió<span class="value">{{ d.now.cash.openedBy }} · {{ d.now.cash.openedAt | date:'dd/MM HH:mm':'-0400' }}</span></li>

@@ -45,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
      * take as long as a wrong password and the response time does not tell which usernames exist.
      */
     public static final String DUMMY_HASH = "$2a$10$Nk2HnL1tr/7vuCGvT7nyneb7Si1lIgN4NFtfrY6j1fki0XxnJUSUC";
-    private static final String CHALLENGE_ENDED = "El ingreso venció. Vuelva a ingresar su usuario y contraseña.";
+    private static final String CHALLENGE_ENDED = "El ingreso venció. Vuelve a ingresar tu usuario y contraseña.";
 
     @Override
     @Transactional(readOnly = true)
@@ -122,13 +122,13 @@ public class AuthServiceImpl implements AuthService {
     private LoginResponse secondFactorChallenge(User user) {
         if (user.getTotpSecret() != null) {
             String challengeId = challengeService.create(user.getId(), user.getUsername(), null);
-            return LoginResponse.secondFactor(user.getUsername(), "Ingrese el código de su app autenticadora.",
+            return LoginResponse.secondFactor(user.getUsername(), "Escribe el código de tu app autenticadora.",
                 new TwoFactorChallengeResponse(challengeId, false, null, null));
         }
         // Activation: the secret is kept only in the challenge until the user confirms a code with it
         String secret = totpService.generateSecret();
         String challengeId = challengeService.create(user.getId(), user.getUsername(), secret);
-        return LoginResponse.secondFactor(user.getUsername(), "Active el segundo factor con su app autenticadora.",
+        return LoginResponse.secondFactor(user.getUsername(), "Activa el segundo factor con tu app autenticadora.",
             new TwoFactorChallengeResponse(challengeId, true, secret, totpService.otpauthUri(secret, user.getUsername())));
     }
 
@@ -143,7 +143,7 @@ public class AuthServiceImpl implements AuthService {
             user.getRole(),
             user.getPermissions(),
             user.isMustChangePassword(),
-            user.isMustChangePassword() ? "Debe cambiar su contraseña." : "Sesión iniciada.",
+            user.isMustChangePassword() ? "Debe cambiar tu contraseña." : "Sesión iniciada.",
             null
         );
     }

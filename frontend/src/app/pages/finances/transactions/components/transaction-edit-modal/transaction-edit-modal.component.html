@@ -1,7 +1,7 @@
 <app-modal
   [isOpen]="isOpen()"
   title="Editar movimiento"
-  subtitle="Modifica la descripción, categoría o notas de la transacción"
+  subtitle="Cambia la descripción, la categoría o las notas del movimiento"
   [size]="'md'"
   (close)="close.emit()">
 
@@ -23,7 +23,7 @@
         <select id="edit-cat" class="form-control" formControlName="categoryId">
           <option value="">Sin categoría</option>
           @for (cat of sameTypeCategories(); track cat.id) {
-            <option [value]="cat.id">{{ cat.name }}</option>
+            <option [value]="cat.id">{{ cat | categoryLabel }}</option>
           }
         </select>
       </div>

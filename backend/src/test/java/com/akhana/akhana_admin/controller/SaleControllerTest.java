@@ -232,7 +232,7 @@ class SaleControllerTest {
                 .content("{\"voidReason\": \"error\"}"))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.message").value(
-                "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualice la pantalla y revise antes de intentar de nuevo."));
+                "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualiza la pantalla y revisa antes de intentar de nuevo."));
     }
 
     @Test
@@ -243,7 +243,7 @@ class SaleControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"paymentMethod\": \"TARJETA\", \"items\": []}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Los datos enviados no son válidos; revise el formulario e intente de nuevo."));
+            .andExpect(jsonPath("$.message").value("Los datos enviados no son válidos; revisa el formulario e intenta de nuevo."));
 
         mockMvc.perform(get("/api/sales")
                 .param("from", "abc")

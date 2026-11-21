@@ -120,11 +120,11 @@ describe('CreditorsViewComponent', () => {
 
   it('DEU-01: al eliminar con deuda muestra el rechazo del servidor', () => {
     creditorService.deleteCreditor.mockReturnValue(throwError(() => ({
-      error: { message: 'Mami tiene una deuda de Bs 150.00; devuélvala antes de darla de baja.' }
+      error: { message: 'Mami tiene una deuda de Bs 150.00; devuélvela antes de darla de baja.' }
     })));
     component.openDelete(mami);
     component.confirmDelete();
-    expect(component.errorMessage()).toBe('Mami tiene una deuda de Bs 150.00; devuélvala antes de darla de baja.');
+    expect(component.errorMessage()).toBe('Mami tiene una deuda de Bs 150.00; devuélvela antes de darla de baja.');
   });
 
   it('DEU-04: abrir un pedido oculta el detalle y al cerrarlo lo recarga', () => {

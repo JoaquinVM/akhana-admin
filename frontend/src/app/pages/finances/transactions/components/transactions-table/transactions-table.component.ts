@@ -2,12 +2,13 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FinancialTransaction } from '../../../../../core/finance/models/finance.models';
 import { operationDayLabel } from '../../../../../shared/utils/store-date';
+import { CategoryLabelPipe, TransactionStatusPipe, TransactionTypePipe, transactionSign } from '../../../../../core/finance/transaction-labels';
 
 // Money movements list with its row actions
 @Component({
   selector: 'app-transactions-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TransactionTypePipe, TransactionStatusPipe, CategoryLabelPipe],
   templateUrl: './transactions-table.component.html',
   styleUrls: ['./transactions-table.component.css']
 })
@@ -18,6 +19,11 @@ export class TransactionsTableComponent {
   }
 
   transactions = input<FinancialTransaction[]>([]);
+
+  // H6: + or -, a transfer has no sign in a list of all accounts
+  txSign(tx: FinancialTransaction): string {
+    return transactionSign(tx);
+  }
 
   saleDetailRequested = output<string>();
   editRequested = output<FinancialTransaction>();

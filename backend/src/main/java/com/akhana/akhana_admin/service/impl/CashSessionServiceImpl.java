@@ -57,11 +57,11 @@ public class CashSessionServiceImpl implements CashSessionService {
 
     private static final String ALREADY_OPEN_MESSAGE = "Ya existe una caja abierta en el sistema. Debe cerrarse antes de iniciar una nueva.";
     static final String CASH_ACCOUNT_NOT_FOUND = "No se encontró la cuenta Caja en el sistema.";
-    static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (%s). Indique el motivo en el comentario de apertura.";
-    static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (%s). Indique el motivo en el comentario de apertura.";
+    static final String OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al cierre de la caja anterior (%s). Indica el motivo en el comentario de apertura.";
+    static final String FIRST_OPENING_COMMENT_REQUIRED = "El monto inicial es distinto al saldo de la cuenta Caja (%s). Indica el motivo en el comentario de apertura.";
     static final String ADJUSTMENT_CATEGORY_MISSING = "Falta la categoría de sistema Ajuste para registrar la diferencia de caja.";
-    static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrija el conteo o deje los cortes vacíos.";
-    static final String COUNT_WITH_RESERVES_MISMATCH = "Los cortes y las reservas suman %s y el monto contado es %s; corrija el conteo o deje los cortes y las reservas vacíos.";
+    static final String CUTS_MISMATCH = "Los cortes suman %s y el monto contado es %s; corrige el conteo o deja los cortes vacíos.";
+    static final String COUNT_WITH_RESERVES_MISMATCH = "Los cortes y las reservas suman %s y el monto contado es %s; corrige el conteo o deja los cortes y las reservas vacíos.";
     static final String CUT_DENOMINATION_INVALID = "El corte de %s no existe; use Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20 o 0,10.";
     static final String CUT_DENOMINATION_REPEATED = "El corte de %s está repetido.";
     static final String FUTURE_DAY = "El día de la caja no puede ser futuro.";

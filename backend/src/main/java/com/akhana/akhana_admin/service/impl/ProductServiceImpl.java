@@ -38,7 +38,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductBarcodeService barcodeService;
 
     static final String SELL_PRICE_REQUIRED = "El precio de venta debe ser mayor a 0.";
-    static final String OWNER_REQUIRED = "Elija la dueña del producto de tercero.";
+    static final String OWNER_REQUIRED = "Elige la dueña del producto de tercero.";
     static final String UNIDENTIFIED_EXISTS = "Ya existe un producto sin identificar.";
     static final String SPECIAL_TYPE_FIXED = "El tipo de producto y su dueña no se cambian después de crearlo.";
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);

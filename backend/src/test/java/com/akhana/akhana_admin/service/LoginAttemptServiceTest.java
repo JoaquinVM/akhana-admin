@@ -41,7 +41,7 @@ class LoginAttemptServiceTest {
         service.recordFailure("ana", IP);
         assertThatThrownBy(() -> service.recordFailure("ana", IP))
             .isInstanceOf(LoginBlockedException.class)
-            .hasMessage("Demasiados intentos fallidos. Espere 30 minutos e intente nuevamente.");
+            .hasMessage("Demasiados intentos fallidos. Espera 30 minutos e intenta nuevamente.");
 
         clock.advance(Duration.ofMinutes(29));
         assertThatThrownBy(() -> service.checkNotBlocked("ana", IP))

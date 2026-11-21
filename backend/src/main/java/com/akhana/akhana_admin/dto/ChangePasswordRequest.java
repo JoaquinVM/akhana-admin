@@ -10,6 +10,6 @@ public record ChangePasswordRequest(
 
     @NotBlank(message = "La nueva contraseña es obligatoria.")
     @Size(min = 12, max = 72, message = "La nueva contraseña debe tener entre 12 y 72 caracteres.")
-    @MaxUtf8Bytes(value = 72, message = "La nueva contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela.")
+    @MaxUtf8Bytes(value = 72, message = "La nueva contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtala.")
     String newPassword
 ) {}

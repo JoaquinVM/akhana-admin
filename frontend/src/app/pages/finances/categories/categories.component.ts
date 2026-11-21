@@ -13,10 +13,14 @@ import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 export type CategoryTypeFilter = 'TODOS' | 'INGRESO' | 'GASTO';
 
+import { CategoryLabelPipe, CategoryTypePipe } from '../../../core/finance/transaction-labels';
+
+import { PluralPipe } from '../../../shared/utils/plural.pipe';
+
 @Component({
   selector: 'app-financial-categories',
   standalone: true,
-  imports: [IconComponent, 
+  imports: [PluralPipe, CategoryLabelPipe, CategoryTypePipe, IconComponent, 
     CommonModule,
     ReactiveFormsModule,
     ModalComponent,

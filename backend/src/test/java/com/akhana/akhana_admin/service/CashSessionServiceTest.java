@@ -355,7 +355,7 @@ class CashSessionServiceTest {
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(
                 new CloseCashRequest(new BigDecimal("3500.00"), null, cuts, null, null), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrija el conteo o deje los cortes vacíos.");
+            .hasMessage("Los cortes suman Bs 100,00 y el monto contado es Bs 3.500,00; corrige el conteo o deja los cortes vacíos.");
         assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
         verify(cashSessionRepository, never()).save(any());
     }
@@ -407,7 +407,7 @@ class CashSessionServiceTest {
                 new BigDecimal("1300.00"), null, List.of(new CashCutDto(new BigDecimal("200"), 4, 1, null)),
                 new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Los cortes y las reservas suman Bs 1.350,00 y el monto contado es Bs 1.300,00; corrija el conteo o deje los cortes y las reservas vacíos.");
+            .hasMessage("Los cortes y las reservas suman Bs 1.350,00 y el monto contado es Bs 1.300,00; corrige el conteo o deja los cortes y las reservas vacíos.");
         assertThat(activeSession.getStatus()).isEqualTo(CashSessionStatus.ABIERTA);
         assertThat(activeSession.getClosingReserveBills()).isNull();
         verify(cashSessionRepository, never()).save(any());
@@ -436,7 +436,7 @@ class CashSessionServiceTest {
 
         assertThatThrownBy(() -> cashSessionService.closeCurrentSession(new CloseCashRequest(new BigDecimal("500.00"), null,
                 null, new BigDecimal("150.00"), new BigDecimal("200.00")), "cajero1"))
-            .hasMessage("Los cortes y las reservas suman Bs 350,00 y el monto contado es Bs 500,00; corrija el conteo o deje los cortes y las reservas vacíos.");
+            .hasMessage("Los cortes y las reservas suman Bs 350,00 y el monto contado es Bs 500,00; corrige el conteo o deja los cortes y las reservas vacíos.");
         verify(cashSessionRepository, never()).save(any());
     }
 

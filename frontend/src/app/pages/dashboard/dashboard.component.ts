@@ -218,7 +218,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.dashboard.set(null);
         this.errorMessage.set(this.installed && isConnectionError(err)
           ? CONNECTION_MESSAGE
-          : err?.error?.message || 'Error al cargar el dashboard. Intente nuevamente.');
+          : err?.error?.message || 'Error al cargar el dashboard. Intenta nuevamente.');
         this.isLoading.set(false);
       }
     });

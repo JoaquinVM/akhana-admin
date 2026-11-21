@@ -87,7 +87,7 @@ describe('LoginComponent', () => {
 
     component.onSubmit();
 
-    expect(component.errorMessage()).toBe('Credenciales no válidas. Verifique su usuario y contraseña.');
+    expect(component.errorMessage()).toBe('Credenciales no válidas. Revisa tu usuario y contraseña.');
     expect(component.isLoading()).toBe(false);
     expect(routerSpy.navigate).not.toHaveBeenCalled();
   });
@@ -103,11 +103,11 @@ describe('LoginComponent', () => {
 
     component.onSubmit();
 
-    expect(component.errorMessage()).toBe('No fue posible comunicarse con el servidor. Intente nuevamente.');
+    expect(component.errorMessage()).toBe('No fue posible comunicarse con el servidor. Intenta nuevamente.');
   });
 
   it('should display the backend message when login is blocked (429)', () => {
-    const message = 'Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente.';
+    const message = 'Demasiados intentos fallidos. Espera 15 minutos e intenta nuevamente.';
     const errorResponse = new HttpErrorResponse({ status: 429, error: { error: 'Too Many Requests', message } });
     authServiceSpy.login.mockReturnValue(throwError(() => errorResponse));
 
@@ -137,7 +137,7 @@ describe('LoginComponent', () => {
       username: 'admin',
       role: 'ADMINISTRATOR',
       mustChangePassword: true,
-      message: 'Debe cambiar su contraseña.'
+      message: 'Debe cambiar tu contraseña.'
     } satisfies LoginResponse));
 
     component.loginForm.setValue({ username: 'admin', password: 'initial-pass' });
@@ -152,7 +152,7 @@ describe('LoginComponent', () => {
     again.detectChanges();
 
     expect(again.componentInstance.errorMessage()).toBe(SESSION_ENDED);
-    expect(again.nativeElement.textContent).toContain('Su sesión terminó');
+    expect(again.nativeElement.textContent).toContain('Tu sesión terminó');
     expect(TestBed.createComponent(LoginComponent).componentInstance.errorMessage()).toBeNull();
   });
 
@@ -163,7 +163,7 @@ describe('LoginComponent', () => {
       id: '',
       username: 'duena',
       role: 'ADMINISTRATOR',
-      message: setupRequired ? 'Active el segundo factor con su app autenticadora.' : 'Ingrese el código de su app autenticadora.',
+      message: setupRequired ? 'Activa el segundo factor con tu app autenticadora.' : 'Escribe el código de tu app autenticadora.',
       twoFactor: {
         challengeId: 'c-1',
         setupRequired,
@@ -239,7 +239,7 @@ describe('LoginComponent', () => {
     it('si el ingreso venció o quedó bloqueado, vuelve a la contraseña con el mensaje', () => {
       passwordStep(false);
       authServiceSpy.loginWithSecondFactor.mockReturnValue(throwError(() => new HttpErrorResponse({
-        status: 401, error: { message: 'El ingreso venció. Vuelva a ingresar su usuario y contraseña.' }
+        status: 401, error: { message: 'El ingreso venció. Vuelve a ingresar tu usuario y contraseña.' }
       })));
 
       component.codeForm.setValue({ code: '123456' });
@@ -248,7 +248,7 @@ describe('LoginComponent', () => {
 
       expect(component.secondFactor()).toBeNull();
       expect(component.loginForm.getRawValue().password).toBe('');
-      expect(text()).toContain('El ingreso venció. Vuelva a ingresar su usuario y contraseña.');
+      expect(text()).toContain('El ingreso venció. Vuelve a ingresar tu usuario y contraseña.');
     });
 
     it('Volver regresa a la contraseña', () => {

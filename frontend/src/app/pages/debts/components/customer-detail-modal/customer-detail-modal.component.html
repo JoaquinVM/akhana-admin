@@ -90,7 +90,7 @@
             <label class="form-label" for="collection-account">Cobrado a <span class="required-mark">*</span></label>
             <select id="collection-account" class="form-control" name="accountId"
                     [ngModel]="collectionAccountId()" (ngModelChange)="collectionAccountId.set($event)">
-              <option value="">Seleccione…</option>
+              <option value="">Selecciona…</option>
               @for (account of collectionAccounts(); track account.id) {
                 <option [value]="account.id">{{ account.name }}{{ account.cashAccount ? '' : ' (QR)' }}</option>
               }

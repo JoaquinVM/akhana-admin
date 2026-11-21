@@ -26,7 +26,7 @@
             </td>
             <td>
               <span class="tx-badge" [class]="'badge-type-' + tx.type.toLowerCase()">
-                {{ tx.type }}
+                {{ tx | txType }}
               </span>
             </td>
             <td>
@@ -47,9 +47,9 @@
             </td>
             <td>
               @if (tx.category) {
-                <span class="category-color-pill" [title]="tx.category.name">
+                <span class="category-color-pill" [title]="tx.category | categoryLabel">
                   <span class="color-dot" [style.backgroundColor]="tx.category.color || '#2E5B27'"></span>
-                  <span class="pill-text">{{ tx.category.name }}</span>
+                  <span class="pill-text">{{ tx.category | categoryLabel }}</span>
                 </span>
               } @else {
                 <span class="text-muted">-</span>
@@ -66,13 +66,11 @@
             <td class="text-right cell-amount"
                 [class.positive]="tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO' || tx.type === 'SALDO_INICIAL'"
                 [class.negative]="tx.type === 'GASTO_MANUAL'">
-              @if (tx.type === 'GASTO_MANUAL') { - }
-              @if (tx.type === 'INGRESO_MANUAL' || tx.type === 'VENTA_INGRESO') { + }
-              Bs {{ tx.amount | number:'1.2-2' }}
+              {{ txSign(tx) }}Bs {{ tx.amount | number:'1.2-2' }}
             </td>
             <td>
               <span class="status-pill" [class.status-active]="tx.status === 'ACTIVO'" [class.status-voided]="tx.status === 'ANULADO'">
-                {{ tx.status }}
+                {{ tx.status | txStatus }}
               </span>
               @if (tx.historical) {
                 <span class="historical-tag" title="Movimiento de la planilla (FIN-11): no se edita ni se anula">Histórico</span>

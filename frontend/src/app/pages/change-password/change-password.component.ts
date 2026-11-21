@@ -60,9 +60,9 @@ export class ChangePasswordComponent {
         this.isLoading.set(false);
         this.form.enable();
         if (err.status === 0) {
-          this.errorMessage.set('No fue posible comunicarse con el servidor. Intente nuevamente.');
+          this.errorMessage.set('No fue posible comunicarse con el servidor. Intenta nuevamente.');
         } else {
-          this.errorMessage.set(err.error?.message ?? 'No se pudo cambiar la contraseña. Intente más tarde.');
+          this.errorMessage.set(err.error?.message ?? 'No se pudo cambiar la contraseña. Intenta más tarde.');
         }
       }
     });

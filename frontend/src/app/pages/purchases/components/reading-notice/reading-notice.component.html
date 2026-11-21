@@ -1,7 +1,7 @@
 <div class="reading-notice">
-  <p class="reading-source">Leído con IA: revise antes de registrar.</p>
+  <p class="reading-source">Leído con IA: revisa antes de registrar.</p>
   @if (draft().reviewAll) {
-    <div class="alert alert-warning" role="status"><span>Es una nota suelta: revise todas las líneas, cantidades y costos.</span></div>
+    <div class="alert alert-warning" role="status"><span>Es una nota suelta: revisa todas las líneas, cantidades y costos.</span></div>
   }
   @if (draft().supplierText && !draft().supplierId && !isEdit()) {
     <div class="alert alert-warning" role="status"><span>La lectura dice «{{ draft().supplierText }}», que no coincide con un proveedor activo: elíjalo.</span></div>
@@ -12,10 +12,10 @@
     </div>
   }
   @if (draft().paidNote && isEdit()) {
-    <div class="alert alert-warning" role="status"><span>La nota dice que está pagado. Registre el pago desde el detalle, eligiendo de dónde salió el dinero.</span></div>
+    <div class="alert alert-warning" role="status"><span>La nota dice que está pagado. Registra el pago desde el detalle, eligiendo de dónde salió el dinero.</span></div>
   } @else if (paidProposal()) {
     <div class="alert alert-warning paid-proposal" role="status">
-      <span>La nota dice que está pagado. En «Pago inicial», elija la caja, la cuenta o la persona que pagó.</span>
+      <span>La nota dice que está pagado. En «Pago inicial», elige la caja, la cuenta o la persona que pagó.</span>
       <button type="button" class="btn btn-ghost btn-sm" (click)="dismissPaid.emit()">No se pagó</button>
     </div>
   }

@@ -50,8 +50,8 @@ describe('SalesBySupplierReportComponent', () => {
   it('FIN-10: muestra cada proveedor con sus meses y su total, como Resumen Ventas', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Bohemia');
-    expect(text).toContain('julio 2026');
-    expect(text).toContain('septiembre 2026');
+    expect(text).toContain('Julio 2026');
+    expect(text).toContain('Septiembre 2026');
     expect(text).toContain('230.00');
     expect(text).toContain('Total Bohemia');
     expect(text).toContain('550.00');

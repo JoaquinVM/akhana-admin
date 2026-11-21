@@ -54,7 +54,7 @@
 
             <div class="group-info">
               <span class="group-name">{{ grp.name }}</span>
-              <span class="group-count">{{ grp.products.length }} productos</span>
+              <span class="group-count">{{ grp.products.length | plural:'producto':'productos' }}</span>
             </div>
 
             <button
@@ -156,7 +156,7 @@
           </div>
 
           @if (productSearchTerm().trim()) {
-            <p class="catalog-results-count">{{ filteredCatalogProducts.length }} resultado(s)</p>
+            <p class="catalog-results-count">{{ filteredCatalogProducts.length | plural:'resultado':'resultados' }}</p>
           }
 
           <div class="catalog-results-grid">

@@ -68,10 +68,12 @@ const TEXTS: Record<TransactionFormMode, TransactionFormTexts> = {
 };
 
 // Modal to add an income, expense or transfer; the parent owns the form and submits it
+import { CategoryLabelPipe } from '../../../../../core/finance/transaction-labels';
+
 @Component({
   selector: 'app-transaction-form-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
+  imports: [CategoryLabelPipe, CommonModule, ReactiveFormsModule, ModalComponent, CashLimitWarningComponent],
   templateUrl: './transaction-form-modal.component.html',
   styleUrls: ['../transaction-modal.css']
 })

@@ -64,8 +64,8 @@ describe('TransactionsByCategoryReportComponent', () => {
 
   it('FIN-10: una columna por mes y el total del rango; ingresos +, gastos − y neto, como Resumen Transacc.', () => {
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('julio 2026');
-    expect(text).toContain('agosto 2026');
+    expect(text).toContain('Julio 2026');
+    expect(text).toContain('Agosto 2026');
     expect(text).toContain('Total del rango');
     expect(text).toContain('67,031.50');
     expect(text).toContain('-67,097.56');

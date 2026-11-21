@@ -115,7 +115,7 @@ describe('AuthService', () => {
       role: 'ADMINISTRATOR',
       permissions: [],
       mustChangePassword: true,
-      message: 'Debe cambiar su contraseña.'
+      message: 'Debe cambiar tu contraseña.'
     } satisfies LoginResponse);
 
     expect(service.mustChangePassword()).toBe(true);
@@ -137,7 +137,7 @@ describe('AuthService', () => {
     service.login({ username: 'duena', password: 'clave' }).subscribe(r => (challenge = r));
     httpTesting.expectOne('/api/auth/login').flush({
       token: null, id: null, username: 'duena', role: null, permissions: [], mustChangePassword: false,
-      message: 'Ingrese el código de su app autenticadora.',
+      message: 'Escribe el código de tu app autenticadora.',
       twoFactor: { challengeId: 'c-1', setupRequired: false, secret: null, otpauthUri: null }
     });
 
@@ -151,7 +151,7 @@ describe('AuthService', () => {
     expect(req.request.body).toEqual({ challengeId: 'c-1', code: '123456' });
     req.flush({
       token: 'admin.token', id: 'u-1', username: 'duena', fullName: 'Dueña', role: 'ADMINISTRATOR',
-      permissions: ['USERS'], mustChangePassword: true, message: 'Debe cambiar su contraseña.', twoFactor: null
+      permissions: ['USERS'], mustChangePassword: true, message: 'Debe cambiar tu contraseña.', twoFactor: null
     });
 
     expect(service.isAuthenticated()).toBe(true);

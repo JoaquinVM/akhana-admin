@@ -30,7 +30,7 @@ export class FreeLineFormComponent {
   submitted = signal<boolean>(false);
 
   nameError = computed<string | null>(() =>
-    this.name().trim().length === 0 ? 'Escriba el nombre.' : null
+    this.name().trim().length === 0 ? 'Escribe el nombre.' : null
   );
 
   priceError = computed<string | null>(() => {

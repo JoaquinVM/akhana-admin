@@ -85,7 +85,7 @@ class DebtWriteEndpointTest extends WriteEndpointTestSupport {
     @Test
     @DisplayName("DEU: dar de baja a una persona con deuda da 400 con el mensaje de la regla")
     void deletingACreditorWithDebtIsRejected() throws Exception {
-        String message = "Ana tiene una deuda de Bs 50,00; devuélvala antes de darla de baja.";
+        String message = "Ana tiene una deuda de Bs 50,00; devuélvela antes de darla de baja.";
         doAnswer(invocation -> { throw new IllegalStateException(message); })
             .when(creditorService).deleteCreditor(UUID.fromString(ID), "admin");
 

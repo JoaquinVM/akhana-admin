@@ -6,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoginResponse, TwoFactorChallenge } from '../../core/auth/models/auth.models';
 
-export const SESSION_ENDED = 'Su sesión terminó: venció, se cambió la contraseña o el usuario fue dado de baja. Vuelva a ingresar.';
+export const SESSION_ENDED = 'Tu sesión terminó: venció, se cambió la contraseña o el usuario fue dado de baja. Vuelve a ingresar.';
 const WRONG_CODE = 'Código incorrecto.';
 
 @Component({
@@ -84,13 +84,13 @@ export class LoginComponent {
         this.isLoading.set(false);
         this.loginForm.enable();
         if (err.status === 401) {
-          this.errorMessage.set('Credenciales no válidas. Verifique su usuario y contraseña.');
+          this.errorMessage.set('Credenciales no válidas. Revisa tu usuario y contraseña.');
         } else if (err.status === 429) {
-          this.errorMessage.set(err.error?.message ?? 'Demasiados intentos fallidos. Intente más tarde.');
+          this.errorMessage.set(err.error?.message ?? 'Demasiados intentos fallidos. Intenta más tarde.');
         } else if (err.status === 0 || err.error instanceof ProgressEvent) {
-          this.errorMessage.set('No fue posible comunicarse con el servidor. Intente nuevamente.');
+          this.errorMessage.set('No fue posible comunicarse con el servidor. Intenta nuevamente.');
         } else {
-          this.errorMessage.set('Ocurrió un error al procesar el inicio de sesión. Intente más tarde.');
+          this.errorMessage.set('Ocurrió un error al procesar el inicio de sesión. Intenta más tarde.');
         }
       }
     });
@@ -120,13 +120,13 @@ export class LoginComponent {
         this.codeForm.enable();
         this.codeForm.reset();
         if (err.status === 0 || err.error instanceof ProgressEvent) {
-          this.errorMessage.set('No fue posible comunicarse con el servidor. Intente nuevamente.');
+          this.errorMessage.set('No fue posible comunicarse con el servidor. Intenta nuevamente.');
         } else if (err.status === 401 && err.error?.message === WRONG_CODE) {
           this.errorMessage.set(WRONG_CODE);
         } else {
           // The login ended (expired, too many codes or locked): it starts again from the password
           this.backToPassword();
-          this.errorMessage.set(err.error?.message ?? 'El ingreso venció. Vuelva a ingresar su usuario y contraseña.');
+          this.errorMessage.set(err.error?.message ?? 'El ingreso venció. Vuelve a ingresar tu usuario y contraseña.');
         }
       }
     });

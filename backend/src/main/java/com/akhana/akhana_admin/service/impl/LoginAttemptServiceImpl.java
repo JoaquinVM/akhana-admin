@@ -71,7 +71,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
 
     private static String waitMessage(String reason, Duration wait) {
         long minutes = Math.max(1, (wait.toSeconds() + 59) / 60);
-        return reason + " Espere " + minutes + (minutes == 1 ? " minuto" : " minutos") + " e intente nuevamente.";
+        return reason + " Espera " + minutes + (minutes == 1 ? " minuto" : " minutos") + " e intenta nuevamente.";
     }
 
     @Override

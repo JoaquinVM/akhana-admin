@@ -30,7 +30,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String COST_SCALE = "El costo unitario de '%s' admite hasta 2 decimales.";
     static final String NO_ITEMS = "El pedido debe tener al menos una línea.";
     static final String FUTURE_DATE = "La fecha del pedido no puede ser futura.";
-    static final String SHIPPING_SOURCE_REQUIRED = "Elija una cuenta o una persona como origen del envío.";
+    static final String SHIPPING_SOURCE_REQUIRED = "Elige una cuenta o una persona como origen del envío.";
     static final String SHIPPING_CATEGORY_MISSING = "No existe la categoría Transporte; no se puede registrar el envío.";
     static final String PAYMENT_CATEGORY_MISSING = "No existe la categoría Pedido; no se puede registrar el pago.";
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
@@ -42,21 +42,21 @@ public class PurchaseServiceImpl implements PurchaseService {
     static final String CLOSED_SESSION_PURCHASE = "El pedido tiene movimientos de una caja cerrada; no se puede anular.";
     static final String FUTURE_DELIVERY_DATE = "La fecha de entrega no puede ser futura.";
     static final String DELIVERY_BEFORE_PURCHASE = "La fecha de entrega no puede ser anterior a la fecha del pedido.";
-    static final String PAYMENT_SOURCE_REQUIRED = "Elija una cuenta o una persona como origen del pago.";
+    static final String PAYMENT_SOURCE_REQUIRED = "Elige una cuenta o una persona como origen del pago.";
     static final String EDIT_REASON_REQUIRED = "El motivo del cambio es obligatorio.";
     static final String NO_CHANGES = "No hay cambios para guardar.";
-    static final String LINE_PRODUCT_CHANGED = "No se cambia el producto de una línea: quítela y agregue otra.";
+    static final String LINE_PRODUCT_CHANGED = "No se cambia el producto de una línea: quítala y agrega otra.";
     static final String REPEATED_LINE = "La línea de '%s' está repetida.";
-    static final String TOTAL_BELOW_PAID = "El total del pedido (%s) no puede ser menor a lo pagado (%s); anule primero el pago.";
+    static final String TOTAL_BELOW_PAID = "El total del pedido (%s) no puede ser menor a lo pagado (%s); anula primero el pago.";
     static final String CLOSED_SESSION_SHIPPING = "El envío se pagó en una caja cerrada; no se puede cambiar.";
-    static final String PAYMENT_REPAID = "Ya se devolvió a %s parte de este pago; anule primero la devolución.";
-    static final String SHIPPING_REPAID = "Ya se devolvió a %s parte de este envío; anule primero la devolución.";
+    static final String PAYMENT_REPAID = "Ya se devolvió a %s parte de este pago; anula primero la devolución.";
+    static final String SHIPPING_REPAID = "Ya se devolvió a %s parte de este envío; anula primero la devolución.";
     static final String ARRIVAL_REASON = "Llegó la mercadería";
     public static final String ARRIVAL_NOT_DELIVERED = "Cuando llega la mercadería, el pedido queda entregado.";
     public static final String ARRIVAL_READING_NOT_PHOTO = "Los precios reales se leen de una foto, no de un texto.";
     public static final String TEXT_STAYS_PENDING = "Un pedido desde texto queda con entrega pendiente hasta que llegue la mercadería.";
     public static final String READING_ONLY_ON_ARRIVAL = "Una lectura solo se usa al registrar un pedido o cuando llega la mercadería.";
-    static final String CLIENT_REQUEST_MISMATCH = "Este pedido ya se registró como %s con otro contenido; revise la lista de pedidos antes de volver a guardar.";
+    static final String CLIENT_REQUEST_MISMATCH = "Este pedido ya se registró como %s con otro contenido; revisa la lista de pedidos antes de volver a guardar.";
     static final String CLIENT_REQUEST_INDEX = "ux_purchases_client_request_id";
     public static final String READING_NOT_USABLE = "Esta lectura ya no se puede usar. Vuelve a leer el texto o la foto.";
 

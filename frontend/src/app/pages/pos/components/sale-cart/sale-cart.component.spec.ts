@@ -24,7 +24,7 @@ describe('SaleCartComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.cart-empty-state')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.btn-clear-cart')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.cart-badge').textContent).toContain('0 ítems');
+    expect(fixture.nativeElement.querySelector('.cart-badge').textContent).toContain('0 productos');
   });
 
   it('muestra una fila por línea y el conteo recibido', () => {
@@ -32,7 +32,7 @@ describe('SaleCartComponent', () => {
     fixture.componentRef.setInput('cartCount', 4);
     fixture.detectChanges();
     expect(fixture.debugElement.queryAll(By.directive(CartLineComponent)).length).toBe(2);
-    expect(fixture.nativeElement.querySelector('.cart-badge').textContent).toContain('4 ítems');
+    expect(fixture.nativeElement.querySelector('.cart-badge').textContent).toContain('4 productos');
     expect(fixture.nativeElement.querySelector('.cart-empty-state')).toBeNull();
   });
 

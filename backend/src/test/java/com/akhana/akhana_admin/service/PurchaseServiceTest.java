@@ -275,7 +275,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPurchase(
             request(List.of(line(tea, "1", "10")), "5", null, false), "operator"))
-            .hasMessage("Elija una cuenta o una persona como origen del envío.");
+            .hasMessage("Elige una cuenta o una persona como origen del envío.");
     }
 
     private PurchaseRequest shippingByPerson(String shipping, UUID accountId, UUID creditorId) {
@@ -307,7 +307,7 @@ class PurchaseServiceTest {
     @DisplayName("DEU-02: el envío sale de una cuenta o de una persona activa, no de las dos")
     void registerPurchase_shippingSourceRules() {
         assertThatThrownBy(() -> purchaseService.registerPurchase(shippingByPerson("25", bisa.getId(), mami.getId()), "operator"))
-            .hasMessage("Elija una cuenta o una persona como origen del envío.");
+            .hasMessage("Elige una cuenta o una persona como origen del envío.");
 
         mami.setStatus(CreditorStatus.INACTIVO);
         assertThatThrownBy(() -> purchaseService.registerPurchase(shippingByPerson("25", null, mami.getId()), "operator"))
@@ -927,10 +927,10 @@ class PurchaseServiceTest {
             .hasMessage("El pago supera el saldo pendiente del pedido (Bs 200,00).");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(bisa.getId(), mami.getId(), new BigDecimal("10"), null), "operator"))
-            .hasMessage("Elija una cuenta o una persona como origen del pago.");
+            .hasMessage("Elige una cuenta o una persona como origen del pago.");
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
             new PurchasePaymentRequest(null, null, new BigDecimal("10"), null), "operator"))
-            .hasMessage("Elija una cuenta o una persona como origen del pago.");
+            .hasMessage("Elige una cuenta o una persona como origen del pago.");
 
         mami.setStatus(CreditorStatus.INACTIVO);
         assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(), byMami("10"), "operator"))
@@ -988,7 +988,7 @@ class PurchaseServiceTest {
 
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("50.00"));
         assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
-            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anula primero la devolución.");
         assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ACTIVO);
 
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("200.00"));
@@ -1012,9 +1012,9 @@ class PurchaseServiceTest {
         when(creditorRepaymentItemRepository.existsActiveForPurchasePayments(List.of(payment.getId()))).thenReturn(true);
 
         assertThatThrownBy(() -> purchaseService.voidPayment(purchase.getId(), payment.getId(), REASON, "operator"))
-            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anula primero la devolución.");
         assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
-            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anula primero la devolución.");
         assertThat(payment.getStatus()).isEqualTo(PurchasePaymentRecordStatus.ACTIVO);
         assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.REGISTRADO);
 
@@ -1036,7 +1036,7 @@ class PurchaseServiceTest {
 
         when(creditorRepository.computeDebt(mami.getId())).thenReturn(new BigDecimal("199.99"));
         assertThatThrownBy(() -> purchaseService.voidPurchase(purchase.getId(), REASON, "operator"))
-            .hasMessage("Ya se devolvió a Mami parte de este pago; anule primero la devolución.");
+            .hasMessage("Ya se devolvió a Mami parte de este pago; anula primero la devolución.");
         assertThat(purchase.getStatus()).isEqualTo(PurchaseStatus.REGISTRADO);
         assertThat(bisaTx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
         assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("1000.00");
@@ -1139,7 +1139,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), edit(purchase,
             List.of(kept(teaLine, "24", "10")), "0", null, "Faltaron las nueces"), "operator"))
-            .hasMessage("El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anule primero el pago.");
+            .hasMessage("El total del pedido (Bs 240,00) no puede ser menor a lo pagado (Bs 300,00); anula primero el pago.");
         verify(purchaseRepository, never()).save(any());
 
         // A rejected edit rolls back; the unit test starts again from the same purchase
@@ -1165,7 +1165,7 @@ class PurchaseServiceTest {
             nutsLine.getId());
         assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
             edit(purchase, List.of(otherProduct), "0", null, "Cambio"), "op"))
-            .hasMessage("No se cambia el producto de una línea: quítela y agregue otra.");
+            .hasMessage("No se cambia el producto de una línea: quítala y agrega otra.");
         assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(),
             edit(purchase, List.of(kept(teaLine, "1", "10"), kept(teaLine, "2", "10")), "0", null, "Cambio"), "op"))
             .hasMessage("La línea de 'Té verde' está repetida.");
@@ -1408,7 +1408,7 @@ class PurchaseServiceTest {
         assertThatThrownBy(() -> purchaseService.updatePurchase(purchase.getId(), arrival(purchase, List.of(
             kept(nutsLine, "1.5", "40.00"), kept(teaLine, "24", "5.00")), DeliveryStatus.ENTREGADO, null), "operator"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("anule primero el pago");
+            .hasMessageContaining("anula primero el pago");
         assertThat(purchase.getCostToConfirm()).isTrue();
     }
 
@@ -1494,7 +1494,7 @@ class PurchaseServiceTest {
 
         assertThatThrownBy(() -> purchaseService.registerPurchase(requestWithId(clientRequestId, "3"), "operator"))
             .isInstanceOf(com.akhana.akhana_admin.exception.DuplicateResourceException.class)
-            .hasMessage("Este pedido ya se registró como PED-000001 con otro contenido; revise la lista de pedidos antes de volver a guardar.");
+            .hasMessage("Este pedido ya se registró como PED-000001 con otro contenido; revisa la lista de pedidos antes de volver a guardar.");
         verify(purchaseRepository, never()).save(any());
     }
 

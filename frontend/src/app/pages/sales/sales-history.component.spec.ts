@@ -39,7 +39,7 @@ describe('SalesHistoryComponent', () => {
         pendingAssignment: false }, 0, 20);
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('VTA-000010');
-    expect(text).toContain('Sesión #3');
+    expect(text).toContain('Caja #3');
     expect(text).toContain('Crédito');
     expect(text).toContain('60 ventas · Página 1 de 3');
     expect(component.sellers()).toEqual(['admin', 'operador']);

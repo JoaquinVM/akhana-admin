@@ -29,7 +29,8 @@
   color: #a16207;
 }
 
-.balance {
+/* H7: only a balance still to pay reads in red; a paid order (0) does not */
+.balance.has-balance {
   color: #b91c1c;
 }
 
