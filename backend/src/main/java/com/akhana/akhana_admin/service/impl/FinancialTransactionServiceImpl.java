@@ -83,7 +83,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 categoryId,
                 status,
                 effectiveSearch
-        ).stream().map(this::mapToResponse).collect(Collectors.toList());
+        ).stream().map(FinancialTransactionServiceImpl::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -96,14 +96,14 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         LocalDate effectiveEnd = to != null ? to : getDefaultEndDate();
 
         return financialTransactionRepository.findByAccountAndDateRange(accountId, effectiveStart, effectiveEnd)
-                .stream().map(this::mapToResponse).collect(Collectors.toList());
+                .stream().map(FinancialTransactionServiceImpl::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FinancialTransactionResponse> getExpensesByCashSession(UUID cashSessionId) {
         return financialTransactionRepository.findByCashSessionIdOrderByTransactionDateDesc(cashSessionId)
-                .stream().map(this::mapToResponse).collect(Collectors.toList());
+                .stream().map(FinancialTransactionServiceImpl::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -541,7 +541,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         return StoreFormat.today();
     }
 
-    private FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {
+    /** A movement as every screen gets it; the financial summary (FIN-09) uses it too, so no field is lost. */
+    static FinancialTransactionResponse mapToResponse(FinancialTransaction tx) {
         FinancialTransactionResponse.AccountSummary sourceSummary = null;
         if (tx.getSourceAccount() != null) {
             sourceSummary = FinancialTransactionResponse.AccountSummary.builder()
