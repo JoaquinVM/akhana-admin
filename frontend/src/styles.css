@@ -640,6 +640,103 @@ textarea.form-control {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* H19: amount fields without the up and down arrows (the amount is written, never stepped) */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* H19: a button label that must stay on one line («Abrir caja») */
+.btn-nowrap {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* H14: report tables fit 1366 px (less side padding), the range total lines up with the rows and the first
+   column does not wrap */
+.table.report-table th,
+.table.report-table td {
+  padding: 0.625rem 0.5rem;
+}
+
+.table.report-table th:first-child,
+.table.report-table td:first-child {
+  padding-left: 1rem;
+  white-space: nowrap;
+}
+
+.table.report-table th:last-child,
+.table.report-table td:last-child {
+  padding-right: 1rem;
+}
+
+.table.report-table thead th {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.table.report-table tfoot td {
+  font-size: 0.875rem;
+}
+
+.report-currency-note {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* H4: filters with a label over each field, in a grid like the one of Transacciones */
+div.filters-card.filters-stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+div.filters-card.filters-stacked > .filter-pill-group {
+  flex: none;
+  align-self: flex-start;
+}
+
+.labeled-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.labeled-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.labeled-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.labeled-filter-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .labeled-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .zen-table {
   width: 100%;
   border-collapse: collapse;

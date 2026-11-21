@@ -32,7 +32,10 @@
   color: var(--text-muted);
 }
 
-.report-table th.num,
+.report-table th.num {
+  text-align: right;
+}
+
 .report-table td.num {
   text-align: right;
   white-space: nowrap;

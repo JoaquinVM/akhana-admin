@@ -24,7 +24,7 @@
     <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
   }
 
-  <div class="filters-card">
+  <div class="filters-card filters-stacked">
     <div class="filter-pill-group" role="tablist" aria-label="Filtrar por estado">
       @for (filter of statusFilters; track filter.value) {
         <button type="button" role="tab" class="filter-pill"
@@ -35,20 +35,32 @@
         </button>
       }
     </div>
-    <div class="filters-right">
-      <input type="date" class="form-control date-filter" aria-label="Desde"
-             [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
-      <input type="date" class="form-control date-filter" aria-label="Hasta"
-             [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
-      <select class="form-control product-filter" aria-label="Filtrar por producto"
-              [ngModel]="productFilter()" (ngModelChange)="onProductFilter($event)">
-        <option value="">Todos los productos</option>
-        @for (product of availableProducts(); track product.id) {
-          <option [value]="product.id">{{ product.name }}</option>
-        }
-      </select>
-      <input type="text" class="form-control search-input" placeholder="Buscar por número, para quién o comentario…"
-             aria-label="Buscar consumos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+    <div class="labeled-filters">
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="consumptions-from">Desde</label>
+        <input id="consumptions-from" type="date" class="form-control" aria-label="Desde"
+               [ngModel]="fromDate()" (ngModelChange)="onFromDate($event)" />
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="consumptions-to">Hasta</label>
+        <input id="consumptions-to" type="date" class="form-control" aria-label="Hasta"
+               [ngModel]="toDate()" (ngModelChange)="onToDate($event)" />
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="consumptions-product">Producto</label>
+        <select id="consumptions-product" class="form-control" aria-label="Filtrar por producto"
+                [ngModel]="productFilter()" (ngModelChange)="onProductFilter($event)">
+          <option value="">Todos los productos</option>
+          @for (product of availableProducts(); track product.id) {
+            <option [value]="product.id">{{ product.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="labeled-filter labeled-filter-wide">
+        <label class="labeled-filter-label" for="consumptions-search">Buscar</label>
+        <input id="consumptions-search" type="text" class="form-control" placeholder="Número, para quién o comentario…"
+               aria-label="Buscar consumos" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" />
+      </div>
     </div>
   </div>
 
