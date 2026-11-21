@@ -21,6 +21,20 @@ El sistema SHALL permitir la administración de cuentas financieras iniciando co
 - **WHEN** se aplica la migración en una base nueva
 - **THEN** existen Caja, Bisa y Efectivo, cada una con su color y un movimiento `SALDO_INICIAL` por 0.00 Bs; Bisa es la cuenta QR si no había otra, y una cuenta que ya se llame así se reutiliza
 
+#### Scenario: Saldo inicial y nombre de una cuenta nueva (FIN-01)
+- **WHEN** se crea una cuenta con saldo inicial negativo
+- **THEN** se rechaza con «El saldo inicial no puede ser negativo.»; 0,00 sí se acepta
+- **WHEN** se crea una cuenta con el nombre de una cuenta eliminada
+- **THEN** se crea: el nombre es único solo entre las cuentas activas, sin distinguir mayúsculas (índice parcial `uq_financial_accounts_name_active`, V35)
+
+#### Scenario: Editar una cuenta no pisa su saldo (FIN-01, FIN-03, T-14)
+- **WHEN** se edita una cuenta, se le pasa la marca QR o se elimina mientras otra operación mueve su saldo (una venta, un ingreso)
+- **THEN** la edición bloquea la cuenta (y la cuenta QR actual, por id) y guarda con el saldo de después del bloqueo: el saldo final incluye la otra operación. Un ingreso o retiro de caja también relee las cuentas después del bloqueo. Pruebas en `AccountBalanceIntegrationTest`.
+
+#### Scenario: Monto de un movimiento (V35)
+- **WHEN** se guarda un movimiento con monto 0 o negativo
+- **THEN** la base lo rechaza (`chk_financial_transactions_amount_positive`); solo el saldo inicial puede ser 0,00. La restricción es `NOT VALID`: no revisa los movimientos que ya existían.
+
 #### Scenario: Carga del saldo al corte (FIN-01)
 - **WHEN** el administrador carga en Bisa un saldo al corte de 31562.575 Bs y la cuenta no tiene otros movimientos
 - **THEN** el movimiento `SALDO_INICIAL` pasa a 31562.58 Bs con descripción «Saldo al corte» y auditoría de modificación, y el saldo inicial y actual de Bisa quedan en 31562.58 Bs

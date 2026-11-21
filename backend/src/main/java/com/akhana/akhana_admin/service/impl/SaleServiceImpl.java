@@ -440,6 +440,18 @@ public class SaleServiceImpl implements SaleService {
         if (!accountIds.isEmpty()) {
             financialAccountRepository.findAllByIdForUpdate(accountIds);
         }
+        // Like any void (FIN-06): taking the sale's money back out cannot leave an account negative; 0.00 is allowed
+        Map<UUID, FinancialAccount> accountsById = new TreeMap<>();
+        Map<UUID, BigDecimal> toTakeBack = new TreeMap<>();
+        for (FinancialTransaction tx : relatedTxs) {
+            if (tx.getStatus() == FinancialTransactionStatus.ACTIVO && tx.getSourceAccount() != null) {
+                UUID accountId = tx.getSourceAccount().getId();
+                accountsById.putIfAbsent(accountId, tx.getSourceAccount());
+                toTakeBack.merge(accountId, tx.getAmount(), BigDecimal::add);
+            }
+        }
+        toTakeBack.forEach((accountId, amount) ->
+            FinancialTransactionServiceImpl.requireBalanceFor(accountsById.get(accountId), amount));
         for (FinancialTransaction tx : relatedTxs) {
             if (tx.getStatus() == FinancialTransactionStatus.ACTIVO) {
                 tx.setStatus(FinancialTransactionStatus.ANULADO);

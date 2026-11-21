@@ -12,6 +12,7 @@ import com.akhana.akhana_admin.repository.FinancialAccountRepository;
 import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.service.FinancialTransactionService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
     private final FinancialCategoryRepository financialCategoryRepository;
     private final CashSessionRepository cashSessionRepository;
     private final ExpectedCashCalculator expectedCashCalculator;
+    private final EntityManager entityManager;
 
     static final String CASH_SESSION_REQUIRED = "Los movimientos de la cuenta Caja requieren una caja abierta.";
     static final String AMOUNT_EDIT = "El monto de un movimiento registrado no se puede editar; si hay un error, anúlelo y regístrelo de nuevo.";
@@ -484,7 +486,8 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         return tx.getCategory() != null && tx.getCategory().isCashAdjustment();
     }
 
-    private static void requireBalanceFor(FinancialAccount account, BigDecimal amount) {
+    // Shared by every void that takes money out of an account (FIN-06, also sales and collections): 0.00 is allowed, never below
+    static void requireBalanceFor(FinancialAccount account, BigDecimal amount) {
         if (account.getCurrentBalance().compareTo(amount) < 0) {
             throw new IllegalStateException(String.format(VOID_LEAVES_NEGATIVE, account.getName(),
                     StoreFormat.money(account.getCurrentBalance())));
@@ -513,14 +516,16 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         cashSessionRepository.save(session);
     }
 
-    // Locked accounts are loaded fresh into the persistence context, so lazy references to them see the locked state
+    // Refreshed after the lock: an account already loaded in this transaction (createCashTransfer reads both before
+    // calling createTransaction) keeps its old balance otherwise, and the save would overwrite a concurrent sale
     private Map<UUID, FinancialAccount> lockAccounts(UUID... ids) {
         Set<UUID> idSet = Arrays.stream(ids).filter(Objects::nonNull).collect(Collectors.toSet());
         if (idSet.isEmpty()) {
             return Map.of();
         }
-        return financialAccountRepository.findAllByIdForUpdate(idSet).stream()
-                .collect(Collectors.toMap(FinancialAccount::getId, account -> account));
+        List<FinancialAccount> locked = financialAccountRepository.findAllByIdForUpdate(idSet);
+        locked.forEach(entityManager::refresh);
+        return locked.stream().collect(Collectors.toMap(FinancialAccount::getId, account -> account));
     }
 
     private Optional<FinancialAccount> activeAccount(Map<UUID, FinancialAccount> accounts, UUID id) {

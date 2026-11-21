@@ -263,6 +263,9 @@ public class CustomerServiceImpl implements CustomerService {
             .findFirst()
             .orElse(tx.getSourceAccount());
 
+        // Like any void (FIN-06): taking the collection back out cannot leave the account negative; 0.00 is allowed
+        FinancialTransactionServiceImpl.requireBalanceFor(account, tx.getAmount());
+
         Instant now = Instant.now();
         account.setCurrentBalance(account.getCurrentBalance().subtract(tx.getAmount()));
         financialAccountRepository.save(account);

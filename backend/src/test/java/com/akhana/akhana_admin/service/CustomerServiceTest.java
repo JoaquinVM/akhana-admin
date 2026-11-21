@@ -278,6 +278,38 @@ class CustomerServiceTest {
     }
 
     @Test
+    @DisplayName("DEU-06, FIN-06: anular un cobro QR que deja la cuenta justo en 0,00 se permite")
+    void voidQrCollection_leavingZero_passes() {
+        qr.setCurrentBalance(new BigDecimal("50.00"));
+        CustomerCollection k = collection(qr, "50.00", Instant.now());
+        FinancialTransaction tx = incomeOf(k, null);
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(qr));
+
+        customerService.voidCollection(neida.getId(), k.getId(), new VoidDebtRequest("Error"), "cajero");
+
+        assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ANULADO);
+        assertThat(qr.getCurrentBalance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @DisplayName("DEU-06, FIN-06: anular un cobro que dejaría la cuenta en negativo se rechaza con el mensaje de Finanzas")
+    void voidCollection_leavingNegative_isRejected() {
+        caja.setCurrentBalance(new BigDecimal("49.99"));
+        CustomerCollection k = collection(caja, "50.00", Instant.now());
+        FinancialTransaction tx = incomeOf(k, openSession.getId());
+        when(cashSessionRepository.findByIdForUpdate(openSession.getId())).thenReturn(Optional.of(openSession));
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(caja));
+
+        assertThatThrownBy(() -> customerService.voidCollection(neida.getId(), k.getId(), new VoidDebtRequest("Error"), "cajero"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("No se puede anular: la cuenta Caja quedaría con saldo negativo (saldo disponible: Bs 49,99). "
+                + "Anule primero los gastos o transferencias que usaron ese dinero.");
+        assertThat(tx.getStatus()).isEqualTo(FinancialTransactionStatus.ACTIVO);
+        assertThat(k.getStatus()).isEqualTo(CustomerCollectionStatus.ACTIVO);
+        assertThat(caja.getCurrentBalance()).isEqualByComparingTo("49.99");
+    }
+
+    @Test
     @DisplayName("DEU-06: un cobro de una caja cerrada no se anula; el motivo es obligatorio")
     void voidCollectionRejections() {
         CustomerCollection k = collection(caja, "50.00", Instant.now());

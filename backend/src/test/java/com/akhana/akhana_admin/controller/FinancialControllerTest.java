@@ -150,6 +150,20 @@ class FinancialControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/finances/accounts - FIN-01: un saldo inicial negativo se rechaza con 400")
+    void createAccount_negativeInitialBalance_isRejected() throws Exception {
+        mockMvc.perform(post("/api/finances/accounts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + AUTH_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Cuenta nueva", "initialBalance": -0.01}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("El saldo inicial no puede ser negativo.")));
+        org.mockito.Mockito.verifyNoInteractions(financialAccountService);
+    }
+
+    @Test
     @DisplayName("POST /api/finances/transactions - Debe registrar ingreso y retornar 201 CREATED")
     void testCreateTransaction() throws Exception {
         UUID accountId = UUID.randomUUID();
