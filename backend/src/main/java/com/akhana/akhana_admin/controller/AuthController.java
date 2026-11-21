@@ -59,10 +59,11 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<ChangePasswordResponse> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
-            Authentication authentication) {
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(new ChangePasswordResponse(authService.changePassword(user.getId(), request)));
+        return ResponseEntity.ok(new ChangePasswordResponse(authService.changePassword(user.getId(), request, httpRequest.getRemoteAddr())));
     }
 }

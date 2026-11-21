@@ -1,6 +1,7 @@
 package com.akhana.akhana_admin.dto;
 
 import com.akhana.akhana_admin.model.Role;
+import com.akhana.akhana_admin.dto.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -18,7 +19,8 @@ public record CreateUserRequest(
     String username,
 
     @NotBlank(message = "La contraseña es obligatoria.")
-    @Size(min = 12, max = 100, message = "La contraseña debe tener entre 12 y 100 caracteres.")
+    @Size(min = 12, max = 72, message = "La contraseña debe tener entre 12 y 72 caracteres.")
+    @MaxUtf8Bytes(value = 72, message = "La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela.")
     String password,
 
     @NotNull(message = "El rol es obligatorio.")
