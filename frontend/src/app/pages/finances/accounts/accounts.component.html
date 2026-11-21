@@ -93,6 +93,18 @@
               <span>Movimientos</span>
             </button>
 
+            <button
+              type="button"
+              class="btn-card-action btn-audit"
+              (click)="openAuditModal(account)"
+              title="Consultar auditoría">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Auditoría</span>
+            </button>
+
             @if (account.openingBalanceEditable) {
               <button
                 type="button"
@@ -143,7 +155,9 @@
     [title]="isEditing() ? 'Editar Cuenta Financiera' : 'Nueva cuenta Financiera'"
     [subtitle]="isEditing() ? 'Modifica los datos de la cuenta seleccionada' : 'Registra una nueva cuenta para gestionar sus saldos'"
     [size]="'md'"
-    (close)="closeFormModal()">
+    [closeOnBackdrop]="false"
+    [closeOnEscape]="false"
+    (close)="attemptCloseForm()">
 
     <form [formGroup]="accountForm" (ngSubmit)="saveAccount()" class="account-form">
       @if (formError()) {
@@ -202,7 +216,7 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+        <button type="button" class="btn btn-secondary" (click)="attemptCloseForm()" [disabled]="isSubmitting()">
           Cancelar
         </button>
         <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
@@ -216,6 +230,18 @@
       </div>
     </form>
   </app-modal>
+
+  <!-- Shared discard changes confirmation modal -->
+  <app-confirm-modal
+    [isOpen]="isDiscardConfirmOpen()"
+    [title]="'¿Descartar cambios?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [confirmText]="'Descartar cambios'"
+    [cancelText]="'Continuar editando'"
+    [variant]="'warning'"
+    (confirm)="discardChanges()"
+    (cancel)="cancelDiscard()">
+  </app-confirm-modal>
 
   <!-- Cutover balance modal (FIN-01) -->
   <app-modal
@@ -344,4 +370,13 @@
     (confirm)="confirmDelete()"
     (cancel)="closeDeleteModal()">
   </app-confirm-modal>
+
+  <!-- Shared audit modal -->
+  <app-audit-modal
+    [isOpen]="!!auditAccount()"
+    [title]="'Auditoría de la cuenta'"
+    [subtitle]="auditAccount()?.name || ''"
+    [data]="auditData()"
+    (close)="closeAuditModal()">
+  </app-audit-modal>
 </div>

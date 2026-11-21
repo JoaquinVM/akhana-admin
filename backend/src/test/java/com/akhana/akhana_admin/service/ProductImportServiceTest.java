@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.dto.ProductImportResponse.RowStatus;
 import com.akhana.akhana_admin.dto.ProductPresentationRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
@@ -50,6 +51,7 @@ class ProductImportServiceTest {
     @Mock private SupplierRepository supplierRepository;
     @Mock private TagRepository tagRepository;
     @Mock private ProductPresentationService presentationService;
+    @Mock private ProductPriceChangeRepository priceChangeRepository;
 
     @InjectMocks
     private ProductImportServiceImpl importService;
@@ -67,8 +69,10 @@ class ProductImportServiceTest {
         when(supplierRepository.save(any(Supplier.class))).thenAnswer(i -> i.getArgument(0));
         when(tagRepository.save(any(Tag.class))).thenAnswer(i -> i.getArgument(0));
         when(productRepository.save(any(Product.class))).thenAnswer(i -> {
-            savedProducts.add(i.getArgument(0));
-            return i.getArgument(0);
+            Product product = i.getArgument(0);
+            product.setId(UUID.randomUUID());
+            savedProducts.add(product);
+            return product;
         });
     }
 
@@ -193,6 +197,38 @@ class ProductImportServiceTest {
                 org.assertj.core.groups.Tuple.tuple("1/4 libra", new BigDecimal("0.113"), new BigDecimal("16.00")),
                 org.assertj.core.groups.Tuple.tuple("1/2 libra", new BigDecimal("0.227"), new BigDecimal("31.50")),
                 org.assertj.core.groups.Tuple.tuple("1 libra", new BigDecimal("0.454"), new BigDecimal("10.00")));
+    }
+
+    @Test
+    @DisplayName("CAT-07: cada producto importado registra su precio inicial en el historial, como al crearlo")
+    void importedProduct_recordsInitialPrices() {
+        byte[] file = xlsx(
+            row("Infusiones", "Tes del Valle", null, "Te verde", "TE-VER", 12.5, 20, "Unidad"),
+            row("Nutricion", "Frutos Secos", null, "Arandano", "FSE-ARA", 0.095, 0.14, "Gramo"));
+
+        importService.preview("Productos.xlsx", file);
+        verify(priceChangeRepository, never()).save(any());
+
+        importService.importProducts("Productos.xlsx", file, "admin");
+
+        ArgumentCaptor<ProductPriceChange> captor = ArgumentCaptor.forClass(ProductPriceChange.class);
+        verify(priceChangeRepository, times(2)).save(captor.capture());
+        Map<UUID, ProductPriceChange> byProduct = new HashMap<>();
+        captor.getAllValues().forEach(c -> byProduct.put(c.getProductId(), c));
+
+        ProductPriceChange te = byProduct.get(saved("TE-VER").getId());
+        assertThat(te.getSource()).isEqualTo(PriceChangeSource.CATALOG);
+        assertThat(te.getPreviousBuyPrice()).isNull();
+        assertThat(te.getPreviousSellPrice()).isNull();
+        assertThat(te.getNewBuyPrice()).isEqualByComparingTo("12.50");
+        assertThat(te.getNewSellPrice()).isEqualByComparingTo("20.00");
+        assertThat(te.getChangedBy()).isEqualTo("admin");
+        assertThat(te.getChangedAt()).isEqualTo(saved("TE-VER").getCreatedAt());
+
+        // The kilo product keeps the converted prices, the ones of its catalog card
+        ProductPriceChange arandano = byProduct.get(saved("FSE-ARA").getId());
+        assertThat(arandano.getNewBuyPrice()).isEqualByComparingTo("95.00");
+        assertThat(arandano.getNewSellPrice()).isEqualByComparingTo("140.00");
     }
 
     @Test

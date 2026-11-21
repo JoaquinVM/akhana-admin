@@ -164,4 +164,19 @@ describe('FinancialCategoriesComponent', () => {
     expect(component.auditModalSubtitle()).toBe('Ventas');
     expect(component.selectedAuditData()?.['createdBy']).toBe('admin');
   });
+
+  it('al cerrar el formulario con cambios sin guardar pide confirmar; sin cambios cierra directo', () => {
+    component.openEditModal(mockCategories[1]);
+    component.attemptCloseForm();
+    expect(component.isFormModalOpen()).toBe(false);
+
+    component.openEditModal(mockCategories[1]);
+    component.categoryForm.patchValue({ color: '#000000' });
+    component.attemptCloseForm();
+    expect(component.isDiscardConfirmOpen()).toBe(true);
+    expect(component.isFormModalOpen()).toBe(true);
+    component.discardChanges();
+    expect(component.isFormModalOpen()).toBe(false);
+    expect(component.isDiscardConfirmOpen()).toBe(false);
+  });
 });

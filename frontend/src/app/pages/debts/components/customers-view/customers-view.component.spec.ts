@@ -76,15 +76,48 @@ describe('CustomersViewComponent', () => {
     expect(customerService.getCustomers).toHaveBeenLastCalledWith('INACTIVO', 'nei');
   });
 
-  it('DEU-05: crea un cliente activo y exige nombre', () => {
+  it('DEU-05: crea un cliente activo y exige nombre con el error junto al campo', () => {
     component.openCreate();
     component.save();
-    expect(component.formError()).toBe('El nombre es obligatorio.');
+    fixture.detectChanges();
+    expect(component.formError()).toBeNull();
+    expect(fixture.nativeElement.querySelector('#customer-name').classList).toContain('is-invalid');
+    expect(fixture.nativeElement.querySelector('.invalid-feedback').textContent).toContain('El nombre es obligatorio.');
+    expect(customerService.createCustomer).not.toHaveBeenCalled();
 
-    component.updateDraft('name', '  Tía Neida ');
+    component.form.controls.name.setValue('  Tía Neida ');
     component.save();
     expect(customerService.createCustomer).toHaveBeenCalledWith({ name: 'Tía Neida', phone: null, description: null, status: 'ACTIVO' });
     expect(component.isFormOpen()).toBe(false);
+  });
+
+  it('DEU-05: el error del servidor al guardar va dentro del formulario', () => {
+    customerService.updateCustomer.mockReturnValue(throwError(() => ({ error: { message: "Ya existe un cliente con el nombre 'Otra tienda'." } })));
+    component.openEdit(neida);
+    component.form.controls.name.setValue('Otra tienda');
+    component.save();
+    expect(component.formError()).toBe("Ya existe un cliente con el nombre 'Otra tienda'.");
+    expect(component.isFormOpen()).toBe(true);
+  });
+
+  it('DEU-05: al cerrar con cambios sin guardar pide confirmar; continuar editando conserva lo escrito', () => {
+    component.openCreate();
+    component.attemptCloseForm();
+    expect(component.isFormOpen()).toBe(false);
+
+    component.openCreate();
+    component.form.controls.name.setValue('Tía Neida');
+    component.attemptCloseForm();
+    expect(component.isDiscardConfirmOpen()).toBe(true);
+    component.isDiscardConfirmOpen.set(false);
+    expect(component.isFormOpen()).toBe(true);
+    expect(component.form.controls.name.value).toBe('Tía Neida');
+  });
+
+  it('DEU-07: el error de carga muestra el mensaje del servidor', () => {
+    customerService.getCustomers.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadCustomers();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
   });
 
   it('DEU-05: muestra el rechazo del servidor al eliminar un cliente con saldo', () => {
