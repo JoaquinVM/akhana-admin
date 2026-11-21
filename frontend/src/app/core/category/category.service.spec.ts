@@ -60,16 +60,6 @@ describe('CategoryService', () => {
     req.flush([mockCategory]);
   });
 
-  it('debe obtener una categoría por id', () => {
-    service.getCategoryById('cat-1').subscribe(category => {
-      expect(category.id).toBe('cat-1');
-      expect(category.name).toBe('Aromaterapia');
-    });
-
-    const req = httpTesting.expectOne('/api/categories/cat-1');
-    expect(req.request.method).toBe('GET');
-    req.flush(mockCategory);
-  });
 
   it('debe crear una categoría por POST', () => {
     const request: CategoryRequest = {

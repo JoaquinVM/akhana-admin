@@ -56,7 +56,6 @@ describe('CategoriesComponent', () => {
   beforeEach(async () => {
     mockCategoryService = {
       getCategories: vi.fn().mockReturnValue(of(mockCategories)),
-      getCategoryById: vi.fn(),
       createCategory: vi.fn(),
       updateCategory: vi.fn(),
       deleteCategory: vi.fn().mockReturnValue(of(null))

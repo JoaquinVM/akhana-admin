@@ -21,9 +21,6 @@ export class TagService {
     return this.http.get<Tag[]>(this.apiUrl, { params });
   }
 
-  getTagById(id: string): Observable<Tag> {
-    return this.http.get<Tag>(`${this.apiUrl}/${id}`);
-  }
 
   createTag(request: TagRequest): Observable<Tag> {
     return this.http.post<Tag>(this.apiUrl, request);

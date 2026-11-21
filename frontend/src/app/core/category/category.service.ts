@@ -21,9 +21,6 @@ export class CategoryService {
     return this.http.get<Category[]>(this.apiUrl, { params });
   }
 
-  getCategoryById(id: string): Observable<Category> {
-    return this.http.get<Category>(`${this.apiUrl}/${id}`);
-  }
 
   createCategory(request: CategoryRequest): Observable<Category> {
     return this.http.post<Category>(this.apiUrl, request);
