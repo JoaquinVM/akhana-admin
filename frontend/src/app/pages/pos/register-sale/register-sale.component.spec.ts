@@ -386,9 +386,9 @@ describe('RegisterSaleComponent', () => {
 
   describe('CAT-11: presentaciones', () => {
     // Nuez pelada: costo 130 y precio 210 por kilo
-    const halfPound = { id: 'pres-half', name: '1/2 libra', weightKg: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true };
-    const hundred = { id: 'pres-100', name: '100 g', weightKg: 0.1, fixedPrice: null, price: 21, cost: 13, active: true };
-    const retired = { id: 'pres-old', name: '1 libra', weightKg: 0.454, fixedPrice: 90, price: 90, cost: 59.02, active: false };
+    const halfPound = { id: 'pres-half', name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, price: 45, cost: 29.51, active: true, sold: true };
+    const hundred = { id: 'pres-100', name: '100 g', baseQuantity: 0.1, fixedPrice: null, price: 21, cost: 13, active: true, sold: true };
+    const retired = { id: 'pres-old', name: '1 libra', baseQuantity: 0.454, fixedPrice: 90, price: 90, cost: 59.02, active: false, sold: true };
     const nut: Product = {
       ...mockProduct1, id: 'prod-nut', code: 'FSE-NUE', name: 'Nuez pelada', buyPrice: 130, sellPrice: 210,
       saleUnit: 'KILOGRAM', presentations: [hundred, halfPound, retired]
@@ -449,6 +449,43 @@ describe('RegisterSaleComponent', () => {
       component.addToCart({ ...nut, presentations: [retired] });
       expect(component.pickerProduct()).toBeNull();
       expect(component.cartItems()[0].quantity).toBe(0.1);
+    });
+  });
+
+  describe('CAT-15: cajas de un producto por unidad', () => {
+    // Barra Chia: costo 2,13 y precio 4,00; la Caja ×12 se vende a Bs 44
+    const box = { id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, price: 44, cost: 25.56, active: true, sold: true, barcode: '7790000000017' };
+    const bar: Product = {
+      ...mockProduct1, id: 'prod-bar', code: 'NSE-BAR-CHI', name: 'Barra Chia', buyPrice: 2.13, sellPrice: 4,
+      saleUnit: 'UNIT', presentations: [box]
+    };
+
+    it('la caja elegida en el buscador entra entera, sin selector, y suma de a una; el producto sigue entrando por unidad', () => {
+      component.onCatalogPick({ product: bar, presentation: box });
+      component.onCatalogPick({ product: bar, presentation: box });
+      component.onCatalogPick({ product: bar, presentation: null });
+
+      expect(component.pickerProduct()).toBeNull();
+      expect(component.cartItems().length).toBe(2);
+      const boxLine = component.cartItems()[0];
+      expect(component.lineName(boxLine)).toBe('Barra Chia · Caja ×12');
+      expect(boxLine.quantity).toBe(2);
+      expect(boxLine.subtotal).toBe(88);
+      expect(component.cartItems()[1].subtotal).toBe(4);
+      expect(component.checkoutItems()[0]).toEqual({ productId: 'prod-bar', quantity: 2, discountPerUnit: undefined, presentationId: 'pres-box' });
+      expect(component.checkoutItems()[1].presentationId).toBeUndefined();
+    });
+
+    it('al costo la caja cobra 12 × 2,13 = 25,56', () => {
+      component.onCatalogPick({ product: bar, presentation: box });
+      component.setAtCost(true);
+      expect(component.cartItems()[0].unitPrice).toBe(25.56);
+    });
+
+    it('el escaneo de la caja la agrega y la marca escaneada', () => {
+      component.onScanned({ product: bar, presentation: box, fromServer: false });
+      expect(component.cartItems()[0].presentation).toEqual(box);
+      expect(component.cartItems()[0].scanned).toBe(true);
     });
   });
 

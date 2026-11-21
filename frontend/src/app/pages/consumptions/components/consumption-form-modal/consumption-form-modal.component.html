@@ -97,7 +97,7 @@
                 <span class="unit-hints">
                   <span class="unit-hint">{{ isWeightLine(line) ? 'kg' : 'u' }}</span>
                   @if (line.presentation) {
-                    <span class="unit-hint">{{ line.presentation.weightKg | number:'1.3-3' }} kg c/u</span>
+                    <span class="unit-hint">{{ line.presentation.baseQuantity | number:'1.3-3' }} kg c/u</span>
                   }
                 </span>
               </td>

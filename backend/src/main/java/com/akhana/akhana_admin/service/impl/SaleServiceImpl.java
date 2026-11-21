@@ -139,9 +139,9 @@ public class SaleServiceImpl implements SaleService {
                 throw new IllegalArgumentException(FREE_LINE_ONLY_SPECIAL);
             }
 
-            // CAT-11: by presentation the quantity is whole packs and the kilos are packs x presentation weight
+            // CAT-15: by package the quantity is whole packs and the base quantity is packs x package base quantity
             ProductPresentation presentation = itemReq.presentationId() != null
-                ? presentationService.findActivePresentation(product, itemReq.presentationId())
+                ? presentationService.findSoldPresentation(product, itemReq.presentationId())
                 : null;
             BigDecimal qty = presentation != null
                 ? normalizePackQuantity(itemReq.quantity(), product.getName(), presentation.getName())
@@ -162,7 +162,7 @@ public class SaleServiceImpl implements SaleService {
                     throw new IllegalArgumentException(AT_COST_NO_DISCOUNTS);
                 }
             }
-            // A presentation at cost costs weight x cost per kilo: its fixed price is ignored (CAT-11)
+            // A package at cost costs base quantity x cost: its own price is ignored (CAT-11, CAT-15)
             BigDecimal unitPrice;
             if (presentation != null) {
                 unitPrice = atCost
@@ -207,8 +207,8 @@ public class SaleServiceImpl implements SaleService {
                 .quantity(qty)
                 .presentation(presentation)
                 .presentationName(presentation != null ? presentation.getName() : null)
-                .presentationWeightKg(presentation != null ? presentation.getWeightKg() : null)
-                .weightKg(presentation != null ? packWeight(qty, presentation) : null)
+                .presentationBaseQuantity(presentation != null ? presentation.getBaseQuantity() : null)
+                .baseQuantity(presentation != null ? packBaseQuantity(qty, presentation) : null)
                 .subtotal(lineSubtotal)
                 .scanned(Boolean.TRUE.equals(itemReq.scanned()))
                 .build();
@@ -550,7 +550,7 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalArgumentException("El precio de '" + freeName + "' debe ser mayor a 0, con hasta 2 decimales.");
         }
         if (itemReq.presentationId() != null) {
-            throw new IllegalArgumentException("'" + freeName + "' no se vende por presentación.");
+            throw new IllegalArgumentException("'" + freeName + "' no se vende por empaque.");
         }
         if (itemReq.discountPerUnit() != null && itemReq.discountPerUnit().signum() != 0) {
             throw new IllegalArgumentException(FREE_LINE_NO_DISCOUNT);
@@ -677,7 +677,7 @@ public class SaleServiceImpl implements SaleService {
         return total.setScale(2, RoundingMode.HALF_UP);
     }
 
-    // A line by presentation counts whole packs (CAT-11)
+    // A line by package counts whole packs (CAT-11, CAT-15, COM-29)
     static BigDecimal normalizePackQuantity(BigDecimal quantity, String productName, String presentationName) {
         String label = productName + " · " + presentationName;
         if (quantity == null) {
@@ -687,13 +687,13 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalArgumentException("La cantidad de '" + label + "' debe ser mayor a 0.");
         }
         if (quantity.stripTrailingZeros().scale() > 0) {
-            throw new IllegalArgumentException("La cantidad de '" + label + "' debe ser entera: se vende por presentación.");
+            throw new IllegalArgumentException("La cantidad de '" + label + "' debe ser entera: va por empaque.");
         }
         return quantity.setScale(3);
     }
 
-    static BigDecimal packWeight(BigDecimal packs, ProductPresentation presentation) {
-        return packs.multiply(presentation.getWeightKg()).setScale(3, RoundingMode.HALF_UP);
+    static BigDecimal packBaseQuantity(BigDecimal packs, ProductPresentation presentation) {
+        return packs.multiply(presentation.getBaseQuantity()).setScale(3, RoundingMode.HALF_UP);
     }
 
     static final String NO_OPEN_SESSION = "Para registrar una venta debe existir una caja abierta.";

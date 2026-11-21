@@ -117,6 +117,13 @@ export const routes: Routes = [
         data: { permission: PERMISSIONS.PRODUCTS }
       },
       {
+        path: 'products/boxes',
+        // COM-10: boxes sold as products become packages, one by one, in its own page
+        loadComponent: () => import('./pages/products/box-conversion/box-conversion.component').then(m => m.BoxConversionComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.PRODUCTS }
+      },
+      {
         path: 'products/barcodes',
         // CAT-10: long work done in batches, in its own page
         loadComponent: () => import('./pages/products/barcode-loading/barcode-loading.component').then(m => m.BarcodeLoadingComponent),

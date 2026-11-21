@@ -57,7 +57,8 @@ class ConsumptionServiceTest {
     void setUp() {
         // Only these two repositories: a consumption cannot reach a cash session, an account or a movement
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
-            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository), clock);
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)), clock);
 
         roquin = product("Roquin", "ROQ-1", SaleUnit.UNIT, "2.73", "4.00");
         bombitas = product("Bombitas Proteína", "BOM-1", SaleUnit.UNIT, "10.00", "15.00");
@@ -255,7 +256,7 @@ class ConsumptionServiceTest {
     void register_byPresentation() {
         nuts.setBuyPrice(new BigDecimal("130.00"));
         ProductPresentation halfPound = ProductPresentation.builder().id(UUID.randomUUID()).product(nuts)
-            .name("1/2 libra").weightKg(new BigDecimal("0.227")).fixedPrice(new BigDecimal("45.00")).active(true).build();
+            .name("1/2 libra").baseQuantity(new BigDecimal("0.227")).fixedPrice(new BigDecimal("45.00")).active(true).build();
         when(presentationRepository.findById(halfPound.getId())).thenReturn(Optional.of(halfPound));
         ConsumptionItemRequest pack = new ConsumptionItemRequest(nuts.getId(), BigDecimal.ONE, halfPound.getId());
 
@@ -265,7 +266,7 @@ class ConsumptionServiceTest {
         assertThat(response.items()).hasSize(2);
         assertThat(response.items().get(0).presentationName()).isEqualTo("1/2 libra");
         assertThat(response.items().get(0).quantity()).isEqualByComparingTo("2");
-        assertThat(response.items().get(0).weightKg()).isEqualByComparingTo("0.454");
+        assertThat(response.items().get(0).baseQuantity()).isEqualByComparingTo("0.454");
         assertThat(response.items().get(0).subtotal()).isEqualByComparingTo("59.02");
         assertThat(response.items().get(1).presentationId()).isNull();
         assertThat(response.items().get(1).subtotal()).isEqualByComparingTo("39.00");
@@ -277,7 +278,8 @@ class ConsumptionServiceTest {
     void register_futureDateFollowsTheStoreMidnight() {
         LocalDate december1 = LocalDate.of(2026, 12, 1);
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
-            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             StoreClocks.at(StoreClocks.LAST_SECOND_OF_NOVEMBER));
         assertThatThrownBy(() -> consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator"))
             .isInstanceOf(IllegalArgumentException.class)
@@ -286,7 +288,8 @@ class ConsumptionServiceTest {
             .isEqualTo(LocalDate.of(2026, 11, 30));
 
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
-            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
+            new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             StoreClocks.at(StoreClocks.FIRST_SECOND_OF_DECEMBER));
         assertThat(consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator").consumptionDate())
             .isEqualTo(december1);

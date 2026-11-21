@@ -1524,4 +1524,92 @@ describe('PurchaseFormModalComponent', () => {
       expect(purchaseService.updatePurchase.mock.calls[0][1].arrival).toBeUndefined();
     });
   });
+
+  describe('COM-29: compras por empaque', () => {
+    const box = { id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: null, price: null, cost: 120,
+      active: true, sold: false, barcode: null };
+    const retired = { id: 'pres-old', name: 'Display ×24', baseQuantity: 24, fixedPrice: null, price: null, cost: 240,
+      active: false, sold: false, barcode: null };
+    // Té verde costs Bs 10 per unit
+    const teaWithBox = product({ presentations: [box, retired] });
+
+    beforeEach(() => {
+      component.products.set([teaWithBox, nuts]);
+      component.supplierId.set('sup-1');
+    });
+
+    it('ofrece la unidad y los empaques activos; 24 unidades a Bs 10 pasan a 2 cajas a Bs 120, sin alerta', () => {
+      component.addProduct(teaWithBox);
+      component.onQuantityChange(0, 24);
+      expect(component.packageOptions(component.lines()[0]).map(o => o.name)).toEqual(['Caja ×12']);
+
+      component.onPackageChange(0, 'pres-box');
+
+      const line = component.lines()[0];
+      expect(line.quantity).toBe(2);
+      expect(line.unitCost).toBe(120);
+      expect(component.baseQuantity(line)).toBe(24);
+      expect(component.baseUnitCost(line)).toBe(10);
+      expect(component.lineSubtotal(line)).toBe(240);
+      expect(component.costDiffers(line)).toBe(false);
+      expect(component.buildRequest().items[0]).toEqual({
+        productId: 'p-1', quantity: 2, unitCost: 120, updateProductCost: false, newSellPrice: null, presentationId: 'pres-box'
+      });
+
+      // Back to units: the base units and their cost
+      component.onPackageChange(0, '');
+      expect(component.lines()[0].quantity).toBe(24);
+      expect(component.lines()[0].unitCost).toBe(10);
+      expect(component.buildRequest().items[0].presentationId).toBeUndefined();
+    });
+
+    it('la alerta y el precio sugerido usan el costo por unidad base (Bs 150 / 12 = 12,50; 25,50 / 12 = 2,13)', () => {
+      component.addProduct(teaWithBox);
+      component.onPackageChange(0, 'pres-box');
+      component.onCostChange(0, 150);
+      expect(component.baseUnitCost(component.lines()[0])).toBe(12.5);
+      expect(component.costDiffers(component.lines()[0])).toBe(true);
+
+      component.onUpdateCostToggle(0, true);
+      expect(purchaseService.getPriceSuggestion).toHaveBeenLastCalledWith('p-1', 12.5);
+
+      component.onCostChange(0, 25.5);
+      expect(component.baseUnitCost(component.lines()[0])).toBe(2.13);
+    });
+
+    it('con empaque la cantidad va de a una caja y no baja de 1', () => {
+      component.addProduct(teaWithBox);
+      component.onPackageChange(0, 'pres-box');
+      component.incrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(2);
+      component.decrementQuantity(0);
+      expect(component.lines()[0].quantity).toBe(1);
+      expect(component.canDecrement(component.lines()[0])).toBe(false);
+    });
+
+    it('al editar, una línea con un empaque ya inactivo lo conserva y no da alerta de costo', () => {
+      const purchase = {
+        id: 'pur-7', purchaseNumber: 'PED-000007', supplierId: 'sup-1', purchaseDate: '2026-11-20', shippingCost: 0,
+        consignment: false, comment: null, deliveryType: 'EN_TIENDA', deliveryStatus: 'ENTREGADO', deliveryDate: '2026-11-20',
+        items: [{
+          id: 'item-1', productId: 'p-1', productName: 'Té verde', productCode: 'TE-1', saleUnit: 'UNIT', quantity: 1,
+          unitCost: 240, subtotal: 240, previousUnitCost: 10, costUpdated: false, presentationId: 'pres-old',
+          presentationName: 'Display ×24', presentationBaseQuantity: 24, baseQuantity: 24, baseUnitCost: 10
+        }],
+        payments: []
+      } as unknown as Purchase;
+      productService.getProducts.mockReturnValue(of([teaWithBox, nuts]));
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('purchase', purchase);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+
+      const line = component.lines()[0];
+      expect(line.presentation).toEqual({ id: 'pres-old', name: 'Display ×24', baseQuantity: 24 });
+      expect(component.packageOptions(line).map(o => o.name)).toEqual(['Display ×24', 'Caja ×12']);
+      expect(component.costDiffers(line)).toBe(false);
+      expect(component.buildRequest().items[0]).toEqual(expect.objectContaining({ itemId: 'item-1', presentationId: 'pres-old' }));
+    });
+  });
 });

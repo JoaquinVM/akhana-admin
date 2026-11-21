@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.Instant;
 import java.util.UUID;
 
-// CAT-10: a factory barcode of a product; removing it deactivates the row, never deletes it (RG-01)
+// CAT-10, CAT-15: a factory barcode of a product or of one of its packages; removing it deactivates the row, never deletes it (RG-01)
 @Entity
 @Table(name = "product_barcodes")
 @Getter
@@ -26,6 +26,10 @@ public class ProductBarcode {
 
     @Column(nullable = false, length = 13, updatable = false)
     private String barcode;
+
+    // CAT-15: the barcode of this package of the product; null for the product's own barcodes
+    @Column(name = "presentation_id", updatable = false)
+    private UUID presentationId;
 
     @Column(nullable = false)
     @Builder.Default

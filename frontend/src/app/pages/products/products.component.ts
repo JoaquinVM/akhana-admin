@@ -40,19 +40,23 @@ import { ConnectionNoticeComponent } from '../../shared/components/connection-no
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
-// CAT-11: editable row of the Presentaciones section; the server validates the rules
+// CAT-15: editable row of the Empaques section (the presentations of CAT-11); the server validates the rules
 export interface PresentationDraft {
   id: string | null;
   name: string;
-  weightKg: number | null;
+  baseQuantity: number | null;
   fixedPrice: number | null;
   active: boolean;
+  sold: boolean;
+  barcode: string;
 }
 
 export const MAX_ACTIVE_PRESENTATIONS = 6;
 
 function suggestedDrafts(): PresentationDraft[] {
-  return SUGGESTED_PRESENTATIONS.map((p) => ({ id: null, name: p.name, weightKg: p.weightKg, fixedPrice: null, active: true }));
+  return SUGGESTED_PRESENTATIONS.map((p) => ({
+    id: null, name: p.name, baseQuantity: p.baseQuantity, fixedPrice: null, active: true, sold: true, barcode: ''
+  }));
 }
 
 export const PRODUCTS_PAGE_SIZE = 100;
@@ -121,8 +125,10 @@ export class ProductsComponent implements OnInit {
   originalFormValues = signal<Record<string, any> | null>(null);
   formVersion = signal<number>(0);
 
-  // CAT-11: presentations of the product by kilo and warnings of the last save
+  // CAT-15: packages of the product and warnings of the last save
   presentations = signal<PresentationDraft[]>([]);
+  // The sale unit the packages were written for: changing it turns them off (CAT-15)
+  private formSaleUnit: string = 'UNIT';
   private originalPresentations = signal<string>('[]');
   saveWarnings = signal<string[]>([]);
   readonly maxActivePresentations = MAX_ACTIVE_PRESENTATIONS;
@@ -383,6 +389,16 @@ export class ProductsComponent implements OnInit {
       this.toast.error('Cierra esta ventana para escanear.');
       return;
     }
+    // CAT-15: with the cursor in the code of a package, the scan is that package's code
+    const packageIndex = this.document.activeElement?.getAttribute('data-package-barcode');
+    if (packageIndex !== null && packageIndex !== undefined) {
+      if (!looksLikeBarcode(code)) {
+        this.toast.error('El código de barras no es válido.');
+        return;
+      }
+      this.updatePresentation(Number(packageIndex), 'barcode', canonicalBarcode(code));
+      return;
+    }
     if (!this.showBarcodes()) {
       this.toast.error('Este producto no admite código de barras.');
       return;
@@ -427,12 +443,16 @@ export class ProductsComponent implements OnInit {
         }
       });
 
-    // CAT-11: switching to Kilo without presentations proposes 100 g and 1/2 libra
+    // CAT-15: changing between unit and kilo turns off the packages, whose base quantity changes meaning; switching to
+    // Kilo proposes 100 g and 1/2 libra (CAT-11)
     this.productForm.get('saleUnit')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((unit) => {
-        if (unit === 'KILOGRAM' && this.presentations().length === 0) {
-          this.presentations.set(suggestedDrafts());
+        if (!unit || unit === this.formSaleUnit) return;
+        this.formSaleUnit = unit;
+        this.presentations.update((list) => list.filter((p) => p.id).map((p) => ({ ...p, active: false })));
+        if (unit === 'KILOGRAM' && !this.presentations().some((p) => p.active)) {
+          this.presentations.update((list) => [...list, ...suggestedDrafts()]);
         }
       });
 
@@ -618,6 +638,7 @@ export class ProductsComponent implements OnInit {
       specialType: '',
       ownerCreditorId: ''
     });
+    this.formSaleUnit = 'UNIT';
     this.presentations.set([]);
     this.originalPresentations.set('[]');
     this.barcodes.set([]);
@@ -653,10 +674,13 @@ export class ProductsComponent implements OnInit {
     const drafts: PresentationDraft[] = (product.presentations ?? []).map((p) => ({
       id: p.id,
       name: p.name,
-      weightKg: p.weightKg,
+      baseQuantity: p.baseQuantity,
       fixedPrice: p.fixedPrice,
-      active: p.active
+      active: p.active,
+      sold: p.sold,
+      barcode: p.barcode ?? ''
     }));
+    this.formSaleUnit = product.saleUnit ?? 'UNIT';
     this.presentations.set(drafts);
     this.originalPresentations.set(JSON.stringify(drafts));
     this.barcodes.set(product.barcodes ?? []);
@@ -716,6 +740,7 @@ export class ProductsComponent implements OnInit {
       specialType: '',
       ownerCreditorId: ''
     });
+    this.formSaleUnit = 'UNIT';
     this.presentations.set([]);
     this.originalPresentations.set('[]');
     this.barcodes.set([]);
@@ -749,7 +774,7 @@ export class ProductsComponent implements OnInit {
       sellPrice: Number(val.sellPrice),
       status: this.isEditing() ? val.status : 'ACTIVO',
       saleUnit: val.saleUnit,
-      presentations: val.saleUnit === 'KILOGRAM' && !val.specialType ? this.presentationRequests() : undefined,
+      presentations: !val.specialType ? this.presentationRequests() : undefined,
       specialType: val.specialType || null,
       ownerCreditorId: val.specialType === 'THIRD_PARTY' ? val.ownerCreditorId : null,
       barcodes: this.barcodesModified() ? this.barcodes() : undefined
@@ -789,15 +814,21 @@ export class ProductsComponent implements OnInit {
     }
   }
 
-  // --- Presentaciones (CAT-11) ---
+  // --- Empaques (CAT-15) ---
 
   addPresentation(): void {
-    this.presentations.update((list) => [...list, { id: null, name: '', weightKg: null, fixedPrice: null, active: true }]);
+    this.presentations.update((list) => [...list,
+      { id: null, name: '', baseQuantity: null, fixedPrice: null, active: true, sold: this.isKilogramForm(), barcode: '' }]);
   }
 
-  updatePresentation(index: number, field: 'name' | 'weightKg' | 'fixedPrice', value: string): void {
-    const parsed = field === 'name' ? value : value === '' || value === null ? null : Number(value);
+  updatePresentation(index: number, field: 'name' | 'baseQuantity' | 'fixedPrice' | 'barcode', value: string): void {
+    const parsed = field === 'name' || field === 'barcode' ? value : value === '' || value === null ? null : Number(value);
     this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, [field]: parsed } : p)));
+  }
+
+  // A package that is not sold has no price of its own
+  setPresentationSold(index: number, sold: boolean): void {
+    this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, sold, fixedPrice: sold ? p.fixedPrice : null } : p)));
   }
 
   // A new one is removed from the list; a saved one is deactivated, never deleted
@@ -814,26 +845,29 @@ export class ProductsComponent implements OnInit {
     this.presentations.update((list) => list.map((p, i) => (i === index ? { ...p, active } : p)));
   }
 
-  // Preview; the server recomputes. Without a fixed price: weight x price per kilo
+  // Preview; the server recomputes. Without its own price: base quantity x price
   presentationPricePreview(draft: PresentationDraft): number | null {
+    if (!draft.sold) return null;
     if (draft.fixedPrice) return draft.fixedPrice;
     const sell = Number(this.productForm.get('sellPrice')?.value) || 0;
-    return draft.weightKg ? lineAmount(Number(draft.weightKg), sell) : null;
+    return draft.baseQuantity ? lineAmount(Number(draft.baseQuantity), sell) : null;
   }
 
   // Rounded like the server (HALF_UP on the exact product): 100 g at Bs 40,15/kg is Bs 4,02
   presentationCostPreview(draft: PresentationDraft): number | null {
     const buy = Number(this.productForm.get('buyPrice')?.value) || 0;
-    return draft.weightKg ? lineAmount(Number(draft.weightKg), buy) : null;
+    return draft.baseQuantity ? lineAmount(Number(draft.baseQuantity), buy) : null;
   }
 
   private presentationRequests(): ProductPresentationRequest[] {
     return this.presentations().map((p) => ({
       id: p.id,
       name: p.name.trim(),
-      weightKg: Number(p.weightKg),
-      fixedPrice: p.fixedPrice ? Number(p.fixedPrice) : null,
-      active: p.active
+      baseQuantity: Number(p.baseQuantity),
+      fixedPrice: p.sold && p.fixedPrice ? Number(p.fixedPrice) : null,
+      active: p.active,
+      sold: p.sold,
+      barcode: p.barcode.trim()
     }));
   }
 

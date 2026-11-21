@@ -111,7 +111,7 @@ describe('SaleCatalogComponent', () => {
 
     // The exact name comes first
     results[0].nativeElement.click();
-    expect(add).toHaveBeenCalledWith(pistacho);
+    expect(add).toHaveBeenCalledWith({ product: pistacho, presentation: null });
     expect(component.productSearchTerm()).toBe('');
   });
 
@@ -151,7 +151,7 @@ describe('SaleCatalogComponent', () => {
     component.productSearchTerm.set('fse-pis');
     const input = fixture.debugElement.query(By.css('.form-control-search')).nativeElement as HTMLInputElement;
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    expect(add).toHaveBeenCalledWith(pistacho);
+    expect(add).toHaveBeenCalledWith({ product: pistacho, presentation: null });
   });
 
   it('Enter con un solo resultado lo agrega; con varios y sin código exacto no hace nada', () => {
@@ -164,7 +164,7 @@ describe('SaleCatalogComponent', () => {
 
     component.productSearchTerm.set('50g');
     component.addFromSearch();
-    expect(add).toHaveBeenCalledWith(tab50);
+    expect(add).toHaveBeenCalledWith({ product: tab50, presentation: null });
   });
 
   it('POS-02: muestra el primer grupo, cambia de grupo y agrega con un toque', () => {
@@ -175,7 +175,7 @@ describe('SaleCatalogComponent', () => {
     component.selectGroup('g2');
     fixture.detectChanges();
     fixture.debugElement.query(By.css('.quick-item-card')).nativeElement.click();
-    expect(add).toHaveBeenCalledWith(pistacho);
+    expect(add).toHaveBeenCalledWith({ product: pistacho, presentation: null });
   });
 
   it('POS-02: cada producto rápido es un botón, que se usa con el teclado', () => {
@@ -189,5 +189,75 @@ describe('SaleCatalogComponent', () => {
     component.configure.subscribe(configure);
     fixture.debugElement.query(By.css('.quick-header button')).nativeElement.click();
     expect(configure).toHaveBeenCalled();
+  });
+
+  describe('CAT-15: cajas que se venden', () => {
+    const box: any = { id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, price: 44, cost: 25.56,
+      active: true, sold: true, barcode: '7790000000017' };
+    const display: any = { id: 'pres-dis', name: 'Display ×24', baseQuantity: 24, fixedPrice: null, price: null, cost: 51.12,
+      active: true, sold: false, barcode: null };
+    const bar: any = { id: 'p4', code: 'NSE-BAR-CHI', name: 'Barra Chia', saleUnit: 'UNIT', sellPrice: 4, buyPrice: 2.13,
+      presentations: [box, display] };
+    const halfPound: any = { id: 'pres-half', name: '1/2 libra', baseQuantity: 0.227, fixedPrice: 45, price: 45, cost: 29.51,
+      active: true, sold: true, barcode: null };
+    const nut: any = { id: 'p5', code: 'FSE-NUE', name: 'Nuez pelada', saleUnit: 'KILOGRAM', sellPrice: 210,
+      presentations: [halfPound] };
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('products', [bar, nut]);
+      fixture.detectChanges();
+    });
+
+    const names = (): string[] => fixture.debugElement.queryAll(By.css('.search-result-item .res-name'))
+      .map(el => el.nativeElement.textContent.trim());
+
+    it('la caja que se vende de un producto por unidad es una fila con su precio; la que no se vende, no', () => {
+      component.productSearchTerm.set('barra chia');
+      fixture.detectChanges();
+      expect(names()).toEqual(['Barra Chia', 'Barra Chia · Caja ×12']);
+      const prices = fixture.debugElement.queryAll(By.css('.search-result-item .res-price span'))
+        .map(el => el.nativeElement.textContent.trim());
+      expect(prices).toEqual(['Bs 4.00', 'Bs 44.00']);
+    });
+
+    it('elegir la caja la emite con su empaque; elegir el producto, sin empaque', () => {
+      const add = vi.fn();
+      component.add.subscribe(add);
+      component.productSearchTerm.set('barra chia');
+      fixture.detectChanges();
+      const rows = fixture.debugElement.queryAll(By.css('.search-result-item'));
+      rows[1].nativeElement.click();
+      expect(add).toHaveBeenLastCalledWith({ product: bar, presentation: box });
+      component.productSearchTerm.set('barra chia');
+      fixture.detectChanges();
+      fixture.debugElement.queryAll(By.css('.search-result-item'))[0].nativeElement.click();
+      expect(add).toHaveBeenLastCalledWith({ product: bar, presentation: null });
+    });
+
+    it('096: en una venta al costo la fila de la caja muestra el costo de la caja (12 × 2,13)', () => {
+      fixture.componentRef.setInput('atCost', true);
+      component.productSearchTerm.set('barra chia');
+      fixture.detectChanges();
+      const prices = fixture.debugElement.queryAll(By.css('.search-result-item .res-price span'))
+        .map(el => el.nativeElement.textContent.trim());
+      expect(prices).toEqual(['Bs 2.13', 'Bs 25.56']);
+    });
+
+    it('los empaques de un producto por kilo no son filas: siguen en su selector', () => {
+      component.productSearchTerm.set('nuez');
+      fixture.detectChanges();
+      expect(names()).toEqual(['Nuez pelada']);
+    });
+
+    it('el código de la caja escrito entero la agrega con Enter; el código del producto agrega el producto', () => {
+      const add = vi.fn();
+      component.add.subscribe(add);
+      component.productSearchTerm.set('7790000000017');
+      component.addFromSearch();
+      expect(add).toHaveBeenLastCalledWith({ product: bar, presentation: box });
+      component.productSearchTerm.set('NSE-BAR-CHI');
+      component.addFromSearch();
+      expect(add).toHaveBeenLastCalledWith({ product: bar, presentation: null });
+    });
   });
 });

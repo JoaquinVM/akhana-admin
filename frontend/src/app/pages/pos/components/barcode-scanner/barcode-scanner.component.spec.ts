@@ -11,6 +11,7 @@ import {
   SCAN_LOOKUP_FAILED,
   ScannedProduct,
   inactiveProductMessage,
+  packageNotSoldMessage,
   unknownBarcodeMessage
 } from './barcode-scanner.component';
 
@@ -69,7 +70,7 @@ describe('BarcodeScannerComponent (POS-15)', () => {
   it('un código del catálogo agrega ese producto sin consultar al servidor', () => {
     scan(EAN);
 
-    expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p1' }), fromServer: false }]);
+    expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p1' }), presentation: null, fromServer: false }]);
     expect(products.getProductByBarcode).not.toHaveBeenCalled();
   });
 
@@ -96,7 +97,7 @@ describe('BarcodeScannerComponent (POS-15)', () => {
 
     scan('4006381333931');
 
-    expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p2' }), fromServer: true }]);
+    expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p2' }), presentation: null, fromServer: true }]);
   });
 
   it('un código desconocido solo avisa', () => {
@@ -187,5 +188,38 @@ describe('BarcodeScannerComponent (POS-15)', () => {
     scan(EAN);
 
     expect(scanned).toEqual([]);
+  });
+
+  describe('CAT-15: códigos de empaques', () => {
+    const BOX = '7790000000017';
+    const DISPLAY = '7790000000024';
+    const box: any = { id: 'pres-box', name: 'Caja ×12', baseQuantity: 12, fixedPrice: 44, price: 44, cost: 25.56,
+      active: true, sold: true, barcode: BOX };
+    const display: any = { id: 'pres-dis', name: 'Display ×24', baseQuantity: 24, fixedPrice: null, price: null, cost: 51.12,
+      active: true, sold: false, barcode: DISPLAY };
+    const bar = (): Product => product({ id: 'p4', name: 'Barra Chia', barcodes: [], presentations: [box, display] });
+
+    it('el código de una caja que se vende agrega esa caja, sin consultar al servidor', () => {
+      fixture.componentRef.setInput('products', [bar()]);
+      fixture.detectChanges();
+      scan(BOX);
+      expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p4' }), presentation: box, fromServer: false }]);
+      expect(products.getProductByBarcode).not.toHaveBeenCalled();
+    });
+
+    it('el código de un empaque que no se vende avisa y no agrega nada', () => {
+      fixture.componentRef.setInput('products', [bar()]);
+      fixture.detectChanges();
+      scan(DISPLAY);
+      expect(scanned).toEqual([]);
+      expect(toastError).toHaveBeenCalledWith(packageNotSoldMessage(bar(), display));
+      expect(packageNotSoldMessage(bar(), display)).toBe('El empaque Display ×24 de Barra Chia no se vende entero.');
+    });
+
+    it('el código de una caja cargada después de abrir la pantalla se encuentra en el servidor con su empaque', () => {
+      products.getProductByBarcode.mockReturnValue(of(bar()));
+      scan(BOX);
+      expect(scanned).toEqual([{ product: expect.objectContaining({ id: 'p4' }), presentation: box, fromServer: true }]);
+    });
   });
 });

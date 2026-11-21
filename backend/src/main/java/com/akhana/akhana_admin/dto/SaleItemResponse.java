@@ -24,8 +24,8 @@ public record SaleItemResponse(
     // CAT-11: copy of the presentation sold and the kilos of the line; null for other lines
     UUID presentationId,
     String presentationName,
-    BigDecimal presentationWeightKg,
-    BigDecimal weightKg,
+    BigDecimal presentationBaseQuantity,
+    BigDecimal baseQuantity,
     // POS-11 to POS-13: free line with its typed name, assignment and owner; null for other lines
     ProductSpecialType freeLineType,
     String freeName,
@@ -49,8 +49,8 @@ public record SaleItemResponse(
             item.getProduct() != null ? item.getProduct().getSaleUnit() : null,
             item.getPresentation() != null ? item.getPresentation().getId() : null,
             item.getPresentationName(),
-            item.getPresentationWeightKg(),
-            item.getWeightKg(),
+            item.getPresentationBaseQuantity(),
+            item.getBaseQuantity(),
             item.getFreeLineType(),
             item.getFreeName(),
             item.getAssignmentStatus(),

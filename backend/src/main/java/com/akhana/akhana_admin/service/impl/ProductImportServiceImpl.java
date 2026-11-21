@@ -93,7 +93,7 @@ public class ProductImportServiceImpl implements ProductImportService {
     record SaleUnitFactor(SaleUnit saleUnit, BigDecimal factor) {}
 
     /** CAT-11: fixed name and weight of the pound presentations, by the end of the code. */
-    record PoundPresentation(String suffix, String name, BigDecimal weightKg) {}
+    record PoundPresentation(String suffix, String name, BigDecimal baseQuantity) {}
 
     static final List<PoundPresentation> POUND_PRESENTATIONS = List.of(
         new PoundPresentation("-CLI", "1/4 libra", new BigDecimal("0.113")),
@@ -547,7 +547,7 @@ public class ProductImportServiceImpl implements ProductImportService {
         base.presentations.put(pound.suffix(), new PresentationDraft(row.rowNumber(), pound, fixedPrice));
         analysis.presentationCount++;
         // CAT-11: the cost is always weight x cost per kilo of the base product
-        BigDecimal cost = pound.weightKg().multiply(base.buyPrice).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal cost = pound.baseQuantity().multiply(base.buyPrice).setScale(2, RoundingMode.HALF_UP);
         List<String> warnings = fixedPrice.compareTo(cost) < 0
             ? List.of(ProductPresentationServiceImpl.lossWarning(pound.name()))
             : List.of();
@@ -662,7 +662,7 @@ public class ProductImportServiceImpl implements ProductImportService {
             // CAT-07: the initial price enters the history, as when the product is created from the form
             priceChangeRepository.save(ProductServiceImpl.catalogPriceChange(product, null, null, username, now));
             if (draft.saleUnit == SaleUnit.KILOGRAM) {
-                presentationService.applyPresentations(product, presentationRequests(draft), null, username);
+                presentationService.applyPresentations(product, presentationRequests(draft), null, null, username);
             }
         }
     }
@@ -672,10 +672,10 @@ public class ProductImportServiceImpl implements ProductImportService {
         List<ProductPresentationRequest> requests = new ArrayList<>();
         requests.add(new ProductPresentationRequest(null, HUNDRED_GRAMS, new BigDecimal("0.100"), null, true));
         draft.presentations.values().forEach(p ->
-            requests.add(new ProductPresentationRequest(null, p.pound().name(), p.pound().weightKg(), p.fixedPrice(), true)));
+            requests.add(new ProductPresentationRequest(null, p.pound().name(), p.pound().baseQuantity(), p.fixedPrice(), true)));
         if (!draft.presentations.containsKey(HALF_POUND)) {
             PoundPresentation half = POUND_PRESENTATIONS.stream().filter(p -> p.suffix().equals(HALF_POUND)).findFirst().orElseThrow();
-            requests.add(new ProductPresentationRequest(null, half.name(), half.weightKg(), null, true));
+            requests.add(new ProductPresentationRequest(null, half.name(), half.baseQuantity(), null, true));
         }
         return requests;
     }

@@ -77,8 +77,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
                    "SUM(s.total_amount), COALESCE(SUM(i.cost), 0), COALESCE(SUM(i.pending), 0), " +
                    "COALESCE(SUM(i.third_party), 0), COALESCE(SUM(i.unidentified), 0) " +
                    "FROM sales s LEFT JOIN (SELECT li.sale_id, " +
-                   "SUM(COALESCE(weight_kg, quantity)) FILTER (WHERE " + NORMAL_LINE + ") AS quantity, " +
-                   "SUM(COALESCE(weight_kg, quantity) * unit_cost) FILTER (WHERE " + NORMAL_LINE + ") AS cost, " +
+                   "SUM(COALESCE(base_quantity, quantity)) FILTER (WHERE " + NORMAL_LINE + ") AS quantity, " +
+                   "SUM(COALESCE(base_quantity, quantity) * unit_cost) FILTER (WHERE " + NORMAL_LINE + ") AS cost, " +
                    "SUM(subtotal) FILTER (WHERE assignment_status = 'POR_ASIGNAR') AS pending, " +
                    "SUM(subtotal) FILTER (WHERE free_line_type = 'THIRD_PARTY') AS third_party, " +
                    "SUM(subtotal) FILTER (WHERE assignment_status = 'SIN_IDENTIFICAR') AS unidentified, " +
@@ -99,8 +99,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     // general discount is spread only over the other lines (P-44). The report per supplier and the dashboard's
     // products and suppliers read the same rows
     @Query(value = "SELECT s.id, to_char(s.operation_date, 'YYYY-MM'), s.sale_type, " +
-                   "s.total_amount, sup.id, sup.name, COALESCE(i.weight_kg, i.quantity), i.subtotal, " +
-                   "COALESCE(i.weight_kg, i.quantity) * i.unit_cost, " + NORMAL_LINE + ", " +
+                   "s.total_amount, sup.id, sup.name, COALESCE(i.base_quantity, i.quantity), i.subtotal, " +
+                   "COALESCE(i.base_quantity, i.quantity) * i.unit_cost, " + NORMAL_LINE + ", " +
                    "i.free_line_type IS NOT NULL, p.id, p.name " +
                    "FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN products p ON p.id = i.product_id " +
                    "LEFT JOIN suppliers sup ON sup.id = p.supplier_id " +

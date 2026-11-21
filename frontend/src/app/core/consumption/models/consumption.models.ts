@@ -20,8 +20,8 @@ export interface ConsumptionItem {
   // CAT-11: copy of the consumed presentation and the line's kilos
   presentationId?: string | null;
   presentationName?: string | null;
-  presentationWeightKg?: number | null;
-  weightKg?: number | null;
+  presentationBaseQuantity?: number | null;
+  baseQuantity?: number | null;
 }
 
 export interface Consumption {

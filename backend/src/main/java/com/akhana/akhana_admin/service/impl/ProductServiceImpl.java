@@ -169,12 +169,12 @@ public class ProductServiceImpl implements ProductService {
         Product saved = productRepository.save(product);
         recordPriceChange(saved, null, null, product.getCreatedBy(), product.getCreatedAt());
         barcodeService.applyBarcodes(saved, request.barcodes(), currentUsername);
-        // Presentations need the saved product (CAT-11)
+        // Packages need the saved product (CAT-15)
         if (specialType != null) {
             return ProductResponse.fromEntity(saved, List.of());
         }
         List<String> warnings = new ArrayList<>(costWarnings(buyPrice));
-        warnings.addAll(presentationService.applyPresentations(saved, request.presentations(), null, currentUsername));
+        warnings.addAll(presentationService.applyPresentations(saved, request.presentations(), null, null, currentUsername));
         return ProductResponse.fromEntity(saved, warnings);
     }
 
@@ -226,6 +226,7 @@ public class ProductServiceImpl implements ProductService {
 
         BigDecimal previousBuyPrice = product.getBuyPrice();
         BigDecimal previousSellPrice = product.getSellPrice();
+        SaleUnit previousSaleUnit = product.getSaleUnit();
 
         // Recalcular utilidades
         BigDecimal buyPrice = special ? ZERO : request.buyPrice().setScale(2, RoundingMode.HALF_UP);
@@ -263,7 +264,7 @@ public class ProductServiceImpl implements ProductService {
         List<String> warnings = new ArrayList<>(special ? List.of() : costWarnings(buyPrice));
         if (!special) {
             warnings.addAll(presentationService.applyPresentations(product, request.presentations(),
-                    previousSellPrice, currentUsername));
+                    previousSellPrice, previousSaleUnit, currentUsername));
         }
         Product updated = productRepository.save(product);
         return ProductResponse.fromEntity(updated, warnings);

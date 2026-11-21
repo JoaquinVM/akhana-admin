@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { BarcodePendingProduct, Product, ProductRequest, ProductStatus } from './models/product.models';
+import { BarcodePendingProduct, Product, ProductRequest, ProductStatus, BoxConversionRequest, BoxProposal } from './models/product.models';
 import { ProductImportResult } from './models/product-import.models';
 
 @Injectable({
@@ -64,6 +64,19 @@ export class ProductService {
 
   clearNoBarcode(id: string): Observable<Product> {
     return this.http.delete<Product>(`${this.apiUrl}/${id}/no-barcode`);
+  }
+
+  // COM-10: boxes sold as their own product, to become packages of their base product (CAT-15)
+  getBoxProposals(): Observable<BoxProposal[]> {
+    return this.http.get<BoxProposal[]>(`${this.apiUrl}/box-proposals`);
+  }
+
+  convertBox(boxProductId: string, request: BoxConversionRequest): Observable<Product> {
+    return this.http.post<Product>(`${this.apiUrl}/${boxProductId}/box-conversion`, request);
+  }
+
+  discardBox(boxProductId: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${boxProductId}/box-discard`, null);
   }
 
   // CAT-06: Revisar validates without saving; Importar validates the same file again and saves

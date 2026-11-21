@@ -9,9 +9,9 @@ import { Customer } from '../../../core/debt/models/debt.models';
 import {
   Product,
   ProductPresentation,
-  activePresentations,
   isSpecialProduct,
-  presentationPrice
+  presentationPrice,
+  soldPresentations
 } from '../../../core/product/models/product.models';
 import {
   SaleDetailRequest,
@@ -19,7 +19,7 @@ import {
 } from '../../../core/sale/models/sale.models';
 import { QuickProductsConfigModalComponent } from '../components/quick-products-config-modal/quick-products-config-modal.component';
 import { CheckoutModalComponent, CheckoutPayment } from '../components/checkout-modal/checkout-modal.component';
-import { SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
+import { CatalogPick, SaleCatalogComponent } from '../components/sale-catalog/sale-catalog.component';
 import { SaleCartComponent } from '../components/sale-cart/sale-cart.component';
 import { CartSummaryComponent } from '../components/cart-summary/cart-summary.component';
 import { CartItem, freeLineLabel, isWeightLine, isWeightedProduct, lineAmount, lineGross, lineName } from './cart-item';
@@ -34,7 +34,7 @@ import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/po
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
 export { WEIGHT_STEP_KG };
 
-// CAT-11: a line is a product, or a product by kilo with a presentation (whole packs)
+// CAT-11, CAT-15: a line is a product, or a product with one of its packages (whole packs)
 export function cartKey(product: Product, presentation: ProductPresentation | null): string {
   return presentation ? `${product.id}:${presentation.id}` : product.id;
 }
@@ -213,7 +213,16 @@ export class RegisterSaleComponent implements OnInit {
     return lineName(item);
   }
 
-  // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
+  // CAT-15: a package picked in the search (Barra Chia · Caja ×12) goes in as whole boxes, without the picker
+  onCatalogPick({ product, presentation }: CatalogPick): void {
+    if (presentation) {
+      this.addLine(product, presentation);
+      return;
+    }
+    this.addToCart(product);
+  }
+
+  // CAT-11: a product by kilo with packages that are sold opens the picker; without them it goes in as «Otro peso»
   addToCart(product: Product): void {
     if (isSpecialProduct(product)) {
       if (this.atCost()) {
@@ -223,7 +232,7 @@ export class RegisterSaleComponent implements OnInit {
       this.freeLineProduct.set(product);
       return;
     }
-    if (this.isWeighted(product) && activePresentations(product).length > 0) {
+    if (this.isWeighted(product) && soldPresentations(product).length > 0) {
       this.pickerProduct.set(product);
       return;
     }
@@ -231,12 +240,17 @@ export class RegisterSaleComponent implements OnInit {
   }
 
   // POS-15: goes through the same path as a click, so at-cost sales and repeated lines stay the same
-  onScanned({ product, fromServer }: ScannedProduct): void {
+  // CAT-15: the code of a package adds that package, without opening the picker
+  onScanned({ product, presentation, fromServer }: ScannedProduct): void {
     if (fromServer && !this.catalogProducts().some((p) => p.id === product.id)) {
       this.catalogProducts.update((products) => [...products, product]);
     }
-    this.addToCart(product);
-    const key = cartKey(product, null);
+    if (presentation) {
+      this.addLine(product, presentation);
+    } else {
+      this.addToCart(product);
+    }
+    const key = cartKey(product, presentation ?? null);
     this.cartItems.update((items) => items.map((it) => it.key === key ? { ...it, scanned: true } : it));
   }
 

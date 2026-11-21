@@ -61,6 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialSummaryController.class,
         FinancialTransactionController.class,
         ProductBarcodeController.class,
+        BoxProductConversionController.class,
         ProductController.class,
         ProductImportController.class,
         ProductPhotoController.class,
@@ -164,6 +165,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private FinancialSummaryService financialSummaryService;
     @MockitoBean private FinancialTransactionService financialTransactionService;
     @MockitoBean private ProductBarcodeService productBarcodeService;
+    @MockitoBean private BoxProductConversionService boxProductConversionService;
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductImportService productImportService;
     @MockitoBean private ProductPhotoService productPhotoService;
@@ -232,6 +234,11 @@ class EndpointAuthorizationTest {
                 both(post, "/api/products/" + ID + "/barcodes", "{\"barcode\":\"7791234567898\"}"),
                 both(put, "/api/products/" + ID + "/no-barcode", null),
                 both(delete, "/api/products/" + ID + "/no-barcode", null),
+                // COM-10: boxes sold as products become packages (CAT-15)
+                both(get, "/api/products/box-proposals", null),
+                both(post, "/api/products/" + ID + "/box-conversion",
+                        "{\"name\":\"Caja ×12\",\"baseQuantity\":12,\"fixedPrice\":44}"),
+                both(post, "/api/products/" + ID + "/box-discard", null),
                 // Importación de productos con el permiso de la pantalla (CAT-06, P-33)
                 both(post, "/api/products/import/preview", XLSX_FILE),
                 both(post, "/api/products/import", XLSX_FILE),

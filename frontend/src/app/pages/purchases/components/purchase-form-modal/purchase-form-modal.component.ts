@@ -41,8 +41,17 @@ import { isRetryableError, newClientRequestId } from '../../../../shared/utils/c
 // COM-03: which sell price the product takes if its cost is updated
 export type PriceChoice = 'SUGGESTED' | 'CURRENT' | 'CUSTOM';
 
+// COM-29: the package of a line, as it was chosen (a kept line may hold one that is no longer active)
+export interface LinePackage {
+  id: string;
+  name: string;
+  baseQuantity: number;
+}
+
 export interface PurchaseLineDraft {
   product: Product;
+  // COM-29: null for a line in base units; with a package, quantity is whole packs and unitCost the cost of one
+  presentation?: LinePackage | null;
   quantity: number;
   unitCost: number;
   updateCost: boolean;
@@ -324,9 +333,13 @@ export class PurchaseFormModalComponent {
         code: item.productCode ?? '',
         name: item.productName,
         saleUnit: item.saleUnit,
-        buyPrice: item.unitCost,
+        // The cost of one base unit, so a line kept as it was raises no cost alert (COM-29)
+        buyPrice: item.baseUnitCost ?? item.unitCost,
         sellPrice: 0
       } as Product,
+      presentation: item.presentationId && item.presentationName && item.presentationBaseQuantity
+        ? { id: item.presentationId, name: item.presentationName, baseQuantity: item.presentationBaseQuantity }
+        : null,
       quantity: item.quantity,
       unitCost: item.unitCost,
       updateCost: false,
@@ -527,9 +540,52 @@ export class PurchaseFormModalComponent {
     return this.sellPrices().get(line.product.id) ?? null;
   }
 
-  // COM-03: alert when the line cost differs from the registered cost
+  // COM-29: the cost of one base unit: the line cost, or the package cost over its base quantity, HALF_UP like the server
+  baseUnitCost(line: PurchaseLineDraft): number {
+    const cost = Number(line.unitCost) || 0;
+    if (!line.presentation) return cost;
+    // In whole cents and thousandths, so a half cent rounds up exactly: 25,50 / 12 = 2,125 is 2,13
+    const cents = Math.round(cost * 100);
+    const thousandths = Math.round(line.presentation.baseQuantity * 1000);
+    return Math.floor((2 * cents * 1000 + thousandths) / (2 * thousandths)) / 100;
+  }
+
+  // COM-29: base units of a line by package (2 cajas ×12 = 24)
+  baseQuantity(line: PurchaseLineDraft): number {
+    return line.presentation ? Math.round((Number(line.quantity) || 0) * line.presentation.baseQuantity * 1000) / 1000 : line.quantity;
+  }
+
+  // COM-29: «Unidad» or «Kilo» and the active packages of the product, plus the one the line already has
+  packageOptions(line: PurchaseLineDraft): LinePackage[] {
+    const catalog = this.products().find(p => p.id === line.product.id);
+    const options: LinePackage[] = (catalog?.presentations ?? [])
+      .filter(p => p.active)
+      .map(p => ({ id: p.id, name: p.name, baseQuantity: p.baseQuantity }));
+    if (line.presentation && !options.some(o => o.id === line.presentation!.id)) {
+      options.unshift(line.presentation);
+    }
+    return options;
+  }
+
+  // COM-29: switching keeps the base units and their cost when it can: 24 u at Bs 10 become 2 cajas ×12 at Bs 120
+  onPackageChange(index: number, presentationId: string): void {
+    const line = this.lines()[index];
+    const next = this.packageOptions(line).find(o => o.id === presentationId) ?? null;
+    if ((next?.id ?? null) === (line.presentation?.id ?? null)) return;
+    const units = this.baseQuantity(line);
+    const unitCost = this.baseUnitCost(line);
+    const quantity = next ? Math.max(1, Math.floor(units / next.baseQuantity)) : units;
+    const cost = next ? round2(unitCost * next.baseQuantity) : unitCost;
+    this.updateLine(index, { presentation: next, quantity, unitCost: cost, suggestion: null });
+    const updated = this.lines()[index];
+    if (updated.updateCost && this.costDiffers(updated)) {
+      this.loadSuggestion(index);
+    }
+  }
+
+  // COM-03: alert when the cost of one base unit differs from the registered cost (COM-29)
   costDiffers(line: PurchaseLineDraft): boolean {
-    return !line.costMissing && round2(Number(line.unitCost) || 0) !== round2(line.product.buyPrice);
+    return !line.costMissing && round2(this.baseUnitCost(line)) !== round2(line.product.buyPrice);
   }
 
   // Enter never submits the form (only its button does); in the product search it adds the product typed
@@ -576,9 +632,14 @@ export class PurchaseFormModalComponent {
     this.updateLine(index, { quantity: Number(value) || 0, quantityDoubtful: false });
   }
 
-  // COM-14: 1 by unit or 100 g by kilo, as in the POS
+  // COM-14: 1 by unit or 100 g by kilo, as in the POS; whole packs by package (COM-29)
   private quantityStep(line: PurchaseLineDraft): number {
-    return this.isWeighted(line.product) ? WEIGHT_STEP_KG : 1;
+    return this.isWeightLine(line) ? WEIGHT_STEP_KG : 1;
+  }
+
+  // A line in kilos: by kilo and without a package
+  isWeightLine(line: PurchaseLineDraft): boolean {
+    return this.isWeighted(line.product) && !line.presentation;
   }
 
   private quantityAfterStep(line: PurchaseLineDraft, step: number): number {
@@ -588,7 +649,7 @@ export class PurchaseFormModalComponent {
   // COM-14: the − stops at the minimum; a line is only removed with its X
   canDecrement(line: PurchaseLineDraft): boolean {
     const remaining = this.quantityAfterStep(line, -this.quantityStep(line));
-    return this.isWeighted(line.product) ? remaining > 0 : remaining >= 1;
+    return this.isWeightLine(line) ? remaining > 0 : remaining >= 1;
   }
 
   incrementQuantity(index: number): void {
@@ -622,7 +683,7 @@ export class PurchaseFormModalComponent {
 
   private loadSuggestion(index: number): void {
     const line = this.lines()[index];
-    this.purchaseService.getPriceSuggestion(line.product.id, round2(line.unitCost)).subscribe({
+    this.purchaseService.getPriceSuggestion(line.product.id, round2(this.baseUnitCost(line))).subscribe({
       next: suggestion => {
         const current = this.lines()[index];
         if (!current || current.product.id !== suggestion.productId) {
@@ -723,8 +784,9 @@ export class PurchaseFormModalComponent {
         unitCost: Number(line.unitCost),
         updateProductCost,
         newSellPrice: updateProductCost ? this.chosenSellPrice(line) : null,
-        // COM-11: only the lines of the edited purchase carry their id
-        ...(line.itemId ? { itemId: line.itemId } : {})
+        // COM-11: only the lines of the edited purchase carry their id; COM-29: only the lines by package, theirs
+        ...(line.itemId ? { itemId: line.itemId } : {}),
+        ...(line.presentation ? { presentationId: line.presentation.id } : {})
       };
     });
     const shipping = round2(Number(this.shippingCost()) || 0);

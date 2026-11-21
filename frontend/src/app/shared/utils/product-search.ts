@@ -9,6 +9,8 @@ export interface SearchableProduct {
   tags?: { name: string }[] | null;
   // CAT-10: only ever matched whole, never by part or by similarity
   barcodes?: string[] | null;
+  // CAT-15: the code of an active package finds its product too (Productos)
+  presentations?: { barcode?: string | null; active?: boolean }[] | null;
 }
 
 // Lowercase without accents, so "Kéfir" and "kefir" are the same
@@ -128,12 +130,15 @@ export function searchProducts<T extends SearchableProduct>(term: string, produc
   return rankProducts(term, products);
 }
 
-function productByBarcode<T extends { barcodes?: string[] | null }>(term: string, products: T[]): T | undefined {
+type WithBarcodes = Pick<SearchableProduct, 'barcodes' | 'presentations'>;
+
+function productByBarcode<T extends WithBarcodes>(term: string, products: T[]): T | undefined {
   if (!looksLikeBarcode(term)) {
     return undefined;
   }
   const code = canonicalBarcode(term);
-  return products.find((p) => p.barcodes?.includes(code));
+  return products.find((p) => p.barcodes?.includes(code))
+    ?? products.find((p) => p.presentations?.some((pr) => pr.active !== false && pr.barcode === code));
 }
 
 function rankProducts<T extends SearchableProduct>(term: string, products: T[]): T[] {
@@ -153,7 +158,7 @@ function rankProducts<T extends SearchableProduct>(term: string, products: T[]):
 
 // The product an Enter in a search box adds: the one whose code is the text typed (without case or accents), or the
 // only match; null when it is not clear which one, so nothing is added by mistake (POS-01)
-export function productForEnter<T extends { code: string; barcodes?: string[] | null }>(term: string, products: T[], matches: T[]): T | null {
+export function productForEnter<T extends { code: string } & WithBarcodes>(term: string, products: T[], matches: T[]): T | null {
   const typed = normalizeSearchText(term);
   if (!typed) {
     return null;

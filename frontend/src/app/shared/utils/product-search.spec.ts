@@ -43,6 +43,18 @@ describe('searchProducts', () => {
   });
 });
 
+describe('searchProducts con empaques (CAT-15)', () => {
+  const bar = { code: 'NSE-BAR-CHI', name: 'Barra Chia', barcodes: [],
+    presentations: [{ barcode: '7790000000017', active: true }, { barcode: '7790000000024', active: false }] };
+  const tea = { code: 'TE-1', name: 'Té verde', barcodes: ['7791234567898'] };
+
+  it('el código completo de un empaque activo encuentra su producto; el de uno inactivo, no', () => {
+    expect(searchProducts('7790000000017', [tea, bar])[0]).toBe(bar);
+    expect(searchProducts('7790000000024', [tea, bar])).toEqual([]);
+    expect(productForEnter('7790000000017', [tea, bar], [])).toBe(bar);
+  });
+});
+
 describe('productForEnter', () => {
   const a = { code: 'TAB-100', name: 'Tab 100' };
   const b = { code: 'TAB-50', name: 'Tab 50' };

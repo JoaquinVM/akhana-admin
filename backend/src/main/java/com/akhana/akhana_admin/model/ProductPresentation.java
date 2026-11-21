@@ -8,9 +8,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * CAT-11: a fixed weight of a product sold by weight (1/2 libra = 0,227 kg). Without a fixed price it costs
- * weight x the product price per kilo; its cost is always weight x the product cost per kilo, never stored.
- * Never deleted: a removed presentation is deactivated because sales and consumptions keep pointing to it.
+ * CAT-15: a package of a product, by unit or by kilo: how many base units it holds (Caja x12 = 12, 1/2 libra =
+ * 0,227 kg). The presentations of CAT-11 are the packages that are sold. Sold without its own price it costs base
+ * quantity x the product price; its cost is always base quantity x the product cost, never stored. Never deleted: a
+ * removed package is deactivated because sales, consumptions and purchases keep pointing to it.
  */
 @Entity
 @Table(name = "product_presentations")
@@ -32,11 +33,17 @@ public class ProductPresentation {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "weight_kg", nullable = false, precision = 12, scale = 3)
-    private BigDecimal weightKg;
+    @Column(name = "base_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal baseQuantity;
 
+    // The package's own price, only when it is sold; null: base quantity x the product price
     @Column(name = "fixed_price", precision = 12, scale = 2)
     private BigDecimal fixedPrice;
+
+    // Sold whole in the POS (CAT-15); a package only bought (Saco 25 kg) is not
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean sold = true;
 
     @Column(nullable = false)
     @Builder.Default

@@ -13,6 +13,7 @@ import com.akhana.akhana_admin.dto.VoidPurchaseRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.impl.ExpectedCashCalculator;
+import com.akhana.akhana_admin.service.impl.ProductPresentationServiceImpl;
 import com.akhana.akhana_admin.service.impl.PurchaseServiceImpl;
 import com.akhana.akhana_admin.service.impl.StoreFormat;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +63,7 @@ class PurchaseServiceTest {
     @Mock private PurchaseReadingRepository purchaseReadingRepository;
     @Mock private PurchasePhotoRepository purchasePhotoRepository;
     @Mock private PurchaseShippingChargeRepository purchaseShippingChargeRepository;
+    @Mock private ProductPresentationRepository presentationRepository;
 
     private PurchaseServiceImpl purchaseService;
 
@@ -80,11 +82,13 @@ class PurchaseServiceTest {
 
     @BeforeEach
     void setUp() {
+        ProductPresentationServiceImpl presentationService = new ProductPresentationServiceImpl(presentationRepository,
+            productPriceChangeRepository, mock(ProductBarcodeService.class));
         purchaseService = new PurchaseServiceImpl(purchaseRepository, supplierRepository, productRepository,
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
             purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository,
-            new TransactionTemplate(mock(PlatformTransactionManager.class)), clock);
+            presentationService, new TransactionTemplate(mock(PlatformTransactionManager.class)), clock);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)
@@ -1534,5 +1538,115 @@ class PurchaseServiceTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("El costo unitario de 'Té verde' no puede ser negativo.");
         verify(purchaseRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------------- COM-29
+
+    // Té verde (cost 10,00) with its Caja ×12, bought or sold; a Display ×24 that is no longer active
+    private ProductPresentation teaPackage(String name, String units, boolean active) {
+        ProductPresentation presentation = ProductPresentation.builder().id(UUID.randomUUID()).product(tea).name(name)
+            .baseQuantity(new BigDecimal(units)).active(active).sold(false).build();
+        when(presentationRepository.findById(presentation.getId())).thenReturn(Optional.of(presentation));
+        return presentation;
+    }
+
+    private PurchaseItemRequest packageLine(ProductPresentation presentation, String packs, String packageCost,
+                                            boolean updateCost, UUID itemId) {
+        return new PurchaseItemRequest(tea.getId(), new BigDecimal(packs), new BigDecimal(packageCost), updateCost, null,
+            itemId, presentation != null ? presentation.getId() : null);
+    }
+
+    @Test
+    @DisplayName("COM-29: 2 cajas ×12 a Bs 120 suman 240 al pedido, 24 unidades y Bs 10,00 por unidad; sin alerta de costo")
+    void registerPurchase_byPackage() {
+        ProductPresentation box = teaPackage("Caja ×12", "12", true);
+
+        PurchaseResponse res = purchaseService.registerPurchase(request(List.of(
+            packageLine(box, "2", "120.00", true, null)), null, null, false), "operator");
+
+        var item = res.items().get(0);
+        assertThat(item.quantity()).isEqualByComparingTo("2");
+        assertThat(item.unitCost()).isEqualByComparingTo("120.00");
+        assertThat(item.subtotal()).isEqualByComparingTo("240.00");
+        assertThat(item.presentationId()).isEqualTo(box.getId());
+        assertThat(item.presentationName()).isEqualTo("Caja ×12");
+        assertThat(item.presentationBaseQuantity()).isEqualByComparingTo("12");
+        assertThat(item.baseQuantity()).isEqualByComparingTo("24");
+        assertThat(item.baseUnitCost()).isEqualByComparingTo("10.00");
+        assertThat(res.itemsTotal()).isEqualByComparingTo("240.00");
+        // Bs 10,00 per unit is the product cost: nothing to update
+        assertThat(item.costUpdated()).isFalse();
+        assertThat(tea.getBuyPrice()).isEqualByComparingTo("10.00");
+        verify(productPriceChangeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("COM-29: el costo por unidad base (Bs 150 / 12 = 12,50) es el que se compara y el que toma el producto")
+    void registerPurchase_byPackageUpdatesTheBaseUnitCost() {
+        ProductPresentation box = teaPackage("Caja ×12", "12", true);
+
+        PurchaseResponse res = purchaseService.registerPurchase(request(List.of(
+            packageLine(box, "1", "150.00", true, null)), null, null, false), "operator");
+
+        assertThat(res.items().get(0).costUpdated()).isTrue();
+        assertThat(res.items().get(0).baseUnitCost()).isEqualByComparingTo("12.50");
+        assertThat(tea.getBuyPrice()).isEqualByComparingTo("12.50");
+        ArgumentCaptor<ProductPriceChange> captor = ArgumentCaptor.forClass(ProductPriceChange.class);
+        verify(productPriceChangeRepository).save(captor.capture());
+        assertThat(captor.getValue().getNewBuyPrice()).isEqualByComparingTo("12.50");
+        // 25,50 / 12 = 2,125: the cost per unit is rounded HALF_UP to 2,13
+        assertThat(PurchaseItem.builder().unitCost(new BigDecimal("25.50")).presentationBaseQuantity(new BigDecimal("12"))
+            .build().baseUnitCost()).isEqualByComparingTo("2.13");
+    }
+
+    @Test
+    @DisplayName("COM-29: con empaque la cantidad es entera y el empaque tiene que estar activo y ser del producto")
+    void registerPurchase_rejectsInvalidPackageLines() {
+        ProductPresentation box = teaPackage("Caja ×12", "12", true);
+        ProductPresentation display = teaPackage("Display ×24", "24", false);
+
+        assertThatThrownBy(() -> purchaseService.registerPurchase(request(List.of(
+            packageLine(box, "1.5", "120.00", false, null)), null, null, false), "operator"))
+            .hasMessage("La cantidad de 'Té verde · Caja ×12' debe ser entera: va por empaque.");
+        assertThatThrownBy(() -> purchaseService.registerPurchase(request(List.of(
+            packageLine(display, "1", "200.00", false, null)), null, null, false), "operator"))
+            .hasMessage("El empaque 'Display ×24' de 'Té verde' ya no está disponible.");
+        ProductPresentation ofNuts = ProductPresentation.builder().id(UUID.randomUUID()).product(nuts).name("Saco 25 kg")
+            .baseQuantity(new BigDecimal("25")).active(true).build();
+        when(presentationRepository.findById(ofNuts.getId())).thenReturn(Optional.of(ofNuts));
+        assertThatThrownBy(() -> purchaseService.registerPurchase(request(List.of(
+            packageLine(ofNuts, "1", "200.00", false, null)), null, null, false), "operator"))
+            .hasMessageContaining("Empaque no encontrado");
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("COM-29: al editar se cambia el empaque de una línea y queda en los cambios; uno ya inactivo se conserva")
+    void updatePurchase_changesAndKeepsPackages() {
+        Purchase purchase = editablePurchase("0.00");
+        ProductPresentation box = teaPackage("Caja ×12", "12", true);
+
+        // Té verde: 24 units at Bs 10 become 2 boxes ×12 at Bs 120 (the same Bs 240)
+        PurchaseResponse res = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"),
+            packageLine(box, "2", "120.00", false, teaLine.getId())), "0", null, "Llegó en cajas"), "operator");
+
+        assertThat(teaLine.getPresentation()).isSameAs(box);
+        assertThat(teaLine.getBaseQuantity()).isEqualByComparingTo("24");
+        assertThat(res.itemsTotal()).isEqualByComparingTo("300.00");
+        assertThat(res.revisions().get(0).changes()).startsWith("Empaque de Té verde: Unidad → Caja ×12 · "
+            + "Cantidad de Té verde: 24 → 2 · Costo de Té verde: ");
+
+        // Later the box is deactivated: the line keeps it while it is not changed
+        box.setActive(false);
+        PurchaseResponse again = purchaseService.updatePurchase(purchase.getId(), edit(purchase, List.of(
+            kept(nutsLine, "1.5", "40"),
+            packageLine(box, "3", "120.00", false, teaLine.getId())), "0", null, "Llegó una caja más"), "operator");
+
+        assertThat(again.items()).filteredOn(i -> i.productName().equals("Té verde")).singleElement()
+            .satisfies(i -> {
+                assertThat(i.presentationName()).isEqualTo("Caja ×12");
+                assertThat(i.baseQuantity()).isEqualByComparingTo("36");
+            });
     }
 }

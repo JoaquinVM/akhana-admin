@@ -82,7 +82,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
             products.put(product.getId(), product);
             BigDecimal quantity;
             if (itemReq.presentationId() != null) {
-                ProductPresentation presentation = presentationService.findActivePresentation(product, itemReq.presentationId());
+                ProductPresentation presentation = presentationService.findSoldPresentation(product, itemReq.presentationId());
                 presentations.put(presentation.getId(), presentation);
                 quantity = SaleServiceImpl.normalizePackQuantity(itemReq.quantity(), product.getName(), presentation.getName());
             } else {
@@ -111,8 +111,8 @@ public class ConsumptionServiceImpl implements ConsumptionService {
             // Cost snapshot: later cost changes (COM-03 or catalog) do not alter this consumption
             BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
             // By presentation the cost per kilo applies to the kilos of the packs (CAT-11)
-            BigDecimal weightKg = presentation != null ? SaleServiceImpl.packWeight(quantity, presentation) : null;
-            BigDecimal subtotal = unitCost.multiply(weightKg != null ? weightKg : quantity).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal baseQuantity = presentation != null ? SaleServiceImpl.packBaseQuantity(quantity, presentation) : null;
+            BigDecimal subtotal = unitCost.multiply(baseQuantity != null ? baseQuantity : quantity).setScale(2, RoundingMode.HALF_UP);
             consumption.getItems().add(ConsumptionItem.builder()
                 .consumption(consumption)
                 .product(product)
@@ -121,8 +121,8 @@ public class ConsumptionServiceImpl implements ConsumptionService {
                 .quantity(quantity)
                 .presentation(presentation)
                 .presentationName(presentation != null ? presentation.getName() : null)
-                .presentationWeightKg(presentation != null ? presentation.getWeightKg() : null)
-                .weightKg(weightKg)
+                .presentationBaseQuantity(presentation != null ? presentation.getBaseQuantity() : null)
+                .baseQuantity(baseQuantity)
                 .unitCost(unitCost)
                 .subtotal(subtotal)
                 .build());

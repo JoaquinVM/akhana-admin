@@ -38,8 +38,24 @@ public class PurchaseItem {
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal quantity;
 
+    // Per base unit, or per package when the line has one (COM-29)
     @Column(name = "unit_cost", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitCost;
+
+    // COM-29: a line by package keeps a copy of it; quantity is then the packs and baseQuantity the base units
+    // (packs x package base quantity) that enter the stock. All null for a line in base units
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "presentation_id")
+    private ProductPresentation presentation;
+
+    @Column(name = "presentation_name", length = 50)
+    private String presentationName;
+
+    @Column(name = "presentation_base_quantity", precision = 12, scale = 3)
+    private BigDecimal presentationBaseQuantity;
+
+    @Column(name = "base_quantity", precision = 12, scale = 3)
+    private BigDecimal baseQuantity;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
@@ -61,5 +77,11 @@ public class PurchaseItem {
 
     public boolean isRemoved() {
         return removedAt != null;
+    }
+
+    /** The cost of one base unit: the unit cost, or the package cost divided by its base quantity (COM-29). */
+    public BigDecimal baseUnitCost() {
+        return presentationBaseQuantity == null ? unitCost
+            : unitCost.divide(presentationBaseQuantity, 2, java.math.RoundingMode.HALF_UP);
     }
 }

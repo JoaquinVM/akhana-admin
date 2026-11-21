@@ -20,7 +20,7 @@ const SALE_FIELDS = {
 const SALE_ITEM_FIELDS = {
   id: true, productId: true, productName: true, productCode: true, unitPrice: true, discountPerUnit: true,
   finalUnitPrice: true, quantity: true, subtotal: true, saleUnit: true, presentationId: true, presentationName: true,
-  presentationWeightKg: true, weightKg: true, freeLineType: true, freeName: true, assignmentStatus: true,
+  presentationBaseQuantity: true, baseQuantity: true, freeLineType: true, freeName: true, assignmentStatus: true,
   assignedBy: true, assignedAt: true, creditorId: true, creditorName: true,
 } satisfies Record<keyof SaleItem, true>;
 
