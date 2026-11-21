@@ -46,7 +46,7 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
-  color: #1B3B18;
+  color: var(--primary-color);
 }
 
 .filters {

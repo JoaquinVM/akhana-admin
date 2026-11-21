@@ -37,13 +37,13 @@
 }
 
 .required-mark {
-  color: var(--color-danger, #dc2626);
+  color: var(--color-danger);
   font-weight: bold;
 }
 
 .form-hint {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .modal-actions {

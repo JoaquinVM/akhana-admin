@@ -1,5 +1,5 @@
 .loading {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .payables-total {
@@ -8,8 +8,8 @@
   align-items: baseline;
   padding: 14px 18px;
   margin-bottom: 16px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
   border-radius: 10px;
   color: #475569;
 }
@@ -20,8 +20,8 @@
 }
 
 .supplier-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 16px;

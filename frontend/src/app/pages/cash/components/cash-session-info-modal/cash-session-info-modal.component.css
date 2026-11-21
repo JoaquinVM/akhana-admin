@@ -12,16 +12,16 @@
 }
 
 .info-label {
-  font-family: var(--font-heading, sans-serif);
+  font-family: var(--font-heading);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .info-value {
-  font-family: var(--font-body, sans-serif);
+  font-family: var(--font-body);
   font-size: 1rem;
   font-weight: 600;
   color: #1e293b;
@@ -29,14 +29,14 @@
 
 .session-badge {
   display: inline-block;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 1.125rem;
   font-weight: 700;
-  color: #1b3b18;
+  color: var(--primary-color);
   background-color: #ecfdf5;
   border: 1px solid #a7f3d0;
   padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   width: fit-content;
 }
 
@@ -48,9 +48,9 @@
 .info-comment {
   margin: 0;
   padding: 0.75rem 1rem;
-  background-color: #f8fafc;
+  background-color: var(--bg-canvas);
   border-left: 3px solid #10b981;
-  border-radius: 0 var(--radius-sm, 6px) var(--radius-sm, 6px) 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-size: 0.875rem;
   color: #334155;
   font-style: italic;

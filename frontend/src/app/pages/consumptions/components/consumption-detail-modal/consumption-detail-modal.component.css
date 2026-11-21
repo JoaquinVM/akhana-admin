@@ -7,7 +7,7 @@
 .hint,
 .audit {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .hint {
@@ -30,7 +30,7 @@
 }
 
 .loading {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .detail-footer {

@@ -10,7 +10,7 @@
 }
 
 .hint {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -39,7 +39,7 @@
 .entry-note {
   display: block;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .selection-total {
@@ -56,7 +56,7 @@
 .selection-total strong {
   font-family: var(--font-heading);
   font-size: 1.15rem;
-  color: #111f0f;
+  color: var(--text-primary);
 }
 
 .concept-note {

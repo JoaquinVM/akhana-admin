@@ -29,7 +29,7 @@
   flex: 1;
   min-width: 240px;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .report-table th.num,
@@ -45,7 +45,7 @@
 
 .report-table .group-at-cost,
 .report-table .group-total {
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid var(--border-light);
 }
 
 .report-table .strong {
@@ -53,7 +53,7 @@
 }
 
 .report-table .subtotal-row td {
-  background: #f8fafc;
+  background: var(--bg-canvas);
   font-weight: 600;
 }
 
@@ -65,5 +65,5 @@
 
 .report-table .muted {
   font-style: italic;
-  color: #64748b;
+  color: var(--text-muted);
 }
