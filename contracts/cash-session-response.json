@@ -1,0 +1,22 @@
+{
+  "id" : "ca5e0000-0000-0000-0000-000000000001",
+  "sessionNumber" : 7,
+  "status" : "CERRADA",
+  "openingAmount" : 100.00,
+  "openingComment" : "Apertura",
+  "openedBy" : "cajero",
+  "openedAt" : "2026-11-30T12:00:00Z",
+  "closingAmount" : 245.50,
+  "closingComment" : "Cierre",
+  "closedBy" : "cajero",
+  "closedAt" : "2026-11-30T23:30:00Z",
+  "totalSalesCash" : 150.00,
+  "totalSalesQr" : 80.00,
+  "totalSales" : 230.00,
+  "expectedCash" : 245.00,
+  "difference" : 0.50,
+  "salesCount" : 12,
+  "historical" : false,
+  "operationDate" : "2026-11-30",
+  "reopenable" : true
+}
