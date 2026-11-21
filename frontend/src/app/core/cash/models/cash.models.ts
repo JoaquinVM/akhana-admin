@@ -109,6 +109,8 @@ export interface Sale {
   historical?: boolean;
   // CAJ-11: day it counts for (yyyy-MM-dd, the day of its session); createdAt is the real time it was recorded
   operationDate?: string | null;
+  // POS-04 (097): rounding of the cash paid to Bs 0.10, already inside totalAmount
+  cashRounding?: number;
 }
 
 export interface CashSessionSummary {

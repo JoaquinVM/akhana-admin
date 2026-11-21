@@ -8,6 +8,10 @@ import {
   BOLIVIAN_DENOMINATIONS
 } from '../../../../core/cash/models/cash.models';
 import { CloseCashDraftService } from '../../../../core/cash/close-cash-draft.service';
+import { CloseCashReviewComponent } from '../close-cash-review/close-cash-review.component';
+
+// CAJ-05: a difference above this amount (Bs) is reviewed in its own step before closing
+export const DIFFERENCE_REVIEW_THRESHOLD = 20;
 
 interface CutRow {
   denomination: number;
@@ -18,7 +22,7 @@ interface CutRow {
 @Component({
   selector: 'app-close-cash-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ModalComponent, CloseCashReviewComponent],
   templateUrl: './close-cash-modal.component.html',
   styleUrls: ['./close-cash-modal.component.css']
 })
@@ -31,6 +35,8 @@ export class CloseCashModalComponent {
   expectedCash = input<number>(0);
   // CAJ-15: the open cash session, whose count is kept in this browser
   sessionId = input<string | null>(null);
+  // Number of the session, for the text of the adjustment it will register
+  sessionNumber = input<number | null>(null);
 
   close = output<void>();
   confirmed = output<CloseCashRequest>();
@@ -39,6 +45,9 @@ export class CloseCashModalComponent {
   showCutsSection = signal<boolean>(false);
 
   activeMode = signal<'ARQUEO' | 'DIRECTO'>('ARQUEO');
+
+  // CAJ-05: 'review' shows the difference and the adjustment before closing, when it is above the threshold
+  step = signal<'count' | 'review'>('count');
 
   // Count per bill and coin
   cutsData = signal<CutRow[]>(
@@ -73,13 +82,21 @@ export class CloseCashModalComponent {
   });
 
   form = this.fb.group({
-    closingAmount: [0, [Validators.required, Validators.min(0)]],
+    // CAJ-04: the counted amount is required, so it starts empty and never as a 0 nobody counted
+    closingAmount: [null as number | null, [Validators.required, Validators.min(0)]],
     closingComment: ['', [Validators.maxLength(500)]],
     reserveBills: [0, [Validators.min(0)]],
     reserveCoins: [0, [Validators.min(0)]]
   });
 
-  enteredClosingAmount = signal<number>(0);
+  enteredClosingAmount = signal<number | null>(null);
+
+  hasAmount = computed(() => this.enteredClosingAmount() !== null);
+
+  // In the detailed count there is an amount once a bill, a coin or a reserve is written
+  hasCount = computed(() =>
+    this.cutsData().some((r) => r.cashQuantity > 0 || r.reserveQuantity > 0)
+    || this.reserveBills() > 0 || this.reserveCoins() > 0);
 
   // While the modal loads what was written before, nothing is saved
   private restoring = false;
@@ -89,14 +106,18 @@ export class CloseCashModalComponent {
     return Math.round((this.subtotalBills() + this.subtotalCoins()) * 100) / 100;
   });
 
-  // Rounded to cents so an exact count reads as 0, never as a float remainder
+  // Rounded to cents so an exact count reads as 0, never as a float remainder; 0 while there is no amount
   difference = computed(() => {
-    return Math.round((this.enteredClosingAmount() - this.expectedCash()) * 100) / 100;
+    const entered = this.enteredClosingAmount();
+    return entered === null ? 0 : Math.round((entered - this.expectedCash()) * 100) / 100;
   });
+
+  needsReview = computed(() => this.hasAmount() && Math.abs(this.difference()) > DIFFERENCE_REVIEW_THRESHOLD);
 
   constructor() {
     this.form.get('closingAmount')?.valueChanges.subscribe((val) => {
-      this.enteredClosingAmount.set(Number(val) || 0);
+      const n = val === null || val === undefined || (val as unknown) === '' ? NaN : Number(val);
+      this.enteredClosingAmount.set(Number.isFinite(n) ? n : null);
     });
     this.form.get('reserveBills')?.valueChanges.subscribe((val) => this.onReserveChange(this.reserveBills, val));
     this.form.get('reserveCoins')?.valueChanges.subscribe((val) => this.onReserveChange(this.reserveCoins, val));
@@ -126,8 +147,9 @@ export class CloseCashModalComponent {
       })
     );
     this.activeMode.set(draft?.mode ?? 'ARQUEO');
+    this.step.set('count');
     this.form.reset({
-      closingAmount: draft?.mode === 'DIRECTO' ? draft.closingAmount : 0,
+      closingAmount: draft?.mode === 'DIRECTO' ? draft.closingAmount : null,
       closingComment: draft?.closingComment ?? '',
       reserveBills: draft?.reserveBills ?? 0,
       reserveCoins: draft?.reserveCoins ?? 0
@@ -161,7 +183,7 @@ export class CloseCashModalComponent {
         .map(({ denomination, cashQuantity, reserveQuantity }) => ({ denomination, cashQuantity, reserveQuantity })),
       reserveBills: this.reserveBills(),
       reserveCoins: this.reserveCoins(),
-      closingAmount: Number(value.closingAmount) || 0,
+      closingAmount: this.enteredClosingAmount(),
       closingComment: value.closingComment ?? ''
     });
   }
@@ -212,10 +234,9 @@ export class CloseCashModalComponent {
     this.saveDraft();
   }
 
+  // CAJ-04: with nothing counted the amount stays empty, so the session cannot close at 0 by mistake
   applyCutsToClosingAmount(): void {
-    const total = this.totalCuts();
-    this.form.patchValue({ closingAmount: total });
-    this.form.get('closingAmount')?.markAsTouched();
+    this.form.patchValue({ closingAmount: this.hasCount() ? this.totalCuts() : null });
   }
 
   getRowSubtotal(row: CutRow): number {
@@ -225,6 +246,11 @@ export class CloseCashModalComponent {
   onSubmit(): void {
     if (this.form.invalid || this.isLoading()) {
       this.form.markAllAsTouched();
+      return;
+    }
+    // CAJ-05: a large difference is reviewed first; confirming from the review closes
+    if (this.step() === 'count' && this.needsReview()) {
+      this.step.set('review');
       return;
     }
 
@@ -255,6 +281,10 @@ export class CloseCashModalComponent {
       request.reserveCoins = this.reserveCoins();
     }
     this.confirmed.emit(request);
+  }
+
+  backToCount(): void {
+    this.step.set('count');
   }
 
   onCancel(): void {

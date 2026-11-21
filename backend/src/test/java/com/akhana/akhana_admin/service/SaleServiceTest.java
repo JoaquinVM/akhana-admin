@@ -607,15 +607,17 @@ class SaleServiceTest {
 
         assertThat(response.subtotalAmount()).isEqualByComparingTo("7.50");
         assertThat(response.discountItemsTotal()).isEqualByComparingTo("0.02");
-        assertThat(response.totalAmount()).isEqualByComparingTo("7.48");
-        assertThat(response.changeGiven()).isEqualByComparingTo("2.52");
+        // 097: paid in cash, 7.48 is charged as 7.50
+        assertThat(response.totalAmount()).isEqualByComparingTo("7.50");
+        assertThat(response.cashRounding()).isEqualByComparingTo("0.02");
+        assertThat(response.changeGiven()).isEqualByComparingTo("2.50");
         assertThat(response.items().get(0).quantity()).isEqualByComparingTo("0.375");
         assertThat(response.items().get(0).subtotal()).isEqualByComparingTo("7.48");
 
         SaleItem item = saleCaptor.getValue().getItems().get(0);
         assertThat(item.getQuantity().scale()).isEqualTo(3);
         assertThat(item.getSubtotal().scale()).isEqualTo(2);
-        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("107.48");
+        assertThat(activeSession.getExpectedCash()).isEqualByComparingTo("107.50");
     }
 
     @Test
@@ -865,7 +867,9 @@ class SaleServiceTest {
         Sale sale = registerCapturing(presentationSale(halfPound, "1", SaleType.AL_COSTO));
 
         assertThat(sale.getItems().get(0).getUnitPrice()).isEqualByComparingTo("29.51");
-        assertThat(sale.getTotalAmount()).isEqualByComparingTo("29.51");
+        // 097: paid in cash, 29.51 is charged as 29.50
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("29.50");
+        assertThat(sale.getCashRounding()).isEqualByComparingTo("-0.01");
     }
 
     @Test

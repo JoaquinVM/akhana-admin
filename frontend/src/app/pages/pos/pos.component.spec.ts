@@ -407,7 +407,17 @@ describe('PosComponent', () => {
     mockCashService.closeSession.mockReturnValue(of({ ...mockSession, status: 'CERRADA', sessionNumber: 208, difference: -4.32 }));
     component.handleConfirmClose({ closingAmount: 100, closingComment: null });
 
-    expect(component.feedbackMessage()?.text).toBe('Caja #208 cerrada exitosamente (con faltante de Bs 4,32).');
+    expect(component.feedbackMessage()).toEqual({
+      type: 'warning',
+      text: 'Caja #208 cerrada con faltante de Bs 4,32, registrado como ajuste en la cuenta Caja.'
+    });
+  });
+
+  it('CAJ-05: el cierre sin diferencia avisa en verde', () => {
+    mockCashService.closeSession.mockReturnValue(of({ ...mockSession, status: 'CERRADA', sessionNumber: 209, difference: 0 }));
+    component.handleConfirmClose({ closingAmount: 100, closingComment: null });
+
+    expect(component.feedbackMessage()).toEqual({ type: 'success', text: 'Caja #209 cerrada con cuadre exacto.' });
   });
 
   it('al refrescar la caja abierta mantiene el espacio de trabajo (sin volver a «Cargando»)', () => {

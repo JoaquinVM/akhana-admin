@@ -1,7 +1,8 @@
 import { Component, input, output } from '@angular/core';
 
 export interface PosFeedback {
-  type: 'success' | 'error';
+  // warning: done, but with something to look at (a cash session closed with a difference)
+  type: 'success' | 'warning' | 'error';
   text: string;
 }
 

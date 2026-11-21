@@ -1,4 +1,4 @@
-import { formatBs } from './money';
+import { formatBs, isWholeCoins, roundToCoin } from './money';
 
 describe('formatBs', () => {
   // The same cases as StoreFormatTest.money (backend): a message reads the same on both sides
@@ -17,5 +17,16 @@ describe('formatBs', () => {
 
   it.each(cases)('%s', (_name, amount, expected) => {
     expect(formatBs(amount)).toBe(expected);
+  });
+
+  it('097: redondea al Bs 0,10 más cercano, como el servidor', () => {
+    expect(roundToCoin(15.09)).toBe(15.1);
+    expect(roundToCoin(15.05)).toBe(15.1);
+    expect(roundToCoin(15.04)).toBe(15);
+    expect(roundToCoin(15)).toBe(15);
+    expect(roundToCoin(0.04)).toBe(0.1);
+    expect(roundToCoin(0)).toBe(0);
+    expect(isWholeCoins(10.1)).toBe(true);
+    expect(isWholeCoins(10.05)).toBe(false);
   });
 });

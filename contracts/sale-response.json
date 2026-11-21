@@ -48,5 +48,6 @@
   "customerName" : "Luis",
   "creditAmount" : 5.00,
   "historical" : false,
-  "operationDate" : "2026-11-30"
+  "operationDate" : "2026-11-30",
+  "cashRounding" : 0
 }

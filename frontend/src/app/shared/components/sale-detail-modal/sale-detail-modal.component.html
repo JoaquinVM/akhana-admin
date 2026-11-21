@@ -313,6 +313,13 @@
               </span>
             </div>
 
+            @if (sale.cashRounding) {
+              <div class="totals-row">
+                <span class="totals-label">Redondeo del efectivo</span>
+                <span class="totals-val">{{ sale.cashRounding > 0 ? '+' : '-' }}Bs {{ (sale.cashRounding > 0 ? sale.cashRounding : -sale.cashRounding) | number:'1.2-2' }}</span>
+              </div>
+            }
+
             <div class="totals-divider"></div>
 
             <div class="totals-row row-final">

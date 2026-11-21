@@ -301,7 +301,7 @@ class CashSessionServiceTest {
     @DisplayName("Debe retornar la sesión activa actual con el contador de ventas")
     void getCurrentSession_success() {
         when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(3L);
+        when(saleRepository.countByCashSessionIdAndStatus(sessionId, SaleStatus.COMPLETADA)).thenReturn(3L);
 
         CashSessionSummaryResponse response = cashSessionService.getCurrentSession();
 
@@ -327,7 +327,7 @@ class CashSessionServiceTest {
         stubAdjustment(FinancialCategorySystemKey.CASH_SURPLUS, FinancialCategoryType.INGRESO, "100.00");
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(2L);
+        when(saleRepository.countByCashSessionIdAndStatus(sessionId, SaleStatus.COMPLETADA)).thenReturn(2L);
 
         List<CashCutDto> cuts = List.of(
             new CashCutDto(new BigDecimal("100.00"), 1, 0, new BigDecimal("100.00")),
@@ -498,7 +498,7 @@ class CashSessionServiceTest {
         activeSession.setTotalSalesCash(new BigDecimal("850.00"));
         activeSession.setTotalSalesQr(new BigDecimal("300.00"));
         when(cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
+        when(saleRepository.countByCashSessionIdAndStatus(sessionId, SaleStatus.COMPLETADA)).thenReturn(5L);
         when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId))
                 .thenReturn(new BigDecimal("120.00"));
 
@@ -516,7 +516,7 @@ class CashSessionServiceTest {
         activeSession.setTotalSalesCash(new BigDecimal("850.00"));
         when(cashSessionRepository.findByStatusForUpdate(CashSessionStatus.ABIERTA)).thenReturn(Optional.of(activeSession));
         when(cashSessionRepository.save(any(CashSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(5L);
+        when(saleRepository.countByCashSessionIdAndStatus(sessionId, SaleStatus.COMPLETADA)).thenReturn(5L);
         when(financialTransactionRepository.sumActiveCashOutflowsBySessionId(sessionId))
                 .thenReturn(new BigDecimal("120.00"));
 
@@ -1139,7 +1139,7 @@ class CashSessionServiceTest {
         stubReopenable(closed);
         FinancialTransaction adjustment = stubClosingAdjustment(closed, FinancialTransactionType.GASTO_MANUAL, "7.00", "Faltante al cierre de caja #150");
         FinancialAccount cash = stubCashAccount("150.00");
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(4L);
+        when(saleRepository.countByCashSessionIdAndStatus(sessionId, SaleStatus.COMPLETADA)).thenReturn(4L);
 
         CashSessionSummaryResponse response = cashSessionService.reopenSession(sessionId, new ReopenCashRequest(" Cerrada por error "), "luis");
 

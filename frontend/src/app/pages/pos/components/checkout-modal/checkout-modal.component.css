@@ -476,3 +476,10 @@
   font-size: 12px;
   color: var(--color-warning);
 }
+
+/* 097: the rounded cash amount, above the amount received */
+.cash-rounding-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary, #1f2937);
+}

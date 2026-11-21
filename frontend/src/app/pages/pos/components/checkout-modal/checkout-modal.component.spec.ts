@@ -25,6 +25,98 @@ describe('CheckoutModalComponent', () => {
     open(20);
   });
 
+  const billButtons = (): HTMLButtonElement[] =>
+    Array.from(fixture.nativeElement.querySelectorAll('.btn-quick'))
+      .filter((b: any) => b.textContent.trim().startsWith('Bs')) as HTMLButtonElement[];
+
+  it('POS-04: el billete fija el monto recibido, no lo suma a lo que ya estaba', () => {
+    open(38);
+    component.setPaymentMethod('EFECTIVO');
+    component.onAmountReceivedChange(40);
+
+    component.setReceived(50);
+    expect(component.amountReceived()).toBe(50);
+    component.setReceived(100);
+    expect(component.amountReceived()).toBe(100);
+    expect(component.changeGiven()).toBe(62);
+  });
+
+  it('POS-04: solo se ofrecen los billetes que cubren el total, más «Exacto»', () => {
+    open(38);
+    component.setPaymentMethod('EFECTIVO');
+    fixture.detectChanges();
+
+    expect(billButtons().map((b) => b.textContent!.trim())).toEqual(['Bs 50', 'Bs 100', 'Bs 200']);
+    expect(fixture.nativeElement.textContent).toContain('Exacto');
+
+    billButtons()[1].click();
+    fixture.detectChanges();
+    expect(component.amountReceived()).toBe(100);
+    billButtons()[0].click();
+    expect(component.amountReceived()).toBe(50);
+  });
+
+  it('POS-04: un total de Bs 50 justo no ofrece Bs 50, porque eso es «Exacto»', () => {
+    open(50);
+    component.setPaymentMethod('EFECTIVO');
+    fixture.detectChanges();
+    expect(billButtons().map((b) => b.textContent!.trim())).toEqual(['Bs 100', 'Bs 200']);
+  });
+
+  it('POS-04: en el pago mixto los billetes cubren la parte en efectivo', () => {
+    open(60);
+    component.setPaymentMethod('MIXTO');
+    component.onCashPortionChange(15);
+    fixture.detectChanges();
+    expect(billButtons().map((b) => b.textContent!.trim())).toEqual(['Bs 20', 'Bs 50', 'Bs 100', 'Bs 200']);
+  });
+
+  it('097: en efectivo se cobra el total redondeado a Bs 0,10 y se avisa el redondeo', () => {
+    open(15.09);
+    component.setPaymentMethod('EFECTIVO');
+    fixture.detectChanges();
+
+    expect(component.cashDue()).toBe(15.1);
+    expect(component.amountReceived()).toBe(15.1);
+    expect(component.isPaymentValid()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Bs 15.10 (redondeo +Bs 0.01)');
+
+    component.onAmountReceivedChange(15.09);
+    expect(component.isPaymentValid()).toBe(false);
+    component.setReceived(20);
+    expect(component.changeGiven()).toBe(4.9);
+
+    let emitted: any = null;
+    component.confirmed.subscribe((p) => (emitted = p));
+    component.handleConfirm();
+    expect(emitted.amountCash).toBe(15.1);
+  });
+
+  it('097: 15,04 se cobra 15,00 y sin centavos no hay aviso de redondeo', () => {
+    open(15.04);
+    component.setPaymentMethod('EFECTIVO');
+    expect(component.cashDue()).toBe(15);
+    expect(component.cashRounding()).toBe(-0.04);
+
+    open(20);
+    component.setPaymentMethod('EFECTIVO');
+    fixture.detectChanges();
+    expect(component.cashRounding()).toBe(0);
+    expect(fixture.nativeElement.textContent).not.toContain('redondeo');
+  });
+
+  it('097: en el pago mixto el efectivo va en múltiplos de Bs 0,10', () => {
+    open(15.09);
+    component.setPaymentMethod('MIXTO');
+    expect(component.amountCash()).toBe(7.6);
+    expect(component.isPaymentValid()).toBe(true);
+
+    component.onCashPortionChange(10.05);
+    fixture.detectChanges();
+    expect(component.isPaymentValid()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('múltiplos de Bs 0,10');
+  });
+
   it('debe procesar el método de pago EFECTIVO calculando el cambio', () => {
     component.setPaymentMethod('EFECTIVO');
 
@@ -81,7 +173,7 @@ describe('CheckoutModalComponent', () => {
     expect(component.amountQr()).toBe(5);
     expect(component.amountReceived()).toBe(15); // se sincronizó automáticamente
 
-    component.addReceived(5);
+    component.setReceived(20);
     expect(component.amountReceived()).toBe(20);
     expect(component.changeGiven()).toBe(5);
 

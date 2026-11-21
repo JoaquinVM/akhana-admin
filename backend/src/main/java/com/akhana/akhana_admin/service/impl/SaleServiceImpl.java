@@ -66,6 +66,9 @@ public class SaleServiceImpl implements SaleService {
     static final String CASH_ACCOUNT_MISSING = "No existe la cuenta Caja; no se puede registrar el cobro en efectivo.";
     static final String QR_ACCOUNT_MISSING = "No hay una cuenta marcada para cobros QR; no se puede registrar el cobro QR.";
     static final String MIXED_NEEDS_BOTH = "En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.";
+    static final String MIXED_CASH_NOT_ROUND = "En un pago mixto la parte en efectivo debe ir en múltiplos de Bs 0,10; el QR lleva los centavos.";
+    // POS-04 (097): the smallest coin; cash is always charged in multiples of it
+    static final BigDecimal SMALLEST_COIN = new BigDecimal("0.10");
     static final String AT_COST_NO_DISCOUNTS = "Una venta al costo no admite descuentos.";
     static final String CREDIT_ONLY_AT_COST = "Solo una venta al costo puede quedar a crédito.";
     static final String CREDIT_CUSTOMER_REQUIRED = "Elija un cliente activo para la venta a crédito.";
@@ -279,14 +282,18 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal amountQr = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal amountReceived = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal changeGiven = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal cashRounding = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         if (paymentMethod == PaymentMethod.EFECTIVO) {
-            amountCash = paidNow;
-            amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : paidNow;
-            if (amountReceived.compareTo(paidNow) < 0) {
+            // POS-04 (097): cash is charged rounded to Bs 0.10, to the nearest; the rounding goes into the total
+            BigDecimal cashDue = roundToSmallestCoin(paidNow);
+            cashRounding = cashDue.subtract(paidNow).setScale(2, RoundingMode.HALF_UP);
+            amountCash = cashDue;
+            amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : cashDue;
+            if (amountReceived.compareTo(cashDue) < 0) {
                 throw new IllegalArgumentException("El monto recibido en efectivo no puede ser menor al total.");
             }
-            changeGiven = amountReceived.subtract(paidNow).setScale(2, RoundingMode.HALF_UP);
+            changeGiven = amountReceived.subtract(cashDue).setScale(2, RoundingMode.HALF_UP);
         } else if (paymentMethod == PaymentMethod.QR) {
             amountQr = paidNow;
             amountReceived = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -297,6 +304,10 @@ public class SaleServiceImpl implements SaleService {
             if (cashPortion.signum() <= 0 || cashPortion.compareTo(paidNow) >= 0) {
                 throw new IllegalArgumentException(MIXED_NEEDS_BOTH);
             }
+            // POS-04 (097): the cash part goes in whole coins, so the QR part takes the cents
+            if (cashPortion.remainder(SMALLEST_COIN).signum() != 0) {
+                throw new IllegalArgumentException(MIXED_CASH_NOT_ROUND);
+            }
             amountCash = cashPortion;
             amountQr = paidNow.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
             amountReceived = request.amountReceived() != null ? request.amountReceived().setScale(2, RoundingMode.HALF_UP) : cashPortion;
@@ -305,6 +316,8 @@ public class SaleServiceImpl implements SaleService {
             }
             changeGiven = amountReceived.subtract(cashPortion).setScale(2, RoundingMode.HALF_UP);
         }
+
+        totalAmount = totalAmount.add(cashRounding).setScale(2, RoundingMode.HALF_UP);
 
         // The customer is locked after the session so its receivable does not change meanwhile (T-14)
         Customer customer = null;
@@ -356,6 +369,7 @@ public class SaleServiceImpl implements SaleService {
             .amountQr(amountQr)
             .amountReceived(amountReceived)
             .changeGiven(changeGiven)
+            .cashRounding(cashRounding)
             .description(request.description() != null ? request.description().trim() : null)
             .createdBy(username)
             .createdAt(Instant.now())
@@ -397,10 +411,19 @@ public class SaleServiceImpl implements SaleService {
 
     // POS-18: the same checkout sent again; the total and the number of lines tell it apart from another sale
     private static SaleResponse replayedSale(Sale existing, BigDecimal totalAmount, int lines) {
-        if (existing.getTotalAmount().compareTo(totalAmount) != 0 || existing.getItems().size() != lines) {
+        // The stored total carries its cash rounding (097); the one computed from the lines does not
+        BigDecimal existingBeforeRounding = existing.getTotalAmount().subtract(existing.getCashRounding());
+        if (existingBeforeRounding.compareTo(totalAmount) != 0 || existing.getItems().size() != lines) {
             throw new DuplicateResourceException(String.format(CLIENT_REQUEST_MISMATCH, existing.getSaleNumber()));
         }
         return SaleResponse.fromEntity(existing);
+    }
+
+    // POS-04 (097): to the nearest Bs 0.10 (15.04 -> 15.00, 15.05 -> 15.10); a positive amount never becomes 0
+    static BigDecimal roundToSmallestCoin(BigDecimal amount) {
+        BigDecimal rounded = amount.divide(SMALLEST_COIN, 0, RoundingMode.HALF_UP).multiply(SMALLEST_COIN)
+            .setScale(2, RoundingMode.HALF_UP);
+        return rounded.signum() == 0 && amount.signum() > 0 ? SMALLEST_COIN.setScale(2, RoundingMode.HALF_UP) : rounded;
     }
 
     @Override

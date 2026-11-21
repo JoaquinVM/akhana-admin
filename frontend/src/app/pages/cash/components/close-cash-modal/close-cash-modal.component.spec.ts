@@ -21,8 +21,120 @@ describe('CloseCashModalComponent', () => {
   it('debe inicializarse con el formulario y lista de denominaciones', () => {
     expect(component).toBeTruthy();
     expect(component.denominations.length).toBe(11);
-    expect(component.form.get('closingAmount')?.value).toBe(0);
-    expect(component.difference()).toBe(-100); // 0 - 100
+    expect(component.form.get('closingAmount')?.value).toBeNull();
+    expect(component.hasAmount()).toBe(false);
+  });
+
+  // Closes, going through the review step when the difference asks for it
+  const confirmClose = () => {
+    component.onSubmit();
+    if (component.step() === 'review') {
+      component.onSubmit();
+    }
+  };
+
+  const submitButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('button[type="submit"]');
+
+  it('CAJ-04: sin contar nada el monto está vacío, el botón desactivado y no se cierra', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Falta el monto contado');
+    expect(fixture.nativeElement.textContent).not.toContain('Faltante');
+    component.onSubmit();
+    component.onSubmit();
+    expect(emitted).toBeNull();
+
+    component.setMode('DIRECTO');
+    fixture.detectChanges();
+    expect(component.form.get('closingAmount')?.value).toBeNull();
+    expect(submitButton().disabled).toBe(true);
+    component.onSubmit();
+    expect(emitted).toBeNull();
+  });
+
+  it('CAJ-04: al contar un billete hay monto, y al borrar todo vuelve a quedar vacío', () => {
+    setCut(50, 2);
+    fixture.detectChanges();
+    expect(component.form.get('closingAmount')?.value).toBe(100);
+    expect(submitButton().disabled).toBe(false);
+
+    component.clearAllCuts();
+    fixture.detectChanges();
+    expect(component.form.get('closingAmount')?.value).toBeNull();
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('CAJ-04: un 0 escrito a mano en el conteo directo sí es un monto', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    fixture.componentRef.setInput('expectedCash', 0);
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 0 });
+
+    component.onSubmit();
+    expect(emitted.closingAmount).toBe(0);
+  });
+
+  it('CAJ-05: una diferencia de hasta Bs 20 cierra sin el paso de revisión', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 80 });
+
+    component.onSubmit();
+    expect(component.step()).toBe('count');
+    expect(emitted.closingAmount).toBe(80);
+  });
+
+  it('CAJ-05: una diferencia de más de Bs 20 pasa por «Revisar diferencia» con el ajuste que se registrará', () => {
+    let emitted: any = null;
+    component.confirmed.subscribe((res) => (emitted = res));
+    fixture.componentRef.setInput('sessionNumber', 7);
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 79.5 });
+
+    component.onSubmit();
+    fixture.detectChanges();
+    expect(emitted).toBeNull();
+    expect(component.step()).toBe('review');
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Revisar diferencia');
+    expect(text).toContain('«Faltante al cierre de caja #7»');
+    expect(text).toContain('en la cuenta Caja');
+    expect(submitButton().textContent).toContain('Cerrar con faltante');
+
+    component.backToCount();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Revisar diferencia');
+
+    component.onSubmit();
+    component.onSubmit();
+    expect(emitted.closingAmount).toBe(79.5);
+  });
+
+  it('CAJ-05: el sobrante grande se revisa como sobrante', () => {
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 150 });
+    component.onSubmit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('«Sobrante al cierre de caja»');
+    expect(submitButton().textContent).toContain('Cerrar con sobrante');
+  });
+
+  it('CAJ-05: al volver a abrir el modal empieza en el conteo, no en la revisión', () => {
+    component.setMode('DIRECTO');
+    component.form.patchValue({ closingAmount: 10 });
+    component.onSubmit();
+    expect(component.step()).toBe('review');
+
+    fixture.componentRef.setInput('isOpen', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    expect(component.step()).toBe('count');
   });
 
   it('debe separar correctamente billetes (5) y monedas (6) para la vista en 2 columnas', () => {
@@ -69,7 +181,7 @@ describe('CloseCashModalComponent', () => {
       closingComment: 'Cierre correcto'
     });
 
-    component.onSubmit();
+    confirmClose();
 
     expect(emittedResult).not.toBeNull();
     expect(emittedResult.closingAmount).toBe(150);
@@ -84,7 +196,7 @@ describe('CloseCashModalComponent', () => {
 
     component.setMode('DIRECTO');
     component.form.patchValue({ closingAmount: 3600 });
-    component.onSubmit();
+    confirmClose();
 
     expect(emitted.closingAmount).toBe(3600);
     expect(emitted.cuts).toBeUndefined();
@@ -95,7 +207,7 @@ describe('CloseCashModalComponent', () => {
     component.confirmed.subscribe((res) => (emitted = res));
     component.cutsData.update((rows) => rows.map((r) => (r.denomination === 0.5 ? { ...r, cashQuantity: 3, reserveQuantity: 1 } : r)));
     component.applyCutsToClosingAmount();
-    component.onSubmit();
+    confirmClose();
 
     expect(emitted.closingAmount).toBe(2);
     expect(emitted.cuts).toEqual([{ denomination: 0.5, cashQuantity: 3, reserveQuantity: 1, subtotal: 2 }]);
@@ -152,7 +264,7 @@ describe('CloseCashModalComponent', () => {
     component.confirmed.subscribe((res) => (emitted = res));
     setCut(200, 5);
     component.form.patchValue({ reserveBills: 150 });
-    component.onSubmit();
+    confirmClose();
 
     expect(emitted.closingAmount).toBe(1150);
     expect(emitted.cuts).toEqual([{ denomination: 200, cashQuantity: 5, reserveQuantity: 0, subtotal: 1000 }]);
@@ -167,7 +279,7 @@ describe('CloseCashModalComponent', () => {
 
     component.setMode('DIRECTO');
     component.form.patchValue({ closingAmount: 500 });
-    component.onSubmit();
+    confirmClose();
 
     expect(emitted.closingAmount).toBe(500);
     expect(emitted.cuts).toBeUndefined();

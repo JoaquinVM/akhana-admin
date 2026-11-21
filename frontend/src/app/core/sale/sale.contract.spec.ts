@@ -14,7 +14,7 @@ const SALE_FIELDS = {
   discountItemsTotal: true, globalDiscountAmount: true, discountTotal: true, totalAmount: true, paymentMethod: true,
   amountCash: true, amountQr: true, amountReceived: true, changeGiven: true, description: true, createdBy: true,
   createdAt: true, voidedAt: true, voidedBy: true, voidReason: true, items: true, saleType: true, customerId: true,
-  customerName: true, creditAmount: true, historical: true, operationDate: true,
+  customerName: true, creditAmount: true, historical: true, operationDate: true, cashRounding: true,
 } satisfies Record<keyof Sale, true>;
 
 const SALE_ITEM_FIELDS = {

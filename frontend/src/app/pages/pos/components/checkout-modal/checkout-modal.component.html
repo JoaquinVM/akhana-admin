@@ -146,6 +146,13 @@
       <!-- Cash panel -->
       @if (paymentMethod() === 'EFECTIVO') {
         <div class="checkout-panel">
+          <!-- 097: cash is charged rounded to Bs 0.10 -->
+          @if (cashRounding() !== 0) {
+            <p class="cash-rounding-note">
+              A cobrar en efectivo: <strong>Bs {{ cashDue() | number:'1.2-2' }}</strong>
+              (redondeo {{ cashRounding() > 0 ? '+' : '-' }}Bs {{ (cashRounding() > 0 ? cashRounding() : -cashRounding()) | number:'1.2-2' }})
+            </p>
+          }
           <div class="checkout-field-row">
             <label class="checkout-field-label" for="amountReceived">Monto recibido:</label>
             <div class="checkout-field-controls">
@@ -163,22 +170,21 @@
 
               <div class="quick-amounts-bar">
                 <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Monto exacto">Exacto</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
+                @for (bill of coveringBills(); track bill) {
+                  <button type="button" class="btn btn-quick" (click)="setReceived(bill)" [attr.aria-label]="'Recibido Bs ' + bill">Bs {{ bill }}</button>
+                }
               </div>
             </div>
           </div>
 
-          @if ((amountReceived() || 0) < amountDue()) {
+          @if ((amountReceived() || 0) < cashDue()) {
             <div class="checkout-alert-error">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-svg">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <span>El monto recibido en efectivo es menor al total de la venta (faltan Bs {{ (amountDue() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
+              <span>El monto recibido en efectivo es menor al total de la venta (faltan Bs {{ (cashDue() - (amountReceived() || 0)) | number:'1.2-2' }}).</span>
             </div>
           }
 
@@ -244,6 +250,8 @@
 
           @if (mixedNeedsBothParts()) {
             <p class="mixed-hint" role="alert">El efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.</p>
+          } @else if (mixedCashNotWholeCoins()) {
+            <p class="mixed-hint" role="alert">La parte en efectivo va en múltiplos de Bs 0,10; el QR lleva los centavos.</p>
           }
 
           <div class="checkout-field-row">
@@ -263,10 +271,9 @@
 
               <div class="quick-amounts-bar">
                 <button type="button" class="btn btn-quick" (click)="setExactAmount()" title="Cobro exacto del efectivo">Exacto</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(10)">+10</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(20)">+20</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(50)">+50</button>
-                <button type="button" class="btn btn-quick" (click)="addReceived(100)">+100</button>
+                @for (bill of coveringBills(); track bill) {
+                  <button type="button" class="btn btn-quick" (click)="setReceived(bill)" [attr.aria-label]="'Recibido Bs ' + bill">Bs {{ bill }}</button>
+                }
               </div>
             </div>
           </div>

@@ -100,6 +100,10 @@ El sistema SHALL permitir el cierre de la sesión de caja activa requiriendo obl
 - **WHEN** el usuario proporciona un monto de cierre y confirma la acción
 - **THEN** el sistema actualiza el estado de la sesión a `CERRADA`, guarda la fecha y hora de cierre, el usuario que ejecutó el cierre, el monto de cierre, y bloquea el registro de nuevas ventas sobre dicha sesión
 
+#### Scenario: Sin monto contado no se cierra (CAJ-04)
+- **WHEN** se abre el modal de cierre y no se contó nada: ni cortes, ni reservas, ni un monto directo
+- **THEN** el monto contado está vacío («Sin contar», «Falta el monto contado»), no se muestra faltante y «Confirmar y cerrar caja» está desactivado. En el arqueo hay monto en cuanto se escribe un billete, una moneda o una reserva, y al borrar todo vuelve a quedar vacío. En el conteo directo un 0 escrito a mano sí es un monto. El borrador (CAJ-15) guarda el monto vacío como vacío. Pruebas en `close-cash-modal.component.spec.ts`.
+
 #### Scenario: Inmutabilidad de caja cerrada
 - **WHEN** una caja pasa a estado `CERRADA`
 - **THEN** el sistema no permite asociarle nuevas transacciones ni reabrirla, con una sola excepción: la última caja cerrada se puede reabrir con motivo mientras no se haya abierto otra después (CAJ-14)
@@ -137,6 +141,14 @@ El sistema SHALL calcular y mostrar automáticamente la diferencia entre el mont
 #### Scenario: Presentación de balance con diferencia
 - **WHEN** el usuario se encuentra en el diálogo de confirmación de cierre
 - **THEN** el sistema muestra el monto esperado en efectivo, el monto de cierre y la diferencia calculada (`monto de cierre - monto esperado en efectivo`), permitiendo cerrar la caja aún si existe diferencia (positiva o negativa)
+
+#### Scenario: Revisar diferencia (CAJ-05)
+- **WHEN** la diferencia entre lo contado y lo esperado supera Bs 20 (`DIFFERENCE_REVIEW_THRESHOLD`) y se pulsa cerrar
+- **THEN** el modal pasa al paso «Revisar diferencia» (`close-cash-review`): esperado, contado, sobrante o faltante y el ajuste que se registrará («Faltante al cierre de caja #N» por el monto, en la cuenta Caja); «Volver al conteo» regresa sin cerrar y «Cerrar con faltante» o «Cerrar con sobrante» cierra. Con Bs 20 o menos cierra directo. Al volver a abrir el modal empieza en el conteo. Pruebas en `close-cash-modal.component.spec.ts`.
+
+#### Scenario: Aviso final del cierre (CAJ-05)
+- **WHEN** la caja se cierra
+- **THEN** con cuadre exacto el aviso es verde («Caja #N cerrada con cuadre exacto.»); con diferencia es ámbar («Caja #N cerrada con faltante de Bs 4,32, registrado como ajuste en la cuenta Caja.»). Pruebas en `pos.component.spec.ts` y `pos-feedback-banner.component.spec.ts`.
 
 ### Requirement: Efectivo esperado único (CAJ-03, T-15)
 El sistema SHALL calcular el efectivo esperado en un solo lugar del servidor como monto inicial + ventas en efectivo + transferencias hacia Caja − gastos de Caja − transferencias desde Caja, contando solo movimientos activos vinculados a la caja. Las pantallas muestran ese valor y no lo recalculan.
@@ -208,6 +220,9 @@ El sistema SHALL listar el historial cronológico de sesiones de caja y permitir
 #### Scenario: Listado de historial de cajas
 - **WHEN** el usuario navega a la sección "Cajas"
 - **THEN** el sistema presenta la tabla de sesiones mostrando identificador, fechas/horas de apertura y cierre, usuarios de apertura y cierre, monto inicial, monto de cierre, diferencia y estado
+- **NOTA** La cantidad de ventas de una caja no cuenta las anuladas (095), igual que sus totales: en la caja abierta,
+  el cierre, la reapertura, el historial, el detalle (que sí lista las anuladas) y el tablero
+  (`countByCashSessionIdAndStatus`, `countSalesBySession`). Prueba en `CashReopenIntegrationTest`.
 - **NOTA** Las ventas de todas las cajas se cuentan en una sola consulta (`GROUP BY`), y el detalle de una caja carga
   las líneas de sus ventas en lotes de 50 (`default_batch_fetch_size`), no una consulta por caja ni por venta. Pruebas en
   `QueryCountIntegrationTest`: el número de consultas es el mismo con 1 o con 9 cajas o ventas.

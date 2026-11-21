@@ -290,6 +290,18 @@ El sistema SHALL procesar el cobro de la venta mediante el modal ergonómico de 
 - **WHEN** una venta `MIXTO` lleva todo en efectivo o todo en QR
 - **THEN** el servidor la rechaza con «En un pago mixto el efectivo y el QR deben ser mayores a Bs 0,00; si se paga todo de una forma, elija Efectivo o QR.» y el modal de cobro deshabilita Confirmar y muestra el mismo aviso. Pruebas en `SaleServiceTest` y `checkout-modal.component.spec.ts`.
 
+#### Scenario: Los billetes fijan el monto recibido (POS-04)
+- **WHEN** una venta de Bs 38 se cobra en efectivo
+- **THEN** el modal ofrece «Exacto», «Bs 50», «Bs 100» y «Bs 200» (de Bs 10, 20, 50, 100 y 200, solo los mayores a lo que hay que cobrar; en el mixto, a la parte en efectivo), y pulsar un billete fija el monto recibido en ese billete: no lo suma a lo que ya estaba. Pruebas en `checkout-modal.component.spec.ts`.
+
+#### Scenario: Redondeo del efectivo a Bs 0.10 (POS-04, 097)
+- **WHEN** una venta de Bs 15,09 se paga toda en efectivo
+- **THEN** se cobra Bs 15,10: el modal lo muestra («A cobrar en efectivo: Bs 15,10 (redondeo +Bs 0,01)») y el servidor guarda `cash_rounding` = 0,01 (`V37__sale_cash_rounding.sql`), con el total, el efectivo, el ingreso en Caja, la caja y el esperado en 15,10. Se redondea al más cercano: 15,04 → 15,00 y 15,05 → 15,10; un monto positivo nunca queda en 0. El monto recibido se compara con lo redondeado. En QR no se redondea. Anular la venta devuelve lo que entró, y reintentar el cobro (POS-18) devuelve la misma venta. El detalle muestra «Redondeo del efectivo». Pruebas en `SaleCashRoundingIntegrationTest`, `SaleServiceTest`, `checkout-modal.component.spec.ts` y `money.spec.ts`.
+
+#### Scenario: Parte en efectivo del mixto en monedas enteras (POS-04, 097)
+- **WHEN** un pago mixto de Bs 15,09 lleva Bs 10,05 en efectivo
+- **THEN** el servidor lo rechaza con «En un pago mixto la parte en efectivo debe ir en múltiplos de Bs 0,10; el QR lleva los centavos.» y el modal desactiva Confirmar con el mismo aviso; con Bs 10,00 en efectivo el QR lleva Bs 5,09. La mitad propuesta al elegir Mixto ya va redondeada. Pruebas en `SaleCashRoundingIntegrationTest` y `checkout-modal.component.spec.ts`.
+
 #### Scenario: Venta sin cuenta o categoría de ventas (T-17)
 - **WHEN** falta la categoría Venta, o el cobro tiene parte en efectivo y no existe la cuenta «Caja», o tiene parte QR y no hay cuenta marcada para pagos QR
 - **THEN** el sistema rechaza la venta indicando qué falta y no guarda la venta, ni toca la caja, ni genera movimientos (RG-05)

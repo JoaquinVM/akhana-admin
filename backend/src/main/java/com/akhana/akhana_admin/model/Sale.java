@@ -98,6 +98,11 @@ public class Sale {
     @Builder.Default
     private BigDecimal changeGiven = BigDecimal.ZERO;
 
+    // POS-04 (097): rounding of the cash paid to Bs 0.10, already inside totalAmount and amountCash
+    @Column(name = "cash_rounding", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cashRounding = BigDecimal.ZERO;
+
     @Column(length = 255)
     private String description;
 
