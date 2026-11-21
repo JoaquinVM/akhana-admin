@@ -233,7 +233,8 @@
                 }
               </td>
               <td class="text-right">
-                <button type="button" class="btn-icon btn-delete" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
+                <!-- H23: out of the Tab order, so Tab from the cost never lands on it -->
+                <button type="button" class="btn-icon btn-delete" tabindex="-1" (click)="removeLine(i)" title="Quitar línea" aria-label="Quitar línea"><app-icon name="close" /></button>
               </td>
             </tr>
             @if (costDiffers(line)) {

@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, output, signal, untracked } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentMethod } from '../../../../core/sale/models/sale.models';
@@ -30,6 +30,9 @@ export const QUICK_BILLS = [10, 20, 50, 100, 200];
   styleUrls: ['./checkout-modal.component.css']
 })
 export class CheckoutModalComponent {
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly injector = inject(Injector);
+
   readonly isOpen = input<boolean>(false);
   readonly cartCount = input<number>(0);
   readonly isSubmitting = input<boolean>(false);
@@ -152,8 +155,23 @@ export class CheckoutModalComponent {
         this.comment.set('');
         this.customerId.set(null);
         this.setPaymentMethod(this.paymentMethod());
+        // H22: the focus goes into the modal, ready to charge with Enter
+        afterNextRender(() => this.focusFirstField(), { injector: this.injector });
       });
     });
+  }
+
+  // H22: cash asks for the amount received, the cash part of a mixed payment for its amount; QR or all on credit
+  // only need the confirmation
+  focusFirstField(): void {
+    const root: HTMLElement = this.host.nativeElement;
+    const target = this.isFullCredit() || this.paymentMethod() === 'QR'
+      ? root.querySelector<HTMLElement>('.btn-confirm-checkout')
+      : root.querySelector<HTMLInputElement>(this.paymentMethod() === 'MIXTO' ? '#cashPortion' : '#amountReceived');
+    target?.focus();
+    if (target instanceof HTMLInputElement) {
+      target.select();
+    }
   }
 
   setPaymentMethod(method: PaymentMethod): void {

@@ -768,3 +768,21 @@
   justify-content: center;
   padding: 0.75rem;
 }
+
+/* H16: the status as a native select, with its color next to it */
+.status-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-select .color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-select .form-control {
+  flex: 1;
+}
