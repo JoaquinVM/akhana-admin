@@ -51,9 +51,9 @@
 
 .kpi-value {
   font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .kpi-caption {
@@ -61,13 +61,10 @@
   color: var(--text-muted);
 }
 
-.text-green { color: #059669 !important; }
-.text-blue { color: #2563eb !important; }
-.text-red { color: #dc2626 !important; }
-
+/* Expected cash: soft Marfil instead of mint green */
 .kpi-card-highlight {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #86efac;
+  background: var(--color-marfil-soft);
+  border-color: var(--color-marfil-border);
 }
 
 .highlight-value {
@@ -75,6 +72,6 @@
 }
 
 .highlight-caption {
-  color: #166534;
+  color: var(--text-muted);
   font-weight: 500;
 }

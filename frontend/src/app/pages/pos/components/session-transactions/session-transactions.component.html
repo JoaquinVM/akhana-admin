@@ -101,7 +101,7 @@
   @if (activeTab() === 'VENTAS') {
     <!-- SALES VIEW -->
     @if (salesView() === 'loading') {
-      <div class="transactions-empty" role="status">
+      <div class="transactions-empty table-loading" role="status">
         <h4>Cargando las ventas de este turno…</h4>
       </div>
     } @else if (salesView() === 'failed') {
@@ -112,16 +112,12 @@
     } @else if (sales().length === 0) {
       <div class="transactions-empty">
         <div class="empty-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" class="empty-svg" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2C6 7 5.5 15 12 22C18.5 15 18 7 12 2Z" /><path d="M12 5v15M12 10 8.5 7.5M12 14l3.5-3M12 17l-3-2" />
           </svg>
         </div>
         <h4>No hay ventas registradas aún en este turno</h4>
-        <p>Pulsa en «Registrar venta» para abrir la pantalla de venta y emitir la primera transacción vinculada a la sesión activa.</p>
+        <p>La primera aparecerá aquí apenas la registres.</p>
         <div class="empty-actions">
           <button
             type="button"
@@ -146,7 +142,7 @@
   } @else if (activeTab() === 'MOVIMIENTOS') {
     <!-- CASH INS AND OUTS VIEW (CAJ-08) -->
     @if (transfersView() === 'loading') {
-      <div class="transactions-empty" role="status">
+      <div class="transactions-empty table-loading" role="status">
         <h4>Cargando los ingresos y retiros de este turno…</h4>
       </div>
     } @else if (transfersView() === 'failed') {
@@ -163,7 +159,7 @@
   } @else {
     <!-- PURCHASES VIEW (expenses of the current cash session) -->
     @if (expensesView() === 'loading') {
-      <div class="transactions-empty" role="status">
+      <div class="transactions-empty table-loading" role="status">
         <h4>Cargando los gastos de este turno…</h4>
       </div>
     } @else if (expensesView() === 'failed') {

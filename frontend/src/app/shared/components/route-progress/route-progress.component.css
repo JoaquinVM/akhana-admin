@@ -1,0 +1,41 @@
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  height: 3px;
+  overflow: hidden;
+  background: #f1ece0;
+  pointer-events: none;
+  /* Quick screens never flash it */
+  opacity: 0;
+  animation: route-progress-in 0.15s ease 0.15s forwards;
+}
+
+.route-progress span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-herval);
+  animation: route-progress-run 1.2s ease-in-out infinite;
+}
+
+@keyframes route-progress-in {
+  to { opacity: 1; }
+}
+
+@keyframes route-progress-run {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-progress span {
+    animation: none;
+    width: 100%;
+  }
+}

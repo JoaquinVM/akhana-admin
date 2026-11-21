@@ -115,7 +115,7 @@ describe('service worker (MOV-03, CA-09, CA-11)', () => {
   it('CA-11: al activarse borra las cachés de versiones anteriores', async () => {
     await wait('install');
     await wait('activate');
-    expect(cacheNames).toEqual(['akhana-offline-v2']);
+    expect(cacheNames).toEqual(['akhana-offline-v3']);
   });
 
   it('CA-11: no intercepta la API, los bundles ni otros orígenes', () => {

@@ -82,7 +82,7 @@
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: #ffffff;
+  border-top-color: var(--color-marfil);
   animation: spin 0.8s linear infinite;
   display: inline-block;
   margin-right: 6px;

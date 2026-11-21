@@ -1,12 +1,12 @@
 import { Component, input } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { MoneyComponent } from '../../../../shared/components/money/money.component';
 import { CashSessionSummary } from '../../../../core/cash/models/cash.models';
 
 // The five figures of the open session; the expected cash comes from the server (CAJ-03)
 @Component({
   selector: 'app-pos-kpis',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [MoneyComponent],
   templateUrl: './pos-kpis.component.html',
   styleUrls: ['./pos-kpis.component.css']
 })

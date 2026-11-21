@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MoneyComponent } from '../money/money.component';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, Sale } from '../../../core/sale/models/sale.models';
 import { operationDayLabel } from '../../utils/store-date';
 
@@ -7,7 +8,7 @@ import { operationDayLabel } from '../../utils/store-date';
 @Component({
   selector: 'app-sales-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MoneyComponent],
   templateUrl: './sales-table.component.html',
   styleUrls: ['./sales-table.component.css']
 })
