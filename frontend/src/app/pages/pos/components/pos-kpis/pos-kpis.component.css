@@ -63,8 +63,9 @@
 
 /* Expected cash: soft Marfil instead of mint green */
 .kpi-card-highlight {
-  background: var(--color-marfil-soft);
-  border-color: var(--color-marfil-border);
+  /* Herval as a tint only: it is never used as text */
+  background: color-mix(in srgb, var(--color-herval) 20%, #ffffff);
+  border-color: color-mix(in srgb, var(--color-herval) 50%, #ffffff);
 }
 
 .highlight-value {
