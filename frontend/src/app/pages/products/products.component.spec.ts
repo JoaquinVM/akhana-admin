@@ -563,15 +563,13 @@ describe('ProductsComponent', () => {
     search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(component.productForm.get('supplierId')?.value).toBe('sup-1');
 
-    // Conmutar apertura de dropdown de estado
-    component.toggleStatusDropdown();
-    expect(component.isStatusDropdownOpen()).toBe(true);
-
-    // Seleccionar nuevo estado
-    component.selectStatus('INACTIVO');
+    // H16: el estado es un select nativo, que se elige con el teclado
+    const status = fixture.nativeElement.querySelector('#product-status-trigger') as HTMLSelectElement;
+    expect(status.tagName).toBe('SELECT');
+    status.value = 'INACTIVO';
+    status.dispatchEvent(new Event('change'));
     expect(component.productForm.get('status')?.value).toBe('INACTIVO');
     expect(component.selectedStatusValue()).toBe('INACTIVO');
-    expect(component.isStatusDropdownOpen()).toBe(false);
     expect(component.isFieldModified('status')).toBe(true);
   });
 
