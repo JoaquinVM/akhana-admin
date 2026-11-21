@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 import java.time.Clock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialTransactionServiceTest {
@@ -1190,5 +1191,48 @@ class FinancialTransactionServiceTest {
 
         assertEquals(Instant.parse(instant), res.getTransactionDate());
         assertEquals(LocalDate.parse(day), res.getOperationDate());
+    }
+
+    @ParameterizedTest(name = "monto {0}")
+    @ValueSource(strings = {"0", "0.00", "0.004", "-0.01", "-50.00"})
+    @DisplayName("Un gasto en 0 (o que redondea a 0) o negativo se rechaza sin tocar saldos")
+    void testExpenseWithZeroOrNegativeAmountRejected(String amount) {
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount));
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.GASTO_MANUAL)
+                .sourceAccountId(bisaAccount.getId())
+                .categoryId(expenseCat.getId())
+                .amount(new BigDecimal(amount))
+                .description("Comisión bancaria")
+                .build();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.createTransaction(req, "admin"));
+
+        assertEquals("El monto debe ser mayor a Bs 0,00.", ex.getMessage());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "monto {0}")
+    @ValueSource(strings = {"0", "0.00", "0.004", "-0.01", "-50.00"})
+    @DisplayName("Una transferencia en 0 (o que redondea a 0) o negativa se rechaza sin tocar ninguna de las dos cuentas")
+    void testTransferWithZeroOrNegativeAmountRejected(String amount) {
+        when(financialAccountRepository.findAllByIdForUpdate(any())).thenReturn(List.of(bisaAccount, joacoAccount));
+        FinancialTransactionRequest req = FinancialTransactionRequest.builder()
+                .type(FinancialTransactionType.TRANSFERENCIA)
+                .sourceAccountId(bisaAccount.getId())
+                .destinationAccountId(joacoAccount.getId())
+                .amount(new BigDecimal(amount))
+                .description("Reparto")
+                .build();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> financialTransactionService.createTransaction(req, "admin"));
+
+        assertEquals("El monto debe ser mayor a Bs 0,00.", ex.getMessage());
+        assertEquals(new BigDecimal("1000.00"), bisaAccount.getCurrentBalance());
+        assertEquals(new BigDecimal("200.00"), joacoAccount.getCurrentBalance());
+        verify(financialTransactionRepository, never()).save(any());
     }
 }

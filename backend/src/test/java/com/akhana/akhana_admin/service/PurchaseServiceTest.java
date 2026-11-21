@@ -42,6 +42,8 @@ import static org.mockito.Mockito.*;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -1493,6 +1495,44 @@ class PurchaseServiceTest {
         assertThatThrownBy(() -> purchaseService.registerPurchase(requestWithId(clientRequestId, "3"), "operator"))
             .isInstanceOf(com.akhana.akhana_admin.exception.DuplicateResourceException.class)
             .hasMessage("Este pedido ya se registró como PED-000001 con otro contenido; revise la lista de pedidos antes de volver a guardar.");
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "monto {0}")
+    @ValueSource(strings = {"0", "0.00", "0.004", "-0.01", "-50.00"})
+    @DisplayName("COM-05: un pago de pedido en 0 (o que redondea a 0) o negativo se rechaza sin tocar la cuenta")
+    void registerPayment_rejectsZeroOrNegativeAmount(String amount) {
+        Purchase purchase = existingPurchase("300.00", "0.00");
+        BigDecimal before = bisa.getCurrentBalance();
+
+        assertThatThrownBy(() -> purchaseService.registerPayment(purchase.getId(),
+            new PurchasePaymentRequest(bisa.getId(), null, new BigDecimal(amount), null), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+        assertThat(bisa.getCurrentBalance()).isEqualTo(before);
+        assertThat(purchase.getPaidAmount()).isEqualByComparingTo("0.00");
+        verify(financialTransactionRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "cantidad {0}")
+    @ValueSource(strings = {"0", "0.000", "-1"})
+    @DisplayName("COM-02: una línea de compra con cantidad 0 o negativa se rechaza y el pedido no se guarda")
+    void registerPurchase_rejectsZeroOrNegativeQuantity(String quantity) {
+        assertThatThrownBy(() -> purchaseService.registerPurchase(
+            request(List.of(line(tea, quantity, "10")), null, null, false), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("La cantidad de 'Té verde' debe ser mayor a 0.");
+        verify(purchaseRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "costo {0}")
+    @ValueSource(strings = {"-0.01", "-10"})
+    @DisplayName("COM-02: una línea de compra con costo negativo se rechaza y el pedido no se guarda")
+    void registerPurchase_rejectsNegativeCost(String cost) {
+        assertThatThrownBy(() -> purchaseService.registerPurchase(
+            request(List.of(line(tea, "2", cost)), null, null, false), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("El costo unitario de 'Té verde' no puede ser negativo.");
         verify(purchaseRepository, never()).save(any());
     }
 }
