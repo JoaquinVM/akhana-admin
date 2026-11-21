@@ -11,7 +11,6 @@ import { TagsComponent } from './pages/tags/tags.component';
 import { PosComponent } from './pages/pos/pos.component';
 import { CashHistoryComponent } from './pages/cash/cash-history/cash-history.component';
 import { FinanceSummaryComponent } from './pages/finances/summary/finance-summary.component';
-import { TransactionsComponent } from './pages/finances/transactions/transactions.component';
 import { AccountsComponent } from './pages/finances/accounts/accounts.component';
 import { FinancialCategoriesComponent } from './pages/finances/categories/categories.component';
 import { UsersComponent } from './pages/security/users/users.component';
@@ -79,7 +78,8 @@ export const routes: Routes = [
       },
       {
         path: 'finances/transactions',
-        component: TransactionsComponent,
+        // Lazy loaded, like the other screens only the administrator uses: the initial bundle stays under 1 MB
+        loadComponent: () => import('./pages/finances/transactions/transactions.component').then(m => m.TransactionsComponent),
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.FINANCES_TRANSACTIONS }
       },
@@ -190,7 +190,8 @@ export const routes: Routes = [
     ]
   },
   {
+    // An unknown address goes home, where homeRedirect decides (DSH-04)
     path: '**',
-    redirectTo: 'pos'
+    redirectTo: ''
   }
 ];

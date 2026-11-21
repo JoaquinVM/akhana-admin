@@ -211,6 +211,45 @@ describe('ProductsComponent', () => {
     fixture.detectChanges();
   });
 
+  it('si falla la carga de categorías o etiquetas lo avisa con Reintentar', () => {
+    mockCategoryService.getCategories.mockReturnValue(throwError(() => new Error('red')));
+    mockTagService.getTags.mockReturnValue(throwError(() => new Error('red')));
+    component.loadCatalogDependencies();
+    fixture.detectChanges();
+    const notice = fixture.nativeElement.querySelector('app-connection-notice');
+    expect(notice.textContent).toContain('No se pudieron cargar las categorías y las etiquetas.');
+
+    mockCategoryService.getCategories.mockReturnValue(of(mockCategories));
+    mockTagService.getTags.mockReturnValue(of([]));
+    notice.querySelector('button').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-connection-notice')).toBeNull();
+    expect(component.categories().length).toBe(mockCategories.length);
+  });
+
+  it('categoría y etiquetas se eligen con un selector usable con teclado', () => {
+    component.openCreateModal();
+    fixture.detectChanges();
+    const trigger = document.getElementById('product-category-trigger') as HTMLButtonElement;
+    expect(trigger.tagName).toBe('BUTTON');
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    const search = trigger.closest('app-search-select')!.querySelector('.search-select-input') as HTMLInputElement;
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    expect(component.productForm.get('categoryId')?.value).toBe(mockCategories[0].id);
+
+    const tagTrigger = document.getElementById('product-tag-picker') as HTMLButtonElement;
+    expect(tagTrigger.tagName).toBe('BUTTON');
+    tagTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    const tagSearch = tagTrigger.closest('app-search-select')!.querySelector('.search-select-input') as HTMLInputElement;
+    tagSearch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    expect(component.productForm.get('tagIds')?.value).toEqual([mockTags[0].id]);
+    expect(component.tagPicker.value).toBeNull();
+  });
+
   it('debe inicializar y cargar productos ordenados por nombre A-Z', () => {
     expect(component.products().length).toBe(3);
     const filtered = component.filteredProducts();

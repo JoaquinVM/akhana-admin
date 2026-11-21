@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { ChangePasswordRequest, LoginRequest, LoginResponse, Role, TwoFactorLoginRequest, UserSession } from './models/auth.models';
+import { ChangePasswordRequest, LoginRequest, LoginResponse, Role, TwoFactorLoginRequest, UserProfile, UserSession } from './models/auth.models';
 
 const KNOWN_ROLES: Role[] = ['OPERATOR', 'ADMINISTRATOR'];
 
@@ -56,8 +56,8 @@ export class AuthService {
     }
   }
 
-  fetchCurrentUserProfile(): Observable<any> {
-    return this.http.get<any>(this.ME_URL).pipe(
+  fetchCurrentUserProfile(): Observable<UserProfile> {
+    return this.http.get<UserProfile>(this.ME_URL).pipe(
       tap((profile) => {
         if (profile && this._currentUser()) {
           const updated: UserSession = {

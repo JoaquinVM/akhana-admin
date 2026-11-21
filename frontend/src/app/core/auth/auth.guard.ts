@@ -22,14 +22,15 @@ export const authGuard: CanActivateFn = () => {
 };
 
 /**
- * Prevents authenticated users from unnecessarily accessing /login. Redirects to /pos.
+ * Prevents authenticated users from unnecessarily accessing /login. Sends them to '/', where homeRedirect (DSH-04)
+ * picks the dashboard or the POS.
  */
 export const guestGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
   if (authService.isAuthenticated()) {
-    return router.createUrlTree([authService.mustChangePassword() ? '/change-password' : '/pos']);
+    return router.createUrlTree([authService.mustChangePassword() ? '/change-password' : '/']);
   }
 
   return true;

@@ -1,6 +1,6 @@
 @if (isOpen()) {
   <div class="modal-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true" [attr.aria-label]="title()">
-    <div class="modal-card" [class.variant-danger]="variant() === 'danger'" [class.variant-warning]="variant() === 'warning'" [class.variant-primary]="variant() === 'primary'">
+    <div class="modal-card" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" [class.variant-danger]="variant() === 'danger'" [class.variant-warning]="variant() === 'warning'" [class.variant-primary]="variant() === 'primary'">
       <div class="modal-header">
         <div class="modal-icon-badge">
           @if (variant() === 'danger') {
@@ -33,7 +33,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isLoading()">
+        <button type="button" class="btn btn-outline" cdkFocusInitial (click)="onCancel()" [disabled]="isLoading()">
           {{ cancelText() }}
         </button>
         <button type="button" class="btn" [class.btn-danger]="variant() === 'danger'" [class.btn-warning]="variant() === 'warning'" [class.btn-primary]="variant() === 'primary'" (click)="onConfirm()" [disabled]="isLoading()">

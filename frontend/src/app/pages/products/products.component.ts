@@ -2,7 +2,7 @@ import { Component, DOCUMENT, OnInit, computed, inject, signal, DestroyRef, Host
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   Product,
   ProductPresentationRequest,
@@ -35,6 +35,7 @@ import { formatBs } from '../../shared/utils/money';
 import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { ConnectionNoticeComponent } from '../../shared/components/connection-notice/connection-notice.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
 
@@ -58,7 +59,7 @@ export const PRODUCTS_PAGE_SIZE = 100;
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [IconComponent, SearchSelectComponent, 
+  imports: [IconComponent, SearchSelectComponent, ConnectionNoticeComponent,
     CommonModule,
     ReactiveFormsModule,
     ConfirmModalComponent,
@@ -99,6 +100,14 @@ export class ProductsComponent implements OnInit {
   onlyWithoutPhoto = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
+  // Lists the form and the filters choose from; a failed one would otherwise look like an empty list
+  catalogLoadFailures = signal<string[]>([]);
+  catalogLoadMessage = computed(() => {
+    const failed = this.catalogLoadFailures();
+    return failed.length > 0
+      ? `No se pudieron cargar ${failed.length > 1 ? failed.slice(0, -1).join(', ') + ' y ' + failed[failed.length - 1] : failed[0]}. Revisa la conexión antes de elegirlos.`
+      : null;
+  });
 
   // Modales
   isFormModalOpen = signal<boolean>(false);
@@ -123,9 +132,9 @@ export class ProductsComponent implements OnInit {
   formNoBarcode = signal<boolean>(false);
 
   // Custom select dropdowns in the form
-  isCategoryDropdownOpen = signal<boolean>(false);
   isStatusDropdownOpen = signal<boolean>(false);
-  isTagDropdownOpen = signal<boolean>(false);
+  // Picker of the tag to add: it only adds, the chosen tags live in tagIds
+  readonly tagPicker = new FormControl<string | null>(null);
 
   // Discard changes confirmation modal
   isDiscardConfirmOpen = signal<boolean>(false);
@@ -246,6 +255,9 @@ export class ProductsComponent implements OnInit {
   });
 
   // Supplier selected in the form
+  categoryOptions = computed<SearchSelectOption[]>(() =>
+    this.categories().map((c) => ({ value: c.id, label: c.name })));
+
   supplierOptions = computed<SearchSelectOption[]>(() =>
     this.suppliers().map((s) => ({ value: s.id, label: s.name, hint: s.code })));
 
@@ -275,6 +287,9 @@ export class ProductsComponent implements OnInit {
     const selectedIds: string[] = this.productForm.get('tagIds')?.value || [];
     return this.tags().filter(t => t.status !== 'ELIMINADO' && !selectedIds.includes(t.id));
   });
+
+  tagOptions = computed<SearchSelectOption[]>(() =>
+    this.availableTagsObjects().map((t) => ({ value: t.id, label: t.name })));
 
   // Unsaved changes detection
   hasFormChanges = computed<boolean>(() => {
@@ -401,6 +416,16 @@ export class ProductsComponent implements OnInit {
         this.formVersion.update(v => v + 1);
       });
 
+    this.tagPicker.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((tagId) => {
+        const tag = this.tags().find(t => t.id === tagId);
+        if (tag) {
+          this.addTag(tag);
+          this.tagPicker.setValue(null, { emitEvent: false });
+        }
+      });
+
     // CAT-11: switching to Kilo without presentations proposes 100 g and 1/2 libra
     this.productForm.get('saleUnit')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -437,26 +462,31 @@ export class ProductsComponent implements OnInit {
   }
 
   loadCatalogDependencies(): void {
+    this.catalogLoadFailures.set([]);
+    const failed = (what: string) => this.catalogLoadFailures.update(list => [...list, what]);
     this.creditorService.getCreditors('ACTIVO').subscribe({
       next: (data) => this.creditors.set(data),
-      error: () => this.creditors.set([])
+      error: () => {
+        this.creditors.set([]);
+        failed('los dueños');
+      }
     });
     // Load the non-deleted categories
     this.categoryService.getCategories(undefined, 'ACTIVO').subscribe({
       next: (data) => this.categories.set(data),
-      error: () => console.warn('Error al cargar categorías para productos.')
+      error: () => failed('las categorías')
     });
 
     // Cargar proveedores activos
     this.supplierService.getSuppliers(undefined, 'ACTIVO').subscribe({
       next: (data) => this.suppliers.set(data),
-      error: () => console.warn('Error al cargar proveedores para productos.')
+      error: () => failed('los proveedores')
     });
 
     // Cargar etiquetas activas
     this.tagService.getTags(undefined, 'ACTIVO').subscribe({
       next: (data) => this.tags.set(data),
-      error: () => console.warn('Error al cargar etiquetas para productos.')
+      error: () => failed('las etiquetas')
     });
   }
 
@@ -519,21 +549,12 @@ export class ProductsComponent implements OnInit {
   // --- Category, supplier, status and tag selection ---
 
   closeAllDropdowns(): void {
-    this.isCategoryDropdownOpen.set(false);
     this.isStatusDropdownOpen.set(false);
-    this.isTagDropdownOpen.set(false);
-  }
-
-  toggleCategoryDropdown(): void {
-    const open = !this.isCategoryDropdownOpen();
-    this.closeAllDropdowns();
-    this.isCategoryDropdownOpen.set(open);
   }
 
   selectCategory(category: Category): void {
     this.productForm.patchValue({ categoryId: category.id });
     this.productForm.get('categoryId')?.markAsTouched();
-    this.isCategoryDropdownOpen.set(false);
     this.formVersion.update(v => v + 1);
   }
 
@@ -550,19 +571,12 @@ export class ProductsComponent implements OnInit {
     this.formVersion.update(v => v + 1);
   }
 
-  toggleTagDropdown(): void {
-    const open = !this.isTagDropdownOpen();
-    this.closeAllDropdowns();
-    this.isTagDropdownOpen.set(open);
-  }
-
   addTag(tag: Tag): void {
     const currentTagIds: string[] = this.productForm.get('tagIds')?.value || [];
     if (!currentTagIds.includes(tag.id)) {
       this.productForm.patchValue({ tagIds: [...currentTagIds, tag.id] });
       this.formVersion.update(v => v + 1);
     }
-    this.isTagDropdownOpen.set(false);
   }
 
   removeTag(tagId: string): void {

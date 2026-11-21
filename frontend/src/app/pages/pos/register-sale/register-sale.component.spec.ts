@@ -508,6 +508,7 @@ describe('RegisterSaleComponent', () => {
     component.addToCart(mockProduct1);
     component.openCheckoutModal();
     expect(component.isCheckoutModalOpen()).toBe(true);
+    mockCashService.getCurrentSession.mockClear();
 
     component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0, comment: '' });
 
@@ -517,6 +518,8 @@ describe('RegisterSaleComponent', () => {
       amountReceived: 20
     }));
     expect(component.isCheckoutModalOpen()).toBe(false);
+    // The refresh of the cash lives in SaleService.registerSale: the screen does not ask again
+    expect(mockCashService.getCurrentSession).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
       state: expect.objectContaining({
         saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.'

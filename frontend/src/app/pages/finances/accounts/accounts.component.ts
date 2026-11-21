@@ -8,12 +8,14 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { ConnectionNoticeComponent } from '../../../shared/components/connection-notice/connection-notice.component';
 import { operationDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-accounts',
   standalone: true,
   imports: [
+    ConnectionNoticeComponent,
     CommonModule,
     ReactiveFormsModule,
     ModalComponent,
@@ -53,6 +55,7 @@ export class AccountsComponent implements OnInit {
   selectedAccountForMovements = signal<FinancialAccount | null>(null);
   accountTransactions = signal<FinancialTransaction[]>([]);
   isLoadingMovements = signal<boolean>(false);
+  movementsLoadFailed = signal<boolean>(false);
 
   // Cutover balance modal (FIN-01)
   isOpeningBalanceModalOpen = signal<boolean>(false);
@@ -260,7 +263,12 @@ export class AccountsComponent implements OnInit {
   openMovementsModal(account: FinancialAccount): void {
     this.selectedAccountForMovements.set(account);
     this.isMovementsModalOpen.set(true);
+    this.loadMovements(account);
+  }
+
+  loadMovements(account: FinancialAccount): void {
     this.isLoadingMovements.set(true);
+    this.movementsLoadFailed.set(false);
     this.accountTransactions.set([]);
 
     this.transactionService.getTransactions({ accountId: account.id }).subscribe({
@@ -269,6 +277,8 @@ export class AccountsComponent implements OnInit {
         this.isLoadingMovements.set(false);
       },
       error: () => {
+        // A failed load must not read as "no movements"
+        this.movementsLoadFailed.set(true);
         this.isLoadingMovements.set(false);
       }
     });

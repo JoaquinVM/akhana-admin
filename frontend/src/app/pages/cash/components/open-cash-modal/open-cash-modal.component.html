@@ -11,6 +11,12 @@
       <p class="form-alert" role="alert">{{ error }}</p>
     }
 
+    @if (proposalFailed()) {
+      <app-connection-notice
+        message="No se pudo consultar el monto propuesto para abrir la caja. Revisa la conexión."
+        (retry)="loadProposal()" />
+    }
+
     @if (noDayMessage(); as message) {
       <p class="form-alert" role="alert">{{ message }}</p>
     }

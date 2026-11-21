@@ -61,7 +61,8 @@ Límites conocidos:
 - La página propia aparece desde la segunda apertura: la primera, ya instalada y con conexión, registra el worker.
 - En las demás pantallas, con la app ya abierta y sin conexión, no se muestra esta página: se comportan como en el
   navegador. No se recargan solas para no perder lo que se esté escribiendo, como una venta en el POS. Al entrar al POS
-  sin conexión dice «Caja cerrada» aunque la caja esté abierta, igual que en el navegador.
+  sin conexión no da la caja por cerrada: dice «No se pudo consultar la caja. Revisa la conexión.» con **Reintentar**,
+  igual que en el navegador (POS-17).
 - Una app retomada de segundo plano sigue con la versión que tenía hasta que se cierre o el sistema la cierre: la versión
   nueva llega al abrirla de nuevo o al tocar **Actualizar** en el aviso de NF-10, si una pantalla ya no carga.
 - En iPhone el sistema puede borrar la caché de una app que no se usa; entonces vuelve el error del navegador hasta la

@@ -536,7 +536,7 @@ export class RegisterSaleComponent implements OnInit {
       next: (sale) => {
         this.isSubmitting.set(false);
         this.isCheckoutModalOpen.set(false);
-        this.cashService.getCurrentSession().subscribe({ error: () => undefined });
+        // SaleService.registerSale refreshes the cash session itself
         this.router.navigate(['/pos'], {
           state: {
             saleSuccessMessage: `Venta #${sale.saleNumber} registrada exitosamente.`

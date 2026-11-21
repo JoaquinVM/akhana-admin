@@ -36,6 +36,16 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+// GET /api/auth/me: the user as the server sees it now (role and permissions may have changed since the login)
+export interface UserProfile {
+  id: string;
+  username: string;
+  fullName?: string | null;
+  role: Role;
+  permissions?: string[] | null;
+  mustChangePassword?: boolean | null;
+}
+
 export interface UserSession {
   id: string;
   username: string;

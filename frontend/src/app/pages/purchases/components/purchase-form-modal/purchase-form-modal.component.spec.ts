@@ -97,6 +97,13 @@ describe('PurchaseFormModalComponent', () => {
     expect(component.needsShippingAccount()).toBe(true);
   });
 
+  it('COM-02: el costo de cada línea tiene nombre para el lector de pantalla', () => {
+    component.addProduct(nuts);
+    fixture.detectChanges();
+    const labels = Array.from(document.querySelectorAll('input.input-number')).map(input => input.getAttribute('aria-label'));
+    expect(labels).toContain(`Costo unitario (Bs) de ${nuts.name}`);
+  });
+
   it('COM-02: seleccionar de nuevo un producto por unidad suma una unidad', () => {
     component.addProduct(tea);
     component.addProduct(tea);

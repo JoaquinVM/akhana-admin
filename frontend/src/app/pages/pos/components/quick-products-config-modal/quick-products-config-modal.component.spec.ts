@@ -4,7 +4,8 @@ import { QuickProductService } from '../../../../core/quick-product/quick-produc
 import { ProductService } from '../../../../core/product/product.service';
 import { Product } from '../../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
 
@@ -171,6 +172,45 @@ describe('QuickProductsConfigModalComponent', () => {
 
     expect(mockProductService.getProducts).toHaveBeenCalledWith(undefined, 'ACTIVO');
     expect(component.catalogProducts().length).toBe(3);
+  });
+
+  it('POS-02: mientras se guarda un cambio no manda otro que lo pise', () => {
+    const pending = new Subject<QuickProductGroup>();
+    mockQuickProductService.updateGroup.mockReturnValue(pending);
+    component.handleAddProductToGroup(mockProduct2);
+    component.handleRemoveProductFromGroup('prod-1');
+    expect(mockQuickProductService.updateGroup).toHaveBeenCalledTimes(1);
+    expect(component.isSaving()).toBe(true);
+
+    pending.next(mockGroup);
+    expect(component.isSaving()).toBe(false);
+    component.handleRemoveProductFromGroup('prod-1');
+    expect(mockQuickProductService.updateGroup).toHaveBeenCalledTimes(2);
+  });
+
+  it('POS-02: si falla un cambio lo avisa con un toast y deja seguir', () => {
+    const toast = vi.spyOn(TestBed.inject(ToastService), 'error');
+    mockQuickProductService.updateGroup.mockReturnValue(throwError(() => ({ error: { message: 'El grupo ya no existe.' } })));
+    component.handleAddProductToGroup(mockProduct2);
+    expect(toast).toHaveBeenCalledWith('El grupo ya no existe.');
+    expect(component.isSaving()).toBe(false);
+
+    mockQuickProductService.reorderGroups.mockReturnValue(throwError(() => ({})));
+    component.onDropGroup({ previousIndex: 0, currentIndex: 0 } as any);
+    expect(toast).toHaveBeenLastCalledWith('No se pudo guardar el orden de los grupos.');
+  });
+
+  it('POS-02: eliminar un grupo pide confirmación con el modal de la app, no con confirm()', () => {
+    const nativeConfirm = vi.spyOn(window, 'confirm');
+    component.handleDeleteGroup(mockGroup, new MouseEvent('click'));
+    fixture.detectChanges();
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    expect(mockQuickProductService.deleteGroup).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('app-confirm-modal .modal-title').textContent).toContain('¿Eliminar grupo?');
+
+    component.confirmDeleteGroup();
+    expect(mockQuickProductService.deleteGroup).toHaveBeenCalledWith('grp-1');
+    expect(component.groupToDelete()).toBeNull();
   });
 
   it('debe emitir close al invocar handleClose()', () => {

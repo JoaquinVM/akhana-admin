@@ -29,6 +29,11 @@ describe('CartLineComponent', () => {
     expect(fixture.debugElement.query(By.css('.item-subtotal')).nativeElement.textContent).toContain('60.00');
   });
 
+  it('el descuento por unidad tiene nombre para el lector de pantalla', () => {
+    const input = fixture.nativeElement.querySelector('.discount-input-wrap input');
+    expect(input.getAttribute('aria-label')).toBe('Descuento por unidad (Bs) de Tab s/Pistacho');
+  });
+
   it('avisa al carrito cada cambio: sumar, restar, cantidad, descuento y quitar', () => {
     const calls: string[] = [];
     component.increment.subscribe(() => calls.push('+'));

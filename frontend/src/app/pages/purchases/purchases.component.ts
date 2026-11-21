@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { searchDebouncer } from '../../shared/utils/search-debounce';
 import { PurchaseService } from '../../core/purchase/purchase.service';
 import { PurchaseReadingService } from '../../core/purchase/purchase-reading.service';
 import { SupplierService } from '../../core/supplier/supplier.service';
@@ -77,6 +78,7 @@ export class PurchasesComponent implements OnInit {
   supplierFilter = signal<string>('');
   statusFilter = signal<PaymentStatusFilter>('ALL');
   searchTerm = signal<string>('');
+  private readonly debounceSearch = searchDebouncer();
   // Only the latest filter or search may fill the list: an older, slower answer must not overwrite it (COM-26)
   private purchasesLoad?: Subscription;
   isLoading = signal<boolean>(false);
@@ -165,7 +167,7 @@ export class PurchasesComponent implements OnInit {
 
   onSearch(term: string): void {
     this.searchTerm.set(term);
-    this.loadPurchases();
+    this.debounceSearch(() => this.loadPurchases());
   }
 
   statusLabel(status: PurchasePaymentStatus): string {

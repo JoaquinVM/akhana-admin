@@ -100,7 +100,15 @@ describe('UsersComponent', () => {
   });
 
   it('debe filtrar usuarios al buscar y limpiar el buscador', () => {
+    vi.useFakeTimers();
+    mockUserService.getUsers.mockClear();
+    component.onSearch({ target: { value: 'oper' } } as any);
     component.onSearch({ target: { value: 'operador' } } as any);
+    vi.advanceTimersByTime(249);
+    expect(mockUserService.getUsers).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    vi.useRealTimers();
+    expect(mockUserService.getUsers).toHaveBeenCalledTimes(1);
     expect(mockUserService.getUsers).toHaveBeenCalledWith('operador', 0, 10);
     expect(component.searchTerm()).toBe('operador');
 

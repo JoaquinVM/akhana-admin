@@ -167,8 +167,11 @@ describe('PosComponent', () => {
     expect(component.isVoidModalVisible()).toBe(true);
     expect(component.selectedSaleToVoid()?.id).toBe('sale-1');
 
+    mockCashService.getCurrentSession.mockClear();
     component.handleConfirmVoid({ voidReason: 'Error en digitación de productos' });
 
+    // The refresh of the cash lives in SaleService.voidSale
+    expect(mockCashService.getCurrentSession).not.toHaveBeenCalled();
     expect(mockSaleService.voidSale).toHaveBeenCalledWith('sale-1', {
       voidReason: 'Error en digitación de productos'
     });
@@ -270,12 +273,34 @@ describe('PosComponent', () => {
     expect(mockCategoryService.getCategories).toHaveBeenCalledWith('GASTO');
 
     mockCashService.getCurrentSession.mockClear();
+    mockTransactionService.getExpensesByCashSession.mockClear();
     component.onCashExpenseSaved('Gasto de caja de Bs 35,50 registrado exitosamente.');
 
     expect(component.isCashExpenseModalVisible()).toBe(false);
     expect(component.feedbackMessage()?.text).toContain('Gasto de caja de Bs 35,50 registrado exitosamente');
+    expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledTimes(1);
     expect(mockTransactionService.getExpensesByCashSession).toHaveBeenCalledWith('session-1');
     expect(mockCashService.getCurrentSession).toHaveBeenCalled();
+  });
+
+  it('un mensaje nuevo del banner dura sus 6 s aunque el anterior estuviera por vencer', () => {
+    vi.useFakeTimers();
+    component.onCashExpensesChanged('Primero');
+    vi.advanceTimersByTime(5000);
+    component.onCashExpensesChanged('Segundo');
+    vi.advanceTimersByTime(1500);
+    expect(component.feedbackMessage()?.text).toBe('Segundo');
+    vi.advanceTimersByTime(4500);
+    expect(component.feedbackMessage()).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('al salir del POS se cancela el temporizador del banner', () => {
+    vi.useFakeTimers();
+    component.onCashExpensesChanged('Mensaje');
+    fixture.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   });
 
   it('no abre el modal de gasto con la caja cerrada', () => {
@@ -571,9 +596,10 @@ describe('PosComponent', () => {
       component.recentSales.set([mockSale1]);
       mockSaleService.getSalesBySession.mockReturnValue(throwError(() => ({ status: 0 })));
       mockCashService.getSessionDetail.mockReturnValue(throwError(() => ({ status: 0 })));
-      mockCashService.getCurrentSession.mockImplementation(() => {
+      // SaleService.voidSale refreshes the cash itself; here that refresh gets no answer
+      mockSaleService.voidSale.mockImplementation(() => {
         mockCashService.sessionCheckFailed.set(true);
-        return throwError(() => ({ status: 0 }));
+        return of({ ...mockSale1, status: 'ANULADA', voidReason: 'Error' });
       });
       component.selectedSaleToVoid.set(mockSale1);
       component.handleConfirmVoid({ voidReason: 'Error' });

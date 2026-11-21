@@ -116,14 +116,31 @@ describe('PurchasesComponent', () => {
     expect(fixture.nativeElement.querySelector('.show-more-row')).toBeNull();
   });
 
+  it('COM-26: la búsqueda espera 250 ms desde la última tecla', () => {
+    vi.useFakeTimers();
+    purchaseService.getPurchases.mockClear();
+    component.onSearch('h');
+    component.onSearch('ha');
+    vi.advanceTimersByTime(249);
+    expect(purchaseService.getPurchases).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(purchaseService.getPurchases).toHaveBeenCalledTimes(1);
+    expect(purchaseService.getPurchases.mock.calls[0][0].search).toBe('ha');
+    vi.useRealTimers();
+  });
+
   it('COM-26: una respuesta vieja que llega tarde no pisa la búsqueda más nueva', () => {
+    vi.useFakeTimers();
     const slowAll = new Subject<Purchase[]>();
     const fastFiltered = new Subject<Purchase[]>();
     purchaseService.getPurchases.mockReturnValueOnce(slowAll).mockReturnValueOnce(fastFiltered);
     const other = { ...purchase, id: 'pur-2', purchaseNumber: 'PED-000002' };
 
     component.onSearch('h');
+    vi.advanceTimersByTime(250);
     component.onSearch('harinas');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
     fastFiltered.next([purchase]);
     slowAll.next([purchase, other]);
     fixture.detectChanges();
