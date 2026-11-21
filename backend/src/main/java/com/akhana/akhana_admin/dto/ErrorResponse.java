@@ -31,6 +31,10 @@ public record ErrorResponse(
         return new ErrorResponse("Internal Server Error", message, Instant.now());
     }
 
+    public static ErrorResponse methodNotAllowed(String message) {
+        return new ErrorResponse("Method Not Allowed", message, Instant.now());
+    }
+
     public static ErrorResponse notFound(String message) {
         return new ErrorResponse("Not Found", message, Instant.now());
     }

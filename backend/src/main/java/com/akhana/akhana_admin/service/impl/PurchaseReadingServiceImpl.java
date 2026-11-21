@@ -36,7 +36,7 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
     static final BigDecimal UNKNOWN_CALL_COST_USD = new BigDecimal("0.010000");
     static final int MAX_SUGGESTIONS = 5;
     static final String NO_COST_NOTE = "No se pudo saber el costo de esta línea: llénalo para registrar.";
-    // A call holds a request thread, and a database connection with open-in-view, which the POS shares
+    // A call holds a request thread; without open-in-view it holds no database connection while it waits for the AI
     static final int MAX_READINGS_IN_PROCESS = 3;
 
     private final PurchaseReader reader;

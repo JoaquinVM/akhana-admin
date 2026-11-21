@@ -45,6 +45,14 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
 }
 
+# What a run sends to healthchecks.io: only the lines of these scripts (log), never the backend log, which carries
+# user names and IPs; an IP left in a line of ours is masked too. report_lines <file>
+report_lines() {
+    grep -E '^\[[0-9]{4}-[0-9]{2}-[0-9]{2} ' "$1" \
+        | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/x.x.x.x/g' \
+        | tail -n 60 || true
+}
+
 # Pings healthchecks.io: ping <url> [start|fail] [message]. An empty URL means no alerts.
 ping_check() {
     local url=$1 suffix=${2:-} body=${3:-}

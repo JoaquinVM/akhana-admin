@@ -54,6 +54,15 @@ El sistema SHALL disponer de una sección de accesos directos ("Productos Rápid
 #### Scenario: Configuración de grupos y productos rápidos desde el POS
 - **WHEN** el usuario abre el modal de configuración de productos rápidos
 - **THEN** el sistema permite crear nuevos grupos, renombrarlos, asignar productos activos a cada grupo y eliminar grupos
+- **NOTA** Excepción escrita a RG-01: eliminar un grupo lo borra de la base junto con sus productos asignados (no
+  hay baja lógica). Un grupo es solo una ayuda visual del POS: no registra dinero ni movimientos.
+
+#### Scenario: Solo productos activos en los productos rápidos (POS-02)
+- **WHEN** un producto de un grupo se desactiva o se elimina después de agregarlo
+- **THEN** el POS deja de mostrarlo en el grupo (el backend lo filtra al responder) y al guardar el grupo sale de él;
+  agregar un producto inactivo o eliminado a un grupo no tiene efecto. Los grupos, sus productos, categorías,
+  proveedores y etiquetas se leen en un número fijo de consultas, con 1 o con muchos productos. Pruebas en
+  `QueryCountIntegrationTest`.
 
 #### Scenario: Búsqueda de productos en el modal de configuración (POS-02)
 - **WHEN** el usuario escribe un nombre o código en «Agregar productos del catálogo»

@@ -108,6 +108,33 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("La página de usuarios mantiene el JSON que lee la pantalla (PageResponse de user.models.ts)")
+    void getUsers_pageContract() throws Exception {
+        UserResponse response = new UserResponse(
+                sampleUserId, "User Name", "username", Role.ADMINISTRATOR, true,
+                Role.ADMINISTRATOR.permissionKeys(),
+                Instant.now(), "system", null, null, null, null, false
+        );
+        when(userService.getUsers(any(), any())).thenReturn(
+                new PageImpl<>(List.of(response), org.springframework.data.domain.PageRequest.of(1, 10), 11));
+
+        String body = mockMvc.perform(get("/api/users").param("page", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ADMIN_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].username").value("username"))
+                .andExpect(jsonPath("$.totalElements").value(11))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.number").value(1))
+                .andReturn().getResponse().getContentAsString();
+
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        new tools.jackson.databind.ObjectMapper().readTree(body).propertyNames().forEach(keys::add);
+        org.assertj.core.api.Assertions.assertThat(keys)
+                .containsExactlyInAnyOrder("content", "totalElements", "totalPages", "size", "number");
+    }
+
+    @Test
     @DisplayName("GET /api/users con operador retorna 403 Forbidden con mensaje")
     void getUsers_asOperator_returnsForbidden() throws Exception {
         mockMvc.perform(get("/api/users")

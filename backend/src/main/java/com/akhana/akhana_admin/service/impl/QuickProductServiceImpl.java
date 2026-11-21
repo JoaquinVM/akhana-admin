@@ -64,7 +64,7 @@ public class QuickProductServiceImpl implements QuickProductService {
                 Product product = productRepository.findById(prodId)
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
                 ProductServiceImpl.ensureNotSpecial(product);
-                if (product.getStatus() != ProductStatus.ELIMINADO) {
+                if (product.getStatus() == ProductStatus.ACTIVO) {
                     items.add(QuickProductGroupItem.builder()
                         .group(group)
                         .product(product)
@@ -110,7 +110,7 @@ public class QuickProductServiceImpl implements QuickProductService {
                     Product product = productRepository.findById(prodId)
                         .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + prodId));
                     ProductServiceImpl.ensureNotSpecial(product);
-                    if (product.getStatus() != ProductStatus.ELIMINADO) {
+                    if (product.getStatus() == ProductStatus.ACTIVO) {
                         group.getItems().add(QuickProductGroupItem.builder()
                             .group(group)
                             .product(product)
@@ -168,6 +168,8 @@ public class QuickProductServiceImpl implements QuickProductService {
         List<ProductResponse> products = group.getItems() != null
             ? group.getItems().stream()
                 .sorted(Comparator.comparing(QuickProductGroupItem::getDisplayOrder))
+                // A product deactivated or removed after it was added stays out of the POS
+                .filter(item -> item.getProduct().getStatus() == ProductStatus.ACTIVO)
                 .map(item -> ProductResponse.fromEntity(item.getProduct()))
                 .collect(Collectors.toList())
             : Collections.emptyList();

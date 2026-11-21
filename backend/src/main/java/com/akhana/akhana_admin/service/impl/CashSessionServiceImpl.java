@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -403,11 +404,13 @@ public class CashSessionServiceImpl implements CashSessionService {
             : cashSessionRepository.findFirstByHistoricalImportIdIsNullOrderBySessionNumberDesc()
                 .map(CashSession::getId)
                 .orElse(null);
+        Map<UUID, Long> salesBySession = new HashMap<>();
+        for (Object[] row : cashSessionRepository.countSalesBySession()) {
+            salesBySession.put((UUID) row[0], (Long) row[1]);
+        }
         return cashSessionRepository.findAllByOrderByOpenedAtDesc().stream()
-            .map(session -> {
-                long count = saleRepository.countByCashSessionId(session.getId());
-                return mapToSummary(session, count, session.getId().equals(reopenableId));
-            })
+            .map(session -> mapToSummary(session, salesBySession.getOrDefault(session.getId(), 0L),
+                session.getId().equals(reopenableId)))
             .collect(Collectors.toList());
     }
 

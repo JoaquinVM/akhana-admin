@@ -75,7 +75,9 @@ public class Product {
     @JoinColumn(name = "owner_creditor_id", updatable = false)
     private Creditor ownerCreditor;
 
+    // Batch-loaded like the presentations, so a page of products reads its tags in one query
     @ManyToMany(fetch = FetchType.LAZY)
+    @BatchSize(size = 100)
     @JoinTable(
         name = "product_tags",
         joinColumns = @JoinColumn(name = "product_id"),

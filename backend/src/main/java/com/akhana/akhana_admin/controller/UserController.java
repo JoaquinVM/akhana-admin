@@ -1,5 +1,6 @@
 package com.akhana.akhana_admin.controller;
 
+import com.akhana.akhana_admin.dto.PageResponse;
 import com.akhana.akhana_admin.dto.CreateUserRequest;
 import com.akhana.akhana_admin.dto.UpdateUserRequest;
 import com.akhana.akhana_admin.dto.UserResponse;
@@ -8,7 +9,6 @@ import com.akhana.akhana_admin.model.Role;
 import com.akhana.akhana_admin.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -31,11 +31,11 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<Page<UserResponse>> getUsers(
+    public ResponseEntity<PageResponse<UserResponse>> getUsers(
             @RequestParam(required = false) String search,
             @PageableDefault(size = 10) Pageable pageable
     ) {
-        return ResponseEntity.ok(userService.getUsers(search, pageable));
+        return ResponseEntity.ok(PageResponse.from(userService.getUsers(search, pageable)));
     }
 
     @GetMapping("/{id}")
