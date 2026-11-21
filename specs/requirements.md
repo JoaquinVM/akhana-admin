@@ -15,11 +15,11 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
 | Login y usuarios | USR-01 a USR-08 | ✅ Completo | Sin publicar: 2FA para todos los usuarios (USR-08), contraseñas de 12 a 72 caracteres (USR-01) y cierre de sesiones al quitar el 2FA o cambiar el rol (094) | `users.md` |
 | Catálogo | CAT-01 a CAT-04, CAT-06 a CAT-08, CAT-10, CAT-11, CAT-12 | ✅ Completo | — | `product-import.md`, `product-presentations.md`, `barcodes.md`, `product-photos.md` |
-| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-26 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
+| Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-27 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
 | Caja | CAJ-01 a CAJ-15 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día. Reservas sueltas del conteo (CAJ-04) y conteo guardado (CAJ-15) sin publicar | `cash.md` |
-| POS y ventas | POS-01 a POS-15, POS-17 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
+| POS y ventas | POS-01 a POS-15, POS-17, POS-18 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
@@ -142,6 +142,7 @@ Detalle en `purchases.md`.
 - **COM-24** · V1 — Se guarda con el pedido lo que leyó la IA, para compararlo con lo confirmado.
 - **COM-25** · V1 — Tope de US$10 al mes, contando también las lecturas fallidas. Al llegar, Desde foto y Desde texto se apagan hasta el mes siguiente y el formulario a mano sigue igual. El administrador ve el gasto del mes.
 - **COM-26** · V1 — El listado de pedidos muestra siempre el resultado del último filtro o búsqueda: una respuesta anterior que llega tarde no lo reemplaza.
+- **COM-27** · V1 — Reintentar el registro de un pedido nuevo no lo duplica: el formulario crea un id al abrirse y lo repite en sus reintentos, y el servidor responde como en POS-18.
 
 ### 3.4 Deudas y cuentas por cobrar · V1
 
@@ -206,6 +207,7 @@ Detalle en `sales.md`.
 - **POS-15** En la pantalla de venta, un escaneo con el lector USB agrega el producto por coincidencia exacta, esté donde esté el cursor y sin cambiar ningún campo. Un código desconocido solo avisa. Detalle en `barcodes.md`.
 - **POS-16** · V2 — Impresión de ticket de venta.
 - **POS-17** Con la conexión lenta o caída, el POS y la venta no confunden «no se pudo saber» con «no hay»: una falla de red o del servidor no da la caja por cerrada ni saca de la venta, y el catálogo, los productos rápidos y las ventas, gastos e ingresos/retiros de la sesión dicen que están cargando o, si fallan, ofrecen reintentar. Lo que sí confirma el servidor manda: la caja cerrada se muestra cerrada, y el servidor valida la caja al vender y al anular.
+- **POS-18** Reintentar un cobro no duplica la venta: cada venta lleva un id que la pantalla crea al abrir el cobro y repite en sus reintentos. Si ya existe, el servidor devuelve esa venta sin mover dinero; con otro total u otra cantidad de líneas, la rechaza. Sin respuesta (red o 5xx), la pantalla avisa que pudo quedar registrada y deja volver a cobrar.
 
 ### 3.8 Dinero (finanzas) · V1
 

@@ -1,13 +1,17 @@
 package com.akhana.akhana_admin.service.impl;
 
 import com.akhana.akhana_admin.dto.*;
+import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
 import com.akhana.akhana_admin.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -51,6 +55,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     public static final String ARRIVAL_READING_NOT_PHOTO = "Los precios reales se leen de una foto, no de un texto.";
     public static final String TEXT_STAYS_PENDING = "Un pedido desde texto queda con entrega pendiente hasta que llegue la mercadería.";
     public static final String READING_ONLY_ON_ARRIVAL = "Una lectura solo se usa al registrar un pedido o cuando llega la mercadería.";
+    static final String CLIENT_REQUEST_MISMATCH = "Este pedido ya se registró como %s con otro contenido; revise la lista de pedidos antes de volver a guardar.";
+    static final String CLIENT_REQUEST_INDEX = "ux_purchases_client_request_id";
     public static final String READING_NOT_USABLE = "Esta lectura ya no se puede usar. Vuelve a leer el texto o la foto.";
 
     private final PurchaseRepository purchaseRepository;
@@ -67,6 +73,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final PurchasePhotoRepository purchasePhotoRepository;
     private final PurchaseShippingChargeRepository purchaseShippingChargeRepository;
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
+    private final TransactionTemplate transactionTemplate;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
     private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
@@ -158,10 +165,22 @@ public class PurchaseServiceImpl implements PurchaseService {
         return PurchaseResponse.detail(purchase, shippingAccount, shippingCreditor, photoId);
     }
 
+    // COM-27: its own transaction, so a retry after the unique index of the client request id can run in a new one
     @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
     public PurchaseResponse registerPurchase(PurchaseRequest request, String username) {
+        return ClientRequestRetry.run(transactionTemplate, () -> recordPurchase(request, username));
+    }
+
+    private PurchaseResponse recordPurchase(PurchaseRequest request, String username) {
         if (request.items() == null || request.items().isEmpty()) {
             throw new IllegalArgumentException(NO_ITEMS);
+        }
+        // COM-27: a repeated id gets its purchase back, without new movements; with other content it is rejected.
+        // Checked first: on a retry the reading is already used by that purchase
+        Optional<PurchaseResponse> replayed = replayedPurchase(request);
+        if (replayed.isPresent()) {
+            return replayed.get();
         }
         Supplier supplier = supplierRepository.findById(request.supplierId())
             .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + request.supplierId()));
@@ -170,7 +189,17 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
 
         // COM-22: the server decides what a purchase from a text is, not the screen
-        PurchaseReading reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
+        PurchaseReading reading;
+        try {
+            reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
+        } catch (IllegalArgumentException e) {
+            // The same request at the same time waited on the reading and the first one used it: that purchase is it
+            replayed = replayedPurchase(request);
+            if (replayed.isPresent()) {
+                return replayed.get();
+            }
+            throw e;
+        }
         boolean fromText = reading != null && reading.getSource() == PurchaseReadingSource.TEXT;
         if (fromText && request.deliveryStatus() == DeliveryStatus.ENTREGADO) {
             throw new IllegalArgumentException(TEXT_STAYS_PENDING);
@@ -242,6 +271,7 @@ public class PurchaseServiceImpl implements PurchaseService {
 
         Instant now = Instant.now();
         Purchase purchase = Purchase.builder()
+            .clientRequestId(request.clientRequestId())
             .purchaseNumber(formatPurchaseNumber(purchaseRepository.nextPurchaseNumber()))
             .supplier(supplier)
             .purchaseDate(purchaseDate)
@@ -262,6 +292,12 @@ public class PurchaseServiceImpl implements PurchaseService {
         items.forEach(item -> item.setPurchase(purchase));
         purchase.setItems(items);
         Purchase saved = purchaseRepository.save(purchase);
+        try {
+            // The insert runs here, so a request with the same id at the same time is caught by its index (COM-27)
+            purchaseRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw ClientRequestRetry.translate(e, CLIENT_REQUEST_INDEX);
+        }
         if (reading != null) {
             reading.setPurchaseId(saved.getId());
         }
@@ -776,6 +812,30 @@ public class PurchaseServiceImpl implements PurchaseService {
     }
 
     // A new line (COM-02): the product cannot be deleted or special; it keeps the product cost of this moment
+    // COM-27: the same new purchase sent again; the total and the number of lines tell it apart from another one
+    private Optional<PurchaseResponse> replayedPurchase(PurchaseRequest request) {
+        if (request.clientRequestId() == null) {
+            return Optional.empty();
+        }
+        Optional<Purchase> existing = purchaseRepository.findByClientRequestId(request.clientRequestId());
+        if (existing.isEmpty()) {
+            return Optional.empty();
+        }
+        Purchase purchase = existing.get();
+        BigDecimal total = request.shippingCost() != null
+            ? request.shippingCost().setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        for (PurchaseItemRequest itemReq : request.items()) {
+            Product product = productRepository.findById(itemReq.productId())
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemReq.productId()));
+            total = total.add(lineValues(product, itemReq).subtotal());
+        }
+        if (purchase.getTotalAmount().compareTo(total) != 0 || purchase.getItems().size() != request.items().size()) {
+            throw new DuplicateResourceException(String.format(CLIENT_REQUEST_MISMATCH, purchase.getPurchaseNumber()));
+        }
+        return Optional.of(getPurchaseById(purchase.getId()));
+    }
+
     private PurchaseItem newLine(PurchaseItemRequest itemReq, List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
         Product product = productRepository.findById(itemReq.productId())
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemReq.productId()));

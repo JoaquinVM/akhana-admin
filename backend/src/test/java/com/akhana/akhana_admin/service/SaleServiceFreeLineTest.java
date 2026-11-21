@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Free lines, unidentified sales and their assignment, third-party sales (POS-11 to POS-13). */
 @ExtendWith(MockitoExtension.class)
@@ -62,7 +64,8 @@ class SaleServiceFreeLineTest {
         saleService = new SaleServiceImpl(saleRepository, cashSessionRepository, productRepository, financialAccountRepository,
             financialCategoryRepository, financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository),
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository),
-            saleItemRepository, creditorRepository, creditorRepaymentItemRepository);
+            saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
         session = CashSession.builder().id(UUID.randomUUID()).sessionNumber(1L).status(CashSessionStatus.ABIERTA)
             .openingAmount(new BigDecimal("100.00")).expectedCash(new BigDecimal("100.00"))
             .totalSalesCash(BigDecimal.ZERO).totalSalesQr(BigDecimal.ZERO).totalSales(BigDecimal.ZERO).build();

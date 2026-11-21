@@ -15,6 +15,8 @@ import java.util.UUID;
 @Repository
 public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
 
+    Optional<Purchase> findByClientRequestId(UUID clientRequestId);
+
     // Purchase numbers come from a database sequence, like sales (T-06)
     @Query(value = "SELECT nextval('purchase_number_seq')", nativeQuery = true)
     long nextPurchaseNumber();

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
-import { PurchaseFormModalComponent, PurchaseLineDraft, round2 } from './purchase-form-modal.component';
+import { PURCHASE_RETRY_MESSAGE, PurchaseFormModalComponent, PurchaseLineDraft, round2 } from './purchase-form-modal.component';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
@@ -306,6 +306,36 @@ describe('PurchaseFormModalComponent', () => {
     cost.dispatchEvent(enter);
     expect(enter.defaultPrevented).toBe(true);
     expect(purchaseService.registerPurchase).not.toHaveBeenCalled();
+  });
+
+  describe('COM-27: reintento sin duplicar el pedido', () => {
+    const sentIds = (): string[] => purchaseService.registerPurchase.mock.calls.map((call: any[]) => call[0].clientRequestId);
+
+    it('tras un 502 permite reintentar y manda el mismo id; otro formulario nuevo lleva otro id', () => {
+      purchaseService.registerPurchase.mockReturnValueOnce(throwError(() => ({ status: 502 })))
+        .mockReturnValueOnce(of({ id: 'pur-9', purchaseNumber: 'PED-000029' } as Purchase));
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.submit();
+      expect(component.formError()).toBe(PURCHASE_RETRY_MESSAGE);
+      expect(component.isSubmitting()).toBe(false);
+      component.submit();
+      expect(TestBed.inject(ToastService).toasts().map(t => t.text)).toContain('Pedido PED-000029 registrado.');
+
+      fixture.componentRef.setInput('isOpen', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      component.supplierId.set('sup-1');
+      component.addProduct(tea);
+      component.submit();
+
+      const ids = sentIds();
+      expect(ids).toHaveLength(3);
+      expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+      expect(ids[1]).toBe(ids[0]);
+      expect(ids[2]).not.toBe(ids[0]);
+    });
   });
 
   it('al registrar el pedido muestra el aviso de éxito', () => {

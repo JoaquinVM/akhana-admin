@@ -52,6 +52,8 @@ export interface SaleDetailRequest {
   saleType?: SaleType;
   customerId?: string | null;
   creditAmount?: number;
+  // POS-18: id of this checkout, kept on its retries so the sale is recorded once
+  clientRequestId?: string;
 }
 
 export interface VoidSaleRequest {

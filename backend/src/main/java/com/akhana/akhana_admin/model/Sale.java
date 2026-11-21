@@ -27,6 +27,10 @@ public class Sale {
     @Column(name = "historical_import_id", updatable = false)
     private UUID historicalImportId;
 
+    // POS-18: id the POS made for this checkout; a retry with it gets this sale back. Null for old and migrated sales
+    @Column(name = "client_request_id", updatable = false)
+    private UUID clientRequestId;
+
     @Column(name = "sale_number", nullable = false, length = 50)
     private String saleNumber;
 

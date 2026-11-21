@@ -43,10 +43,20 @@ public record SaleDetailRequest(
     UUID customerId,
 
     // Part left as a receivable; null means 0 (DEU-05)
-    BigDecimal creditAmount
+    BigDecimal creditAmount,
+
+    // POS-18: id of this checkout, made by the screen and kept on its retries; null for old clients
+    UUID clientRequestId
 ) {
     public SaleDetailRequest(List<SaleItemRequest> items, BigDecimal globalDiscountAmount, PaymentMethod paymentMethod,
+                             BigDecimal amountCash, BigDecimal amountQr, BigDecimal amountReceived, String description,
+                             SaleType saleType, UUID customerId, BigDecimal creditAmount) {
+        this(items, globalDiscountAmount, paymentMethod, amountCash, amountQr, amountReceived, description, saleType,
+            customerId, creditAmount, null);
+    }
+
+    public SaleDetailRequest(List<SaleItemRequest> items, BigDecimal globalDiscountAmount, PaymentMethod paymentMethod,
                              BigDecimal amountCash, BigDecimal amountQr, BigDecimal amountReceived, String description) {
-        this(items, globalDiscountAmount, paymentMethod, amountCash, amountQr, amountReceived, description, null, null, null);
+        this(items, globalDiscountAmount, paymentMethod, amountCash, amountQr, amountReceived, description, null, null, null, null);
     }
 }

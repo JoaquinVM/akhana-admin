@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { RegisterSaleComponent } from './register-sale.component';
+import { RegisterSaleComponent, SALE_RETRY_MESSAGE } from './register-sale.component';
 import { CashService } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
 import { QuickProductService } from '../../../core/quick-product/quick-product.service';
@@ -525,6 +525,57 @@ describe('RegisterSaleComponent', () => {
         saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.'
       })
     }));
+  });
+
+  describe('POS-18: reintento sin duplicar la venta', () => {
+    const payment = { paymentMethod: 'EFECTIVO' as const, amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0, comment: '' };
+    const sentIds = (): string[] => mockSaleService.registerSale.mock.calls.map((call: any[]) => call[0].clientRequestId);
+
+    it('tras un 504 o sin conexión permite reintentar y manda el mismo id', () => {
+      mockSaleService.registerSale.mockReturnValueOnce(throwError(() => ({ status: 504 })))
+        .mockReturnValueOnce(throwError(() => ({ status: 0 })))
+        .mockReturnValueOnce(of(mockCreatedSale));
+      component.addToCart(mockProduct1);
+      component.openCheckoutModal();
+
+      component.submitSale(payment);
+      expect(component.isSubmitting()).toBe(false);
+      expect(component.errorMessage()).toBe(SALE_RETRY_MESSAGE);
+      component.closeCheckoutModal();
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      component.submitSale(payment);
+
+      const ids = sentIds();
+      expect(ids).toHaveLength(3);
+      expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+      expect(new Set(ids).size).toBe(1);
+      // The answer is the sale already recorded: it is shown as registered
+      expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
+        state: expect.objectContaining({ saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.' })
+      }));
+    });
+
+    it('un error de negocio muestra el mensaje del servidor', () => {
+      mockSaleService.registerSale.mockReturnValueOnce(throwError(() => ({ status: 409, error: { message: 'Esta venta ya se registró como VTA-000041 con otro contenido.' } })));
+      component.addToCart(mockProduct1);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(component.errorMessage()).toBe('Esta venta ya se registró como VTA-000041 con otro contenido.');
+    });
+
+    it('al vaciar el carrito la siguiente venta lleva otro id', () => {
+      mockSaleService.registerSale.mockReturnValue(throwError(() => ({ status: 400, error: { message: 'x' } })));
+      component.addToCart(mockProduct1);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      component.clearCart();
+      component.addToCart(mockProduct1);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      const ids = sentIds();
+      expect(ids[0]).not.toBe(ids[1]);
+    });
   });
 
   it('debe permitir cancelar la venta y regresar al POS', () => {
