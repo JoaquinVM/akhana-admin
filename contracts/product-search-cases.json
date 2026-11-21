@@ -1,0 +1,28 @@
+{
+  "about": "The same product search on both sides: frontend shared/utils/product-search.ts (POS-01) and backend ProductTextMatcher (COM-21). Only what both must do alike: case and accents, words in any order, code, name, supplier and category, ranking and typos. Left out on purpose: tags and barcodes (only the POS has them), sizes and plurals (only COM-21 reads them).",
+  "products": [
+    { "code": "LAC-KEF-1", "name": "Kéfir de agua", "supplierName": "Lácteos del Valle", "categoryName": "Bebidas" },
+    { "code": "FSE-PIS", "name": "Pistacho", "supplierName": "Frutos Andinos", "categoryName": "Frutos secos" },
+    { "code": "PAT-TAB-PIS", "name": "Tab s/Pistacho", "supplierName": "Patty", "categoryName": "Snacks" },
+    { "code": "FSE-MAN", "name": "Maní salado", "supplierName": "Frutos Andinos", "categoryName": "Frutos secos" },
+    { "code": "X-1", "name": "Almendra", "supplierName": "Pistachos SRL", "categoryName": null },
+    { "code": "PAS-1", "name": "Pasta corta", "supplierName": null, "categoryName": null }
+  ],
+  "cases": [
+    { "about": "sin mayúsculas ni tildes", "term": "KEFIR", "expected": ["LAC-KEF-1"] },
+    { "about": "la tilde escrita también se ignora", "term": "maní", "expected": ["FSE-MAN"] },
+    { "about": "las palabras en cualquier orden", "term": "salado mani", "expected": ["FSE-MAN"] },
+    { "about": "sin palabras no hay resultados", "term": "   ", "expected": [] },
+    { "about": "por proveedor; empate ordenado por nombre", "term": "frutos andinos", "expected": ["FSE-MAN", "FSE-PIS"] },
+    { "about": "por proveedor con tilde", "term": "lacteos", "expected": ["LAC-KEF-1"] },
+    { "about": "por categoría", "term": "snacks", "expected": ["PAT-TAB-PIS"] },
+    { "about": "proveedor y parte del nombre", "term": "andinos pista", "expected": ["FSE-PIS"] },
+    { "about": "nombre exacto, luego palabra del nombre y al final el proveedor", "term": "pistacho", "expected": ["FSE-PIS", "PAT-TAB-PIS", "X-1"] },
+    { "about": "código exacto primero", "term": "fse-pis", "expected": ["FSE-PIS"] },
+    { "about": "código exacto de otro producto", "term": "x-1", "expected": ["X-1"] },
+    { "about": "con coincidencias exactas, las parecidas quedan fuera", "term": "pista", "expected": ["FSE-PIS", "PAT-TAB-PIS", "X-1"] },
+    { "about": "letras cambiadas de lugar", "term": "kefri", "expected": ["LAC-KEF-1"] },
+    { "about": "una letra de menos", "term": "mani slado", "expected": ["FSE-MAN"] },
+    { "about": "una palabra corta no admite errores", "term": "zzz", "expected": [] }
+  ]
+}
