@@ -16,6 +16,11 @@
   padding: 1.5rem 1rem;
 }
 
+/* The dashboard header stacks title and subtitle; it does not use the shared flex header */
+.page-header {
+  display: block;
+}
+
 .page-title {
   margin: 0;
   font-family: var(--font-heading);

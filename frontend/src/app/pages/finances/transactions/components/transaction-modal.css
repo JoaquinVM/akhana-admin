@@ -17,12 +17,6 @@
   gap: 1rem;
 }
 
-.form-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
 .form-label.required {
   /* Use span.required-mark in the HTML */
 }
