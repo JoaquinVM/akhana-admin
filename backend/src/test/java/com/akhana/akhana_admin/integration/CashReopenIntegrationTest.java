@@ -375,6 +375,30 @@ class CashReopenIntegrationTest {
     }
 
     @Test
+    @DisplayName("095: la venta anulada no cuenta en la cantidad de ventas de la caja, en ningún lugar")
+    void voidedSale_isLeftOutOfTheSalesCount() {
+        CashSessionSummaryResponse opened = open("100.00", "Carga");
+        sellInCash(1);
+        sellInCash(2);
+        SaleResponse voided = sellInCash(1);
+        saleService.voidSale(voided.id(), new VoidSaleRequest("Mal cobrada"), USER);
+        next();
+
+        assertThat(cashSessionService.getCurrentSession().salesCount()).isEqualTo(2);
+        assertThat(dashboardService.getDashboard(day, day).now().cash().salesCount()).isEqualTo(2);
+
+        CashSessionSummaryResponse closed = close("130.00");
+        assertThat(closed.salesCount()).isEqualTo(2);
+        assertThat(cashSessionService.getAllSessions())
+            .filteredOn(s -> s.id().equals(opened.id())).singleElement()
+            .satisfies(s -> assertThat(s.salesCount()).isEqualTo(2));
+        CashSessionDetailResponse detail = cashSessionService.getSessionDetail(opened.id());
+        assertThat(detail.salesCount()).isEqualTo(2);
+        assertThat(detail.sales()).hasSize(3);
+        assertThat(reopen(opened.id(), "Error").salesCount()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("Una venta y un gasto de la caja reabierta se anulan según las reglas de siempre")
     void reopenedSession_voidsItsOwnMovements() {
         CashSessionSummaryResponse opened = open("100.00", "Carga");

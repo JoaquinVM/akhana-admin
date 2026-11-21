@@ -7,7 +7,8 @@ export interface CloseCashDraft {
   cuts: { denomination: number; cashQuantity: number; reserveQuantity: number }[];
   reserveBills: number;
   reserveCoins: number;
-  closingAmount: number;
+  // CAJ-04: null while nothing was written; a 0 written by hand is kept as 0
+  closingAmount: number | null;
   closingComment: string;
 }
 
@@ -16,6 +17,14 @@ const KEY = 'akhana.closeCashDraft';
 function amount(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+}
+
+function optionalAmount(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 }
 
 function quantity(value: unknown): number {
@@ -49,7 +58,7 @@ export class CloseCashDraftService {
           : [],
         reserveBills: amount(draft.reserveBills),
         reserveCoins: amount(draft.reserveCoins),
-        closingAmount: amount(draft.closingAmount),
+        closingAmount: optionalAmount(draft.closingAmount),
         closingComment: typeof draft.closingComment === 'string' ? draft.closingComment : ''
       };
     } catch {

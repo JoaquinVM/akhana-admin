@@ -70,7 +70,8 @@ class ResponseContractTest {
             new BigDecimal("22.50"), new BigDecimal("1.25"), new BigDecimal("1.25"), new BigDecimal("2.50"),
             new BigDecimal("20.00"), PaymentMethod.MIXTO, new BigDecimal("10.00"), new BigDecimal("5.00"),
             new BigDecimal("20.00"), new BigDecimal("10.00"), "Venta de prueba", "cajero", RECORDED, null, null, null,
-            List.of(item), SaleType.NORMAL, CUSTOMER, "Luis", new BigDecimal("5.00"), false, DAY);
+            List.of(item), SaleType.NORMAL, CUSTOMER, "Luis", new BigDecimal("5.00"), false, DAY,
+            BigDecimal.ZERO);
 
         assertMatchesContract("sale-response.json", sale);
     }

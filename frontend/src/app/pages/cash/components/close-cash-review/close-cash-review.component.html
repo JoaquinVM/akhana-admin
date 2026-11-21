@@ -1,0 +1,29 @@
+<section class="review-panel" role="alert" aria-labelledby="review-title">
+  <h3 id="review-title" class="review-title">Revisar diferencia</h3>
+  <p class="review-lead">
+    El conteo no coincide con lo esperado por <strong>{{ differenceText() }}</strong> de {{ kind() }}.
+    Revisa los billetes y monedas antes de cerrar.
+  </p>
+
+  <dl class="review-figures">
+    <div>
+      <dt>Efectivo esperado</dt>
+      <dd>{{ expectedText() }}</dd>
+    </div>
+    <div>
+      <dt>Contado</dt>
+      <dd>{{ countedText() }}</dd>
+    </div>
+    <div>
+      <dt>{{ difference() > 0 ? 'Sobrante' : 'Faltante' }}</dt>
+      <dd class="review-diff">{{ differenceText() }}</dd>
+    </div>
+  </dl>
+
+  <p class="review-adjustment">
+    Al cerrar se registrará el ajuste «{{ adjustmentName() }}» por {{ differenceText() }} en la cuenta Caja,
+    que {{ difference() > 0 ? 'suma' : 'resta' }} ese monto a su saldo.
+  </p>
+
+  <button type="button" class="btn btn-secondary" (click)="back.emit()">Volver al conteo</button>
+</section>

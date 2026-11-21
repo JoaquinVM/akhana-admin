@@ -20,7 +20,7 @@ import { FinancialTransaction } from '../../core/finance/models/finance.models';
 import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { formatBs } from '../../shared/utils/money';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
-import { PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
+import { PosFeedback, PosFeedbackBannerComponent } from './components/pos-feedback-banner/pos-feedback-banner.component';
 import { PosClosedStateComponent } from './components/pos-closed-state/pos-closed-state.component';
 import {
   SessionListState,
@@ -72,7 +72,7 @@ export class PosComponent implements OnInit {
   selectedSaleToVoid = signal<Sale | null>(null);
   selectedSaleForDetailId = signal<string | null>(null);
   selectedSaleForDetail = signal<Sale | null>(null);
-  feedbackMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
+  feedbackMessage = signal<PosFeedback | null>(null);
   recentSales = signal<Sale[]>([]);
 
   // Purchases and expenses of the session
@@ -309,10 +309,13 @@ export class PosComponent implements OnInit {
         this.isActionLoading.set(false);
         this.isCloseModalVisible.set(false);
         const diff = closedSession.difference ?? 0;
-        const diffText = diff === 0
-          ? 'con cuadre exacto'
-          : `con ${diff > 0 ? 'sobrante' : 'faltante'} de ${formatBs(Math.abs(diff))}`;
-        this.showFeedback('success', `Caja #${closedSession.sessionNumber} cerrada exitosamente (${diffText}).`);
+        // CAJ-05: a closing with a difference is done, but it is shown in amber so it is looked at
+        if (diff === 0) {
+          this.showFeedback('success', `Caja #${closedSession.sessionNumber} cerrada con cuadre exacto.`);
+        } else {
+          this.showFeedback('warning', `Caja #${closedSession.sessionNumber} cerrada con ${diff > 0 ? 'sobrante' : 'faltante'} `
+            + `de ${formatBs(Math.abs(diff))}, registrado como ajuste en la cuenta Caja.`);
+        }
         this.clearSessionLists();
       },
       error: (err) => {
@@ -353,7 +356,7 @@ export class PosComponent implements OnInit {
     this.feedbackMessage.set(null);
   }
 
-  private showFeedback(type: 'success' | 'error', text: string): void {
+  private showFeedback(type: PosFeedback['type'], text: string): void {
     this.feedbackMessage.set({ type, text });
     // A new message gets its own 6 s: the timer of the previous one must not hide it early
     clearTimeout(this.feedbackTimer);

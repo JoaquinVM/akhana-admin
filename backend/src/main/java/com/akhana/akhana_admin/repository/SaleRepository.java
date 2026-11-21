@@ -28,7 +28,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     List<Sale> findByCashSessionIdOrderByCreatedAtDesc(UUID cashSessionId);
 
-    long countByCashSessionId(UUID cashSessionId);
+    // CAJ-07: the sales of a session in its count, voided ones left out like in its totals
+    long countByCashSessionIdAndStatus(UUID cashSessionId, SaleStatus status);
 
     // At-cost sales of a customer, on credit or paid at once (P-49), voided included, for its history (DEU-07),
     // by day of operation (CAJ-11)

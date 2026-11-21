@@ -18,8 +18,8 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Proveedores y compras | COM-01 a COM-09, COM-11 a COM-14, COM-19 a COM-27 | ✅ Completo | COM-20 a COM-25 publicados en `v1.10.0`, apagados: falta la clave de OpenAI en el VPS | `purchases.md` |
 | Deudas y cuentas por cobrar | DEU-01 a DEU-07 | ✅ Completo | Sin publicar: envío pagado por una persona (DEU-02) y pago marcando deudas (DEU-03, DEU-04) | `debts.md` |
 | Consumos y ventas al costo | CON-01 a CON-03, CON-05 | ✅ Completo | — | `consumptions.md` |
-| Caja | CAJ-01 a CAJ-15 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día. Reservas sueltas del conteo (CAJ-04) y conteo guardado (CAJ-15) sin publicar | `cash.md` |
-| POS y ventas | POS-01 a POS-15, POS-17, POS-18 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular | `sales.md`, `barcodes.md` |
+| Caja | CAJ-01 a CAJ-15 | ✅ Completo | CAJ-12 a CAJ-14 sin desplegar: hasta entonces no abrir ninguna caja en producción; con la primera caja real de un día pasado, revisar que todo cuente para ese día. Sin publicar: reservas sueltas (CAJ-04), conteo guardado (CAJ-15), monto contado obligatorio y «Revisar diferencia» (CAJ-04, CAJ-05) y ventas anuladas fuera del conteo (CAJ-07) | `cash.md` |
+| POS y ventas | POS-01 a POS-15, POS-17, POS-18 | ✅ Completo | POS-10 con gramos y total escrito publicado en `v1.11.0`: probar en la caja y en el celular. Sin publicar: redondeo del efectivo a Bs 0.10 y billetes que fijan el monto recibido (POS-04) | `sales.md`, `barcodes.md` |
 | Finanzas | FIN-01 a FIN-09 | ✅ Completo | — | `finance.md` |
 | Reportes | FIN-10, CON-03 | ✅ Completo | — | `reports.md` |
 | Dashboard | DSH-01 a DSH-04 | ✅ Completo | Revisar los números con datos reales en producción | `dashboard.md` |
@@ -180,10 +180,10 @@ Detalle en `cash.md`.
 - **CAJ-01** No se puede vender sin una caja abierta.
 - **CAJ-02** Apertura con monto inicial ≥ 0 y comentario opcional.
 - **CAJ-03** Efectivo esperado = monto inicial + ventas en efectivo + ingresos de caja − gastos y pagos de pedidos desde caja − retiros. Los ajustes de apertura y cierre no cuentan. Una salida de Caja que supera el esperado se avisa sin bloquear.
-- **CAJ-04** Cierre con monto contado obligatorio; arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", más dos montos sueltos «Reserva billetes» y «Reserva monedas»; si se carga, cortes + reservas deben sumar el monto contado (1.000 en cortes + 150 + 200 = 1.350).
-- **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia.
+- **CAJ-04** Cierre con monto contado obligatorio: empieza vacío y sin monto no se cierra (un 0 escrito a mano sí vale); arqueo opcional por cortes (Bs 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,20, 0,10) en "caja" y "reserva", más dos montos sueltos «Reserva billetes» y «Reserva monedas»; si se carga, cortes + reservas deben sumar el monto contado (1.000 en cortes + 150 + 200 = 1.350).
+- **CAJ-05** Se muestra la diferencia (contado − esperado) antes de confirmar; se permite cerrar con diferencia. Si supera Bs 20, pasa antes por «Revisar diferencia», con el ajuste que se registrará; el aviso final va en ámbar si hubo diferencia.
 - **CAJ-06** Una caja cerrada es inmutable: no recibe movimientos y no se reabre, salvo la última con motivo (CAJ-14).
-- **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes.
+- **CAJ-07** Historial de cajas con detalle de apertura, ventas por método, gastos, pagos de pedidos, retiros, cierre y cortes. La cantidad de ventas de una caja no cuenta las anuladas.
 - **CAJ-08** Ingreso y retiro de caja ("salida interna") desde el POS como transferencia entre Caja y otra cuenta, con comentario obligatorio; se anula solo mientras su caja esté abierta.
 - **CAJ-09** Al cerrar, la diferencia se registra automáticamente como ajuste (sobrante o faltante) en la cuenta Caja, para que su saldo coincida con lo contado.
 - **CAJ-10** La apertura propone como monto inicial el cierre anterior (en la primera caja, el saldo de Caja); si se cambia, el comentario es obligatorio y la diferencia con el saldo de Caja se registra como ajuste, que no se anula.
@@ -200,7 +200,7 @@ Detalle en `sales.md`.
 - **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno. También encuentran el código de barras, solo cuando está completo y es exacto.
 - **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar. Solo muestran productos activos: uno desactivado o eliminado después de agregarlo deja de verse. Borrar un grupo lo borra de verdad (excepción a RG-01).
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal). «Otro peso» no lleva descuento por unidad: se cambia su total (POS-10).
-- **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
+- **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0. El efectivo se cobra redondeado a Bs 0.10, al más cercano, y el redondeo queda en el total de la venta; en el mixto, la parte en efectivo va en múltiplos de Bs 0.10 y el QR lleva los centavos. Los botones de billete fijan el monto recibido («Exacto» y solo los billetes que cubren lo que hay que cobrar).
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.
 - **POS-06** Numeración de venta única y correlativa. En desarrollo los números saltan porque las pruebas consumen las secuencias; en producción no.
 - **POS-07** Anulación con motivo mientras la caja de la venta esté abierta (operador y administrador, P-33); como en FIN-06, ninguna cuenta puede quedar en negativo (en 0,00 sí).

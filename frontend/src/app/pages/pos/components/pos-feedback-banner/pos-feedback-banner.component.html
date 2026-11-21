@@ -1,6 +1,7 @@
 <div
   class="feedback-banner"
   [class.success]="message().type === 'success'"
+  [class.warning]="message().type === 'warning'"
   [class.error]="message().type === 'error'">
   <span class="feedback-icon">
     @if (message().type === 'success') {

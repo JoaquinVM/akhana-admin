@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { PaymentMethod } from '../../../../core/sale/models/sale.models';
 import { Customer } from '../../../../core/debt/models/debt.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { isWholeCoins, roundToCoin } from '../../../../shared/utils/money';
 
 // Payment chosen at checkout; register-sale builds the sale (items and discounts)
 export interface CheckoutPayment {
@@ -17,6 +18,9 @@ export interface CheckoutPayment {
   // P-39: optional comment of the at-cost sale («Mami precio costo»); empty when none
   comment: string;
 }
+
+// Bills offered as the amount received (POS-04)
+export const QUICK_BILLS = [10, 20, 50, 100, 200];
 
 @Component({
   selector: 'app-checkout-modal',
@@ -53,6 +57,22 @@ export class CheckoutModalComponent {
     return Math.max(0, Math.round((this.totalAmount() - credit) * 100) / 100);
   });
 
+  // POS-04 (097): paid all in cash, the amount due is charged rounded to Bs 0.10, like the server does
+  cashDue = computed<number>(() => roundToCoin(this.amountDue()));
+
+  // What the rounding adds (+) or takes (-) from the amount due, when paid all in cash
+  cashRounding = computed<number>(() => Math.round((this.cashDue() - this.amountDue()) * 100) / 100);
+
+  // POS-04: the cash to cover, the rounded amount due or the cash part of a mixed payment
+  cashToCover = computed<number>(() => (this.paymentMethod() === 'MIXTO' ? this.amountCash() : this.cashDue()));
+
+  // POS-04 (097): the cash part of a mixed payment goes in Bs 0.10 coins; the QR takes the cents
+  mixedCashNotWholeCoins = computed<boolean>(() =>
+    this.paymentMethod() === 'MIXTO' && !this.isFullCredit() && this.amountCash() > 0 && !isWholeCoins(this.amountCash()));
+
+  // POS-04: only the bills that cover the cash to receive; the exact amount has its own button
+  coveringBills = computed<number[]>(() => QUICK_BILLS.filter((bill) => bill > this.cashToCover()));
+
   hasCredit = computed<boolean>(() => this.atCost() && this.creditAmount() > 0);
 
   // The whole sale on credit: sent as CREDITO with no payment
@@ -72,7 +92,7 @@ export class CheckoutModalComponent {
   changeGiven = computed<number>(() => {
     const received = this.amountReceived() || 0;
     if (this.paymentMethod() === 'EFECTIVO') {
-      const diff = received - this.amountDue();
+      const diff = received - this.cashDue();
       return diff > 0 ? Math.round(diff * 100) / 100 : 0;
     }
     if (this.paymentMethod() === 'MIXTO') {
@@ -101,7 +121,7 @@ export class CheckoutModalComponent {
     }
     const received = this.amountReceived() || 0;
     if (this.paymentMethod() === 'EFECTIVO') {
-      return received >= this.amountDue();
+      return received >= this.cashDue();
     }
     if (this.paymentMethod() === 'QR') {
       return true;
@@ -112,6 +132,7 @@ export class CheckoutModalComponent {
       return (
         cashPortion > 0 &&
         cashPortion < this.amountDue() &&
+        isWholeCoins(cashPortion) &&
         received >= cashPortion
       );
     }
@@ -140,20 +161,22 @@ export class CheckoutModalComponent {
     const due = this.amountDue();
 
     if (method === 'EFECTIVO') {
-      this.amountCash.set(due);
-      this.amountReceived.set(due);
+      this.amountCash.set(this.cashDue());
+      this.amountReceived.set(this.cashDue());
     } else if (method === 'QR') {
       this.amountCash.set(0);
       this.amountReceived.set(0);
     } else if (method === 'MIXTO') {
-      const half = Math.round((due / 2) * 100) / 100;
+      // 097: the proposed cash half goes in whole coins too
+      const half = roundToCoin(due / 2);
       this.amountCash.set(half);
       this.amountReceived.set(half);
     }
   }
 
-  addReceived(amount: number): void {
-    this.amountReceived.update((current) => Math.round(((current || 0) + amount) * 100) / 100);
+  // POS-04: a bill sets what was received, it never adds to what is already written
+  setReceived(bill: number): void {
+    this.amountReceived.set(bill);
   }
 
   onAmountReceivedChange(val: number | null): void {
@@ -163,7 +186,7 @@ export class CheckoutModalComponent {
 
   setExactAmount(): void {
     if (this.paymentMethod() === 'EFECTIVO') {
-      this.amountReceived.set(this.amountDue());
+      this.amountReceived.set(this.cashDue());
     } else if (this.paymentMethod() === 'MIXTO') {
       this.amountReceived.set(this.amountCash());
     }
@@ -214,7 +237,7 @@ export class CheckoutModalComponent {
     const method = this.paymentMethod();
     this.confirmed.emit({
       paymentMethod: method,
-      amountCash: method === 'EFECTIVO' ? this.amountDue() : method === 'MIXTO' ? this.amountCash() : 0,
+      amountCash: method === 'EFECTIVO' ? this.cashDue() : method === 'MIXTO' ? this.amountCash() : 0,
       amountQr: this.amountQr(),
       amountReceived: this.amountReceived(),
       customerId,

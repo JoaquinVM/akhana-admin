@@ -303,7 +303,7 @@ public class CashSessionServiceImpl implements CashSessionService {
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateResourceException(REOPEN_WITH_OPEN_SESSION);
         }
-        return mapToSummary(reopened, saleRepository.countByCashSessionId(id));
+        return mapToSummary(reopened, saleRepository.countByCashSessionIdAndStatus(id, SaleStatus.COMPLETADA));
     }
 
     // D3: with a difference there must be exactly one active closing adjustment, of that amount and direction; without
@@ -358,7 +358,7 @@ public class CashSessionServiceImpl implements CashSessionService {
     public Optional<CashSessionSummaryResponse> findCurrentSession() {
         return cashSessionRepository.findByStatus(CashSessionStatus.ABIERTA).map(session -> {
             expectedCashCalculator.refresh(session);
-            return mapToSummary(session, saleRepository.countByCashSessionId(session.getId()));
+            return mapToSummary(session, saleRepository.countByCashSessionIdAndStatus(session.getId(), SaleStatus.COMPLETADA));
         });
     }
 
@@ -394,7 +394,7 @@ public class CashSessionServiceImpl implements CashSessionService {
 
         CashSession closed = cashSessionRepository.save(session);
         recordClosingAdjustment(closed, difference, username);
-        long salesCount = saleRepository.countByCashSessionId(closed.getId());
+        long salesCount = saleRepository.countByCashSessionIdAndStatus(closed.getId(), SaleStatus.COMPLETADA);
         return mapToSummary(closed, salesCount);
     }
 
@@ -456,7 +456,7 @@ public class CashSessionServiceImpl implements CashSessionService {
             session.getTotalSales(),
             expectedCash,
             session.getDifference(),
-            sales.size(),
+            sales.stream().filter(s -> s.getStatus() == SaleStatus.COMPLETADA).count(),
             cutDtos,
             session.getClosingReserveBills(),
             session.getClosingReserveCoins(),

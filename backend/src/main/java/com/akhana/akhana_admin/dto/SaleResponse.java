@@ -43,7 +43,9 @@ public record SaleResponse(
     // FIN-11: migrated from the spreadsheet, without cash session or payments
     boolean historical,
     // CAJ-11: day it counts for (the day of its session); createdAt is the real time it was recorded
-    LocalDate operationDate
+    LocalDate operationDate,
+    // POS-04 (097): rounding of the cash paid to Bs 0.10, already inside totalAmount
+    BigDecimal cashRounding
 ) {
     public SaleResponse(
         UUID id,
@@ -83,7 +85,8 @@ public record SaleResponse(
             null,
             BigDecimal.ZERO,
             false,
-            null
+            null,
+            BigDecimal.ZERO
         );
     }
 
@@ -133,7 +136,8 @@ public record SaleResponse(
             sale.getCustomer() != null ? sale.getCustomer().getName() : null,
             sale.getCreditAmount(),
             sale.isHistorical(),
-            sale.getOperationDate()
+            sale.getOperationDate(),
+            sale.getCashRounding()
         );
     }
 }

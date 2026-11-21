@@ -18,6 +18,15 @@ describe('PosFeedbackBannerComponent', () => {
     expect(banner.textContent).toContain('Caja cerrada');
   });
 
+  it('muestra el aviso en ámbar con su ícono de alerta', () => {
+    fixture.componentRef.setInput('message', { type: 'warning', text: 'Caja #3 cerrada con faltante' });
+    fixture.detectChanges();
+    const banner: HTMLElement = fixture.nativeElement.querySelector('.feedback-banner');
+    expect(banner.classList.contains('warning')).toBe(true);
+    expect(banner.classList.contains('success')).toBe(false);
+    expect(banner.textContent).toContain('faltante');
+  });
+
   it('emite dismiss al cerrar', () => {
     fixture.componentRef.setInput('message', { type: 'success', text: 'Listo' });
     fixture.detectChanges();
