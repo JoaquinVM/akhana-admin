@@ -69,6 +69,14 @@
                 </div>
               </td>
             </tr>
+          } @else if (loadFailed()) {
+            <tr>
+              <td colspan="10">
+                <app-connection-notice
+                  message="No se pudo cargar el historial de cajas. Revisa la conexión."
+                  (retry)="loadSessions()" />
+              </td>
+            </tr>
           } @else if (filteredSessions().length === 0) {
             <tr>
               <td colspan="10">

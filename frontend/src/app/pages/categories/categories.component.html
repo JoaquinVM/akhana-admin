@@ -23,7 +23,7 @@
 
   <!-- Global error messages -->
   @if (errorMessage()) {
-    <div class="alert alert-danger">
+    <div class="alert alert-danger" role="alert">
       <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="12" />
@@ -219,7 +219,7 @@
     <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
       <!-- Business error from the backend -->
       @if (formError()) {
-        <div class="alert alert-danger" style="margin-bottom: 1.25rem;">
+        <div class="alert alert-danger" role="alert" style="margin-bottom: 1.25rem;">
           <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />

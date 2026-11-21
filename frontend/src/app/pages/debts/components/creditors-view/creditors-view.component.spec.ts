@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { CreditorsViewComponent } from './creditors-view.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
@@ -44,10 +44,33 @@ describe('CreditorsViewComponent', () => {
     expect(component.totalDebt()).toBe(200.25);
   });
 
+  it('DEU-04: la búsqueda espera 250 ms y una respuesta vieja no pisa la más nueva', () => {
+    vi.useFakeTimers();
+    const slow = new Subject<Creditor[]>();
+    const fast = new Subject<Creditor[]>();
+    creditorService.getCreditors.mockClear();
+    creditorService.getCreditors.mockReturnValueOnce(slow).mockReturnValueOnce(fast);
+    component.onSearch('x');
+    component.onSearch('xy');
+    vi.advanceTimersByTime(249);
+    expect(creditorService.getCreditors).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(creditorService.getCreditors).toHaveBeenCalledTimes(1);
+    component.onSearch('xyz');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
+    fast.next([mami]);
+    slow.next([mami, rosa]);
+    expect(component.creditors().length).toBe(1);
+  });
+
   it('DEU-04: filtra por estado y texto', () => {
     component.setStatusFilter('INACTIVO');
     expect(creditorService.getCreditors).toHaveBeenLastCalledWith('INACTIVO', '');
+    vi.useFakeTimers();
     component.onSearch('ma');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
     expect(creditorService.getCreditors).toHaveBeenLastCalledWith('INACTIVO', 'ma');
   });
 

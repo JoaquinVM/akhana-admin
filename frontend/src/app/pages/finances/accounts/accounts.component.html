@@ -279,6 +279,10 @@
           <div class="spinner-large"></div>
           <p>Cargando transacciones...</p>
         </div>
+      } @else if (movementsLoadFailed()) {
+        <app-connection-notice
+          message="No se pudieron cargar los movimientos de esta cuenta. Revisa la conexión."
+          (retry)="loadMovements(selectedAccountForMovements()!)" />
       } @else if (accountTransactions().length === 0) {
         <div class="empty-state">
           <p>No se encontraron movimientos registrados para esta cuenta.</p>

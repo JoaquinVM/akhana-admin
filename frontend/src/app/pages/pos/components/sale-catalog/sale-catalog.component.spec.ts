@@ -166,6 +166,12 @@ describe('SaleCatalogComponent', () => {
     expect(add).toHaveBeenCalledWith(pistacho);
   });
 
+  it('POS-02: cada producto rápido es un botón, que se usa con el teclado', () => {
+    const card = fixture.nativeElement.querySelector('.quick-item-card') as HTMLElement;
+    expect(card.tagName).toBe('BUTTON');
+    expect(card.getAttribute('type')).toBe('button');
+  });
+
   it('pide abrir la configuración de grupos', () => {
     const configure = vi.fn();
     component.configure.subscribe(configure);

@@ -56,6 +56,7 @@
           min="0"
           [max]="item().unitPrice"
           class="form-control form-control-sm text-right"
+          [attr.aria-label]="'Descuento por unidad (Bs) de ' + name()"
           [ngModel]="item().unitDiscount"
           (ngModelChange)="discountChange.emit($event)" />
       </div>

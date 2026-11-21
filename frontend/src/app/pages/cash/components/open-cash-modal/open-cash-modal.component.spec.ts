@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OpenCashModalComponent } from './open-cash-modal.component';
 import { CashService } from '../../../../core/cash/cash.service';
@@ -47,6 +47,32 @@ describe('OpenCashModalComponent', () => {
     component = fixture.componentInstance;
     emitted = [];
     component.confirmed.subscribe((request) => emitted.push(request));
+  });
+
+  it('CAJ-10: si falla la propuesta muestra el error y no deja abrir con 0; Reintentar la vuelve a pedir', () => {
+    const cash = TestBed.inject(CashService);
+    cash.getOpeningProposal = vi.fn().mockReturnValue(throwError(() => new Error('red')));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    expect(text()).toContain('No se pudo consultar el monto propuesto');
+    expect(component.canSubmit()).toBe(false);
+    component.onSubmit();
+    expect(emitted).toEqual([]);
+
+    cash.getOpeningProposal = vi.fn().mockReturnValue(of({ ...PROPOSAL, unresolvedDays: [] }));
+    element<HTMLButtonElement>('app-connection-notice button')!.click();
+    fixture.detectChanges();
+    expect(component.proposalFailed()).toBe(false);
+    expect(component.canSubmit()).toBe(true);
+  });
+
+  it('CAJ-10: mientras carga la propuesta no se puede abrir', () => {
+    TestBed.inject(CashService).getOpeningProposal = vi.fn().mockReturnValue(new Subject());
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    expect(component.canSubmit()).toBe(false);
   });
 
   describe('CAJ-12: elegir el día', () => {

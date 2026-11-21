@@ -25,7 +25,7 @@
   </header>
 
   @if (errorMessage()) {
-    <div class="alert alert-danger"><span>{{ errorMessage() }}</span></div>
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
   }
   @if (readingStatus(); as status) {
     @if (status.configured && status.capReached) {

@@ -5,8 +5,11 @@
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="title()">
+    <!-- Keyboard focus stays inside while open and goes back to where it was on close -->
     <div
       class="modal-card"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
       [class.size-sm]="size() === 'sm'"
       [class.size-md]="size() === 'md'"
       [class.size-lg]="size() === 'lg'"

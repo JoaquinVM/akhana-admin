@@ -197,6 +197,7 @@
               </td>
               <td class="text-right" data-label="Costo unitario (Bs)" [class.line-doubtful]="line.costMissing">
                 <input type="number" class="form-control input-number no-spinner" [name]="'cost-' + i" step="0.01" min="0"
+                       [attr.aria-label]="'Costo unitario (Bs) de ' + line.product.name"
                        [ngModel]="line.costMissing ? null : line.unitCost" (ngModelChange)="onCostChange(i, $event)" />
                 @if (line.costNote) {
                   <span class="line-flag">{{ line.costNote }}</span>

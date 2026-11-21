@@ -180,6 +180,21 @@ describe('AccountsComponent', () => {
     expect(marks[0].textContent).toContain('Día 31/10 · cargada el 01/11 00:30');
   });
 
+  it('si falla la carga de movimientos muestra el error con Reintentar, no «sin movimientos»', () => {
+    mockTransactionService.getTransactions.mockReturnValue(throwError(() => new Error('red')));
+    component.openMovementsModal(mockAccounts[0]);
+    fixture.detectChanges();
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('No se pudieron cargar los movimientos');
+    expect(text).not.toContain('No se encontraron movimientos');
+
+    mockTransactionService.getTransactions.mockReturnValue(of([]));
+    (document.querySelector('app-connection-notice button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.movementsLoadFailed()).toBe(false);
+    expect(document.body.textContent).toContain('No se encontraron movimientos');
+  });
+
   it('debe ejecutar confirmDelete() y recargar la lista de cuentas', () => {
     component.openDeleteModal(mockAccounts[2]);
     expect(component.isDeleteModalOpen()).toBe(true);

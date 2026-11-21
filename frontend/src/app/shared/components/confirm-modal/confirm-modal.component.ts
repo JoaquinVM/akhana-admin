@@ -1,11 +1,13 @@
-import { Component, input, output } from '@angular/core';
+import { Component, DestroyRef, HostListener, effect, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { isTopDialog, markDialogOpen } from '../modal/dialog-stack';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-confirm-modal',
   standalone: true,
-  imports: [IconComponent, CommonModule],
+  imports: [IconComponent, CommonModule, CdkTrapFocus],
   templateUrl: './confirm-modal.component.html',
   styleUrls: ['./confirm-modal.component.css']
 })
@@ -20,6 +22,19 @@ export class ConfirmModalComponent {
 
   confirm = output<void>();
   cancel = output<void>();
+
+  constructor() {
+    effect(() => markDialogOpen(this, this.isOpen()));
+    inject(DestroyRef).onDestroy(() => markDialogOpen(this, false));
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  handleEscape(event: Event): void {
+    if (this.isOpen() && isTopDialog(this)) {
+      event.preventDefault();
+      this.onCancel();
+    }
+  }
 
   onConfirm(): void {
     if (!this.isLoading()) {

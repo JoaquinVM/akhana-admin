@@ -23,7 +23,7 @@
         <button
           type="button"
           class="btn btn-primary btn-sm"
-          [disabled]="!newGroupName().trim()"
+          [disabled]="!newGroupName().trim() || isSaving()"
           (click)="handleCreateGroup()">
           Crear
         </button>
@@ -33,6 +33,7 @@
       <div
         cdkDropList
         class="groups-drag-list"
+        [cdkDropListDisabled]="isSaving()"
         (cdkDropListDropped)="onDropGroup($event)">
         @for (grp of quickProductService.groups(); track grp.id) {
           <div
@@ -60,7 +61,9 @@
               type="button"
               class="btn-delete-group"
               title="Eliminar grupo"
-              (click)="handleDeleteGroup(grp.id, $event)">
+              [attr.aria-label]="'Eliminar grupo ' + grp.name"
+              [disabled]="isSaving()"
+              (click)="handleDeleteGroup(grp, $event)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -91,6 +94,7 @@
           <div
             cdkDropList
             class="products-drag-list"
+            [cdkDropListDisabled]="isSaving()"
             (cdkDropListDropped)="onDropItem($event)">
             @for (p of group.products; track p.id) {
               <div cdkDrag class="product-drag-item">
@@ -118,6 +122,8 @@
                   type="button"
                   class="btn-remove-prod"
                   title="Quitar del grupo"
+                  [attr.aria-label]="'Quitar ' + p.name + ' del grupo'"
+                  [disabled]="isSaving()"
                   (click)="handleRemoveProductFromGroup(p.id)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-svg">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -175,6 +181,7 @@
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm"
+                    [disabled]="isSaving()"
                     (click)="handleAddProductToGroup(cp)">
                     + Añadir
                   </button>
@@ -197,3 +204,12 @@
     </button>
   </div>
 </app-modal>
+
+<app-confirm-modal
+  [isOpen]="groupToDelete() !== null"
+  title="¿Eliminar grupo?"
+  [message]="'Se quitará el grupo «' + (groupToDelete()?.name ?? '') + '» de los productos rápidos del POS.'"
+  confirmText="Eliminar"
+  [isLoading]="isSaving()"
+  (confirm)="confirmDeleteGroup()"
+  (cancel)="cancelDeleteGroup()" />

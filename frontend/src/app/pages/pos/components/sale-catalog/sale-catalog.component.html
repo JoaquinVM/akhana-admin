@@ -102,12 +102,12 @@
       @if (activeGroup(); as currentGrp) {
         <div class="quick-grid">
           @for (prod of currentGrp.products; track prod.id) {
-            <div class="quick-item-card" (click)="choose(prod)">
-              <div class="card-meta">
+            <button type="button" class="quick-item-card" (click)="choose(prod)">
+              <span class="card-meta">
                 <span class="card-code">{{ prod.code }}</span>
-              </div>
-              <h4 class="card-title">{{ prod.name }}</h4>
-              <div class="card-footer">
+              </span>
+              <span class="card-title">{{ prod.name }}</span>
+              <span class="card-footer">
                 <span class="card-price">Bs {{ prod.sellPrice | number:'1.2-2' }}</span>
                 <span class="card-add-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
@@ -115,8 +115,8 @@
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                 </span>
-              </div>
-            </div>
+              </span>
+            </button>
           } @empty {
             <div class="quick-empty-hint">
               <p>No hay productos en el grupo "{{ currentGrp.name }}". Usa "Configurar grupos" para añadirlos.</p>

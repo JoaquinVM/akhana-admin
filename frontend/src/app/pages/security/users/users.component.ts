@@ -2,6 +2,8 @@ import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angula
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
+import { searchDebouncer } from '../../../shared/utils/search-debounce';
 import { UserService } from '../../../core/user/user.service';
 import { User, CreateUserRequest, UpdateUserRequest } from '../../../core/user/models/user.models';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -42,6 +44,8 @@ export class UsersComponent implements OnInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   searchTerm = signal<string>('');
+  private readonly debounceSearch = searchDebouncer();
+  private usersLoad?: Subscription;
 
   // Pagination
   currentPage = signal<number>(0);
@@ -117,7 +121,9 @@ export class UsersComponent implements OnInit {
     this.errorMessage.set(null);
     this.currentPage.set(page);
 
-    this.userService.getUsers(this.searchTerm(), page, this.pageSize()).subscribe({
+    // A slower answer of an earlier search must not replace the latest one
+    this.usersLoad?.unsubscribe();
+    this.usersLoad = this.userService.getUsers(this.searchTerm(), page, this.pageSize()).subscribe({
       next: (response) => {
         this.users.set(response.content || []);
         this.totalElements.set(response.totalElements || 0);
@@ -134,7 +140,7 @@ export class UsersComponent implements OnInit {
   onSearch(event: Event): void {
     const term = (event.target as HTMLInputElement).value;
     this.searchTerm.set(term);
-    this.loadUsers(0);
+    this.debounceSearch(() => this.loadUsers(0));
   }
 
   clearSearch(): void {
