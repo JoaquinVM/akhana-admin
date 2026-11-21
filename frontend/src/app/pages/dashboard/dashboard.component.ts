@@ -7,6 +7,7 @@ import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { Dashboard, DashboardRankRow } from '../../core/dashboard/models/dashboard.models';
 import { CashDayMarkComponent } from '../../shared/components/cash-day-mark/cash-day-mark.component';
 import { INSTALLED_APP } from '../../core/pwa/installed-app';
+import { storeToday } from '../../shared/utils/store-date';
 
 export type DashboardPeriod = 'TODAY' | 'WEEK' | 'MONTH' | 'RANGE';
 export type RankBy = 'sales' | 'profit';
@@ -16,7 +17,6 @@ interface ChartPoint {
   y: number;
 }
 
-const STORE_ZONE = 'America/La_Paz';
 const CHART_WIDTH = 640;
 const CHART_HEIGHT = 200;
 const CHART_TOP = 12;
@@ -28,11 +28,6 @@ const CONNECTION_MESSAGE = 'No se pudo conectar. Revisa tu internet.';
 
 function isConnectionError(err: unknown): boolean {
   return err instanceof TimeoutError || (err instanceof HttpErrorResponse && CONNECTION_ERRORS.includes(err.status));
-}
-
-/** Today in the store's time zone as YYYY-MM-DD, like the store days of the server. */
-export function storeToday(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: STORE_ZONE }).format(now);
 }
 
 /** The range of a period ending today: today, Monday of this week or the 1st of this month. */
