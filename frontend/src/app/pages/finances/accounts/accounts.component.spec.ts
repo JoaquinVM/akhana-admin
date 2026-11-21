@@ -235,4 +235,38 @@ describe('AccountsComponent', () => {
     expect(component.openingBalanceError()).toBe('La cuenta ya tiene movimientos');
     expect(component.isOpeningBalanceModalOpen()).toBe(true);
   });
+
+  it('al cerrar el formulario con cambios sin guardar pide confirmar; sin cambios cierra directo', () => {
+    component.openEditModal(mockAccounts[1]);
+    component.attemptCloseForm();
+    expect(component.isFormModalOpen()).toBe(false);
+
+    component.openCreateModal();
+    component.accountForm.patchValue({ name: 'Billetera Sol' });
+    component.attemptCloseForm();
+    expect(component.isDiscardConfirmOpen()).toBe(true);
+    expect(component.isFormModalOpen()).toBe(true);
+    component.cancelDiscard();
+    expect(component.accountForm.get('name')?.value).toBe('Billetera Sol');
+
+    component.attemptCloseForm();
+    component.discardChanges();
+    expect(component.isFormModalOpen()).toBe(false);
+  });
+
+  it('abre la auditoría de la cuenta con los seis campos', () => {
+    const acc: FinancialAccount = {
+      ...mockAccounts[2], createdBy: 'admin', createdAt: '2026-10-01T12:00:00Z',
+      updatedBy: 'operador', updatedAt: '2026-10-02T12:00:00Z'
+    };
+    component.openAuditModal(acc);
+    fixture.detectChanges();
+    expect(component.auditData()).toEqual({
+      createdBy: 'admin', createdAt: '2026-10-01T12:00:00Z', updatedBy: 'operador',
+      updatedAt: '2026-10-02T12:00:00Z', deletedBy: undefined, deletedAt: undefined
+    });
+    expect(fixture.nativeElement.querySelectorAll('.btn-audit').length).toBe(3);
+    component.closeAuditModal();
+    expect(component.auditAccount()).toBeNull();
+  });
 });

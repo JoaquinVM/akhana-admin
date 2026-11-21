@@ -76,22 +76,46 @@ describe('CreditorsViewComponent', () => {
 
   it('DEU-01: crea una persona con nombre recortado y campos vacíos en null', () => {
     component.openCreate();
-    component.updateDraft('name', '  Tía Rosa ');
+    component.form.controls.name.setValue('  Tía Rosa ');
     component.save();
     expect(creditorService.createCreditor).toHaveBeenCalledWith({ name: 'Tía Rosa', phone: null, description: null, status: 'ACTIVO' });
     expect(component.isFormOpen()).toBe(false);
   });
 
-  it('DEU-01: exige nombre y muestra el error del servidor', () => {
+  it('DEU-01: exige nombre con el error junto al campo y muestra el error del servidor', () => {
     component.openCreate();
+    component.form.controls.name.setValue('   ');
     component.save();
-    expect(component.formError()).toBe('El nombre es obligatorio.');
+    fixture.detectChanges();
+    expect(component.formError()).toBeNull();
+    expect(fixture.nativeElement.querySelector('#creditor-name').classList).toContain('is-invalid');
+    expect(fixture.nativeElement.querySelector('.invalid-feedback').textContent).toContain('El nombre es obligatorio.');
     expect(creditorService.createCreditor).not.toHaveBeenCalled();
 
     creditorService.createCreditor.mockReturnValue(throwError(() => ({ error: { message: "Ya existe una persona con el nombre 'Mami'." } })));
-    component.updateDraft('name', 'mami');
+    component.form.controls.name.setValue('mami');
     component.save();
     expect(component.formError()).toBe("Ya existe una persona con el nombre 'Mami'.");
+  });
+
+  it('DEU-01: al cerrar con cambios sin guardar pide confirmar y sin cambios cierra directo', () => {
+    component.openEdit(mami);
+    component.attemptCloseForm();
+    expect(component.isFormOpen()).toBe(false);
+
+    component.openEdit(mami);
+    component.form.controls.phone.setValue('70000000');
+    component.attemptCloseForm();
+    expect(component.isDiscardConfirmOpen()).toBe(true);
+    expect(component.isFormOpen()).toBe(true);
+    component.discardChanges();
+    expect(component.isFormOpen()).toBe(false);
+  });
+
+  it('DEU-04: el error de carga muestra el mensaje del servidor', () => {
+    creditorService.getCreditors.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadCreditors();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
   });
 
   it('DEU-01: al eliminar con deuda muestra el rechazo del servidor', () => {

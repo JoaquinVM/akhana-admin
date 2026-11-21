@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { searchDebouncer } from '../../../../shared/utils/search-debounce';
 import { CreditorService } from '../../../../core/debt/creditor.service';
@@ -13,16 +13,10 @@ import { CreditorDetailModalComponent } from '../creditor-detail-modal/creditor-
 import { PurchaseDetailModalComponent } from '../../../purchases/components/purchase-detail-modal/purchase-detail-modal.component';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { FormSnapshot, hasFormChanges } from '../../../../shared/utils/form-changes';
 
 // '' = active and inactive (deleted left out)
 export type CreditorStatusFilter = '' | CreditorStatus;
-
-interface CreditorDraft {
-  name: string;
-  phone: string;
-  description: string;
-  status: CreditorStatus;
-}
 
 // DEU-01 and DEU-04: people with their debt; create, edit, delete and detail with history
 @Component({
@@ -31,6 +25,7 @@ interface CreditorDraft {
   imports: [IconComponent, 
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     ModalComponent,
     ConfirmModalComponent,
     AuditModalComponent,
@@ -44,6 +39,7 @@ interface CreditorDraft {
 export class CreditorsViewComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
+  private readonly fb = inject(FormBuilder);
 
   readonly statusFilters: { value: CreditorStatusFilter; label: string }[] = [
     { value: '', label: 'Activas/Inactivas' },
@@ -64,9 +60,18 @@ export class CreditorsViewComponent implements OnInit {
   // Create or edit form
   isFormOpen = signal<boolean>(false);
   editing = signal<Creditor | null>(null);
-  draft = signal<CreditorDraft>(emptyDraft());
+  form = this.fb.nonNullable.group({
+    // A name made only of spaces counts as empty
+    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(150)]],
+    phone: ['', [Validators.maxLength(30)]],
+    description: ['', [Validators.maxLength(500)]],
+    status: ['ACTIVO' as CreditorStatus]
+  });
+  // Values when the modal opened, to ask before discarding changes
+  private originalValues: FormSnapshot | null = null;
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+  isDiscardConfirmOpen = signal<boolean>(false);
 
   toDelete = signal<Creditor | null>(null);
   isDeleting = signal<boolean>(false);
@@ -94,7 +99,7 @@ export class CreditorsViewComponent implements OnInit {
   ngOnInit(): void {
     this.creditorService.getAccounts().subscribe({
       next: accounts => this.accounts.set(accounts),
-      error: () => this.errorMessage.set('No se pudieron cargar las cuentas para devolver.')
+      error: err => this.errorMessage.set(err.error?.message ?? 'No se pudieron cargar las cuentas para devolver.')
     });
     this.loadCreditors();
   }
@@ -109,8 +114,8 @@ export class CreditorsViewComponent implements OnInit {
         this.creditors.set(creditors);
         this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Error al cargar las personas. Intente nuevamente.');
+      error: err => {
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar las personas. Intente nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -136,9 +141,7 @@ export class CreditorsViewComponent implements OnInit {
 
   openCreate(): void {
     this.editing.set(null);
-    this.draft.set(emptyDraft());
-    this.formError.set(null);
-    this.isFormOpen.set(true);
+    this.resetForm({ name: '', phone: '', description: '', status: 'ACTIVO' });
   }
 
   openEdit(creditor: Creditor): void {
@@ -146,28 +149,50 @@ export class CreditorsViewComponent implements OnInit {
       return;
     }
     this.editing.set(creditor);
-    this.draft.set({
+    this.resetForm({
       name: creditor.name,
       phone: creditor.phone ?? '',
       description: creditor.description ?? '',
       status: creditor.status
     });
+  }
+
+  private resetForm(values: { name: string; phone: string; description: string; status: CreditorStatus }): void {
+    this.form.reset(values);
+    this.originalValues = this.form.getRawValue();
     this.formError.set(null);
     this.isFormOpen.set(true);
   }
 
-  updateDraft(field: keyof CreditorDraft, value: string): void {
-    this.draft.update(d => ({ ...d, [field]: value }));
+  hasFormChanges(): boolean {
+    return hasFormChanges(this.form, this.originalValues);
   }
 
-  closeForm(): void {
-    if (!this.isSubmitting()) {
-      this.isFormOpen.set(false);
+  // With unsaved changes, ask before closing
+  attemptCloseForm(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+    if (this.hasFormChanges()) {
+      this.isDiscardConfirmOpen.set(true);
+    } else {
+      this.closeForm();
     }
   }
 
+  discardChanges(): void {
+    this.isDiscardConfirmOpen.set(false);
+    this.closeForm();
+  }
+
+  closeForm(): void {
+    this.isFormOpen.set(false);
+    this.formError.set(null);
+    this.originalValues = null;
+  }
+
   buildRequest(): CreditorRequest {
-    const d = this.draft();
+    const d = this.form.getRawValue();
     const phone = d.phone.trim();
     const description = d.description.trim();
     return {
@@ -179,11 +204,11 @@ export class CreditorsViewComponent implements OnInit {
   }
 
   save(): void {
-    const request = this.buildRequest();
-    if (request.name.length === 0) {
-      this.formError.set('El nombre es obligatorio.');
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
+    const request = this.buildRequest();
     this.isSubmitting.set(true);
     this.formError.set(null);
     const editing = this.editing();
@@ -194,7 +219,7 @@ export class CreditorsViewComponent implements OnInit {
       next: () => {
         this.toast.success(editing ? 'Persona actualizada.' : 'Persona creada.');
         this.isSubmitting.set(false);
-        this.isFormOpen.set(false);
+        this.closeForm();
         this.loadCreditors();
       },
       error: err => {
@@ -252,10 +277,6 @@ export class CreditorsViewComponent implements OnInit {
     this.detailRefresh.update(n => n + 1);
     this.loadCreditors();
   }
-}
-
-function emptyDraft(): CreditorDraft {
-  return { name: '', phone: '', description: '', status: 'ACTIVO' };
 }
 
 function round2(value: number): number {

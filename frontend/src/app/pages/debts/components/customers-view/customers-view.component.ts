@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { searchDebouncer } from '../../../../shared/utils/search-debounce';
 import { CreditorService } from '../../../../core/debt/creditor.service';
@@ -13,16 +13,10 @@ import { CustomerDetailModalComponent } from '../customer-detail-modal/customer-
 import { SaleDetailModalComponent } from '../../../../shared/components/sale-detail-modal/sale-detail-modal.component';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { FormSnapshot, hasFormChanges } from '../../../../shared/utils/form-changes';
 
 // '' = active and inactive (deleted left out)
 export type CustomerStatusFilter = '' | CustomerStatus;
-
-interface CustomerDraft {
-  name: string;
-  phone: string;
-  description: string;
-  status: CustomerStatus;
-}
 
 // DEU-05 and DEU-07: customers with their receivable; create, edit, delete and detail with history
 @Component({
@@ -31,6 +25,7 @@ interface CustomerDraft {
   imports: [IconComponent, 
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     ModalComponent,
     ConfirmModalComponent,
     AuditModalComponent,
@@ -45,6 +40,7 @@ export class CustomersViewComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly creditorService = inject(CreditorService);
   private readonly customerService = inject(CustomerService);
+  private readonly fb = inject(FormBuilder);
 
   readonly statusFilters: { value: CustomerStatusFilter; label: string }[] = [
     { value: '', label: 'Activos/Inactivos' },
@@ -65,9 +61,18 @@ export class CustomersViewComponent implements OnInit {
   // Create or edit form
   isFormOpen = signal<boolean>(false);
   editing = signal<Customer | null>(null);
-  draft = signal<CustomerDraft>(emptyDraft());
+  form = this.fb.nonNullable.group({
+    // A name made only of spaces counts as empty
+    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(150)]],
+    phone: ['', [Validators.maxLength(30)]],
+    description: ['', [Validators.maxLength(500)]],
+    status: ['ACTIVO' as CustomerStatus]
+  });
+  // Values when the modal opened, to ask before discarding changes
+  private originalValues: FormSnapshot | null = null;
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+  isDiscardConfirmOpen = signal<boolean>(false);
 
   toDelete = signal<Customer | null>(null);
   isDeleting = signal<boolean>(false);
@@ -93,7 +98,7 @@ export class CustomersViewComponent implements OnInit {
   ngOnInit(): void {
     this.creditorService.getAccounts().subscribe({
       next: accounts => this.accounts.set(accounts),
-      error: () => this.errorMessage.set('No se pudieron cargar las cuentas para cobrar.')
+      error: err => this.errorMessage.set(err.error?.message ?? 'No se pudieron cargar las cuentas para cobrar.')
     });
     this.loadCustomers();
   }
@@ -108,8 +113,8 @@ export class CustomersViewComponent implements OnInit {
         this.customers.set(customers);
         this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Error al cargar los clientes. Intente nuevamente.');
+      error: err => {
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar los clientes. Intente nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -135,9 +140,7 @@ export class CustomersViewComponent implements OnInit {
 
   openCreate(): void {
     this.editing.set(null);
-    this.draft.set(emptyDraft());
-    this.formError.set(null);
-    this.isFormOpen.set(true);
+    this.resetForm({ name: '', phone: '', description: '', status: 'ACTIVO' });
   }
 
   openEdit(customer: Customer): void {
@@ -145,28 +148,50 @@ export class CustomersViewComponent implements OnInit {
       return;
     }
     this.editing.set(customer);
-    this.draft.set({
+    this.resetForm({
       name: customer.name,
       phone: customer.phone ?? '',
       description: customer.description ?? '',
       status: customer.status
     });
+  }
+
+  private resetForm(values: { name: string; phone: string; description: string; status: CustomerStatus }): void {
+    this.form.reset(values);
+    this.originalValues = this.form.getRawValue();
     this.formError.set(null);
     this.isFormOpen.set(true);
   }
 
-  updateDraft(field: keyof CustomerDraft, value: string): void {
-    this.draft.update(d => ({ ...d, [field]: value }));
+  hasFormChanges(): boolean {
+    return hasFormChanges(this.form, this.originalValues);
   }
 
-  closeForm(): void {
-    if (!this.isSubmitting()) {
-      this.isFormOpen.set(false);
+  // With unsaved changes, ask before closing
+  attemptCloseForm(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+    if (this.hasFormChanges()) {
+      this.isDiscardConfirmOpen.set(true);
+    } else {
+      this.closeForm();
     }
   }
 
+  discardChanges(): void {
+    this.isDiscardConfirmOpen.set(false);
+    this.closeForm();
+  }
+
+  closeForm(): void {
+    this.isFormOpen.set(false);
+    this.formError.set(null);
+    this.originalValues = null;
+  }
+
   buildRequest(): CustomerRequest {
-    const d = this.draft();
+    const d = this.form.getRawValue();
     const phone = d.phone.trim();
     const description = d.description.trim();
     return {
@@ -178,11 +203,11 @@ export class CustomersViewComponent implements OnInit {
   }
 
   save(): void {
-    const request = this.buildRequest();
-    if (request.name.length === 0) {
-      this.formError.set('El nombre es obligatorio.');
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
+    const request = this.buildRequest();
     this.isSubmitting.set(true);
     this.formError.set(null);
     const editing = this.editing();
@@ -193,7 +218,7 @@ export class CustomersViewComponent implements OnInit {
       next: () => {
         this.toast.success(editing ? 'Cliente actualizado.' : 'Cliente creado.');
         this.isSubmitting.set(false);
-        this.isFormOpen.set(false);
+        this.closeForm();
         this.loadCustomers();
       },
       error: err => {
@@ -251,10 +276,6 @@ export class CustomersViewComponent implements OnInit {
     this.detailRefresh.update(n => n + 1);
     this.loadCustomers();
   }
-}
-
-function emptyDraft(): CustomerDraft {
-  return { name: '', phone: '', description: '', status: 'ACTIVO' };
 }
 
 function round2(value: number): number {

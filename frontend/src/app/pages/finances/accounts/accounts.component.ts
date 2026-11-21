@@ -6,8 +6,10 @@ import { FinancialAccountService } from '../../../core/finance/financial-account
 import { FinancialTransactionService } from '../../../core/finance/financial-transaction.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
+import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { FormSnapshot, hasFormChanges } from '../../../shared/utils/form-changes';
 import { ConnectionNoticeComponent } from '../../../shared/components/connection-notice/connection-notice.component';
 import { operationDayLabel } from '../../../shared/utils/store-date';
 
@@ -20,6 +22,7 @@ import { operationDayLabel } from '../../../shared/utils/store-date';
     ReactiveFormsModule,
     ModalComponent,
     ConfirmModalComponent,
+    AuditModalComponent,
     ColorPickerComponent
   ],
   templateUrl: './accounts.component.html',
@@ -44,6 +47,9 @@ export class AccountsComponent implements OnInit {
   selectedAccountId = signal<string | null>(null);
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+  // Values when the modal opened, to ask before discarding changes
+  private originalFormValues: FormSnapshot | null = null;
+  isDiscardConfirmOpen = signal<boolean>(false);
 
   // Modal Eliminar
   isDeleteModalOpen = signal<boolean>(false);
@@ -56,6 +62,16 @@ export class AccountsComponent implements OnInit {
   accountTransactions = signal<FinancialTransaction[]>([]);
   isLoadingMovements = signal<boolean>(false);
   movementsLoadFailed = signal<boolean>(false);
+
+  // Audit modal (the six who/when fields of the account)
+  auditAccount = signal<FinancialAccount | null>(null);
+  auditData = computed(() => {
+    const a = this.auditAccount();
+    return a
+      ? { createdBy: a.createdBy, createdAt: a.createdAt, updatedBy: a.updatedBy, updatedAt: a.updatedAt,
+          deletedBy: a.deletedBy, deletedAt: a.deletedAt }
+      : null;
+  });
 
   // Cutover balance modal (FIN-01)
   isOpeningBalanceModalOpen = signal<boolean>(false);
@@ -112,6 +128,7 @@ export class AccountsComponent implements OnInit {
       isQrAccount: false
     });
     this.accountForm.get('initialBalance')?.enable();
+    this.originalFormValues = this.accountForm.getRawValue();
     this.isFormModalOpen.set(true);
   }
 
@@ -126,12 +143,39 @@ export class AccountsComponent implements OnInit {
       isQrAccount: account.isQrAccount
     });
     this.accountForm.get('initialBalance')?.disable();
+    this.originalFormValues = this.accountForm.getRawValue();
     this.isFormModalOpen.set(true);
+  }
+
+  hasFormChanges(): boolean {
+    return hasFormChanges(this.accountForm, this.originalFormValues);
+  }
+
+  // With unsaved changes, ask before closing
+  attemptCloseForm(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+    if (this.hasFormChanges()) {
+      this.isDiscardConfirmOpen.set(true);
+    } else {
+      this.closeFormModal();
+    }
+  }
+
+  discardChanges(): void {
+    this.isDiscardConfirmOpen.set(false);
+    this.closeFormModal();
+  }
+
+  cancelDiscard(): void {
+    this.isDiscardConfirmOpen.set(false);
   }
 
   closeFormModal(): void {
     this.isFormModalOpen.set(false);
     this.formError.set(null);
+    this.originalFormValues = null;
   }
 
   saveAccount(): void {
@@ -156,7 +200,7 @@ export class AccountsComponent implements OnInit {
         next: () => {
           this.toast.success('Cuenta actualizada.');
           this.isSubmitting.set(false);
-          this.isFormModalOpen.set(false);
+          this.closeFormModal();
           this.loadAccounts();
         },
         error: (err) => {
@@ -169,7 +213,7 @@ export class AccountsComponent implements OnInit {
         next: () => {
           this.toast.success('Cuenta creada.');
           this.isSubmitting.set(false);
-          this.isFormModalOpen.set(false);
+          this.closeFormModal();
           this.loadAccounts();
         },
         error: (err) => {
@@ -288,5 +332,13 @@ export class AccountsComponent implements OnInit {
     this.isMovementsModalOpen.set(false);
     this.selectedAccountForMovements.set(null);
     this.accountTransactions.set([]);
+  }
+
+  openAuditModal(account: FinancialAccount): void {
+    this.auditAccount.set(account);
+  }
+
+  closeAuditModal(): void {
+    this.auditAccount.set(null);
   }
 }

@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.dto.ProductImportResponse.RowStatus;
 import com.akhana.akhana_admin.dto.ProductPresentationRequest;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.CategoryRepository;
+import com.akhana.akhana_admin.repository.ProductPriceChangeRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
@@ -55,7 +56,6 @@ public class ProductImportServiceImpl implements ProductImportService {
     static final String DEFAULT_COLOR = "#475569";
     static final BigDecimal MIN_UNIT_PRICE = BigDecimal.ONE;
     static final BigDecimal MIN_KILO_PRICE = BigDecimal.TEN;
-    static final String ZERO_COST = "Costo 0: toda la venta cuenta como utilidad.";
     static final String LOSS = "Se vende a pérdida.";
     static final String BELOW_ONE = "Precio menor a Bs 1: si se vende por peso, marcar en Se vende por Gramo, 100 g o Kilo.";
     static final String BELOW_TEN_PER_KILO = "Precio por kilo menor a Bs 10: revisar Se vende por (¿Gramo o 100 g?).";
@@ -66,6 +66,7 @@ public class ProductImportServiceImpl implements ProductImportService {
     private final SupplierRepository supplierRepository;
     private final TagRepository tagRepository;
     private final ProductPresentationService presentationService;
+    private final ProductPriceChangeRepository priceChangeRepository;
 
     enum Column {
         GROUP("Grupo", true, "el grupo"),
@@ -421,7 +422,7 @@ public class ProductImportServiceImpl implements ProductImportService {
         buyPrice = buyPrice.setScale(2, RoundingMode.UNNECESSARY);
         sellPrice = sellPrice.setScale(2, RoundingMode.UNNECESSARY);
         if (buyPrice.signum() == 0) {
-            warnings.add(ZERO_COST);
+            warnings.add(ProductServiceImpl.ZERO_COST_WARNING);
         }
         if (sellPrice.compareTo(buyPrice) < 0) {
             warnings.add(LOSS);
@@ -548,7 +549,7 @@ public class ProductImportServiceImpl implements ProductImportService {
         // CAT-11: the cost is always weight x cost per kilo of the base product
         BigDecimal cost = pound.weightKg().multiply(base.buyPrice).setScale(2, RoundingMode.HALF_UP);
         List<String> warnings = fixedPrice.compareTo(cost) < 0
-            ? List.of("La presentación '" + pound.name() + "' se vende a pérdida.")
+            ? List.of(ProductPresentationServiceImpl.lossWarning(pound.name()))
             : List.of();
         addWarnings(analysis, row.rowNumber(), code, name, warnings);
     }
@@ -658,6 +659,8 @@ public class ProductImportServiceImpl implements ProductImportService {
                 .createdBy(username)
                 .createdAt(now)
                 .build());
+            // CAT-07: the initial price enters the history, as when the product is created from the form
+            priceChangeRepository.save(ProductServiceImpl.catalogPriceChange(product, null, null, username, now));
             if (draft.saleUnit == SaleUnit.KILOGRAM) {
                 presentationService.applyPresentations(product, presentationRequests(draft), null, username);
             }

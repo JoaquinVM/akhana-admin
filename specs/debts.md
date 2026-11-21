@@ -46,6 +46,10 @@ estado (Activo, Inactivo, Eliminado), como proveedores (COM-01).
 - **Cuando** se elimina o inactiva una persona con deuda mayor a 0 **entonces** se rechaza: «<nombre> tiene una
   deuda de Bs 150.00; devuélvala antes de darla de baja.»
 - **Cuando** se elimina con deuda 0 **entonces** queda Eliminada (baja lógica) y su historial se sigue viendo.
+- **Cuando** se guarda el formulario sin nombre (o solo con espacios) **entonces** «El nombre es obligatorio.» bajo
+  el campo, sin llamar al servidor; el error del servidor va dentro del formulario.
+- **Cuando** se cierra el formulario con cambios sin guardar **entonces** pide confirmar «¿Descartar cambios?»; sin
+  cambios cierra directo. Igual en el formulario de clientes (DEU-05).
 - **Cuando** una persona está inactiva o eliminada **entonces** no aparece para nuevos pagos de pedidos; sus
   pagos ya registrados siguen valiendo.
 

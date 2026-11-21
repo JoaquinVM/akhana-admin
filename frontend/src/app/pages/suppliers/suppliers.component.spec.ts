@@ -76,6 +76,12 @@ describe('SuppliersComponent', () => {
     fixture.detectChanges();
   });
 
+
+  it('el error de carga muestra el mensaje del servidor en la pantalla', () => {
+    mockSupplierService.getSuppliers.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadSuppliers();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
+  });
   it('TEST-COMP-01: debe cargar proveedores ordenados por nombre A-Z y excluir eliminados en filtro por defecto', () => {
     expect(mockSupplierService.getSuppliers).toHaveBeenCalledTimes(1);
 

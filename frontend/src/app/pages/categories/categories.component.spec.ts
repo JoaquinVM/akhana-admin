@@ -74,6 +74,12 @@ describe('CategoriesComponent', () => {
     fixture.detectChanges();
   });
 
+
+  it('el error de carga muestra el mensaje del servidor en la pantalla', () => {
+    mockCategoryService.getCategories.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadCategories();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
+  });
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
   });
