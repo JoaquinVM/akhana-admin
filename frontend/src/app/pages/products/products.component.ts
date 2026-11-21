@@ -133,7 +133,6 @@ export class ProductsComponent implements OnInit {
   formNoBarcode = signal<boolean>(false);
 
   // Custom select dropdowns in the form
-  isStatusDropdownOpen = signal<boolean>(false);
   // Picker of the tag to add: it only adds, the chosen tags live in tagIds
   readonly tagPicker = new FormControl<string | null>(null);
 
@@ -549,26 +548,9 @@ export class ProductsComponent implements OnInit {
 
   // --- Category, supplier, status and tag selection ---
 
-  closeAllDropdowns(): void {
-    this.isStatusDropdownOpen.set(false);
-  }
-
   selectCategory(category: Category): void {
     this.productForm.patchValue({ categoryId: category.id });
     this.productForm.get('categoryId')?.markAsTouched();
-    this.formVersion.update(v => v + 1);
-  }
-
-  toggleStatusDropdown(): void {
-    const open = !this.isStatusDropdownOpen();
-    this.closeAllDropdowns();
-    this.isStatusDropdownOpen.set(open);
-  }
-
-  selectStatus(status: ProductStatus): void {
-    this.productForm.patchValue({ status });
-    this.productForm.get('status')?.markAsTouched();
-    this.isStatusDropdownOpen.set(false);
     this.formVersion.update(v => v + 1);
   }
 
@@ -591,7 +573,6 @@ export class ProductsComponent implements OnInit {
     if (!this.isFormModalOpen()) return;
     const target = event.target as HTMLElement;
     if (!target.closest('.position-relative')) {
-      this.closeAllDropdowns();
     }
   }
 
@@ -602,7 +583,6 @@ export class ProductsComponent implements OnInit {
     this.selectedProductId.set(null);
     this.formError.set(null);
     this.originalFormValues.set(null);
-    this.closeAllDropdowns();
 
     this.productForm.reset({
       code: '',
@@ -633,7 +613,6 @@ export class ProductsComponent implements OnInit {
     this.isEditing.set(true);
     this.selectedProductId.set(product.id);
     this.formError.set(null);
-    this.closeAllDropdowns();
 
     const initialData = {
       code: product.code || '',
@@ -701,7 +680,6 @@ export class ProductsComponent implements OnInit {
     this.isFormModalOpen.set(false);
     this.formError.set(null);
     this.originalFormValues.set(null);
-    this.closeAllDropdowns();
     this.productForm.reset({
       code: '',
       name: '',
