@@ -42,7 +42,7 @@ export class LoginComponent {
   readonly secretGroups = computed(() => this.secondFactor()?.secret?.match(/.{1,4}/g)?.join(' ') ?? '');
 
   constructor() {
-    if (this.authService.consumeSessionEnded?.()) {
+    if (this.authService.consumeSessionEnded()) {
       this.errorMessage.set(SESSION_ENDED);
     }
   }

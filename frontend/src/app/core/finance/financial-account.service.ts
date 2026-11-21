@@ -26,9 +26,6 @@ export class FinancialAccountService {
     );
   }
 
-  getAccountById(id: string): Observable<FinancialAccount> {
-    return this.http.get<FinancialAccount>(`${this.apiUrl}/${id}`);
-  }
 
   createAccount(request: FinancialAccountRequest): Observable<FinancialAccount> {
     this.isLoading.set(true);

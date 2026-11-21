@@ -35,7 +35,7 @@ describe('AuthService', () => {
     expect(service).toBeTruthy();
     expect(service.isAuthenticated()).toBe(false);
     expect(service.getToken()).toBeNull();
-    expect(service.getCurrentUser()).toBeNull();
+    expect(service.currentUser()).toBeNull();
   });
 
   it('should authenticate user, store token and session, and update signals on login success', () => {
@@ -61,11 +61,11 @@ describe('AuthService', () => {
 
     expect(service.isAuthenticated()).toBe(true);
     expect(service.getToken()).toBe('jwt.test.token');
-    expect(service.userRole()).toBe('ADMINISTRATOR');
+    expect(service.currentUser()?.role).toBe('ADMINISTRATOR');
     expect(service.permissions()).toEqual(['POS', 'USERS']);
     expect(service.hasPermission('POS')).toBe(true);
     expect(service.hasPermission('FINANCES_SUMMARY')).toBe(false);
-    expect(service.getCurrentUser()).toEqual({
+    expect(service.currentUser()).toEqual({
       id: '123e4567-e89b-12d3-a456-426614174000',
       username: 'admin',
       fullName: 'Administrador General',
@@ -84,7 +84,7 @@ describe('AuthService', () => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
     const restoredService = TestBed.inject(AuthService);
 
-    expect(restoredService.getCurrentUser()).toBeNull();
+    expect(restoredService.currentUser()).toBeNull();
     expect(restoredService.isAuthenticated()).toBe(false);
   });
 
@@ -99,7 +99,7 @@ describe('AuthService', () => {
 
     expect(restoredService.isAuthenticated()).toBe(false);
     expect(restoredService.getToken()).toBeNull();
-    expect(restoredService.getCurrentUser()).toBeNull();
+    expect(restoredService.currentUser()).toBeNull();
     expect(localStorage.getItem('akhana_token')).toBeNull();
     expect(localStorage.getItem('akhana_user')).toBeNull();
     expect(navigateSpy).toHaveBeenCalledTimes(1);

@@ -183,8 +183,8 @@ describe('NavbarComponent', () => {
   it('debe identificar reactivamente el grupo activo cuando la URL coincide con un hijo', () => {
     vi.spyOn(router, 'url', 'get').mockReturnValue('/products');
 
-    const salesGroup = component.navGroups.find(g => g.id === 'sales')!;
-    const catalogGroup = component.navGroups.find(g => g.id === 'catalog')!;
+    const salesGroup = component.visibleNavGroups().find(g => g.id === 'sales')!;
+    const catalogGroup = component.visibleNavGroups().find(g => g.id === 'catalog')!;
 
     expect(component.isGroupActive(salesGroup)).toBe(false);
     expect(component.isGroupActive(catalogGroup)).toBe(true);

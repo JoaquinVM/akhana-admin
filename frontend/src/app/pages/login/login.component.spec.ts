@@ -12,14 +12,15 @@ describe('LoginComponent', () => {
   let authServiceSpy: {
     login: ReturnType<typeof vi.fn>;
     loginWithSecondFactor: ReturnType<typeof vi.fn>;
-    consumeSessionEnded?: ReturnType<typeof vi.fn>;
+    consumeSessionEnded: ReturnType<typeof vi.fn>;
   };
   let routerSpy: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     authServiceSpy = {
       login: vi.fn(),
-      loginWithSecondFactor: vi.fn()
+      loginWithSecondFactor: vi.fn(),
+      consumeSessionEnded: vi.fn().mockReturnValue(false)
     };
     routerSpy = {
       navigate: vi.fn()

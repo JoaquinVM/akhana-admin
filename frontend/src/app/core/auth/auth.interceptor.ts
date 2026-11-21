@@ -28,7 +28,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.url.includes('/api/auth/login')) {
         // With a token there was a session the server no longer accepts: the login explains it
         if (token) {
-          authService.markSessionEnded?.();
+          authService.markSessionEnded();
         }
         authService.clearSession();
         router.navigate(['/login']);

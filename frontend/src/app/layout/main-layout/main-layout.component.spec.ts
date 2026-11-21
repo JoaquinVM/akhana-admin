@@ -15,6 +15,8 @@ describe('MainLayoutComponent', () => {
   beforeEach(async () => {
     mockAuthService = {
       currentUser: signal({ id: '1', username: 'admin', role: 'ADMINISTRATOR' }),
+      permissions: signal<string[]>([]),
+      hasPermission: vi.fn().mockReturnValue(true),
       logout: vi.fn(),
       fetchCurrentUserProfile: vi.fn().mockReturnValue(of({ id: '1', username: 'admin', role: 'ADMINISTRATOR' }))
     };

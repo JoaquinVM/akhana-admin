@@ -35,9 +35,6 @@ export class FinancialCategoryService {
     );
   }
 
-  getCategoryById(id: string): Observable<FinancialCategory> {
-    return this.http.get<FinancialCategory>(`${this.apiUrl}/${id}`);
-  }
 
   createCategory(request: FinancialCategoryRequest): Observable<FinancialCategory> {
     this.isLoading.set(true);

@@ -52,7 +52,6 @@ describe('TagsComponent', () => {
   beforeEach(async () => {
     mockTagService = {
       getTags: vi.fn().mockReturnValue(of(mockTags)),
-      getTagById: vi.fn(),
       createTag: vi.fn(),
       updateTag: vi.fn(),
       deleteTag: vi.fn().mockReturnValue(of(null))
