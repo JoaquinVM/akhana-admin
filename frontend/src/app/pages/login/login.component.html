@@ -39,7 +39,7 @@
             @if (qrDataUrl(); as qr) {
               <img class="qr-image" [src]="qr" alt="Código QR para la app autenticadora" />
             }
-            <p class="step-text">¿No puede escanearlo? Ingresa esta clave en la app:</p>
+            <p class="step-text">¿No puedes escanearlo? Ingresa esta clave en la app:</p>
             <code class="secret-key">{{ secretGroups() }}</code>
             <p class="step-text">Después escribe el código de 6 dígitos que muestra la app.</p>
           } @else {

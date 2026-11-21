@@ -143,7 +143,7 @@ public class AuthServiceImpl implements AuthService {
             user.getRole(),
             user.getPermissions(),
             user.isMustChangePassword(),
-            user.isMustChangePassword() ? "Debe cambiar tu contraseña." : "Sesión iniciada.",
+            user.isMustChangePassword() ? "Debes cambiar tu contraseña." : "Sesión iniciada.",
             null
         );
     }

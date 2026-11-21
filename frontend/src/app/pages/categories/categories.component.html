@@ -208,7 +208,7 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Categoría' : 'Nueva categoría'"
-    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la categoría' : 'Completa la información para registrar una nueva categoría en el catálogo'"
+    [subtitle]="isEditing() ? 'Cambia los datos de la categoría' : 'Completa los datos de la categoría nueva'"
     size="md"
     [closeOnBackdrop]="false"
     (close)="attemptCloseForm()">
@@ -316,7 +316,7 @@
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     title="¿Descartar cambios?"
-    message="Tiene cambios sin guardar en el formulario. Si continúa, perderá toda la información modificada."
+    message="Tienes cambios sin guardar. Si sigues, se pierden."
     confirmText="Descartar cambios"
     cancelText="Continuar editando"
     variant="warning"
