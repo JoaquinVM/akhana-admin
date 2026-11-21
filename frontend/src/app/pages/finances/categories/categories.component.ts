@@ -8,6 +8,7 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/
 import { AuditModalComponent } from '../../../shared/components/audit-modal/audit-modal.component';
 import { ColorPickerComponent } from '../../../shared/components/color-picker/color-picker.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { FormSnapshot, hasFormChanges } from '../../../shared/utils/form-changes';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 export type CategoryTypeFilter = 'TODOS' | 'INGRESO' | 'GASTO';
@@ -44,6 +45,9 @@ export class FinancialCategoriesComponent implements OnInit {
   selectedCategoryId = signal<string | null>(null);
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
+  // Values when the modal opened, to ask before discarding changes
+  private originalFormValues: FormSnapshot | null = null;
+  isDiscardConfirmOpen = signal<boolean>(false);
 
   // Modal Eliminar
   isDeleteModalOpen = signal<boolean>(false);
@@ -119,6 +123,7 @@ export class FinancialCategoriesComponent implements OnInit {
       isSalesDefault: false
     });
     this.categoryForm.get('type')?.enable();
+    this.originalFormValues = this.categoryForm.getRawValue();
     this.isFormModalOpen.set(true);
   }
 
@@ -133,12 +138,39 @@ export class FinancialCategoriesComponent implements OnInit {
       isSalesDefault: category.isSalesDefault
     });
     this.categoryForm.get('type')?.disable();
+    this.originalFormValues = this.categoryForm.getRawValue();
     this.isFormModalOpen.set(true);
+  }
+
+  hasFormChanges(): boolean {
+    return hasFormChanges(this.categoryForm, this.originalFormValues);
+  }
+
+  // With unsaved changes, ask before closing
+  attemptCloseForm(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+    if (this.hasFormChanges()) {
+      this.isDiscardConfirmOpen.set(true);
+    } else {
+      this.closeFormModal();
+    }
+  }
+
+  discardChanges(): void {
+    this.isDiscardConfirmOpen.set(false);
+    this.closeFormModal();
+  }
+
+  cancelDiscard(): void {
+    this.isDiscardConfirmOpen.set(false);
   }
 
   closeFormModal(): void {
     this.isFormModalOpen.set(false);
     this.formError.set(null);
+    this.originalFormValues = null;
   }
 
   saveCategory(): void {
@@ -163,7 +195,7 @@ export class FinancialCategoriesComponent implements OnInit {
         next: () => {
           this.toast.success('Categoría actualizada.');
           this.isSubmitting.set(false);
-          this.isFormModalOpen.set(false);
+          this.closeFormModal();
           this.loadCategories();
         },
         error: (err) => {
@@ -176,7 +208,7 @@ export class FinancialCategoriesComponent implements OnInit {
         next: () => {
           this.toast.success('Categoría creada.');
           this.isSubmitting.set(false);
-          this.isFormModalOpen.set(false);
+          this.closeFormModal();
           this.loadCategories();
         },
         error: (err) => {

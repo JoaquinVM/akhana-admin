@@ -130,8 +130,8 @@ export class UsersComponent implements OnInit {
         this.totalPages.set(response.totalPages || 0);
         this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Error al cargar la lista de usuarios. Por favor, intente nuevamente.');
+      error: (err) => {
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de usuarios. Por favor, intente nuevamente.');
         this.isLoading.set(false);
       }
     });
@@ -374,6 +374,7 @@ export class UsersComponent implements OnInit {
     if (!user) return;
 
     this.isResettingSecondFactor.set(true);
+    this.errorMessage.set(null);
     this.userService.resetSecondFactor(user.id).subscribe({
       next: () => {
         this.toast.success('Segundo factor quitado. Lo activará en su próximo ingreso.');
@@ -384,7 +385,7 @@ export class UsersComponent implements OnInit {
       error: (err) => {
         this.isResettingSecondFactor.set(false);
         this.userToResetSecondFactor.set(null);
-        this.toast.error(err.error?.message || 'No se pudo quitar el segundo factor.');
+        this.errorMessage.set(err.error?.message ?? 'No se pudo quitar el segundo factor.');
       }
     });
   }

@@ -70,6 +70,12 @@ describe('TagsComponent', () => {
     fixture.detectChanges();
   });
 
+
+  it('el error de carga muestra el mensaje del servidor en la pantalla', () => {
+    mockTagService.getTags.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadTags();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
+  });
   it('debe crearse correctamente', () => {
     expect(component).toBeTruthy();
   });

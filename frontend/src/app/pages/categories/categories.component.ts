@@ -130,8 +130,8 @@ export class CategoriesComponent implements OnInit {
         this.categories.set(data);
         this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Error al cargar la lista de categorías. Por favor intente nuevamente.');
+      error: (err) => {
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de categorías. Por favor intente nuevamente.');
         this.isLoading.set(false);
       }
     });

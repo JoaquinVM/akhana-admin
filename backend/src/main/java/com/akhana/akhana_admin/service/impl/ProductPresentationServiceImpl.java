@@ -35,6 +35,11 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
     static final String TOO_MANY = "Un producto admite hasta " + MAX_ACTIVE + " presentaciones activas.";
     static final String NOT_OF_PRODUCT = "La presentación no pertenece a este producto.";
 
+    // Warned when a presentation's price is below its cost, from the form or the import (CAT-11)
+    static String lossWarning(String presentationName) {
+        return "La presentación '" + presentationName + "' se vende a pérdida.";
+    }
+
     private final ProductPresentationRepository presentationRepository;
     private final ProductPriceChangeRepository priceChangeRepository;
 
@@ -59,7 +64,7 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
         List<ProductPresentation> active = product.getPresentations().stream().filter(ProductPresentation::isActive).toList();
         for (ProductPresentation presentation : active) {
             if (priceOf(presentation, product).compareTo(costOf(presentation, product)) < 0) {
-                warnings.add("La presentación '" + presentation.getName() + "' se vende a pérdida.");
+                warnings.add(lossWarning(presentation.getName()));
             }
         }
         boolean priceChanged = previousSellPrice != null && previousSellPrice.compareTo(product.getSellPrice()) != 0;

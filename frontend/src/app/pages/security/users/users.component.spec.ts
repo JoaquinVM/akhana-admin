@@ -89,6 +89,12 @@ describe('UsersComponent', () => {
     fixture.detectChanges();
   });
 
+
+  it('el error de carga muestra el mensaje del servidor en la pantalla', () => {
+    mockUserService.getUsers.mockReturnValue(throwError(() => ({ error: { message: 'Sin conexión con la base.' } })));
+    component.loadUsers();
+    expect(component.errorMessage()).toBe('Sin conexión con la base.');
+  });
   it('debe crearse y cargar la lista paginada de usuarios', () => {
     expect(component).toBeTruthy();
     expect(mockUserService.getUsers).toHaveBeenCalledWith('', 0, 10);
@@ -357,7 +363,7 @@ describe('UsersComponent', () => {
       expect(mockUserService.getUsers).toHaveBeenCalledTimes(3);
     });
 
-    it('si el servidor lo rechaza, muestra su mensaje', () => {
+    it('si el servidor lo rechaza, muestra su mensaje en la pantalla, no en un toast', () => {
       const toast = TestBed.inject(ToastService);
       const error = vi.spyOn(toast, 'error');
       mockUserService.resetSecondFactor.mockReturnValue(throwError(() =>
@@ -366,7 +372,8 @@ describe('UsersComponent', () => {
       component.openResetSecondFactor(other);
       component.confirmResetSecondFactor();
 
-      expect(error).toHaveBeenCalledWith('Este usuario no tiene el segundo factor activo.');
+      expect(component.errorMessage()).toBe('Este usuario no tiene el segundo factor activo.');
+      expect(error).not.toHaveBeenCalled();
       expect(component.isResettingSecondFactor()).toBe(false);
     });
   });

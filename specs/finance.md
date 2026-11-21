@@ -51,6 +51,14 @@ El sistema SHALL permitir la administración de cuentas financieras iniciando co
 - **WHEN** el usuario actualiza el nombre o la selección de color de una cuenta existente
 - **THEN** el sistema persiste los cambios visuales y registra los datos de usuario y fecha de modificación en la auditoría sin alterar los saldos ni movimientos
 
+#### Scenario: Cerrar el formulario de cuenta o categoría con cambios sin guardar
+- **WHEN** el usuario cierra el formulario de una cuenta o de una categoría financiera después de cambiar algún dato
+- **THEN** la pantalla pide confirmar «¿Descartar cambios?» y, sin cambios, cierra directo
+
+#### Scenario: Auditoría de una cuenta
+- **WHEN** el usuario pulsa «Auditoría» en la tarjeta de una cuenta
+- **THEN** ve quién y cuándo la creó, la modificó y la eliminó, en el modal de auditoría compartido
+
 ---
 
 ### Requirement: Cuenta Caja protegida

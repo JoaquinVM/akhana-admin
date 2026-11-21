@@ -112,28 +112,29 @@
 
 <app-modal [isOpen]="isFormOpen()" [title]="editing() ? 'Editar persona' : 'Nueva persona'"
            subtitle="Persona que paga pedidos por el negocio" size="md"
-           [closeOnBackdrop]="false" (close)="closeForm()">
-  <form (ngSubmit)="save()">
+           [closeOnBackdrop]="false" [closeOnEscape]="false" (close)="attemptCloseForm()">
+  <form [formGroup]="form" (ngSubmit)="save()">
     @if (formError()) {
       <div class="alert alert-danger" role="alert"><span>{{ formError() }}</span></div>
     }
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label" for="creditor-name">Nombre <span class="required-mark">*</span></label>
-        <input id="creditor-name" class="form-control" name="name" maxlength="150" placeholder="Ej. Mami"
-               [ngModel]="draft().name" (ngModelChange)="updateDraft('name', $event)" />
+        <input id="creditor-name" class="form-control" formControlName="name" maxlength="150" placeholder="Ej. Mami"
+               [class.is-invalid]="form.controls.name.invalid && form.controls.name.touched" />
+        @if (form.controls.name.invalid && form.controls.name.touched) {
+          <span class="invalid-feedback">El nombre es obligatorio.</span>
+        }
       </div>
       <div class="form-group">
         <label class="form-label" for="creditor-phone">Teléfono</label>
-        <input id="creditor-phone" class="form-control" name="phone" maxlength="30"
-               [ngModel]="draft().phone" (ngModelChange)="updateDraft('phone', $event)" />
+        <input id="creditor-phone" class="form-control" formControlName="phone" maxlength="30" />
       </div>
     </div>
     @if (editing()) {
       <div class="form-group">
         <label class="form-label" for="creditor-status">Estado</label>
-        <select id="creditor-status" class="form-control" name="status"
-                [ngModel]="draft().status" (ngModelChange)="updateDraft('status', $event)">
+        <select id="creditor-status" class="form-control" formControlName="status">
           <option value="ACTIVO">Activa</option>
           <option value="INACTIVO">Inactiva</option>
         </select>
@@ -141,17 +142,26 @@
     }
     <div class="form-group">
       <label class="form-label" for="creditor-description">Descripción</label>
-      <textarea id="creditor-description" class="form-control" name="description" rows="3" maxlength="500"
-                [ngModel]="draft().description" (ngModelChange)="updateDraft('description', $event)"></textarea>
+      <textarea id="creditor-description" class="form-control" formControlName="description" rows="3" maxlength="500"></textarea>
     </div>
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" (click)="closeForm()" [disabled]="isSubmitting()">Cancelar</button>
+      <button type="button" class="btn btn-outline" (click)="attemptCloseForm()" [disabled]="isSubmitting()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
         {{ isSubmitting() ? 'Guardando…' : (editing() ? 'Guardar cambios' : 'Crear persona') }}
       </button>
     </div>
   </form>
 </app-modal>
+
+<app-confirm-modal
+  [isOpen]="isDiscardConfirmOpen()"
+  title="¿Descartar cambios?"
+  message="Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?"
+  confirmText="Descartar cambios"
+  cancelText="Continuar editando"
+  variant="warning"
+  (confirm)="discardChanges()"
+  (cancel)="isDiscardConfirmOpen.set(false)" />
 
 <app-confirm-modal
   [isOpen]="!!toDelete()"

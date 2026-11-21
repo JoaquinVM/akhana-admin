@@ -126,8 +126,8 @@ export class TagsComponent implements OnInit {
         this.tags.set(data);
         this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Error al cargar la lista de etiquetas. Por favor intente nuevamente.');
+      error: (err) => {
+        this.errorMessage.set(err.error?.message ?? 'Error al cargar la lista de etiquetas. Por favor intente nuevamente.');
         this.isLoading.set(false);
       }
     });

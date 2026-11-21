@@ -173,7 +173,9 @@
     [title]="isEditing() ? 'Editar Categoría Financiera' : 'Nueva categoría Financiera'"
     [subtitle]="isEditing() ? 'Modifica los datos de la categoría seleccionada' : 'Registra una categoría para ingresos o gastos'"
     [size]="'md'"
-    (close)="closeFormModal()">
+    [closeOnBackdrop]="false"
+    [closeOnEscape]="false"
+    (close)="attemptCloseForm()">
 
     <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="category-form">
       @if (formError()) {
@@ -239,7 +241,7 @@
       }
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+        <button type="button" class="btn btn-secondary" (click)="attemptCloseForm()" [disabled]="isSubmitting()">
           Cancelar
         </button>
         <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
@@ -253,6 +255,18 @@
       </div>
     </form>
   </app-modal>
+
+  <!-- Shared discard changes confirmation modal -->
+  <app-confirm-modal
+    [isOpen]="isDiscardConfirmOpen()"
+    [title]="'¿Descartar cambios?'"
+    [message]="'Tiene cambios sin guardar en el formulario. Si continúa, perderá todas las modificaciones realizadas. ¿Desea descartar los cambios o continuar editando?'"
+    [confirmText]="'Descartar cambios'"
+    [cancelText]="'Continuar editando'"
+    [variant]="'warning'"
+    (confirm)="discardChanges()"
+    (cancel)="cancelDiscard()">
+  </app-confirm-modal>
 
   <!-- Audit modal -->
   <app-audit-modal

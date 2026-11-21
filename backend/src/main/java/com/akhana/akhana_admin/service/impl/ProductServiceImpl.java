@@ -308,10 +308,16 @@ public class ProductServiceImpl implements ProductService {
         productRepository.save(product);
     }
 
-    // CAT-07: cost and price changes from the catalog; null previous prices mean the product was just created
     private void recordPriceChange(Product product, BigDecimal previousBuyPrice, BigDecimal previousSellPrice,
                                    String username, Instant now) {
-        priceChangeRepository.save(ProductPriceChange.builder()
+        priceChangeRepository.save(catalogPriceChange(product, previousBuyPrice, previousSellPrice, username, now));
+    }
+
+    // CAT-07: cost and price changes from the catalog (form or import); null previous prices mean the product was
+    // just created
+    static ProductPriceChange catalogPriceChange(Product product, BigDecimal previousBuyPrice,
+                                                 BigDecimal previousSellPrice, String username, Instant now) {
+        return ProductPriceChange.builder()
                 .productId(product.getId())
                 .previousBuyPrice(previousBuyPrice)
                 .newBuyPrice(product.getBuyPrice())
@@ -320,7 +326,7 @@ public class ProductServiceImpl implements ProductService {
                 .source(PriceChangeSource.CATALOG)
                 .changedBy(username)
                 .changedAt(now)
-                .build());
+                .build();
     }
 
     private Set<Tag> resolveTags(List<UUID> tagIds) {
