@@ -40,6 +40,10 @@ export class SessionTransactionsComponent {
   activeExpensesCount = computed(() => this.expenses().filter((e) => e.status === 'ACTIVO').length);
 
   // What each tab can say: a list with rows shows them, whatever the last load did
+  // 095: the counter leaves the voided sales out, like the totals; they stay in the list
+  completedSales = computed(() => this.sales().filter((s) => s.status !== 'ANULADA').length);
+  voidedSales = computed(() => this.sales().length - this.completedSales());
+
   salesView = computed<SessionListState>(() => (this.sales().length > 0 ? 'ready' : this.salesState()));
   expensesView = computed<SessionListState>(() => (this.expenses().length > 0 ? 'ready' : this.expensesState()));
   transfersView = computed<SessionListState>(() => (this.transfers().length > 0 ? 'ready' : this.expensesState()));
