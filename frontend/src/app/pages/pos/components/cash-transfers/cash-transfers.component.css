@@ -5,7 +5,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-light);
 }
 .transfers-totals {
   display: flex;
@@ -21,7 +21,7 @@
   color: #047857;
 }
 .text-out {
-  color: #b45309;
+  color: var(--color-warning);
 }
 .direction-pill {
   display: inline-flex;
@@ -40,7 +40,7 @@
   color: #92400e;
 }
 .amount-val {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -58,7 +58,7 @@
   font-weight: 500;
 }
 .detail-notes {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 .transactions-empty {
@@ -67,7 +67,7 @@
   align-items: center;
   padding: 3rem 1rem;
   text-align: center;
-  color: #64748b;
+  color: var(--text-muted);
 }
 .transactions-empty h4 {
   margin: 0 0 0.25rem;
@@ -111,7 +111,7 @@
   font-size: 0.8125rem;
 }
 .btn-warning {
-  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  background: linear-gradient(135deg, var(--color-warning) 0%, #d97706 100%);
   color: #ffffff;
   border: none;
 }

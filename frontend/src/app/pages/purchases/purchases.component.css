@@ -16,7 +16,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -34,7 +34,7 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111f0f;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -76,7 +76,7 @@
 .pay-POR_PAGAR { background: #fee2e2; color: #b91c1c; }
 .pay-CONSIGNACION { background: #ede9fe; color: #6d28d9; }
 .pay-A_CUENTA { background: #fef3c7; color: #a16207; }
-.pay-PAGADO { background: #dcfce7; color: #15803d; }
+.pay-PAGADO { background: #dcfce7; color: var(--color-success); }
 
 @media (max-width: 720px) {
   .page-header {
@@ -92,12 +92,12 @@
 
 .pay-ANULADO { background: #e2e8f0; color: #475569; }
 .delivery-PENDIENTE { background: #fef3c7; color: #a16207; }
-.delivery-ENTREGADO { background: #dcfce7; color: #15803d; }
+.delivery-ENTREGADO { background: #dcfce7; color: var(--color-success); }
 
 .delivery-cell {
   display: block;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .delivery-filter {
@@ -112,7 +112,7 @@
   display: flex;
   gap: 4px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .view-tab {
@@ -120,7 +120,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 600;
   cursor: pointer;
 }
@@ -147,7 +147,7 @@
 .reading-spend {
   margin: 0 0 0.75rem;
   font-size: 0.8125rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-muted);
 }
 
 /* COM-22 */

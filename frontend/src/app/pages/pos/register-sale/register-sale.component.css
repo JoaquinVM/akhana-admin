@@ -17,19 +17,19 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
 .breadcrumb-separator { color: #cbd5e1; }
 .breadcrumb-link {
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.15s ease;
 }
-.breadcrumb-link:hover { color: var(--primary-color, #2e5b27); }
-.breadcrumb-item.active { color: var(--primary-color, #2e5b27); font-weight: 600; }
+.breadcrumb-link:hover { color: var(--primary-color); }
+.breadcrumb-item.active { color: var(--primary-color); font-weight: 600; }
 
 .title-with-actions {
   display: flex;
@@ -42,7 +42,7 @@
   font-family: var(--font-heading);
   font-size: 1.625rem;
   font-weight: 700;
-  color: #111f0f;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -92,8 +92,8 @@
 }
 
 .cart-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow: hidden;

@@ -17,7 +17,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -35,7 +35,7 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111f0f;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -65,8 +65,8 @@
 }
 
 .kpi-card {
-  background: #ffffff;
-  border-radius: var(--radius-lg, 16px);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(22, 67, 18, 0.08);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   padding: 1.25rem;
@@ -83,7 +83,7 @@
 }
 
 .hero-card {
-  background: linear-gradient(135deg, #1b3b18 0%, #2e5b27 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   color: #ffffff;
   border: none;
   box-shadow: 0 10px 25px -5px rgba(27, 59, 24, 0.25);
@@ -101,7 +101,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .hero-card .kpi-label {
@@ -137,7 +137,7 @@
 .kpi-value {
   font-size: 1.5rem;
   font-weight: 700;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   color: #1e293b;
 }
 
@@ -152,7 +152,7 @@
 
 .kpi-desc {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .hero-card .kpi-desc {
@@ -168,8 +168,8 @@
 
 /* Content sections */
 .section-card {
-  background: #ffffff;
-  border-radius: var(--radius-lg, 16px);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(22, 67, 18, 0.08);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   padding: 1.25rem 1.5rem;
@@ -202,7 +202,7 @@
 
 .section-count {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   background-color: #f1f5f9;
   padding: 0.2rem 0.5rem;
   border-radius: 9999px;
@@ -212,13 +212,13 @@
 .section-link {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #1b3b18;
+  color: var(--primary-color);
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 .section-link:hover {
-  color: #2e5b27;
+  color: var(--primary-hover);
   text-decoration: underline;
 }
 
@@ -230,14 +230,14 @@
 }
 
 .account-mini-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md, 8px);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-left: 4px solid var(--acc-color, #2e5b27);
+  border-left: 4px solid var(--acc-color, var(--primary-hover));
 }
 
 .acc-mini-top {
@@ -282,7 +282,7 @@
 }
 
 .acc-mini-balance {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 1.125rem;
   font-weight: 700;
   color: #0f172a;
@@ -317,8 +317,8 @@
 }
 
 .cell-date {
-  font-family: var(--font-mono, monospace);
-  color: #64748b;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -369,7 +369,7 @@
 }
 
 .cell-amount {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-weight: 700;
 }
 
@@ -401,7 +401,7 @@
 .empty-cell {
   text-align: center;
   padding: 2.5rem 1rem !important;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 @media (max-width: 640px) {

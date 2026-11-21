@@ -21,7 +21,7 @@
 .filter-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -29,16 +29,16 @@
 .filter-input, .filter-select {
   padding: 0.5rem 0.75rem;
   border: 1px solid #cbd5e1;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   font-size: 0.8125rem;
-  background-color: #f8fafc;
+  background-color: var(--bg-canvas);
   color: #1e293b;
 }
 
 .filter-input:focus, .filter-select:focus {
   outline: none;
-  border-color: #1b3b18;
-  background-color: #ffffff;
+  border-color: var(--primary-color);
+  background-color: var(--bg-surface);
 }
 
 .search-field {

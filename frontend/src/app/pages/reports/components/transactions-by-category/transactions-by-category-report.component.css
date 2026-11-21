@@ -1,7 +1,7 @@
 .report-table .section-row td {
   font-weight: 700;
   color: #1e293b;
-  border-top: 2px solid #e2e8f0;
+  border-top: 2px solid var(--border-light);
 }
 
 .report-table .line-cell {
@@ -24,11 +24,11 @@
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-weight: 400;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .report-table .consumption-row td {
-  border-top: 2px solid #e2e8f0;
+  border-top: 2px solid var(--border-light);
   font-style: italic;
 }
 

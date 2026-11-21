@@ -9,7 +9,7 @@
   margin: 0;
   font-family: var(--font-heading);
   font-weight: 600;
-  color: #111f0f;
+  color: var(--text-primary);
 }
 
 .section-title {
@@ -41,7 +41,7 @@
   margin: 0;
   padding: 0.25rem;
   list-style: none;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -99,7 +99,7 @@
   display: block;
   font-size: 0.6875rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .line-sell-price-header,
@@ -118,7 +118,7 @@
 .line-code,
 .unit-hint {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .line-name {
@@ -141,7 +141,7 @@
 }
 
 .empty-lines {
-  color: #64748b;
+  color: var(--text-muted);
   padding: 1.5rem;
 }
 

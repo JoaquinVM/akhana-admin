@@ -1,7 +1,7 @@
 .report-table .supplier-row td {
   font-weight: 700;
   color: #1e293b;
-  border-top: 2px solid #e2e8f0;
+  border-top: 2px solid var(--border-light);
 }
 
 .report-table .month-cell {
@@ -11,5 +11,5 @@
 
 .report-table .no-match {
   text-align: center;
-  color: #64748b;
+  color: var(--text-muted);
 }

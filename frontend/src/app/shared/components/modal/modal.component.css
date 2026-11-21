@@ -16,8 +16,8 @@
 .modal-card {
   position: relative;
   width: 100%;
-  background: #ffffff;
-  border-radius: var(--radius-xl, 1rem);
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
   border: 1px solid rgba(46, 91, 39, 0.12);
   box-shadow: 0 24px 48px -12px rgba(17, 31, 15, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
   padding: 1.5rem;
@@ -66,18 +66,18 @@
 
 .modal-title {
   margin: 0;
-  font-family: var(--font-heading, 'Space Grotesk', system-ui, sans-serif);
+  font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-primary, #111f0f);
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .modal-subtitle {
   margin: 0.25rem 0 0;
-  font-family: var(--font-body, 'Geist', system-ui, sans-serif);
+  font-family: var(--font-body);
   font-size: 0.8125rem;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
@@ -98,11 +98,11 @@
 
 .btn-close:hover {
   background: #f1f5f9;
-  color: #111f0f;
+  color: var(--text-primary);
 }
 
 .modal-body {
-  font-family: var(--font-body, 'Geist', system-ui, sans-serif);
+  font-family: var(--font-body);
   overflow-y: auto;
   overflow-x: hidden;
   max-height: calc(100vh - 12rem);
