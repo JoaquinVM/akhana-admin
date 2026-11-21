@@ -54,7 +54,9 @@
           @switch (salesView()) {
             @case ('loading') { Cargando… }
             @case ('failed') { Sin datos }
-            @default { {{ sales().length }} ventas registradas }
+            @default {
+              {{ completedSales() }} {{ completedSales() === 1 ? 'venta registrada' : 'ventas registradas' }}@if (voidedSales() > 0) { · {{ voidedSales() }} {{ voidedSales() === 1 ? 'anulada' : 'anuladas' }}}
+            }
           }
         } @else if (activeTab() === 'MOVIMIENTOS') {
           @switch (transfersView()) {

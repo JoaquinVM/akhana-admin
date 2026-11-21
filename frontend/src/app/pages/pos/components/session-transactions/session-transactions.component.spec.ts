@@ -47,8 +47,14 @@ describe('SessionTransactionsComponent', () => {
 
   it('arranca en Ventas y cuenta las ventas recibidas', () => {
     expect(component.activeTab()).toBe('VENTAS');
-    expect(counter()).toBe('1 ventas registradas');
+    expect(counter()).toBe('1 venta registrada');
     expect(fixture.nativeElement.querySelector('app-sales-table')).toBeTruthy();
+  });
+
+  it('095: el contador de ventas deja fuera las anuladas y las cuenta aparte', () => {
+    fixture.componentRef.setInput('sales', [sale, { ...sale, id: 's-2' }, { ...sale, id: 's-3', status: 'ANULADA' }]);
+    fixture.detectChanges();
+    expect(counter().replace(/\s+/g, ' ')).toBe('2 ventas registradas · 1 anulada');
   });
 
   it('en Compras cuenta solo los gastos activos y aparte los anulados', () => {

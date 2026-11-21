@@ -197,7 +197,7 @@
           class="tab-btn"
           [class.active]="activeTab === 'ventas'"
           (click)="setTab('ventas')">
-          <app-icon name="bag" /> Ventas asociadas ({{ cs.sales.length }})
+          <app-icon name="bag" /> Ventas asociadas ({{ cs.salesCount }}@if (cs.sales.length > cs.salesCount) { · {{ cs.sales.length - cs.salesCount }} {{ cs.sales.length - cs.salesCount === 1 ? 'anulada' : 'anuladas' }}})
         </button>
         <button
           type="button"

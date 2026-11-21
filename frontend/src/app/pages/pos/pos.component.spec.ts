@@ -689,7 +689,7 @@ describe('PosComponent', () => {
       fixture.detectChanges();
 
       expect(component.transactionsLoadFailed()).toBe(false);
-      expect(page()).toContain('1 ventas registradas');
+      expect(page()).toContain('1 venta registrada');
     });
 
     it('con los gastos caídos no dice que no hay ni marca Bs 0, y al reintentar los muestra', () => {
