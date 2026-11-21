@@ -26,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -195,7 +196,7 @@ class JwtAuthenticationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"%s\",\"newPassword\":\"eleven-char\"}".formatted(PASSWORD)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 100 caracteres."));
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe tener entre 12 y 72 caracteres."));
         mockMvc.perform(post("/api/auth/change-password")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -273,6 +274,60 @@ class JwtAuthenticationIntegrationTest {
         assertThat(stored.getTotpEnabledAt()).isNotNull();
         assertThat(stored.getTotpLastStep()).isNotNull();
         assertThat(jdbcTemplate.queryForObject(audit, String.class, admin.getId())).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("End-to-End: quitar el 2FA cierra las sesiones abiertas del usuario, como la PWA de un teléfono perdido (USR-08)")
+    void resetSecondFactor_EndsTheUserSessions() throws Exception {
+        User admin = createUser(Role.ADMINISTRATOR, false);
+        User operator = createUser(Role.OPERATOR, false);
+        String adminToken = login(admin.getUsername(), PASSWORD, false);
+        String lostPhoneToken = login(operator.getUsername(), PASSWORD, false);
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + lostPhoneToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/users/" + operator.getId() + "/second-factor/reset")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.twoFactorEnabled").value(false));
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + lostPhoneToken))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+            .andExpect(status().isOk());
+        // With the password, the operator activates the second factor again on the new phone
+        login(operator.getUsername(), PASSWORD, false);
+    }
+
+    @Test
+    @DisplayName("End-to-End: cambiar el rol de un usuario cierra sus sesiones; cambiar solo el nombre no (USR-05)")
+    void roleChange_EndsTheUserSessions() throws Exception {
+        User admin = createUser(Role.ADMINISTRATOR, false);
+        User operator = createUser(Role.OPERATOR, false);
+        String adminToken = login(admin.getUsername(), PASSWORD, false);
+        String operatorToken = login(operator.getUsername(), PASSWORD, false);
+
+        mockMvc.perform(put("/api/users/" + operator.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"Otro nombre\",\"role\":\"OPERATOR\"}"))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + operatorToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/users/" + operator.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"Otro nombre\",\"role\":\"ADMINISTRATOR\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + operatorToken))
+            .andExpect(status().isUnauthorized());
+        // A new login carries the new role
+        String newToken = login(operator.getUsername(), PASSWORD, false);
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + newToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.role").value("ADMINISTRATOR"));
     }
 }
 

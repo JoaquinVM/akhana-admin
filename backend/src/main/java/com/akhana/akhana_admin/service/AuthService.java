@@ -16,5 +16,5 @@ public interface AuthService {
     LoginResponse loginWithSecondFactor(TwoFactorLoginRequest request, String clientIp);
 
     /** Changes the password and returns a new token: the ones issued before stop working (T-19). */
-    String changePassword(UUID userId, ChangePasswordRequest request);
+    String changePassword(UUID userId, ChangePasswordRequest request, String clientIp);
 }

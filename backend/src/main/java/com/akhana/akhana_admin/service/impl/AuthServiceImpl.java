@@ -39,6 +39,12 @@ public class AuthServiceImpl implements AuthService {
 
     private static final String GENERIC_AUTH_ERROR = "Usuario o contraseña incorrectos.";
     private static final String WRONG_CODE = "Código incorrecto.";
+    private static final String WRONG_CURRENT_PASSWORD = "La contraseña actual no es correcta.";
+    /**
+     * BCrypt hash (cost 10, like the encoder) compared when the user does not exist or is inactive, so those answers
+     * take as long as a wrong password and the response time does not tell which usernames exist.
+     */
+    public static final String DUMMY_HASH = "$2a$10$Nk2HnL1tr/7vuCGvT7nyneb7Si1lIgN4NFtfrY6j1fki0XxnJUSUC";
     private static final String CHALLENGE_ENDED = "El ingreso venció. Vuelva a ingresar su usuario y contraseña.";
 
     @Override
@@ -50,11 +56,13 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
             log.warn("Authentication failed: User '{}' not found", username);
+            passwordEncoder.matches(request.password(), DUMMY_HASH);
             throw failure(username, clientIp, GENERIC_AUTH_ERROR);
         }
 
         if (!user.isActive() || user.getDeletedAt() != null) {
             log.warn("Authentication failed: User '{}' is inactive or deleted", username);
+            passwordEncoder.matches(request.password(), DUMMY_HASH);
             throw failure(username, clientIp, GENERIC_AUTH_ERROR);
         }
 
@@ -76,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthenticationFailedException(CHALLENGE_ENDED);
         }
         loginAttemptService.checkNotBlocked(challenge.username(), clientIp);
+        loginAttemptService.checkSecondFactorNotBlocked(challenge.username());
 
         User user = userRepository.findById(challenge.userId()).orElse(null);
         // The user was removed or got the second factor changed while the challenge was open
@@ -91,6 +100,8 @@ public class AuthServiceImpl implements AuthService {
         if (step.isEmpty()) {
             log.warn("Second factor failed for user '{}'", user.getUsername());
             challengeService.recordFailure(challenge.id());
+            // Besides the user from this IP, a cap per user from any IP (USR-07)
+            loginAttemptService.recordSecondFactorFailure(challenge.username());
             throw failure(challenge.username(), clientIp, WRONG_CODE);
         }
 
@@ -145,13 +156,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public String changePassword(UUID userId, ChangePasswordRequest request) {
+    public String changePassword(UUID userId, ChangePasswordRequest request, String clientIp) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
+        // Whoever holds an open session cannot guess the password here faster than at the login (USR-07)
+        loginAttemptService.checkNotBlocked(user.getUsername(), clientIp);
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("La contraseña actual no es correcta.");
+            log.warn("Password change failed: wrong current password for user '{}'", user.getUsername());
+            loginAttemptService.recordFailure(user.getUsername(), clientIp);
+            throw new IllegalArgumentException(WRONG_CURRENT_PASSWORD);
         }
+        loginAttemptService.recordSuccess(user.getUsername(), clientIp);
         if (request.newPassword().equals(request.currentPassword())) {
             throw new IllegalArgumentException("La nueva contraseña debe ser distinta de la actual.");
         }

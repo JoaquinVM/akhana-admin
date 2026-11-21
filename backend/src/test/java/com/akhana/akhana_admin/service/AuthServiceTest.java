@@ -59,6 +59,8 @@ class AuthServiceTest {
             5, 20, Duration.ofMinutes(15), Duration.ofMinutes(15), clock);
         authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, loginAttemptService,
             new TotpServiceImpl(clock), new TwoFactorChallengeServiceImpl(clock));
+        // An unknown or inactive user is compared with the dummy hash, which never matches
+        lenient().when(passwordEncoder.matches(anyString(), eq(AuthServiceImpl.DUMMY_HASH))).thenReturn(false);
         // An operator: like every user, it enters with the password and the second factor (USR-08, 069)
         activeUser = User.builder()
             .id(UUID.randomUUID())
@@ -169,7 +171,7 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario no existe y no generar JWT")
+    @DisplayName("Si el usuario no existe falla con el 401 genérico, igual de lento que una contraseña incorrecta y sin JWT")
     void login_UserNotFound() {
         LoginRequest request = new LoginRequest("nonexistent", "secret");
 
@@ -180,7 +182,8 @@ class AuthServiceTest {
             .hasMessage("Usuario o contraseña incorrectos.");
 
         verify(userRepository, times(1)).findByUsername("nonexistent");
-        verifyNoInteractions(passwordEncoder);
+        // Compared with a dummy hash, so the answer takes as long as a wrong password
+        verify(passwordEncoder).matches(eq("secret"), eq(AuthServiceImpl.DUMMY_HASH));
         verifyNoInteractions(jwtService);
     }
 
@@ -202,7 +205,7 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Debe fallar con HTTP 401 genérico si el usuario está inactivo y no generar JWT")
+    @DisplayName("Si el usuario está inactivo falla con el 401 genérico, igual de lento que una contraseña incorrecta y sin JWT")
     void login_InactiveUser() {
         User inactiveUser = User.builder()
             .id(UUID.randomUUID())
@@ -221,7 +224,8 @@ class AuthServiceTest {
             .hasMessage("Usuario o contraseña incorrectos.");
 
         verify(userRepository, times(1)).findByUsername("seller");
-        verifyNoInteractions(passwordEncoder);
+        verify(passwordEncoder).matches(eq("12345seller"), eq(AuthServiceImpl.DUMMY_HASH));
+        verify(passwordEncoder, never()).matches("12345seller", inactiveUser.getPassword());
         verifyNoInteractions(jwtService);
     }
 
@@ -248,7 +252,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches("initial-pass", "$2a$10$hashedPassword")).thenReturn(true);
         when(passwordEncoder.encode("new-strong-pass")).thenReturn("$2a$10$newHash");
 
-        authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "new-strong-pass"));
+        authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "new-strong-pass"), IP);
 
         assertThat(activeUser.getPassword()).isEqualTo("$2a$10$newHash");
         assertThat(activeUser.isMustChangePassword()).isFalse();
@@ -262,7 +266,7 @@ class AuthServiceTest {
         when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("wrong", "$2a$10$hashedPassword")).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("wrong", "new-strong-pass")))
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("wrong", "new-strong-pass"), IP))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("La contraseña actual no es correcta.");
         verify(userRepository, never()).save(any());
@@ -274,7 +278,7 @@ class AuthServiceTest {
         when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("same-password", "$2a$10$hashedPassword")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("same-password", "same-password")))
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("same-password", "same-password"), IP))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("La nueva contraseña debe ser distinta de la actual.");
         verify(userRepository, never()).save(any());
@@ -287,11 +291,37 @@ class AuthServiceTest {
         when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("initial-pass", "$2a$10$hashedPassword")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "Administrador")))
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), new ChangePasswordRequest("initial-pass", "Administrador"), IP))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("La contraseña no puede ser igual al nombre de usuario.");
         verify(userRepository, never()).save(any());
     }
+    @Test
+    @DisplayName("Cambiar la contraseña con la actual incorrecta cuenta como un login fallido y se bloquea a los 5 (USR-07)")
+    void changePassword_WrongCurrentPassword_LocksAfterMaxFailures() {
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("wrong", "$2a$10$hashedPassword")).thenReturn(false);
+        ChangePasswordRequest wrong = new ChangePasswordRequest("wrong", "new-strong-pass");
+
+        for (int i = 0; i < 4; i++) {
+            assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), wrong, IP))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("La contraseña actual no es correcta.");
+        }
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(), wrong, IP))
+            .isInstanceOf(LoginBlockedException.class)
+            .hasMessage(BLOCKED_MESSAGE);
+
+        // Locked even with the right current password, and the login of that user from that IP too
+        assertThatThrownBy(() -> authService.changePassword(activeUser.getId(),
+                new ChangePasswordRequest("initial-pass", "new-strong-pass"), IP))
+            .isInstanceOf(LoginBlockedException.class);
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "initial-pass"), IP))
+            .isInstanceOf(LoginBlockedException.class);
+        verify(passwordEncoder, never()).matches("initial-pass", "$2a$10$hashedPassword");
+        verify(userRepository, never()).save(any());
+    }
+
     private static final String BLOCKED_MESSAGE = "Demasiados intentos fallidos. Espere 15 minutos e intente nuevamente.";
 
     private void failLogins(String username, String ip, int times) {
@@ -566,6 +596,46 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> adminPasswordStep(IP)).isInstanceOf(LoginBlockedException.class);
         assertThat(adminPasswordStep("198.51.100.7").twoFactor()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Tras 10 códigos incorrectos en una hora, desde IP distintas, el usuario queda bloqueado en el código (USR-07)")
+    void administrator_SecondFactorCapPerUserAcrossIps() {
+        String secret = new TotpServiceImpl(clock).generateSecret();
+        administrator.setTotpSecret(secret);
+        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(jwtService.generateToken(administrator)).thenReturn("admin-token");
+        when(userRepository.recordSecondFactorStep(eq(administrator.getId()), anyLong())).thenReturn(1);
+        String blocked = "Demasiados códigos incorrectos para este usuario. Espere 60 minutos e intente nuevamente.";
+
+        // One wrong code from each IP: no IP reaches its own limit of 5
+        for (int i = 0; i < 9; i++) {
+            String ip = "198.51.100." + i;
+            LoginResponse challenge = adminPasswordStep(ip);
+            assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                    new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), "000000"), ip))
+                .isInstanceOf(AuthenticationFailedException.class)
+                .hasMessage("Código incorrecto.");
+        }
+        LoginResponse tenth = adminPasswordStep("198.51.100.9");
+        assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                new TwoFactorLoginRequest(tenth.twoFactor().challengeId(), "000000"), "198.51.100.9"))
+            .isInstanceOf(LoginBlockedException.class)
+            .hasMessage(blocked);
+
+        // Not even the right code passes, from a new IP, until the hour is over
+        LoginResponse fresh = adminPasswordStep("192.0.2.50");
+        assertThatThrownBy(() -> authService.loginWithSecondFactor(
+                new TwoFactorLoginRequest(fresh.twoFactor().challengeId(), codeNow(secret, 0)), "192.0.2.50"))
+            .isInstanceOf(LoginBlockedException.class)
+            .hasMessage(blocked);
+        verifyNoInteractions(jwtService);
+
+        clock.advance(Duration.ofHours(1));
+        LoginResponse later = adminPasswordStep("192.0.2.50");
+        assertThat(authService.loginWithSecondFactor(
+                new TwoFactorLoginRequest(later.twoFactor().challengeId(), codeNow(secret, 0)), "192.0.2.50").token())
+            .isEqualTo("admin-token");
     }
 
     @Test

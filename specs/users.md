@@ -41,7 +41,7 @@ El sistema SHALL permitir el registro de nuevos usuarios requiriendo obligatoria
 
 #### Scenario: Nombre de usuario que solo cambia en mayúsculas y contraseña al crear (segunda revisión, 29-10-2026)
 - **WHEN** existe `operador_qa` (activo o dado de baja) y se crea `Operador_QA`, o la contraseña nueva tiene menos de 12 caracteres (8 hasta el 069) o es igual al nombre de usuario
-- **THEN** el servidor rechaza el alta: el nombre de usuario es único sin distinguir mayúsculas («El nombre de usuario 'Operador_QA' ya está registrado.», 409) y la contraseña sigue la misma regla que el cambio de contraseña (12 a 100 caracteres, distinta del nombre de usuario). El formulario pide 12 caracteres. Pruebas en `UserServiceTest`, `UserControllerTest` y `users.component.spec.ts`.
+- **THEN** el servidor rechaza el alta: el nombre de usuario es único sin distinguir mayúsculas («El nombre de usuario 'Operador_QA' ya está registrado.», 409) y la contraseña sigue la misma regla que el cambio de contraseña (12 a 72 caracteres y como mucho 72 bytes en UTF-8, distinta del nombre de usuario). El formulario pide 12 caracteres. Pruebas en `UserServiceTest`, `UserControllerTest` y `users.component.spec.ts`.
 
 #### Scenario: Rechazo por rol ausente
 - **WHEN** se intenta crear o editar un usuario sin indicar el rol
@@ -88,6 +88,10 @@ El sistema SHALL permitir editar el nombre completo y el rol de un usuario exist
 #### Scenario: Actualización de auditoría únicamente con cambios reales
 - **WHEN** se guardan cambios efectivos en un usuario
 - **THEN** el sistema persiste las modificaciones, actualiza `updated_at` con la hora del servidor y `updated_by` con el usuario autenticado, manteniendo intactos los datos de creación
+
+#### Scenario: Cambiar el rol cierra las sesiones del usuario (094)
+- **WHEN** se guarda un rol distinto para un usuario
+- **THEN** sus sesiones abiertas terminan (`password_changed_at`, T-19): el siguiente pedido con su token anterior responde 401 y el nuevo rol empieza con un ingreso nuevo. Cambiar solo el nombre no cierra sesiones (`JwtAuthenticationIntegrationTest`)
 
 ---
 
@@ -221,12 +225,20 @@ El sistema SHALL crear el primer administrador solo cuando no existe ningún usu
 - **THEN** el login responde con `mustChangePassword: true`, el frontend muestra la pantalla de cambio de contraseña y el backend responde 403 `PasswordChangeRequired` a toda llamada distinta de `/api/auth/me` y `/api/auth/change-password`
 
 #### Scenario: Cambio de contraseña válido
-- **WHEN** el usuario envía su contraseña actual correcta y una nueva de 12 a 100 caracteres, distinta de la actual y del nombre de usuario
+- **WHEN** el usuario envía su contraseña actual correcta y una nueva de 12 a 72 caracteres (y como mucho 72 bytes), distinta de la actual y del nombre de usuario
 - **THEN** se guarda el nuevo hash, se quita la marca de cambio obligatorio, se registra `updated_by` y el usuario puede usar el sistema
 
 #### Scenario: Cambio de contraseña rechazado
 - **WHEN** la contraseña actual no coincide, o la nueva no cumple las reglas
 - **THEN** el backend responde 400 con el motivo y la contraseña no cambia
+
+#### Scenario: Contraseña de más de 72 bytes (094)
+- **WHEN** la contraseña nueva, al crear un usuario o al cambiarla, tiene hasta 72 caracteres pero más de 72 bytes en UTF-8 (BCrypt no admite más; las letras con tilde y la ñ ocupan 2 bytes, los emojis 4)
+- **THEN** responde 400 con "La contraseña es demasiado larga: las letras con tilde, la ñ y los emojis cuentan como más de un carácter. Acórtela." (o "La nueva contraseña…"); 72 bytes justos se aceptan (`AuthControllerTest`, `UserControllerTest`)
+
+#### Scenario: La contraseña actual incorrecta cuenta como fallo del login (094)
+- **WHEN** un usuario con sesión envía al cambio de contraseña una contraseña actual incorrecta
+- **THEN** responde 400 "La contraseña actual no es correcta." y el fallo cuenta en el mismo contador que el login, por usuario desde esa IP y por IP (USR-07): el quinto responde 429 y bloquea también el login de ese usuario desde esa IP. Un cambio correcto reinicia su contador desde esa IP (`AuthServiceTest`)
 
 ### Requirement: Límite de intentos de login (USR-07, T-19)
 El sistema SHALL contar los intentos fallidos de login por nombre de usuario (sin distinguir mayúsculas ni espacios) desde cada IP y por IP de la conexión, y SHALL rechazar nuevos intentos durante un bloqueo cuando se supera el límite dentro de la ventana. Valores por defecto: 5 fallos de un usuario desde una IP o 20 de una IP en 15 minutos, bloqueo de 15 minutos, configurables en `application.properties` (`security.login.*`). El contador vive en memoria (un solo servidor). Desde que Admin está en internet (067, `deploy.md`) un usuario nunca se bloquea para todas las IP: si no, cualquiera que adivine su nombre lo dejaría afuera.
@@ -253,7 +265,11 @@ El sistema SHALL contar los intentos fallidos de login por nombre de usuario (si
 
 #### Scenario: Usuario inexistente
 - **WHEN** se intenta ingresar con un usuario que no existe, inactivo o dado de baja
-- **THEN** el fallo cuenta igual y las respuestas (401 genérico y luego 429) son las mismas que para un usuario existente
+- **THEN** el fallo cuenta igual y las respuestas (401 genérico y luego 429) son las mismas que para un usuario existente. Tampoco se distingue por el tiempo de respuesta: la contraseña se compara contra un hash BCrypt ficticio, como si el usuario existiera (094, `AuthServiceTest`)
+
+#### Scenario: Tope de códigos incorrectos por usuario desde cualquier IP (094)
+- **WHEN** un usuario acumula 10 códigos del 2FA incorrectos en una hora, sumando todas las IP
+- **THEN** el décimo y todo código siguiente de ese usuario, incluso el correcto y desde otra IP, responden 429 "Demasiados códigos incorrectos para este usuario. Espere 60 minutos e intente nuevamente." hasta que pasa la hora, y el bloqueo queda en el log. Un ingreso correcto no reinicia este tope. Solo bloquea el paso del código: para llegar a él hay que saber la contraseña, así que nadie lo bloquea con el nombre solo. Configurable con `security.login.second-factor.max-failures-per-user` y `security.login.second-factor.window`; en memoria, como el resto (`AuthServiceTest`)
 
 #### Scenario: IP detrás de un proxy
 - **WHEN** el pedido trae `X-Forwarded-For` y `FORWARD_HEADERS_STRATEGY` no está en `native`
@@ -284,7 +300,7 @@ El sistema SHALL pedir a todo usuario, operador o administrador, después de la 
 
 #### Scenario: Quitar el 2FA
 - **WHEN** un usuario, operador o administrador, pierde el teléfono y otro usuario con permiso de Usuarios elige «Quitar 2FA» en Usuarios
-- **THEN** se borra su clave con quién y cuándo (auditoría de la fila) y en su próximo ingreso lo activa de nuevo. Entrar con el 2FA, o activarlo, no es una edición del usuario: guarda la clave y el paso del código con una consulta propia, sin tocar `updated_by` ni `updated_at`, así que la auditoría sigue mostrando quién lo quitó y cuándo (`JwtAuthenticationIntegrationTest`, revisión del 067). Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
+- **THEN** se borra su clave con quién y cuándo (auditoría de la fila), sus sesiones abiertas terminan, como la PWA del teléfono perdido (`password_changed_at`, T-19; desde el 094), y en su próximo ingreso lo activa de nuevo. Entrar con el 2FA, o activarlo, no es una edición del usuario: guarda la clave y el paso del código con una consulta propia, sin tocar `updated_by` ni `updated_at`, así que la auditoría sigue mostrando quién lo quitó y cuándo (`JwtAuthenticationIntegrationTest`, revisión del 067). Nadie se quita el propio ("No puede quitar su propio segundo factor. Pídaselo a otro administrador."), para que una sesión robada no pueda sacarlo. Si no queda ningún administrador que pueda hacerlo, Joaquín lo quita como root con el SQL de `deploy.md`
 
 #### Scenario: La clave no sale del servidor
 - **WHEN** se consultan los usuarios (`/api/users`) o la sesión (`/api/auth/me`), o un usuario con 2FA vuelve a ingresar
@@ -299,6 +315,7 @@ El sistema SHALL pedir a todo usuario, operador o administrador, después de la 
 - **THEN** todo usuario activo debe cambiar la contraseña en su próximo ingreso y las sesiones abiertas terminan (T-19): las contraseñas se eligieron cuando solo se llegaba por Tailscale
 
 ### Tareas
+- [x] 094 (auditoría, sesiones y 2FA): «Quitar 2FA» y el cambio de rol ponen `password_changed_at` (`UserServiceImpl`); el cambio de contraseña cuenta los fallos en `LoginAttemptService`; tope de 10 códigos malos por usuario y hora desde cualquier IP; contraseñas de 12 a 72 caracteres y hasta 72 bytes (`@MaxUtf8Bytes` en `CreateUserRequest` y `ChangePasswordRequest`, formulario de `/users`); comparación contra un hash ficticio si el usuario no existe o está inactivo. Pruebas: `AuthServiceTest`, `AuthControllerTest`, `UserControllerTest`, `JwtAuthenticationIntegrationTest`.
 - [x] USR-08 y USR-01 (069): el 2FA se pide a todo usuario (`AuthServiceImpl` ya no mira el rol) y las contraseñas nuevas tienen de 12 a 100 caracteres (`CreateUserRequest`, `ChangePasswordRequest`, `DataInitializer`, formulario de `/users` y texto de `/change-password`). Pruebas: `AuthServiceTest`, `AuthControllerTest`, `UserControllerTest`, `UserServiceTest`, `DataInitializerTest`, `JwtAuthenticationIntegrationTest`, `users.component.spec.ts`.
 - [x] USR-08 (067): `TotpService` (RFC 6238 sin dependencias), `TwoFactorChallengeService` en memoria, `POST /api/auth/login/second-factor`, columnas `totp_secret`, `totp_enabled_at`, `totp_last_step` (`V34`), `POST /api/users/{id}/second-factor/reset`, paso del código y QR (`qrcode-generator`) en `/login`, «Quitar 2FA» en `/users`. Pruebas: `TotpServiceTest` (vectores del RFC), `AuthServiceTest`, `AuthControllerTest`, `UserServiceTest`, `EndpointAuthorizationTest`, `JwtAuthenticationIntegrationTest`, `login.component.spec.ts`, `users.component.spec.ts`.
 - [x] USR-07 / T-19: `LoginAttemptService` en memoria (usuario e IP), 429 `LoginBlockedException`, `security.login.*`, IP sin confiar en `X-Forwarded-For`, token de 12 h configurable, mensaje del backend en `/login` (25-10-2026).

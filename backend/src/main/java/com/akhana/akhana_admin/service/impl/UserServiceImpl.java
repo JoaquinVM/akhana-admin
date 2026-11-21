@@ -96,10 +96,15 @@ public class UserServiceImpl implements UserService {
             ensureNotLastAdministrator("No se puede quitar el rol de administrador al último administrador activo.");
         }
 
+        Instant now = Instant.now();
         user.setFullName(newFullName);
         user.setRole(newRole);
+        if (isRoleChanged) {
+            // The open sessions of the user end: the new role starts with a new login (T-19)
+            user.setPasswordChangedAt(now);
+        }
 
-        user.setUpdatedAt(Instant.now());
+        user.setUpdatedAt(now);
         user.setUpdatedBy(currentUsername);
 
         User updated = userRepository.save(user);
@@ -151,7 +156,10 @@ public class UserServiceImpl implements UserService {
         user.setTotpSecret(null);
         user.setTotpEnabledAt(null);
         user.setTotpLastStep(null);
-        user.setUpdatedAt(Instant.now());
+        // The open sessions of the user end too, like the PWA of a lost phone (T-19)
+        Instant now = Instant.now();
+        user.setPasswordChangedAt(now);
+        user.setUpdatedAt(now);
         user.setUpdatedBy(currentUsername);
 
         User updated = userRepository.save(user);
