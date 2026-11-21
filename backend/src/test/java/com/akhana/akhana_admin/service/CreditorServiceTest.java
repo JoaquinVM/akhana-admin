@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import java.time.Clock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -690,5 +692,21 @@ class CreditorServiceTest {
             pay(bisa, "100", item(CreditorHistoryResponse.EntryType.PAYMENT, p.getId())), "operator");
         assertThat(repayments).hasSize(2);
         assertThat(bisa.getCurrentBalance()).isEqualByComparingTo("900.00");
+    }
+
+    @ParameterizedTest(name = "monto {0}")
+    @ValueSource(strings = {"0", "0.00", "0.004", "-0.01", "-50.00"})
+    @DisplayName("DEU-03: un pago a un acreedor en 0 (o que redondea a 0) o negativo se rechaza sin tocar la cuenta")
+    void registerRepayment_rejectsZeroOrNegativeAmount(String amount) {
+        debt("60.00");
+        BigDecimal before = bisa.getCurrentBalance();
+
+        assertThatThrownBy(() -> creditorService.registerRepayment(mami.getId(),
+            pay(bisa, amount, item(CreditorHistoryResponse.EntryType.PAYMENT, UUID.randomUUID())), "operator"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+        assertThat(bisa.getCurrentBalance()).isEqualTo(before);
+        verify(creditorRepaymentRepository, never()).save(any());
+        verify(financialTransactionRepository, never()).save(any());
     }
 }

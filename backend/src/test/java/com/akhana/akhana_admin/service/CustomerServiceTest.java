@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import java.time.Clock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -390,5 +392,20 @@ class CustomerServiceTest {
         assertThat(paid.saleTotal()).isEqualByComparingTo("25.00");
         assertThat(paid.balanceAfter()).isEqualByComparingTo("100.00");
         assertThat(history.customer().balance()).isEqualByComparingTo("100.00");
+    }
+
+    @ParameterizedTest(name = "monto {0}")
+    @ValueSource(strings = {"0", "0.00", "0.004", "-0.01", "-50.00"})
+    @DisplayName("DEU-06: un cobro en 0 (o que redondea a 0) o negativo se rechaza sin tocar la cuenta")
+    void registerCollection_rejectsZeroOrNegativeAmount(String amount) {
+        BigDecimal before = qr.getCurrentBalance();
+
+        assertThatThrownBy(() -> customerService.registerCollection(neida.getId(),
+            new CustomerCollectionRequest(qr.getId(), new BigDecimal(amount), null), "cajero"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("El monto debe ser mayor a Bs 0,00.");
+        assertThat(qr.getCurrentBalance()).isEqualTo(before);
+        verify(customerCollectionRepository, never()).save(any());
+        verify(financialTransactionRepository, never()).save(any());
     }
 }
