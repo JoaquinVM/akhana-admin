@@ -69,34 +69,38 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     // quantity x the cost copied on each line (POS-05). A line by presentation counts its kilos, not its packs
     // (CAT-11). Lines waiting for their product or closed as unidentified (POS-12) and third-party lines (POS-13)
     // are left out of quantity and cost and summed apart; a sale with only such lines is not counted. The general
-    // discount only applies to the other lines (P-44), so the normal part is the sale total minus those subtotals
+    // discount only applies to the other lines (P-44), so the normal part is the sale total minus those subtotals.
+    // The lines are summed only for the sales of the range, not for the whole table
     @Query(value = "SELECT to_char(s.operation_date, 'YYYY-MM-DD') AS day, s.sale_type, " +
                    "COUNT(*) FILTER (WHERE COALESCE(i.normal_lines, 1) > 0), COALESCE(SUM(i.quantity), 0), " +
                    "SUM(s.total_amount), COALESCE(SUM(i.cost), 0), COALESCE(SUM(i.pending), 0), " +
                    "COALESCE(SUM(i.third_party), 0), COALESCE(SUM(i.unidentified), 0) " +
-                   "FROM sales s LEFT JOIN (SELECT sale_id, " +
+                   "FROM sales s LEFT JOIN (SELECT li.sale_id, " +
                    "SUM(COALESCE(weight_kg, quantity)) FILTER (WHERE " + NORMAL_LINE + ") AS quantity, " +
                    "SUM(COALESCE(weight_kg, quantity) * unit_cost) FILTER (WHERE " + NORMAL_LINE + ") AS cost, " +
                    "SUM(subtotal) FILTER (WHERE assignment_status = 'POR_ASIGNAR') AS pending, " +
                    "SUM(subtotal) FILTER (WHERE free_line_type = 'THIRD_PARTY') AS third_party, " +
                    "SUM(subtotal) FILTER (WHERE assignment_status = 'SIN_IDENTIFICAR') AS unidentified, " +
                    "COUNT(*) FILTER (WHERE " + NORMAL_LINE + ") AS normal_lines " +
-                   "FROM sale_items GROUP BY sale_id) i " +
+                   "FROM sale_items li JOIN sales ls ON ls.id = li.sale_id " +
+                   "WHERE ls.status = 'COMPLETADA' AND ls.operation_date BETWEEN :from AND :to " +
+                   "GROUP BY li.sale_id) i " +
                    "ON i.sale_id = s.id " +
                    "WHERE s.status = 'COMPLETADA' AND s.operation_date BETWEEN :from AND :to " +
                    "GROUP BY day, s.sale_type ORDER BY day",
            nativeQuery = true)
     List<Object[]> sumByDayAndType(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    // Lines of the active sales by day of operation (CAJ-11, FIN-10, CON-03): rows of {sale id, month 'YYYY-MM', sale type, sale total,
+    // Lines of the active sales by day of operation (CAJ-11, FIN-10, CON-03, DSH-03): rows of {sale id, month 'YYYY-MM', sale type, sale total,
     // supplier id, supplier name, quantity (kilos for a presentation, CAT-11), line subtotal, unrounded cost,
-    // normal line, free line}. The supplier is the product's current one; pending, unidentified and third-party
+    // normal line, free line, product id, product name}. The supplier is the product's current one; pending, unidentified and third-party
     // lines (POS-12, POS-13) come with normal line = false. Free lines (POS-11), assigned or not, keep their exact amount: the
-    // general discount is spread only over the other lines (P-44)
+    // general discount is spread only over the other lines (P-44). The report per supplier and the dashboard's
+    // products and suppliers read the same rows
     @Query(value = "SELECT s.id, to_char(s.operation_date, 'YYYY-MM'), s.sale_type, " +
                    "s.total_amount, sup.id, sup.name, COALESCE(i.weight_kg, i.quantity), i.subtotal, " +
                    "COALESCE(i.weight_kg, i.quantity) * i.unit_cost, " + NORMAL_LINE + ", " +
-                   "i.free_line_type IS NOT NULL " +
+                   "i.free_line_type IS NOT NULL, p.id, p.name " +
                    "FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN products p ON p.id = i.product_id " +
                    "LEFT JOIN suppliers sup ON sup.id = p.supplier_id " +
                    "WHERE s.status = 'COMPLETADA' AND s.operation_date BETWEEN :from AND :to",
