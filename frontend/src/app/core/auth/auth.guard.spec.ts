@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
 import { authGuard, guestGuard, sessionGuard } from './auth.guard';
+import { routes } from '../../app.routes';
 import { AuthService } from './auth.service';
 
 describe('Auth Guards', () => {
@@ -36,6 +37,10 @@ describe('Auth Guards', () => {
     });
   });
 
+  it('DSH-04: una dirección desconocida va a / y no fija el POS', () => {
+    expect(routes.find(route => route.path === '**')?.redirectTo).toBe('');
+  });
+
   describe('guestGuard', () => {
     it('should allow access to login when user is unauthenticated', () => {
       authServiceSpy.isAuthenticated.mockReturnValue(false);
@@ -44,12 +49,12 @@ describe('Auth Guards', () => {
       expect(result).toBe(true);
     });
 
-    it('should redirect to /pos when user is already authenticated', () => {
+    it('DSH-04: con sesión, /login lleva a / para que homeRedirect elija el inicio', () => {
       authServiceSpy.isAuthenticated.mockReturnValue(true);
 
       const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
       expect(result instanceof UrlTree).toBe(true);
-      expect((result as UrlTree).toString()).toBe('/pos');
+      expect((result as UrlTree).toString()).toBe('/');
     });
   });
 

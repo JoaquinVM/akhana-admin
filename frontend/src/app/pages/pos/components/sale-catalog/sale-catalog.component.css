@@ -255,6 +255,16 @@
   cursor: pointer;
   min-height: 95px;
   transition: all 0.15s ease;
+  /* It is a button: reset the browser's own look */
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.quick-item-card:focus-visible {
+  outline: 2px solid var(--primary-color, #2e5b27);
+  outline-offset: 2px;
 }
 
 .quick-item-card:hover {
@@ -275,6 +285,7 @@
 }
 
 .card-title {
+  display: block;
   margin: 0;
   font-family: var(--font-heading);
   font-size: 0.8125rem;

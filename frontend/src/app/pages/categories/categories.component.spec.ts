@@ -147,6 +147,12 @@ describe('CategoriesComponent', () => {
     expect(component.hasFormChanges()).toBe(false);
   });
 
+  it('un cambio solo de mayúsculas cuenta como cambio y se puede guardar', () => {
+    component.openEditModal(mockCategories[0]);
+    component.categoryForm.patchValue({ name: mockCategories[0].name.toUpperCase() });
+    expect(component.hasFormChanges()).toBe(true);
+  });
+
   it('debe solicitar confirmación de descarte al intentar cerrar un modal sucio', () => {
     component.openCreateModal();
     component.categoryForm.patchValue({ name: 'Nueva' });

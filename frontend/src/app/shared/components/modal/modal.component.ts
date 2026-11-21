@@ -1,11 +1,13 @@
-import { Component, HostListener, input, output } from '@angular/core';
+import { Component, DestroyRef, HostListener, effect, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { isTopDialog, markDialogOpen } from './dialog-stack';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [IconComponent, CommonModule],
+  imports: [IconComponent, CommonModule, CdkTrapFocus],
   templateUrl: './modal.component.html',
   styleUrls: ['./modal.component.css']
 })
@@ -21,9 +23,14 @@ export class ModalComponent {
 
   close = output<void>();
 
+  constructor() {
+    effect(() => markDialogOpen(this, this.isOpen()));
+    inject(DestroyRef).onDestroy(() => markDialogOpen(this, false));
+  }
+
   @HostListener('document:keydown.escape', ['$event'])
   handleEscape(event: Event): void {
-    if (this.isOpen() && this.closeOnEscape()) {
+    if (this.isOpen() && this.closeOnEscape() && isTopDialog(this)) {
       event.preventDefault();
       this.onClose();
     }

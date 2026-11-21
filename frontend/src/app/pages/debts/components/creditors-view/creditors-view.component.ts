@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { searchDebouncer } from '../../../../shared/utils/search-debounce';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { Creditor, CreditorRequest, CreditorStatus, DebtAccount } from '../../../../core/debt/models/debt.models';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -54,6 +56,8 @@ export class CreditorsViewComponent implements OnInit {
   accounts = signal<DebtAccount[]>([]);
   statusFilter = signal<CreditorStatusFilter>('');
   searchTerm = signal<string>('');
+  private readonly debounceSearch = searchDebouncer();
+  private creditorsLoad?: Subscription;
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -98,7 +102,9 @@ export class CreditorsViewComponent implements OnInit {
   loadCreditors(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.creditorService.getCreditors(this.statusFilter() || null, this.searchTerm()).subscribe({
+    // A slower answer of an earlier search must not replace the latest one
+    this.creditorsLoad?.unsubscribe();
+    this.creditorsLoad = this.creditorService.getCreditors(this.statusFilter() || null, this.searchTerm()).subscribe({
       next: creditors => {
         this.creditors.set(creditors);
         this.isLoading.set(false);
@@ -119,7 +125,7 @@ export class CreditorsViewComponent implements OnInit {
 
   onSearch(term: string): void {
     this.searchTerm.set(term);
-    this.loadCreditors();
+    this.debounceSearch(() => this.loadCreditors());
   }
 
   statusLabel(status: CreditorStatus): string {

@@ -600,25 +600,9 @@
   opacity: 1;
 }
 
-.btn-add-tag-chip {
-  background: #f1f5f9;
-  border: 1px dashed #cbd5e1;
-  color: #475569;
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.btn-add-tag-chip:hover {
-  background: #e2e8f0;
-  color: #1e293b;
-}
-
-.tags-dropdown {
-  width: 220px;
+.tag-add-select {
+  display: block;
+  min-width: 220px;
 }
 
 /* Prices and profit */

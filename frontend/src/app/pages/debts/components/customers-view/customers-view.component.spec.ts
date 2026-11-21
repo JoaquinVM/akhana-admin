@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { CustomersViewComponent } from './customers-view.component';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CustomerService } from '../../../../core/debt/customer.service';
@@ -46,10 +46,33 @@ describe('CustomersViewComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Total por cobrar');
   });
 
+  it('DEU-07: la búsqueda espera 250 ms y una respuesta vieja no pisa la más nueva', () => {
+    vi.useFakeTimers();
+    const slow = new Subject<Customer[]>();
+    const fast = new Subject<Customer[]>();
+    customerService.getCustomers.mockClear();
+    customerService.getCustomers.mockReturnValueOnce(slow).mockReturnValueOnce(fast);
+    component.onSearch('x');
+    component.onSearch('xy');
+    vi.advanceTimersByTime(249);
+    expect(customerService.getCustomers).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(customerService.getCustomers).toHaveBeenCalledTimes(1);
+    component.onSearch('xyz');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
+    fast.next([neida]);
+    slow.next([neida, otra]);
+    expect(component.customers().length).toBe(1);
+  });
+
   it('DEU-07: filtra por estado y texto', () => {
     component.setStatusFilter('INACTIVO');
     expect(customerService.getCustomers).toHaveBeenLastCalledWith('INACTIVO', '');
+    vi.useFakeTimers();
     component.onSearch('nei');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
     expect(customerService.getCustomers).toHaveBeenLastCalledWith('INACTIVO', 'nei');
   });
 
@@ -69,6 +92,12 @@ describe('CustomersViewComponent', () => {
     component.openDelete(neida);
     component.confirmDelete();
     expect(component.errorMessage()).toBe('Tía Neida tiene un saldo por cobrar de Bs 579.00.');
+  });
+
+  it('el error de la pantalla se anuncia al lector de pantalla (role="alert")', () => {
+    component.errorMessage.set('Error al cargar los clientes. Intente nuevamente.');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.alert-danger').getAttribute('role')).toBe('alert');
   });
 
   it('DEU-07: al volver de una venta recarga el historial y el listado', () => {

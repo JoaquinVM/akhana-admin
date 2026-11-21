@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { searchDebouncer } from '../../shared/utils/search-debounce';
 import { ConsumptionService } from '../../core/consumption/consumption.service';
 import { ProductService } from '../../core/product/product.service';
 import { Product, isSpecialProduct } from '../../core/product/models/product.models';
@@ -41,6 +43,8 @@ export class ConsumptionsComponent implements OnInit {
   toDate = signal<string>('');
   productFilter = signal<string>('');
   searchTerm = signal<string>('');
+  private readonly debounceSearch = searchDebouncer();
+  private consumptionsLoad?: Subscription;
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -70,7 +74,9 @@ export class ConsumptionsComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     const status = this.statusFilter();
-    this.consumptionService.getConsumptions({
+    // A slower answer of an earlier search must not replace the latest one
+    this.consumptionsLoad?.unsubscribe();
+    this.consumptionsLoad = this.consumptionService.getConsumptions({
       from: this.fromDate() || null,
       to: this.toDate() || null,
       productId: this.productFilter() || null,
@@ -112,7 +118,7 @@ export class ConsumptionsComponent implements OnInit {
 
   onSearch(term: string): void {
     this.searchTerm.set(term);
-    this.loadConsumptions();
+    this.debounceSearch(() => this.loadConsumptions());
   }
 
   statusLabel(status: ConsumptionStatus): string {

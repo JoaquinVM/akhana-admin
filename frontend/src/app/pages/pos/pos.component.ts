@@ -52,6 +52,7 @@ export class PosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private feedbackTimer?: ReturnType<typeof setTimeout>;
   readonly cashService = inject(CashService);
   private readonly saleService = inject(SaleService);
   private readonly transactionService = inject(FinancialTransactionService);
@@ -101,6 +102,7 @@ export class PosComponent implements OnInit {
   expectedCashInDrawer = computed(() => Number(this.cashService.currentSession()?.expectedCash) || 0);
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => clearTimeout(this.feedbackTimer));
     // POS-15: this screen sells nothing by scan, but a scan must not reach the money forms it opens
     const capture = new ScanCapture(this.document, () => undefined);
     capture.install();
@@ -245,8 +247,8 @@ export class PosComponent implements OnInit {
         this.showFeedback('success', `Venta #${updatedSale.saleNumber} anulada exitosamente.`);
         const session = this.cashService.currentSession();
         if (session) {
+          // SaleService.voidSale refreshes the cash session itself
           this.loadSalesForSession(session.id);
-          this.cashService.getCurrentSession().subscribe({ error: () => undefined });
         }
       },
       error: (err) => {
@@ -337,10 +339,7 @@ export class PosComponent implements OnInit {
   onCashExpenseSaved(message: string): void {
     this.closeCashExpenseModal();
     this.showFeedback('success', message);
-    const session = this.cashService.currentSession();
-    if (session) {
-      this.loadExpensesForSession(session.id);
-    }
+    // Reloads the session and, with it, its expenses
     this.loadCurrentSession();
   }
 
@@ -356,8 +355,8 @@ export class PosComponent implements OnInit {
 
   private showFeedback(type: 'success' | 'error', text: string): void {
     this.feedbackMessage.set({ type, text });
-    setTimeout(() => {
-      this.dismissFeedback();
-    }, 6000);
+    // A new message gets its own 6 s: the timer of the previous one must not hide it early
+    clearTimeout(this.feedbackTimer);
+    this.feedbackTimer = setTimeout(() => this.dismissFeedback(), 6000);
   }
 }

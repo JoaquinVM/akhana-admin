@@ -161,8 +161,8 @@ export class CategoriesComponent implements OnInit {
       return false;
     }
 
-    const currentVal = (this.categoryForm.get(fieldName)?.value ?? '').toString().trim().toLowerCase();
-    const origVal = (orig[fieldName] ?? '').toString().trim().toLowerCase();
+    const currentVal = (this.categoryForm.get(fieldName)?.value ?? '').toString().trim();
+    const origVal = (orig[fieldName] ?? '').toString().trim();
 
     return currentVal !== origVal;
   }

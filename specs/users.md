@@ -157,6 +157,10 @@ El sistema SHALL filtrar reactivamente la navegación del usuario autenticado en
 - **WHEN** un operador inicia sesión
 - **THEN** el Navbar muestra Ventas, Catálogo y Compras, y oculta Finanzas y Seguridad
 
+#### Scenario: El menú sigue el rol actual
+- **WHEN** a un usuario con sesión abierta le cambian el rol y vuelve a entrar a la aplicación (la abre o recarga)
+- **THEN** el frontend consulta una vez `/api/auth/me` al entrar y el Navbar muestra el menú del rol actual, sin volver a iniciar sesión; si la consulta falla queda el menú guardado
+
 #### Scenario: Bloqueo de acceso por URL directa no autorizada
 - **WHEN** un usuario introduce directamente en el navegador una URL hacia una pantalla para la que no tiene permiso
 - **THEN** el Guard intercepta la navegación y redirige automáticamente al usuario a su pantalla autorizada predeterminada sin generar ciclos de redirección

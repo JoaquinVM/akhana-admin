@@ -9,13 +9,14 @@ import {
 import { CashDetailModalComponent } from '../components/cash-detail-modal/cash-detail-modal.component';
 import { ReopenCashModalComponent } from '../components/reopen-cash-modal/reopen-cash-modal.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { ConnectionNoticeComponent } from '../../../shared/components/connection-notice/connection-notice.component';
 import { StoreDayPipe } from '../../../shared/utils/store-day.pipe';
 import { sessionDayLabel } from '../../../shared/utils/store-date';
 
 @Component({
   selector: 'app-cash-history',
   standalone: true,
-  imports: [CommonModule, CashDetailModalComponent, ReopenCashModalComponent, StoreDayPipe],
+  imports: [CommonModule, ConnectionNoticeComponent, CashDetailModalComponent, ReopenCashModalComponent, StoreDayPipe],
   templateUrl: './cash-history.component.html',
   styleUrls: ['./cash-history.component.css']
 })
@@ -25,6 +26,7 @@ export class CashHistoryComponent implements OnInit {
 
   sessions = signal<CashSessionSummary[]>([]);
   isLoading = signal<boolean>(false);
+  loadFailed = signal<boolean>(false);
   statusFilter = signal<'ALL' | 'ABIERTA' | 'CERRADA'>('ALL');
 
   selectedDetail = signal<CashSessionDetail | null>(null);
@@ -56,13 +58,16 @@ export class CashHistoryComponent implements OnInit {
 
   loadSessions(): void {
     this.isLoading.set(true);
+    this.loadFailed.set(false);
     this.cashService.getAllSessions().subscribe({
       next: (data) => {
         this.sessions.set(data);
         this.isLoading.set(false);
       },
       error: () => {
+        // A failed load must not read as "no sessions"
         this.sessions.set([]);
+        this.loadFailed.set(true);
         this.isLoading.set(false);
       }
     });
@@ -80,8 +85,9 @@ export class CashHistoryComponent implements OnInit {
         this.isDetailModalVisible.set(true);
         this.isDetailLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.isDetailLoading.set(false);
+        this.toast.error(err.error?.message || `No se pudo abrir el detalle de la caja #${session.sessionNumber}. Intenta de nuevo.`);
       }
     });
   }

@@ -157,8 +157,8 @@ export class TagsComponent implements OnInit {
       return false;
     }
 
-    const currentVal = (this.tagForm.get(fieldName)?.value ?? '').toString().trim().toLowerCase();
-    const origVal = (orig[fieldName] ?? '').toString().trim().toLowerCase();
+    const currentVal = (this.tagForm.get(fieldName)?.value ?? '').toString().trim();
+    const origVal = (orig[fieldName] ?? '').toString().trim();
 
     return currentVal !== origVal;
   }

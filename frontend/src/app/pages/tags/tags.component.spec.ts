@@ -143,6 +143,12 @@ describe('TagsComponent', () => {
     expect(component.hasFormChanges()).toBe(false);
   });
 
+  it('un cambio solo de mayúsculas cuenta como cambio y se puede guardar', () => {
+    component.openEditModal(mockTags[0]);
+    component.tagForm.patchValue({ name: mockTags[0].name.toUpperCase() });
+    expect(component.hasFormChanges()).toBe(true);
+  });
+
   it('debe solicitar confirmación de descarte al intentar cerrar un modal sucio', () => {
     component.openCreateModal();
     component.tagForm.patchValue({ name: 'Orgánico' });

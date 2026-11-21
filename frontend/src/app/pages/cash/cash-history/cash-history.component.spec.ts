@@ -5,6 +5,7 @@ import { CashSessionSummary, CashSessionDetail } from '../../../core/cash/models
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { By } from '@angular/platform-browser';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 describe('CashHistoryComponent', () => {
   let component: CashHistoryComponent;
@@ -87,6 +88,31 @@ describe('CashHistoryComponent', () => {
     expect(rows[0].querySelector('.day-mark').textContent).toContain('Día 28/10 · abierta el 29/10');
     expect(rows[1].textContent).toContain('31/10/2026');
     expect(rows[1].querySelector('.day-mark')).toBeNull();
+  });
+
+  it('si falla la carga muestra el error con Reintentar, no «no se encontraron sesiones»', () => {
+    mockCashService.getAllSessions.mockReturnValue(throwError(() => new Error('red')));
+    component.loadSessions();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('No se pudo cargar el historial de cajas');
+    expect(text).not.toContain('No se encontraron sesiones de caja');
+
+    mockCashService.getAllSessions.mockReturnValue(of(mockSessions));
+    fixture.nativeElement.querySelector('app-connection-notice button').click();
+    fixture.detectChanges();
+    expect(component.loadFailed()).toBe(false);
+    expect(component.sessions().length).toBe(2);
+  });
+
+  it('si falla el detalle avisa con un toast y no abre el modal', () => {
+    const toast = TestBed.inject(ToastService);
+    const spy = vi.spyOn(toast, 'error');
+    mockCashService.getSessionDetail.mockReturnValue(throwError(() => ({ error: {} })));
+    component.openDetail(mockSessions[1]);
+    expect(spy).toHaveBeenCalledWith(`No se pudo abrir el detalle de la caja #${mockSessions[1].sessionNumber}. Intenta de nuevo.`);
+    expect(component.isDetailModalVisible()).toBe(false);
+    expect(component.isDetailLoading()).toBe(false);
   });
 
   it('debe crearse e inicializar el listado histórico de sesiones', () => {

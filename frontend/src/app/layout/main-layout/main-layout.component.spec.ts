@@ -4,15 +4,19 @@ import { provideRouter } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { of } from 'rxjs';
 
 describe('MainLayoutComponent', () => {
   let component: MainLayoutComponent;
   let fixture: ComponentFixture<MainLayoutComponent>;
 
+  let mockAuthService: any;
+
   beforeEach(async () => {
-    const mockAuthService = {
+    mockAuthService = {
       currentUser: signal({ id: '1', username: 'admin', role: 'ADMINISTRATOR' }),
-      logout: vi.fn()
+      logout: vi.fn(),
+      fetchCurrentUserProfile: vi.fn().mockReturnValue(of({ id: '1', username: 'admin', role: 'ADMINISTRATOR' }))
     };
 
     await TestBed.configureTestingModule({
@@ -30,6 +34,10 @@ describe('MainLayoutComponent', () => {
 
   it('debe crearse exitosamente', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('al entrar pide una vez el perfil actual para que el menú refleje el rol', () => {
+    expect(mockAuthService.fetchCurrentUserProfile).toHaveBeenCalledTimes(1);
   });
 
   it('debe renderizar el componente app-navbar', () => {

@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { searchDebouncer } from '../../../../shared/utils/search-debounce';
 import { CreditorService } from '../../../../core/debt/creditor.service';
 import { CustomerService } from '../../../../core/debt/customer.service';
 import { Customer, CustomerRequest, CustomerStatus, DebtAccount } from '../../../../core/debt/models/debt.models';
@@ -55,6 +57,8 @@ export class CustomersViewComponent implements OnInit {
   accounts = signal<DebtAccount[]>([]);
   statusFilter = signal<CustomerStatusFilter>('');
   searchTerm = signal<string>('');
+  private readonly debounceSearch = searchDebouncer();
+  private customersLoad?: Subscription;
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
@@ -97,7 +101,9 @@ export class CustomersViewComponent implements OnInit {
   loadCustomers(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.customerService.getCustomers(this.statusFilter() || null, this.searchTerm()).subscribe({
+    // A slower answer of an earlier search must not replace the latest one
+    this.customersLoad?.unsubscribe();
+    this.customersLoad = this.customerService.getCustomers(this.statusFilter() || null, this.searchTerm()).subscribe({
       next: customers => {
         this.customers.set(customers);
         this.isLoading.set(false);
@@ -118,7 +124,7 @@ export class CustomersViewComponent implements OnInit {
 
   onSearch(term: string): void {
     this.searchTerm.set(term);
-    this.loadCustomers();
+    this.debounceSearch(() => this.loadCustomers());
   }
 
   statusLabel(status: CustomerStatus): string {

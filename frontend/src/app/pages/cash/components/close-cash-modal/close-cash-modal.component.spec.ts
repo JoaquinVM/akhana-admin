@@ -31,6 +31,15 @@ describe('CloseCashModalComponent', () => {
     expect(component.activeMode()).toBe('ARQUEO');
   });
 
+  it('cada casilla de billetes y monedas dice su corte y si es caja o reserva', () => {
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.cut-input:not(.reserve-input)'))
+      .map((input: any) => input.getAttribute('aria-label'));
+    expect(labels).toContain('Billetes de Bs 200 en caja');
+    expect(labels).toContain('Billetes de Bs 200 en reserva');
+    expect(labels.some((label: string) => label.startsWith('Monedas de Bs') && label.endsWith('en reserva'))).toBe(true);
+    expect(labels.every((label: string | null) => !!label)).toBe(true);
+  });
+
   it('debe calcular correctamente subtotales de cortes y total acumulado', () => {
     // Simular 10 en caja y 40 en reserva para Bs 10 -> (10 + 40) * 10 = 500
     component.cutsData.update((rows) =>

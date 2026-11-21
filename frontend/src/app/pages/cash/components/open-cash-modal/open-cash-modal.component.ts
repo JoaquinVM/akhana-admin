@@ -1,8 +1,9 @@
-import { Component, computed, inject, input, output, effect, signal } from '@angular/core';
+import { Component, computed, inject, input, output, effect, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { ConnectionNoticeComponent } from '../../../../shared/components/connection-notice/connection-notice.component';
 import { CashService } from '../../../../core/cash/cash.service';
 import { CashOpeningProposal, OpenCashRequest } from '../../../../core/cash/models/cash.models';
 import { shortDayLabel, weekdayDayLabel } from '../../../../shared/utils/store-date';
@@ -12,7 +13,7 @@ const REQUIRED_COMMENT = [Validators.required, Validators.pattern(/\S/), Validat
 @Component({
   selector: 'app-open-cash-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ModalComponent, ConnectionNoticeComponent],
   templateUrl: './open-cash-modal.component.html',
   styleUrls: ['./open-cash-modal.component.css']
 })
@@ -31,6 +32,8 @@ export class OpenCashModalComponent {
   // CAJ-10: previous session's closing, or the Caja balance for the first session; null while loading
   proposal = signal<CashOpeningProposal | null>(null);
   amountChanged = signal<boolean>(false);
+  // Without the proposal the amount to compare against is unknown: the form waits instead of opening with 0
+  proposalFailed = signal<boolean>(false);
 
   form: FormGroup = this.fb.group({
     operationDate: [''],
@@ -97,14 +100,7 @@ export class OpenCashModalComponent {
   constructor() {
     effect(() => {
       if (this.isOpen()) {
-        this.proposal.set(null);
-        this.form.reset({ operationDate: '', openingAmount: 0, openingComment: '', noAttentionConfirmed: false, noAttentionComment: '' });
-        this.cashService.getOpeningProposal().subscribe({
-          next: (proposal) => {
-            this.proposal.set(proposal);
-            this.form.patchValue({ operationDate: proposal.today, openingAmount: proposal.proposedAmount });
-          }
-        });
+        untracked(() => this.loadProposal());
       }
     });
 
@@ -137,8 +133,21 @@ export class OpenCashModalComponent {
     });
   }
 
+  loadProposal(): void {
+    this.proposal.set(null);
+    this.proposalFailed.set(false);
+    this.form.reset({ operationDate: '', openingAmount: 0, openingComment: '', noAttentionConfirmed: false, noAttentionComment: '' });
+    this.cashService.getOpeningProposal().subscribe({
+      next: (proposal) => {
+        this.proposal.set(proposal);
+        this.form.patchValue({ operationDate: proposal.today, openingAmount: proposal.proposedAmount });
+      },
+      error: () => this.proposalFailed.set(true)
+    });
+  }
+
   canSubmit(): boolean {
-    return this.form.valid && !this.isLoading() && this.hasDayToChoose() && this.dayInRange() && this.daysResolved();
+    return this.proposal() !== null && this.form.valid && !this.isLoading() && this.hasDayToChoose() && this.dayInRange() && this.daysResolved();
   }
 
   onSubmit(): void {

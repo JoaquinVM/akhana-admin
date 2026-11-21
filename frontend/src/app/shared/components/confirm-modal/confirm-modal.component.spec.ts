@@ -1,6 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ConfirmModalComponent } from './confirm-modal.component';
 import { By } from '@angular/platform-browser';
+import { InteractivityChecker } from '@angular/cdk/a11y';
+
+// jsdom has no layout, so the focus trap would see every button as hidden
+const visibleChecker = {
+  isFocusable: (el: HTMLElement) => el.tabIndex >= 0, isTabbable: (el: HTMLElement) => el.tabIndex >= 0,
+  isVisible: () => true, isDisabled: () => false
+};
 
 describe('ConfirmModalComponent', () => {
   let component: ConfirmModalComponent;
@@ -8,7 +15,8 @@ describe('ConfirmModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ConfirmModalComponent]
+      imports: [ConfirmModalComponent],
+      providers: [{ provide: InteractivityChecker, useValue: visibleChecker }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConfirmModalComponent);
@@ -73,5 +81,30 @@ describe('ConfirmModalComponent', () => {
     const backdrop = fixture.debugElement.query(By.css('.modal-backdrop'));
     backdrop.nativeElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(cancelCount).toBe(2);
+  });
+
+  it('Escape cancela, salvo mientras confirma', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    let cancelCount = 0;
+    component.cancel.subscribe(() => cancelCount++);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(cancelCount).toBe(1);
+
+    fixture.componentRef.setInput('isLoading', true);
+    fixture.detectChanges();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(cancelCount).toBe(1);
+  });
+
+  it('al abrir pone el foco en Cancelar', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.btn-outline'));
+    fixture.nativeElement.remove();
   });
 });
