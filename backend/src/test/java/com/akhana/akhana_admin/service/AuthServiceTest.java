@@ -241,7 +241,7 @@ class AuthServiceTest {
 
         assertThat(response.token()).isEqualTo("token");
         assertThat(response.mustChangePassword()).isTrue();
-        assertThat(response.message()).isEqualTo("Debe cambiar tu contraseña.");
+        assertThat(response.message()).isEqualTo("Debes cambiar tu contraseña.");
     }
 
     @Test

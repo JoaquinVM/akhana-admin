@@ -200,7 +200,7 @@
   <app-modal
     [isOpen]="isFormModalOpen()"
     [title]="isEditing() ? 'Editar Etiqueta' : 'Nueva etiqueta'"
-    [subtitle]="isEditing() ? 'Modifique los campos correspondientes de la etiqueta' : 'Completa la información para registrar una nueva etiqueta en el catálogo'"
+    [subtitle]="isEditing() ? 'Cambia los datos de la etiqueta' : 'Completa los datos de la etiqueta nueva'"
     size="md"
     [closeOnBackdrop]="false"
     (close)="attemptCloseForm()">
@@ -286,7 +286,7 @@
   <app-confirm-modal
     [isOpen]="isDiscardConfirmOpen()"
     title="¿Descartar cambios?"
-    message="Tiene cambios sin guardar en el formulario. Si continúa, perderá toda la información modificada."
+    message="Tienes cambios sin guardar. Si sigues, se pierden."
     confirmText="Descartar cambios"
     cancelText="Continuar editando"
     variant="warning"

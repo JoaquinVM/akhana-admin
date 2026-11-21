@@ -115,7 +115,7 @@ describe('AuthService', () => {
       role: 'ADMINISTRATOR',
       permissions: [],
       mustChangePassword: true,
-      message: 'Debe cambiar tu contraseña.'
+      message: 'Debes cambiar tu contraseña.'
     } satisfies LoginResponse);
 
     expect(service.mustChangePassword()).toBe(true);
@@ -151,7 +151,7 @@ describe('AuthService', () => {
     expect(req.request.body).toEqual({ challengeId: 'c-1', code: '123456' });
     req.flush({
       token: 'admin.token', id: 'u-1', username: 'duena', fullName: 'Dueña', role: 'ADMINISTRATOR',
-      permissions: ['USERS'], mustChangePassword: true, message: 'Debe cambiar tu contraseña.', twoFactor: null
+      permissions: ['USERS'], mustChangePassword: true, message: 'Debes cambiar tu contraseña.', twoFactor: null
     });
 
     expect(service.isAuthenticated()).toBe(true);

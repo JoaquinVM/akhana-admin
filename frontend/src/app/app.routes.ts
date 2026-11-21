@@ -172,7 +172,7 @@ export const routes: Routes = [
         component: SectionPageComponent,
         data: {
           title: 'Acceso Restringido',
-          subtitle: 'No cuenta con permisos asignados para acceder a ningún módulo del sistema. Comuníquese con el administrador.'
+          subtitle: 'No tienes permiso para ninguna pantalla. Pídeselo al administrador.'
         }
       },
       {

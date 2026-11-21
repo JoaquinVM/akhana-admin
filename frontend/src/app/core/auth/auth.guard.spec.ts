@@ -49,7 +49,7 @@ describe('Auth Guards', () => {
       expect(result).toBe(true);
     });
 
-    it('DSH-04: con sesión, /login lleva a / para que homeRedirect elige el inicio', () => {
+    it('DSH-04: con sesión, /login lleva a / para que homeRedirect elija el inicio', () => {
       authServiceSpy.isAuthenticated.mockReturnValue(true);
 
       const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
