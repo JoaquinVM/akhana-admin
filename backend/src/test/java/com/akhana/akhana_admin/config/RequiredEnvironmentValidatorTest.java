@@ -46,4 +46,19 @@ class RequiredEnvironmentValidatorTest {
 
         assertThatCode(() -> validator.postProcessEnvironment(env, null)).doesNotThrowAnyException();
     }
+
+    @Test
+    @DisplayName("Falla si JWT_SECRET es el valor de ejemplo que el repo tuvo público (404E6352...)")
+    void publishedExampleSecret_Fails() {
+        // Built from parts so the old secret is not one more line in the repo
+        String published = "404E6352" + "66556A586E3272357538782F413F4428472B4B6250645367566B5970";
+        MockEnvironment env = new MockEnvironment()
+            .withProperty("spring.datasource.password", "db-pass")
+            .withProperty("security.jwt.secret", published);
+
+        assertThatThrownBy(() -> validator.postProcessEnvironment(env, null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("JWT_SECRET is a published example value");
+    }
+
 }

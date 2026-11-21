@@ -95,10 +95,10 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 
 ### 3.1 Principios transversales · V1
 
-- **RG-01** Nada se borra físicamente: productos, ventas, pedidos, movimientos y usuarios usan baja lógica o anulación.
+- **RG-01** Nada se borra físicamente: productos, ventas, pedidos, movimientos y usuarios usan baja lógica o anulación. Única excepción: los grupos de productos rápidos (POS-02) se borran físicamente, porque son solo una ayuda visual del POS y no registran nada.
 - **RG-02** Todo registro guarda auditoría: quién y cuándo creó, modificó, eliminó o anuló. La genera el servidor, nunca el cliente.
 - **RG-03** Toda anulación exige motivo (sin largo mínimo) y revierte su efecto en caja y cuentas (y en stock desde la V2).
-- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error. Todo error llega al usuario en español, sin detalles técnicos; dos guardados iguales a la vez responden un conflicto, no un error del servidor.
+- **RG-04** Las validaciones de negocio (unicidad, saldos) viven en el backend; el frontend solo muestra el error. Todo error llega al usuario en español, sin detalles técnicos, con el mismo formato (también una dirección que no existe o un método no admitido); dos guardados iguales a la vez responden un conflicto, no un error del servidor, y una operación que espera un bloqueo que no llega responde «Otra operación está en curso, intente de nuevo».
 - **RG-05** Toda operación que mueve dinero es atómica: todo o nada, en una sola transacción de base de datos.
 
 ### 3.2 Catálogo
@@ -191,7 +191,7 @@ Detalle en `cash.md`.
 Detalle en `sales.md`.
 
 - **POS-01** Buscador de productos activos; seleccionar uno repetido suma cantidad en lugar de duplicar la línea. Enter agrega el producto del código escrito. Todos los buscadores de productos buscan por código, nombre, proveedor, categoría y etiqueta, sin tildes, en cualquier orden y con errores de tipeo, y muestran todos los resultados por relevancia, con el proveedor de cada uno. También encuentran el código de barras, solo cuando está completo y es exacto.
-- **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar.
+- **POS-02** Productos rápidos en grupos configurables con orden por arrastrar y soltar. Solo muestran productos activos: uno desactivado o eliminado después de agregarlo deja de verse. Borrar un grupo lo borra de verdad (excepción a RG-01).
 - **POS-03** Descuento por unidad (0 ≤ descuento ≤ precio) y descuento general (≤ subtotal). «Otro peso» no lleva descuento por unidad: se cambia su total (POS-10).
 - **POS-04** Pago en efectivo (con cambio y monto recibido ≥ total), QR (a la cuenta QR, hoy Bisa) o mixto, con efectivo y QR mayores a 0.
 - **POS-05** La venta guarda una copia del nombre, código, precio **y costo** de cada producto al vender, para que la utilidad histórica no cambie.

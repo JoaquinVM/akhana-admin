@@ -49,7 +49,7 @@ public class ProductPhotoProcessor {
     private static final float THUMBNAIL_QUALITY = 0.8f;
     private static final double SHRINK_STEP = 0.85;
     private static final int PERMIT_WAIT_SECONDS = 30;
-    // One being processed and two waiting. Each one holds a database connection (open-in-view), which the POS shares
+    // One being processed and two waiting. Each one holds a request thread; open-in-view is off, so no database connection
     static final int MAX_UPLOADS_IN_PROCESS = 3;
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};

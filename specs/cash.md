@@ -208,6 +208,9 @@ El sistema SHALL listar el historial cronológico de sesiones de caja y permitir
 #### Scenario: Listado de historial de cajas
 - **WHEN** el usuario navega a la sección "Cajas"
 - **THEN** el sistema presenta la tabla de sesiones mostrando identificador, fechas/horas de apertura y cierre, usuarios de apertura y cierre, monto inicial, monto de cierre, diferencia y estado
+- **NOTA** Las ventas de todas las cajas se cuentan en una sola consulta (`GROUP BY`), y el detalle de una caja carga
+  las líneas de sus ventas en lotes de 50 (`default_batch_fetch_size`), no una consulta por caja ni por venta. Pruebas en
+  `QueryCountIntegrationTest`: el número de consultas es el mismo con 1 o con 9 cajas o ventas.
 
 #### Scenario: Consulta de detalle de una sesión cerrada
 - **WHEN** el usuario selecciona una caja del historial

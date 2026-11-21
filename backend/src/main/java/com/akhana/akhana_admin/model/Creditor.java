@@ -2,6 +2,7 @@ package com.akhana.akhana_admin.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -14,6 +15,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// Products and sale lines point to their owner: a page of them loads the owners in one query
+@BatchSize(size = 100)
 public class Creditor {
 
     @Id

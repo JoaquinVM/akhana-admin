@@ -438,12 +438,13 @@ class CashSessionServiceTest {
     @DisplayName("Debe obtener el historial de todas las sesiones de caja")
     void getAllSessions_success() {
         when(cashSessionRepository.findAllByOrderByOpenedAtDesc()).thenReturn(List.of(activeSession));
-        when(saleRepository.countByCashSessionId(sessionId)).thenReturn(1L);
+        when(cashSessionRepository.countSalesBySession()).thenReturn(List.<Object[]>of(new Object[]{sessionId, 1L}));
 
         List<CashSessionSummaryResponse> list = cashSessionService.getAllSessions();
 
         assertThat(list).hasSize(1);
         assertThat(list.get(0).id()).isEqualTo(sessionId);
+        assertThat(list.get(0).salesCount()).isEqualTo(1);
     }
 
     @Test

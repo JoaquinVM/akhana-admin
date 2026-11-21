@@ -6,20 +6,27 @@ import com.akhana.akhana_admin.service.ProductPhotoService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestControllerAdvice
 @Slf4j
@@ -29,6 +36,20 @@ public class GlobalExceptionHandler {
     static final String INVALID_PARAMETER = "El valor de «%s» no es válido.";
     static final String MISSING_PARAMETER = "Falta el dato «%s».";
     static final String CONFLICT_WITH_ANOTHER_SAVE = "No se pudo guardar: otro registro igual se guardó al mismo tiempo. Actualice la pantalla y revise antes de intentar de nuevo.";
+    static final String UNEXPECTED_ERROR = "Ocurrió un error inesperado. Intente de nuevo; si se repite, avise al administrador.";
+    static final String NOT_FOUND = "No existe la dirección solicitada.";
+    static final String METHOD_NOT_ALLOWED = "La operación no está permitida en esta dirección.";
+    static final String MISSING_FILE = "Falta el archivo «%s».";
+    static final String OPERATION_IN_PROGRESS = "Otra operación está en curso, intente de nuevo.";
+    static final String FILE_TOO_LARGE = "El archivo supera el tamaño máximo de 10 MB.";
+    private static final String OWN_PACKAGE = "com.akhana.akhana_admin.";
+
+    // Each upload by the prefix of its path, with the message of what it accepts
+    private static final List<Map.Entry<Pattern, String>> UPLOAD_MESSAGES = List.of(
+        Map.entry(Pattern.compile("^/api/products/import(/|$)"), ProductImportService.INVALID_FILE),
+        Map.entry(Pattern.compile("^/api/products/[^/]+/photo(/|$)"), ProductPhotoService.INVALID_FILE),
+        Map.entry(Pattern.compile("^/api/purchases/[^/]+/photo(/|$)"), ProductPhotoService.INVALID_FILE),
+        Map.entry(Pattern.compile("^/api/purchases/readings(/|$)"), ProductPhotoService.INVALID_FILE));
 
     @ExceptionHandler(AuthenticationFailedException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationFailed(AuthenticationFailedException ex) {
@@ -65,20 +86,37 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.notFound(ex.getMessage()));
     }
 
+    // A business rule of this application writes its message in Spanish for the person: thrown from our own code, it
+    // goes as is. One thrown from a library (the JDK, Spring, POI, Jackson) is internal and goes as the generic one.
+    // Our own internal errors use InternalErrorException, never these two
     @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleIllegalState(RuntimeException ex) {
+        if (!thrownByOwnCode(ex)) {
+            log.warn("Internal error answered with the generic message", ex);
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.badRequest(UNEXPECTED_ERROR));
+        }
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.badRequest(ex.getMessage()));
     }
 
-    // The product import (CAT-06) and the product photos (CAT-12) upload files, each with its own message
+    static boolean thrownByOwnCode(Throwable ex) {
+        StackTraceElement[] stack = ex.getStackTrace();
+        return ex.getMessage() != null && stack.length > 0 && stack[0].getClassName().startsWith(OWN_PACKAGE);
+    }
+
+    // Each upload (CAT-06 import, CAT-12 product photo, COM-19 purchase photo, COM-20 reading) with its own message
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex,
                                                              HttpServletRequest request) {
-        String message = request.getRequestURI().endsWith("/photo")
-            ? ProductPhotoService.INVALID_FILE
-            : ProductImportService.INVALID_FILE;
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        String message = UPLOAD_MESSAGES.stream()
+            .filter(entry -> entry.getKey().matcher(path).find())
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .orElse(FILE_TOO_LARGE);
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.badRequest(message));
@@ -133,5 +171,53 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.badRequest(String.format(MISSING_PARAMETER, ex.getParameterName())));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.badRequest(String.format(MISSING_FILE, ex.getRequestPartName())));
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ErrorResponse> handleNoRoute(Exception ex) {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse.notFound(NOT_FOUND));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity
+            .status(HttpStatus.METHOD_NOT_ALLOWED)
+            .body(ErrorResponse.methodNotAllowed(METHOD_NOT_ALLOWED));
+    }
+
+    // A row lock that could not be taken in time (lock_timeout, a deadlock): the other operation wins, this one retries
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleLockFailure(PessimisticLockingFailureException ex) {
+        log.warn("A lock could not be acquired: {}", ex.getMessage());
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(ErrorResponse.conflict(OPERATION_IN_PROGRESS));
+    }
+
+    // Anything else: logged with its trace, and the person sees a message in Spanish without internal details
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
+        // Spring's own request errors (a media type it does not read, a ResponseStatusException) keep their status
+        if (ex instanceof org.springframework.web.ErrorResponse springError
+            && springError.getStatusCode().is4xxClientError()) {
+            log.warn("Request rejected on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+            return ResponseEntity
+                .status(springError.getStatusCode())
+                .body(new ErrorResponse(HttpStatus.valueOf(springError.getStatusCode().value()).getReasonPhrase(),
+                    UNREADABLE_REQUEST, java.time.Instant.now()));
+        }
+        log.error("Unexpected error on {} {}", request.getMethod(), request.getRequestURI(), ex);
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse.internalError(UNEXPECTED_ERROR));
     }
 }
