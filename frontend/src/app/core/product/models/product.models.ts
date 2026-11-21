@@ -118,8 +118,7 @@ export function activePresentations(product: Product): ProductPresentation[] {
   return (product.presentations ?? []).filter((p) => p.active);
 }
 
-// CAT-11: at cost it charges weight x cost per kilo, without the fixed price
-export function presentationPrice(presentation: ProductPresentation, product: Product, atCost: boolean): number {
-  if (atCost) return Math.round(presentation.weightKg * product.buyPrice * 100) / 100;
-  return presentation.price;
+// CAT-11: at cost it charges weight x cost per kilo, without the fixed price; both come computed by the server
+export function presentationPrice(presentation: ProductPresentation, atCost: boolean): number {
+  return atCost ? presentation.cost : presentation.price;
 }

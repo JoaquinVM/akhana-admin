@@ -34,6 +34,7 @@ import { canonicalBarcode, looksLikeBarcode } from '../../shared/utils/barcode';
 import { formatBs } from '../../shared/utils/money';
 import { ScanCapture } from '../../shared/utils/barcode-scan';
 import { searchProducts } from '../../shared/utils/product-search';
+import { lineAmount } from '../pos/register-sale/cart-item';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export type ProductStatusFilter = 'ACTIVE_INACTIVE' | 'ACTIVO' | 'INACTIVO' | 'ELIMINADO';
@@ -803,12 +804,13 @@ export class ProductsComponent implements OnInit {
   presentationPricePreview(draft: PresentationDraft): number | null {
     if (draft.fixedPrice) return draft.fixedPrice;
     const sell = Number(this.productForm.get('sellPrice')?.value) || 0;
-    return draft.weightKg ? Math.round(draft.weightKg * sell * 100) / 100 : null;
+    return draft.weightKg ? lineAmount(Number(draft.weightKg), sell) : null;
   }
 
+  // Rounded like the server (HALF_UP on the exact product): 100 g at Bs 40,15/kg is Bs 4,02
   presentationCostPreview(draft: PresentationDraft): number | null {
     const buy = Number(this.productForm.get('buyPrice')?.value) || 0;
-    return draft.weightKg ? Math.round(draft.weightKg * buy * 100) / 100 : null;
+    return draft.weightKg ? lineAmount(Number(draft.weightKg), buy) : null;
   }
 
   private presentationRequests(): ProductPresentationRequest[] {

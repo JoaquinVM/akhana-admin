@@ -246,6 +246,10 @@ abierta, o la cuenta QR), fecha y comentario.
   el monto y el saldo por cobrar vuelve a subir; si era de Caja con la caja abierta, el efectivo esperado baja.
 - **Cuando** el cobro se hizo en una caja ya cerrada **entonces** se rechaza: «El cobro se hizo en una caja
   cerrada; no se puede anular.»
+- **Cuando** la cuenta del cobro ya no tiene ese dinero y quedaría por debajo de 0,00 **entonces** se rechaza con el
+  mensaje de Finanzas (FIN-06): «No se puede anular: la cuenta <cuenta> quedaría con saldo negativo (saldo disponible:
+  Bs X). Anule primero los gastos o transferencias que usaron ese dinero.» Si queda justo en 0,00, se anula. Pruebas en
+  `CustomerServiceTest`.
 - Motivo obligatorio y doble anulación con los mismos mensajes que DEU-03.
 
 ## DEU-07 · Saldos por cobrar por cliente

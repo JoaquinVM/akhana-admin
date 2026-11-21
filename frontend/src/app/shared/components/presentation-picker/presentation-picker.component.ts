@@ -38,6 +38,6 @@ export class PresentationPickerComponent {
   private amountOf(presentation: ProductPresentation): number {
     const mode = this.priceMode();
     if (mode === 'cost') return presentation.cost;
-    return presentationPrice(presentation, this.product(), mode === 'atCost');
+    return presentationPrice(presentation, mode === 'atCost');
   }
 }

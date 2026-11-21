@@ -20,7 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -58,7 +62,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
 
         boolean setAsQr = Boolean.TRUE.equals(request.getIsQrAccount());
         if (setAsQr) {
-            clearCurrentQrAccount(currentUsername);
+            lockWithCurrentQr(null).currentQr().ifPresent(qr -> clearQrMark(qr, currentUsername));
         }
 
         BigDecimal initial = (request.getInitialBalance() != null ? request.getInitialBalance() : BigDecimal.ZERO)
@@ -99,8 +103,11 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     @Override
     @Transactional
     public FinancialAccountResponse updateAccount(UUID id, FinancialAccountRequest request, String currentUsername) {
-        FinancialAccount account = financialAccountRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+        // Locked so the save does not write back a balance a concurrent sale or movement already changed
+        LockedAccounts locked = Boolean.TRUE.equals(request.getIsQrAccount())
+                ? lockWithCurrentQr(id)
+                : new LockedAccounts(lockActive(id), Optional.empty());
+        FinancialAccount account = locked.target();
 
         String trimmedName = request.getName().trim();
         if (financialAccountRepository.existsByNameIgnoreCaseAndDeletedAtIsNullAndIdNot(trimmedName, id)) {
@@ -115,7 +122,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
         if (request.getIsQrAccount() != null) {
             boolean requestedQr = request.getIsQrAccount();
             if (requestedQr && !Boolean.TRUE.equals(account.getIsQrAccount())) {
-                clearCurrentQrAccount(currentUsername);
+                locked.currentQr().ifPresent(qr -> clearQrMark(qr, currentUsername));
                 account.setIsQrAccount(true);
             } else if (!requestedQr && Boolean.TRUE.equals(account.getIsQrAccount())) {
                 throw new IllegalStateException("Debe existir siempre una cuenta de cobros QR. Configure otra cuenta como QR para transferir la asignación.");
@@ -131,14 +138,14 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     @Override
     @Transactional
     public FinancialAccountResponse setQrAccount(UUID id, String currentUsername) {
-        FinancialAccount targetAccount = financialAccountRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+        LockedAccounts locked = lockWithCurrentQr(id);
+        FinancialAccount targetAccount = locked.target();
 
         if (Boolean.TRUE.equals(targetAccount.getIsQrAccount())) {
             return mapToResponse(targetAccount);
         }
 
-        clearCurrentQrAccount(currentUsername);
+        locked.currentQr().ifPresent(qr -> clearQrMark(qr, currentUsername));
 
         targetAccount.setIsQrAccount(true);
         targetAccount.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
@@ -148,14 +155,44 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     }
 
     // The unique index admits one QR account at a time (FIN-03): the old mark must reach the database before the new one
-    private void clearCurrentQrAccount(String currentUsername) {
-        financialAccountRepository.findByIsQrAccountTrueAndDeletedAtIsNull()
-                .ifPresent(existingQr -> {
-                    existingQr.setIsQrAccount(false);
-                    existingQr.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
-                    existingQr.setUpdatedAt(Instant.now());
-                    financialAccountRepository.saveAndFlush(existingQr);
-                });
+    private void clearQrMark(FinancialAccount lockedQr, String currentUsername) {
+        lockedQr.setIsQrAccount(false);
+        lockedQr.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");
+        lockedQr.setUpdatedAt(Instant.now());
+        financialAccountRepository.saveAndFlush(lockedQr);
+    }
+
+    private record LockedAccounts(FinancialAccount target, Optional<FinancialAccount> currentQr) {}
+
+    private FinancialAccount lockActive(UUID id) {
+        return financialAccountRepository.findActiveByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+    }
+
+    // Locks the account (if any) and the current QR account together, in id order like every money operation (T-14),
+    // so neither save writes back a balance read before a concurrent sale or movement
+    private LockedAccounts lockWithCurrentQr(UUID id) {
+        Optional<UUID> qrId = financialAccountRepository.findCurrentQrAccountId();
+        Set<UUID> ids = new HashSet<>();
+        if (id != null) {
+            ids.add(id);
+        }
+        qrId.ifPresent(ids::add);
+        Map<UUID, FinancialAccount> locked = ids.isEmpty() ? Map.of()
+                : financialAccountRepository.findAllByIdForUpdate(ids).stream()
+                        .collect(Collectors.toMap(FinancialAccount::getId, account -> account));
+
+        FinancialAccount target = null;
+        if (id != null) {
+            target = Optional.ofNullable(locked.get(id))
+                    .filter(account -> account.getDeletedAt() == null)
+                    .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+        }
+        Optional<FinancialAccount> currentQr = qrId.map(locked::get);
+        if (currentQr.isPresent() && !Boolean.TRUE.equals(currentQr.get().getIsQrAccount())) {
+            throw new IllegalStateException("La cuenta de cobros QR cambió mientras se guardaba. Intente de nuevo.");
+        }
+        return new LockedAccounts(target, currentQr);
     }
 
     @Override
@@ -203,8 +240,8 @@ public class FinancialAccountServiceImpl implements FinancialAccountService {
     @Override
     @Transactional
     public void deleteAccount(UUID id, String currentUsername) {
-        FinancialAccount account = financialAccountRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cuenta financiera no encontrada con ID: " + id));
+        // Locked so the zero-balance check and the save see the balance after any concurrent movement
+        FinancialAccount account = lockActive(id);
 
         if (Boolean.TRUE.equals(account.getIsCashAccount())) {
             throw new IllegalStateException("La cuenta Caja es fija del sistema y no puede ser eliminada.");
