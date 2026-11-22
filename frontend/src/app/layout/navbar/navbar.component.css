@@ -46,15 +46,15 @@
 
 .brand-text {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   gap: 6px;
 }
 
 .brand-title {
-  font-family: var(--font-brand);
-  font-size: 21px;
-  color: var(--primary-color);
-  line-height: 1.15;
+  /* The AKHANA lettering from the brand artwork (an image, it is drawn by hand) */
+  display: block;
+  width: auto;
+  height: 22px;
 }
 
 .brand-subtitle {
