@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="900" viewBox="0 0 460 900">
+  <defs>
+    <path id="leaf" d="M0 0C38-16 92-16 140 0C92 16 38 16 0 0Z"/>
+    <path id="vein" d="M6 0H128" fill="none" stroke-width="1.2" stroke-linecap="round"/>
+  </defs>
+  <!-- Top-left branch -->
+  <g opacity="0.85">
+    <g transform="translate(-30 40) rotate(-28)"><use href="#leaf" fill="#525f50" transform="scale(1.6)"/></g>
+    <g transform="translate(-20 120) rotate(-8)"><use href="#leaf" fill="#898257" transform="scale(1.3)"/><use href="#vein" stroke="#f2e3bc" stroke-opacity="0.5" transform="scale(1.3)"/></g>
+    <g transform="translate(30 10) rotate(-52)"><use href="#leaf" fill="#737353" transform="scale(1.1)"/></g>
+    <g transform="translate(-10 210) rotate(14)"><use href="#leaf" fill="#a7a07e" transform="scale(1)"/></g>
+    <g transform="translate(120 -10) rotate(-70)"><use href="#leaf" fill="#898257" transform="scale(0.8)"/></g>
+  </g>
+  <!-- Mid-left leaves -->
+  <g opacity="0.7">
+    <g transform="translate(-40 470) rotate(-18)"><use href="#leaf" fill="#898257" transform="scale(1.2)"/><use href="#vein" stroke="#f2e3bc" stroke-opacity="0.5" transform="scale(1.2)"/></g>
+    <g transform="translate(-30 540) rotate(10)"><use href="#leaf" fill="#525f50" transform="scale(0.9)"/></g>
+    <g transform="translate(-20 610) rotate(30)"><use href="#leaf" fill="#c8bf9f" transform="scale(1.1)"/></g>
+  </g>
+  <!-- Bottom-left earth waves -->
+  <path d="M0 760C70 730 150 745 230 790C300 830 380 850 460 900H0Z" fill="#814e34" opacity="0.55"/>
+  <path d="M0 800C80 780 160 800 240 840C300 870 350 885 400 900H0Z" fill="#5f3625" opacity="0.75"/>
+</svg>

@@ -12,7 +12,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(145deg, #faf8f3 0%, #fdf6e6 55%, #faf8f3 100%);
+  background-color: var(--bg-canvas);
+  background-image: url('/images/fondo-izquierda.svg'), url('/images/fondo-derecha.svg');
+  background-repeat: no-repeat;
+  background-position: left bottom, right top;
+  background-size: auto 100vh, auto 100vh;
   overflow-x: hidden;
 }
 
