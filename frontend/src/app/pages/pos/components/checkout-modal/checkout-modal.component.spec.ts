@@ -117,15 +117,21 @@ describe('CheckoutModalComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('múltiplos de Bs 0.10');
   });
 
-  it('H22: al abrir en efectivo el foco va a «Monto recibido»; en QR, a «Confirmar venta»', async () => {
+  it('H22: el primer foco del modal es «Monto recibido» en efectivo y «Confirmar venta» en QR', () => {
+    const marked = (): HTMLElement[] => Array.from(fixture.nativeElement.querySelectorAll('[cdkFocusInitial]'));
     open(38);
-    await fixture.whenStable();
-    expect(document.activeElement?.id).toBe('amountReceived');
+    component.setPaymentMethod('EFECTIVO');
+    fixture.detectChanges();
+    expect(marked().map((e) => e.id)).toEqual(['amountReceived']);
 
     component.setPaymentMethod('QR');
-    open(38);
-    await fixture.whenStable();
-    expect((document.activeElement as HTMLElement)?.classList.contains('btn-confirm-checkout')).toBe(true);
+    fixture.detectChanges();
+    expect(marked().length).toBe(1);
+    expect(marked()[0].classList.contains('btn-confirm-checkout')).toBe(true);
+
+    component.setPaymentMethod('MIXTO');
+    fixture.detectChanges();
+    expect(marked().map((e) => e.id)).toEqual(['cashPortion']);
   });
 
   it('debe procesar el método de pago EFECTIVO calculando el cambio', () => {

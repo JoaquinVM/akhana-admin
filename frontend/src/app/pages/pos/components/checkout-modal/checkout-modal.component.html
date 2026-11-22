@@ -160,6 +160,7 @@
                 <span class="currency-tag">Bs</span>
                 <input
                   id="amountReceived"
+                  [attr.cdkFocusInitial]="initialFocus() === 'received' ? '' : null"
                   type="number"
                   step="0.50"
                   min="0"
@@ -229,6 +230,7 @@
                 <span class="currency-tag">Bs</span>
                 <input
                   id="cashPortion"
+                  [attr.cdkFocusInitial]="initialFocus() === 'cashPortion' ? '' : null"
                   type="number"
                   step="0.50"
                   min="0"
@@ -324,6 +326,7 @@
       <button
         type="button"
         class="btn btn-primary btn-modal-action btn-confirm-checkout"
+        [attr.cdkFocusInitial]="initialFocus() === 'confirm' ? '' : null"
         [disabled]="!isPaymentValid() || isSubmitting()"
         (click)="handleConfirm()">
         @if (isSubmitting()) {

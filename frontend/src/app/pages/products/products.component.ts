@@ -1,4 +1,4 @@
-import { Component, DOCUMENT, OnInit, computed, inject, signal, DestroyRef, HostListener, effect, untracked } from '@angular/core';
+import { Component, DOCUMENT, OnInit, computed, inject, signal, DestroyRef, effect, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -588,13 +588,6 @@ export class ProductsComponent implements OnInit {
     this.formVersion.update(v => v + 1);
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.isFormModalOpen()) return;
-    const target = event.target as HTMLElement;
-    if (!target.closest('.position-relative')) {
-    }
-  }
 
   // --- Opening and closing modals ---
 
