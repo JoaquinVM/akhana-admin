@@ -42,6 +42,27 @@
             <p class="step-text">¿No puedes escanearlo? Ingresa esta clave en la app:</p>
             <code class="secret-key">{{ secretGroups() }}</code>
             <p class="step-text">Después escribe el código de 6 dígitos que muestra la app.</p>
+            @if (challenge.activationCodeRequired) {
+              <!-- 098: without the code an administrator handed in person the second factor is not activated -->
+              <div class="form-group">
+                <label for="activationCode" class="form-label">Código de activación</label>
+                <div class="input-wrapper" [class.input-error]="isActivationCodeInvalid()">
+                  <input
+                    id="activationCode"
+                    type="text"
+                    formControlName="activationCode"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    maxlength="10"
+                    placeholder="00000000"
+                    class="form-input" />
+                </div>
+                <span class="step-text">Te lo entrega el administrador en persona. Vale 24 horas.</span>
+                @if (isActivationCodeInvalid()) {
+                  <span class="field-error">Escribe los 8 dígitos del código de activación.</span>
+                }
+              </div>
+            }
           } @else {
             <div class="step-intro">
               <h2 class="step-title">Código de verificación</h2>

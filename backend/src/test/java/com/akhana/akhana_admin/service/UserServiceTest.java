@@ -85,6 +85,57 @@ class UserServiceTest {
     }
 
     @Test
+    @org.junit.jupiter.api.DisplayName("098: un usuario nuevo debe cambiar su contraseña y recibe un código de activación de 8 dígitos, del que solo se guarda el hash")
+    void createUser_mustChangePasswordAndGetsActivationCode() {
+        CreateUserRequest request = new CreateUserRequest("New User", "newuser", "raw_password", Role.OPERATOR);
+        when(userRepository.existsByUsernameIgnoreCase("newuser")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "hash:" + inv.getArgument(0));
+        org.mockito.ArgumentCaptor<User> saved = org.mockito.ArgumentCaptor.forClass(User.class);
+        when(userRepository.saveAndFlush(saved.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse response = userService.createUser(request, "admin");
+
+        User user = saved.getValue();
+        assertTrue(user.isMustChangePassword());
+        assertTrue(user.isActivationCodeRequired());
+        assertTrue(response.activationCode().matches("\\d{8}"));
+        assertEquals("hash:" + response.activationCode(), user.getActivationCodeHash());
+        assertTrue(user.getActivationCodeExpiresAt().isAfter(Instant.now().plus(java.time.Duration.ofHours(23))));
+        assertTrue(user.getActivationCodeExpiresAt().isBefore(Instant.now().plus(java.time.Duration.ofHours(25))));
+        assertTrue(response.activationPending());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("098: quitar el 2FA da un código nuevo; generar otro reemplaza al anterior")
+    void resetAndGenerate_giveNewActivationCodes() {
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(sampleUser));
+        when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "hash:" + inv.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        String first = userService.resetSecondFactor(userId, "other_admin").activationCode();
+        assertEquals("hash:" + first, sampleUser.getActivationCodeHash());
+        String second = userService.generateActivationCode(userId, "other_admin").activationCode();
+        assertTrue(second.matches("\\d{8}"));
+        assertEquals("hash:" + second, sampleUser.getActivationCodeHash());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("098: no se genera código para uno mismo ni para quien ya tiene el 2FA activo")
+    void generateActivationCode_rejections() {
+        when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(sampleUser));
+        IllegalArgumentException own = assertThrows(IllegalArgumentException.class,
+            () -> userService.generateActivationCode(userId, "testuser"));
+        assertEquals("No puedes generar tu propio código de activación. Pídeselo a otro administrador.", own.getMessage());
+
+        sampleUser.setTotpSecret("JBSWY3DPEHPK3PXP");
+        IllegalArgumentException active = assertThrows(IllegalArgumentException.class,
+            () -> userService.generateActivationCode(userId, "other_admin"));
+        assertTrue(active.getMessage().startsWith("Este usuario ya tiene el segundo factor activo"));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
     void createUser_duplicateUsername_throwsException() {
         CreateUserRequest request = new CreateUserRequest(
                 "New User",

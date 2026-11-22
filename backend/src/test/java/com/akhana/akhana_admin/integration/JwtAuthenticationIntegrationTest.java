@@ -70,6 +70,11 @@ class JwtAuthenticationIntegrationTest {
 
     /** Logs in with the password and the second factor (USR-08, 069), activating it the first time. */
     private String login(String username, String password, boolean expectedMustChange) throws Exception {
+        return login(username, password, expectedMustChange, null);
+    }
+
+    /** The same, with the one-time activation code an administrator handed (098). */
+    private String login(String username, String password, boolean expectedMustChange, String activationCode) throws Exception {
         String body = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(username, password)))
@@ -83,8 +88,9 @@ class JwtAuthenticationIntegrationTest {
         String secret = (String) twoFactor.get("secret");
         body = mockMvc.perform(post("/api/auth/login/second-factor")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"challengeId\":\"%s\",\"code\":\"%s\"}"
-                    .formatted(twoFactor.get("challengeId"), nextCode(username, secret))))
+                .content("{\"challengeId\":\"%s\",\"code\":\"%s\",\"activationCode\":%s}"
+                    .formatted(twoFactor.get("challengeId"), nextCode(username, secret),
+                        activationCode == null ? "null" : "\"" + activationCode + "\"")))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
         assertThat((Boolean) JsonPath.read(body, "$.mustChangePassword")).isEqualTo(expectedMustChange);
@@ -286,17 +292,19 @@ class JwtAuthenticationIntegrationTest {
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + lostPhoneToken))
             .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/users/" + operator.getId() + "/second-factor/reset")
+        String reset = mockMvc.perform(post("/api/users/" + operator.getId() + "/second-factor/reset")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.twoFactorEnabled").value(false));
+            .andExpect(jsonPath("$.twoFactorEnabled").value(false))
+            .andReturn().getResponse().getContentAsString();
+        String activationCode = JsonPath.read(reset, "$.activationCode");
 
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + lostPhoneToken))
             .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
             .andExpect(status().isOk());
-        // With the password, the operator activates the second factor again on the new phone
-        login(operator.getUsername(), PASSWORD, false);
+        // With the password and the code the administrator handed (098), the operator activates it on the new phone
+        login(operator.getUsername(), PASSWORD, false, activationCode);
     }
 
     @Test

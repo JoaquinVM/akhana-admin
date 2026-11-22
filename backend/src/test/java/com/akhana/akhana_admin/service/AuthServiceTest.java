@@ -450,6 +450,85 @@ class AuthServiceTest {
         return authService.loginWithSecondFactor(new TwoFactorLoginRequest(challenge.twoFactor().challengeId(), code), IP);
     }
 
+    // 098: an operator whose activation needs the code; "12345678" is the code, stored as its hash
+    private LoginResponse operatorChallengeWithCode(Instant expiresAt) {
+        activeUser.setActivationCodeRequired(true);
+        activeUser.setActivationCodeHash("$2a$10$codeHash");
+        activeUser.setActivationCodeExpiresAt(expiresAt);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
+        lenient().when(passwordEncoder.matches("12345678", "$2a$10$codeHash")).thenReturn(true);
+        lenient().when(passwordEncoder.matches("87654321", "$2a$10$codeHash")).thenReturn(false);
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+        return authService.login(new LoginRequest("admin", "12345admin"), IP);
+    }
+
+    private LoginResponse activate(LoginResponse challenge, String activationCode) {
+        return authService.loginWithSecondFactor(new TwoFactorLoginRequest(challenge.twoFactor().challengeId(),
+            codeNow(challenge.twoFactor().secret(), 0), activationCode), IP);
+    }
+
+    @Test
+    @DisplayName("098: con código pedido, el 2FA no se activa sin el código o con uno incorrecto, y cuenta como intento fallido")
+    void activation_WithoutOrWithWrongCode_IsRejected() {
+        LoginResponse challenge = operatorChallengeWithCode(Instant.now().plus(Duration.ofHours(1)));
+        assertThat(challenge.twoFactor().activationCodeRequired()).isTrue();
+
+        assertThatThrownBy(() -> activate(challenge, null))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage(AuthServiceImpl.WRONG_ACTIVATION_CODE);
+        assertThatThrownBy(() -> activate(challenge, "87654321"))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage(AuthServiceImpl.WRONG_ACTIVATION_CODE);
+        verify(userRepository, never()).activateSecondFactor(any(), anyString(), any(), anyLong());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    @DisplayName("098: un código vencido no activa el 2FA")
+    void activation_WithExpiredCode_IsRejected() {
+        LoginResponse challenge = operatorChallengeWithCode(Instant.now().minusSeconds(1));
+        assertThatThrownBy(() -> activate(challenge, "12345678"))
+            .isInstanceOf(AuthenticationFailedException.class)
+            .hasMessage(AuthServiceImpl.WRONG_ACTIVATION_CODE);
+        verify(userRepository, never()).activateSecondFactor(any(), anyString(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("098: con el código correcto y vigente se activa el 2FA y se entra")
+    void activation_WithValidCode_Activates() {
+        LoginResponse challenge = operatorChallengeWithCode(Instant.now().plus(Duration.ofHours(1)));
+        when(userRepository.activateSecondFactor(eq(activeUser.getId()), anyString(), any(Instant.class), anyLong()))
+            .thenReturn(1);
+        when(jwtService.generateToken(activeUser)).thenReturn("operator-token");
+
+        assertThat(activate(challenge, " 12345678 ").token()).isEqualTo("operator-token");
+    }
+
+    @Test
+    @DisplayName("098: un usuario de antes del cambio activa sin código")
+    void activation_LegacyUser_NeedsNoCode() {
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("12345admin", activeUser.getPassword())).thenReturn(true);
+        when(jwtService.generateToken(activeUser)).thenReturn("operator-token");
+        assertThat(operatorSession(IP).token()).isEqualTo("operator-token");
+        verify(userRepository).activateSecondFactor(eq(activeUser.getId()), anyString(), any(Instant.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("098: un administrador activa sin código mientras ningún administrador tenga el 2FA; si alguno lo tiene, se lo pide")
+    void activation_FirstAdministrator_NeedsNoCodeOnlyWhileNoAdminHasIt() {
+        administrator.setActivationCodeRequired(true);
+        when(userRepository.findByUsername("duena")).thenReturn(Optional.of(administrator));
+        when(passwordEncoder.matches("12345admin", administrator.getPassword())).thenReturn(true);
+
+        when(userRepository.existsByRoleAndActiveTrueAndDeletedAtIsNullAndTotpSecretIsNotNull(Role.ADMINISTRATOR)).thenReturn(false);
+        assertThat(authService.login(new LoginRequest("duena", "12345admin"), IP).twoFactor().activationCodeRequired()).isFalse();
+
+        when(userRepository.existsByRoleAndActiveTrueAndDeletedAtIsNullAndTotpSecretIsNotNull(Role.ADMINISTRATOR)).thenReturn(true);
+        assertThat(authService.login(new LoginRequest("duena", "12345admin"), IP).twoFactor().activationCodeRequired()).isTrue();
+    }
+
     @Test
     @DisplayName("Con la contraseña sola, un administrador sin 2FA recibe el QR para activarlo y ningún token")
     void administrator_WithoutSecondFactor_GetsActivation() {

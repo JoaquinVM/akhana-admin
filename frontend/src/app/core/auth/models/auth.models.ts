@@ -12,6 +12,8 @@ export interface TwoFactorChallenge {
   setupRequired: boolean;
   secret?: string | null;
   otpauthUri?: string | null;
+  // 098: activating needs the one-time code an administrator handed in person
+  activationCodeRequired?: boolean;
 }
 
 export interface LoginResponse {
@@ -29,6 +31,8 @@ export interface LoginResponse {
 export interface TwoFactorLoginRequest {
   challengeId: string;
   code: string;
+  // 098: only when activating asks for it
+  activationCode?: string;
 }
 
 export interface ChangePasswordRequest {

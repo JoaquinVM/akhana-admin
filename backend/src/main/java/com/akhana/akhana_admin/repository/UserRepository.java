@@ -35,6 +35,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     long countByRoleAndActiveTrueAndDeletedAtIsNull(Role role);
 
+    // 098: while no active administrator has the second factor, the first one activates it without a code
+    boolean existsByRoleAndActiveTrueAndDeletedAtIsNullAndTotpSecretIsNotNull(Role role);
+
     // USR-04: the active users of a role, locked in id order, so two removals of administrators at the same time
     // cannot both see "another one is left"; the second one counts again after the first commits
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -46,7 +49,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /** Activates the second factor only if the user still has none; 0 when another login activated it first. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE User u SET u.totpSecret = :secret, u.totpEnabledAt = :enabledAt, u.totpLastStep = :step " +
+    @Query("UPDATE User u SET u.totpSecret = :secret, u.totpEnabledAt = :enabledAt, u.totpLastStep = :step, " +
+           // 098: the activation code is used only once
+           "u.activationCodeRequired = false, u.activationCodeHash = NULL, u.activationCodeExpiresAt = NULL " +
            "WHERE u.id = :id AND u.totpSecret IS NULL")
     int activateSecondFactor(@Param("id") UUID id, @Param("secret") String secret,
                              @Param("enabledAt") Instant enabledAt, @Param("step") long step);

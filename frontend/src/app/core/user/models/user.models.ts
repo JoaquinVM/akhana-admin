@@ -15,6 +15,10 @@ export interface User {
   deletedBy: string | null;
   // Second factor of administrators (USR-08): only whether it is active, never its key
   twoFactorEnabled: boolean;
+  // 098: the second factor waits for the activation code handed by an administrator
+  activationPending: boolean;
+  // 098: the one-time activation code, only in the answer that generated it
+  activationCode?: string | null;
 }
 
 export interface CreateUserRequest {

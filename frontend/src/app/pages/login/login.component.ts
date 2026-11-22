@@ -8,6 +8,8 @@ import { LoginResponse, TwoFactorChallenge } from '../../core/auth/models/auth.m
 
 export const SESSION_ENDED = 'Tu sesión terminó: venció, se cambió la contraseña o el usuario fue dado de baja. Vuelve a ingresar.';
 const WRONG_CODE = 'Código incorrecto.';
+// 098: the server's answer to a wrong or expired activation code; the user may try again
+const WRONG_ACTIVATION_CODE = 'Código de activación incorrecto o vencido. Pídele uno nuevo al administrador.';
 
 @Component({
   selector: 'app-login',
@@ -27,7 +29,9 @@ export class LoginComponent {
   });
 
   readonly codeForm = this.fb.group({
-    code: ['', [Validators.required, Validators.pattern(/^\s*\d{3}\s?\d{3}\s*$/)]]
+    code: ['', [Validators.required, Validators.pattern(/^\s*\d{3}\s?\d{3}\s*$/)]],
+    // 098: the 8 digits an administrator handed in person, only when activating asks for them
+    activationCode: ['']
   });
 
   readonly isLoading = signal(false);
@@ -72,6 +76,10 @@ export class LoginComponent {
         this.loginForm.enable();
         if (response.twoFactor) {
           this.codeForm.reset();
+          const activationCode = this.codeForm.get('activationCode');
+          activationCode?.setValidators(response.twoFactor.activationCodeRequired
+            ? [Validators.required, Validators.pattern(/^\s*\d{4}\s?\d{4}\s*$/)] : []);
+          activationCode?.updateValueAndValidity();
           this.secondFactor.set(response.twoFactor);
           if (response.twoFactor.otpauthUri) {
             this.drawQr(response.twoFactor.otpauthUri);
@@ -108,8 +116,10 @@ export class LoginComponent {
     this.isLoading.set(true);
     this.codeForm.disable();
     const code = (this.codeForm.getRawValue().code ?? '').replace(/\s/g, '');
+    const activationCode = challenge.activationCodeRequired
+      ? (this.codeForm.getRawValue().activationCode ?? '').replace(/\s/g, '') : undefined;
 
-    this.authService.loginWithSecondFactor({ challengeId: challenge.challengeId, code }).subscribe({
+    this.authService.loginWithSecondFactor({ challengeId: challenge.challengeId, code, activationCode }).subscribe({
       next: (response) => {
         this.isLoading.set(false);
         this.codeForm.enable();
@@ -121,8 +131,8 @@ export class LoginComponent {
         this.codeForm.reset();
         if (err.status === 0 || err.error instanceof ProgressEvent) {
           this.errorMessage.set('No fue posible comunicarse con el servidor. Intenta nuevamente.');
-        } else if (err.status === 401 && err.error?.message === WRONG_CODE) {
-          this.errorMessage.set(WRONG_CODE);
+        } else if (err.status === 401 && (err.error?.message === WRONG_CODE || err.error?.message === WRONG_ACTIVATION_CODE)) {
+          this.errorMessage.set(err.error.message);
         } else {
           // The login ended (expired, too many codes or locked): it starts again from the password
           this.backToPassword();
@@ -148,6 +158,11 @@ export class LoginComponent {
     this.codeForm.reset();
     this.loginForm.patchValue({ password: '' });
     this.errorMessage.set(null);
+  }
+
+  isActivationCodeInvalid(): boolean {
+    const field = this.codeForm.get('activationCode');
+    return !!field && field.invalid && (field.dirty || field.touched);
   }
 
   isCodeInvalid(): boolean {

@@ -28,7 +28,7 @@ describe('UsersComponent', () => {
       updatedBy: 'admin',
       deletedAt: null,
       deletedBy: null,
-      twoFactorEnabled: false
+      twoFactorEnabled: false, activationPending: false
     },
     {
       id: '22222222-2222-2222-2222-222222222222',
@@ -43,7 +43,7 @@ describe('UsersComponent', () => {
       updatedBy: null,
       deletedAt: null,
       deletedBy: null,
-      twoFactorEnabled: false
+      twoFactorEnabled: false, activationPending: false
     }
   ];
 
@@ -148,6 +148,22 @@ describe('UsersComponent', () => {
         .queryAll(By.css('.role-option-label'))
         .map(el => el.nativeElement.textContent.trim());
       expect(labels).toEqual(['Operador', 'Administrador']);
+    });
+
+    it('098: al crear un usuario muestra una sola vez su código de activación', () => {
+      mockUserService.createUser.mockReturnValue(of({ ...mockUsersList[0], username: 'nuevo_user', activationCode: '12345678' }));
+      component.openCreateModal();
+      component.createForm.patchValue({
+        role: 'OPERATOR', fullName: 'Nuevo usuario', username: 'nuevo_user',
+        password: 'password1234', confirmPassword: 'password1234'
+      });
+      component.submitCreate();
+      fixture.detectChanges();
+
+      expect(component.issuedActivationCode()).toEqual({ username: 'nuevo_user', code: '12345678' });
+      expect(document.body.textContent).toContain('1234 5678');
+      component.closeActivationCode();
+      expect(component.issuedActivationCode()).toBeNull();
     });
 
     it('debe crear usuario exitosamente con el rol elegido', () => {
@@ -314,14 +330,14 @@ describe('UsersComponent', () => {
   });
 
   describe('Segundo factor (USR-08)', () => {
-    const own: User = { ...mockUsersList[0], twoFactorEnabled: true };
+    const own: User = { ...mockUsersList[0], twoFactorEnabled: true, activationPending: false };
     const other: User = {
-      ...mockUsersList[0], id: '33333333-3333-3333-3333-333333333333', username: 'duena', fullName: 'Dueña', twoFactorEnabled: true
+      ...mockUsersList[0], id: '33333333-3333-3333-3333-333333333333', username: 'duena', fullName: 'Dueña', twoFactorEnabled: true, activationPending: false
     };
 
     beforeEach(() => {
       mockUserService.getUsers.mockReturnValue(of({ ...mockPageResponse, content: [own, other, mockUsersList[1]], totalElements: 3 }));
-      mockUserService.resetSecondFactor = vi.fn().mockReturnValue(of({ ...other, twoFactorEnabled: false }));
+      mockUserService.resetSecondFactor = vi.fn().mockReturnValue(of({ ...other, twoFactorEnabled: false, activationPending: false }));
       component.loadUsers(0);
       fixture.detectChanges();
     });
@@ -337,7 +353,7 @@ describe('UsersComponent', () => {
     });
 
     it('ofrece quitarlo también a un operador que lo tiene activo (069)', () => {
-      const operator: User = { ...mockUsersList[1], twoFactorEnabled: true };
+      const operator: User = { ...mockUsersList[1], twoFactorEnabled: true, activationPending: false };
       mockUserService.getUsers.mockReturnValue(of({ ...mockPageResponse, content: [own, operator], totalElements: 2 }));
       component.loadUsers(0);
       fixture.detectChanges();

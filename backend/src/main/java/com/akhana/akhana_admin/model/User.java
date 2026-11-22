@@ -58,6 +58,17 @@ public class User {
     @Column(name = "totp_last_step")
     private Long totpLastStep;
 
+    // 098: the second factor is activated only with the one-time code the administrator handed in person
+    @Column(name = "activation_code_required", nullable = false)
+    @Builder.Default
+    private boolean activationCodeRequired = false;
+
+    @Column(name = "activation_code_hash", length = 100)
+    private String activationCodeHash;
+
+    @Column(name = "activation_code_expires_at")
+    private Instant activationCodeExpiresAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

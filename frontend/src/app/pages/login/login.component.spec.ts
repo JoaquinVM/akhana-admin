@@ -200,22 +200,43 @@ describe('LoginComponent', () => {
       expect(text()).not.toContain('JBSW');
     });
 
+    it('098: si la activación pide el código del administrador, no envía sin los 8 dígitos y luego los manda', () => {
+      const withCode = challenge(true);
+      withCode.twoFactor!.activationCodeRequired = true;
+      authServiceSpy.login.mockReturnValue(of(withCode));
+      component.loginForm.setValue({ username: 'duena', password: 'clave-duena' });
+      component.onSubmit();
+      fixture.detectChanges();
+      expect(text()).toContain('Código de activación');
+      authServiceSpy.loginWithSecondFactor.mockReturnValue(of({
+        token: 'admin.token', id: 'u-1', username: 'duena', role: 'ADMINISTRATOR', message: 'Sesión iniciada.'
+      } satisfies LoginResponse));
+
+      component.codeForm.patchValue({ code: '123456' });
+      component.onSubmitCode();
+      expect(authServiceSpy.loginWithSecondFactor).not.toHaveBeenCalled();
+
+      component.codeForm.patchValue({ code: '123456', activationCode: '1234 5678' });
+      component.onSubmitCode();
+      expect(authServiceSpy.loginWithSecondFactor).toHaveBeenCalledWith({ challengeId: 'c-1', code: '123456', activationCode: '12345678' });
+    });
+
     it('envía el código sin espacios y entra', () => {
       passwordStep(false);
       authServiceSpy.loginWithSecondFactor.mockReturnValue(of({
         token: 'admin.token', id: 'u-1', username: 'duena', role: 'ADMINISTRATOR', message: 'Sesión iniciada.'
       } satisfies LoginResponse));
 
-      component.codeForm.setValue({ code: '123 456' });
+      component.codeForm.patchValue({ code: '123 456' });
       component.onSubmitCode();
 
-      expect(authServiceSpy.loginWithSecondFactor).toHaveBeenCalledWith({ challengeId: 'c-1', code: '123456' });
+      expect(authServiceSpy.loginWithSecondFactor).toHaveBeenCalledWith({ challengeId: 'c-1', code: '123456', activationCode: undefined });
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
     });
 
     it('un código de menos de 6 dígitos no se envía', () => {
       passwordStep(false);
-      component.codeForm.setValue({ code: '12345' });
+      component.codeForm.patchValue({ code: '12345' });
       component.onSubmitCode();
 
       expect(authServiceSpy.loginWithSecondFactor).not.toHaveBeenCalled();
@@ -227,7 +248,7 @@ describe('LoginComponent', () => {
       authServiceSpy.loginWithSecondFactor.mockReturnValue(throwError(() =>
         new HttpErrorResponse({ status: 401, error: { message: 'Código incorrecto.' } })));
 
-      component.codeForm.setValue({ code: '000000' });
+      component.codeForm.patchValue({ code: '000000' });
       component.onSubmitCode();
       fixture.detectChanges();
 
@@ -242,7 +263,7 @@ describe('LoginComponent', () => {
         status: 401, error: { message: 'El ingreso venció. Vuelve a ingresar tu usuario y contraseña.' }
       })));
 
-      component.codeForm.setValue({ code: '123456' });
+      component.codeForm.patchValue({ code: '123456' });
       component.onSubmitCode();
       fixture.detectChanges();
 

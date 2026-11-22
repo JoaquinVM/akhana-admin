@@ -96,7 +96,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "User Name", "username", Role.ADMINISTRATOR, true,
                 Role.ADMINISTRATOR.permissionKeys(),
-                Instant.now(), "system", null, null, null, null, false
+                Instant.now(), "system", null, null, null, null, false, false, null
         );
         when(userService.getUsers(any(), any())).thenReturn(new PageImpl<>(List.of(response)));
 
@@ -113,7 +113,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "User Name", "username", Role.ADMINISTRATOR, true,
                 Role.ADMINISTRATOR.permissionKeys(),
-                Instant.now(), "system", null, null, null, null, false
+                Instant.now(), "system", null, null, null, null, false, false, null
         );
         when(userService.getUsers(any(), any())).thenReturn(
                 new PageImpl<>(List.of(response), org.springframework.data.domain.PageRequest.of(1, 10), 11));
@@ -149,7 +149,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "Carlos Perez", "cperez", Role.OPERATOR, true,
                 Role.OPERATOR.permissionKeys(),
-                Instant.now(), "admin", null, null, null, null, false
+                Instant.now(), "admin", null, null, null, null, false, false, null
         );
 
         when(userService.createUser(any(CreateUserRequest.class), eq("admin"))).thenReturn(response);
@@ -178,7 +178,7 @@ class UserControllerTest {
         UserResponse response = new UserResponse(
                 sampleUserId, "Carlos Perez Modificado", "cperez", Role.OPERATOR, true,
                 Role.OPERATOR.permissionKeys(),
-                Instant.now().minusSeconds(100), "admin", Instant.now(), "admin", null, null, false
+                Instant.now().minusSeconds(100), "admin", Instant.now(), "admin", null, null, false, false, null
         );
 
         when(userService.updateUser(eq(sampleUserId), any(UpdateUserRequest.class), eq("admin"))).thenReturn(response);

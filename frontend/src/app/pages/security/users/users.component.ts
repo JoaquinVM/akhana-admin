@@ -198,8 +198,9 @@ export class UsersComponent implements OnInit {
     };
 
     this.userService.createUser(request).subscribe({
-      next: () => {
+      next: (created) => {
         this.toast.success('Usuario creado.');
+        this.showActivationCode(created);
         this.isCreating.set(false);
         this.closeCreateModal();
         this.loadUsers(this.currentPage());
@@ -376,8 +377,9 @@ export class UsersComponent implements OnInit {
     this.isResettingSecondFactor.set(true);
     this.errorMessage.set(null);
     this.userService.resetSecondFactor(user.id).subscribe({
-      next: () => {
-        this.toast.success('Segundo factor quitado. Lo activará en su próximo ingreso.');
+      next: (updated) => {
+        this.toast.success('Segundo factor quitado. Lo activará en su próximo ingreso, con el código de activación.');
+        this.showActivationCode(updated);
         this.isResettingSecondFactor.set(false);
         this.userToResetSecondFactor.set(null);
         this.loadUsers(this.currentPage());
@@ -387,6 +389,42 @@ export class UsersComponent implements OnInit {
         this.userToResetSecondFactor.set(null);
         this.errorMessage.set(err.error?.message ?? 'No se pudo quitar el segundo factor.');
       }
+    });
+  }
+
+  // --- 098: one-time activation code, handed in person ---
+
+  // Shown once, right after the server generated it; it is not stored and never comes again
+  issuedActivationCode = signal<{ username: string; code: string } | null>(null);
+
+  private showActivationCode(user: User): void {
+    if (user.activationCode) {
+      this.issuedActivationCode.set({ username: user.username, code: user.activationCode });
+    }
+  }
+
+  activationCodeGroups(code: string): string {
+    return `${code.slice(0, 4)} ${code.slice(4)}`;
+  }
+
+  closeActivationCode(): void {
+    this.issuedActivationCode.set(null);
+  }
+
+  // Only for whoever has no second factor active, and never for oneself
+  canGenerateActivationCode(user: User): boolean {
+    const currentUsername = this.authService.currentUser()?.username;
+    return !user.twoFactorEnabled && user.active && currentUsername?.toLowerCase() !== user.username.toLowerCase();
+  }
+
+  generateActivationCode(user: User): void {
+    this.errorMessage.set(null);
+    this.userService.generateActivationCode(user.id).subscribe({
+      next: (updated) => {
+        this.showActivationCode(updated);
+        this.loadUsers(this.currentPage());
+      },
+      error: (err) => this.errorMessage.set(err.error?.message ?? 'No se pudo generar el código de activación.')
     });
   }
 
