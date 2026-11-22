@@ -93,6 +93,16 @@ public class UserController {
         return ResponseEntity.ok(userService.resetSecondFactor(id, currentUsername));
     }
 
+    // 098: the code to hand in person so the user can activate the second factor
+    @PostMapping("/{id}/activation-code")
+    public ResponseEntity<UserResponse> generateActivationCode(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        String currentUsername = extractUsername(authentication);
+        return ResponseEntity.ok(userService.generateActivationCode(id, currentUsername));
+    }
+
     private String extractUsername(Authentication authentication) {
         if (authentication == null) {
             return "system";

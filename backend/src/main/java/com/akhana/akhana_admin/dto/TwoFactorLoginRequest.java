@@ -7,5 +7,12 @@ public record TwoFactorLoginRequest(
     String challengeId,
 
     @NotBlank(message = "Ingresa el código de 6 dígitos.")
-    String code
-) {}
+    String code,
+
+    // 098: the one-time activation code, only when activating the second factor asks for it
+    String activationCode
+) {
+    public TwoFactorLoginRequest(String challengeId, String code) {
+        this(challengeId, code, null);
+    }
+}

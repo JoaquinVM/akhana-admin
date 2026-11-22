@@ -8,5 +8,7 @@ public record TwoFactorChallengeResponse(
     String challengeId,
     boolean setupRequired,
     String secret,
-    String otpauthUri
+    String otpauthUri,
+    // 098: activating needs the one-time code an administrator handed in person
+    boolean activationCodeRequired
 ) {}

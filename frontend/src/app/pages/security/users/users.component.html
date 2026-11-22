@@ -122,6 +122,8 @@
                   </span>
                   @if (user.twoFactorEnabled) {
                     <span class="second-factor-badge" title="Segundo factor activo">2FA</span>
+                  } @else if (user.activationPending) {
+                    <span class="second-factor-badge pending" title="Activa el segundo factor con el código que le entregas">Espera código</span>
                   }
                 </td>
                 <td>
@@ -167,6 +169,23 @@
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </button>
+
+                    <!-- 098: a new activation code, to hand in person -->
+                    @if (canGenerateActivationCode(user)) {
+                      <button
+                        type="button"
+                        class="btn-icon btn-activation-code"
+                        (click)="generateActivationCode(user)"
+                        title="Generar código de activación"
+                        aria-label="Generar código de activación del segundo factor">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="8" cy="15" r="4" />
+                          <path d="M10.85 12.15 19 4" />
+                          <path d="m18 5 2 2" />
+                          <path d="m15 8 2 2" />
+                        </svg>
+                      </button>
+                    }
 
                     <!-- Remove the second factor (lost phone, USR-08) -->
                     @if (canResetSecondFactor(user)) {
@@ -492,6 +511,23 @@
     (confirm)="confirmResetSecondFactor()"
     (cancel)="cancelResetSecondFactor()">
   </app-confirm-modal>
+
+  <!-- 098: the activation code, shown only once -->
+  @if (issuedActivationCode(); as issued) {
+    <app-modal
+      [isOpen]="true"
+      title="Código de activación"
+      size="sm"
+      [closeOnBackdrop]="false"
+      (close)="closeActivationCode()">
+      <div class="activation-code-panel">
+        <p>Entrégale este código en persona a <strong>&#64;{{ issued.username }}</strong>. Lo pide al activar el segundo factor.</p>
+        <code class="activation-code">{{ activationCodeGroups(issued.code) }}</code>
+        <p class="activation-code-note">Vale 24 horas y sirve una sola vez. No se vuelve a mostrar: si se pierde, genera otro.</p>
+        <button type="button" class="btn btn-primary" (click)="closeActivationCode()">Listo</button>
+      </div>
+    </app-modal>
+  }
 
   <!-- Shared audit modal (6 fields) -->
   <app-audit-modal

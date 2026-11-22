@@ -22,4 +22,7 @@ public interface UserService {
 
     /** Removes another user's second factor (lost phone); it is activated again at the next login (USR-08). */
     UserResponse resetSecondFactor(UUID id, String currentUsername);
+
+    // 098: a new one-time code to activate the second factor of a user who does not have it active
+    UserResponse generateActivationCode(UUID id, String currentUsername);
 }

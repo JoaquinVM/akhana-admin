@@ -87,7 +87,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/login - A un administrador le pide el segundo factor sin entregar token (USR-08)")
     void login_Administrator_GetsSecondFactorChallenge() throws Exception {
         when(authService.login(any(LoginRequest.class), anyString())).thenReturn(LoginResponse.secondFactor(
-            "admin", "Escribe el código de tu app autenticadora.", new TwoFactorChallengeResponse("c-1", false, null, null)));
+            "admin", "Escribe el código de tu app autenticadora.", new TwoFactorChallengeResponse("c-1", false, null, null, false)));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

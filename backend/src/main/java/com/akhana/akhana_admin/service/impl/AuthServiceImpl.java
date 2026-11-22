@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akhana.akhana_admin.model.Role;
 import java.time.Instant;
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -45,6 +46,8 @@ public class AuthServiceImpl implements AuthService {
      * take as long as a wrong password and the response time does not tell which usernames exist.
      */
     public static final String DUMMY_HASH = "$2a$10$Nk2HnL1tr/7vuCGvT7nyneb7Si1lIgN4NFtfrY6j1fki0XxnJUSUC";
+    // 098
+    public static final String WRONG_ACTIVATION_CODE = "Código de activación incorrecto o vencido. Pídele uno nuevo al administrador.";
     private static final String CHALLENGE_ENDED = "El ingreso venció. Vuelve a ingresar tu usuario y contraseña.";
 
     @Override
@@ -95,6 +98,14 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthenticationFailedException(CHALLENGE_ENDED);
         }
 
+        // 098: activating may need the one-time code handed by an administrator; a wrong one counts as a failure
+        if (activating && activationCodeRequired(user) && !validActivationCode(user, request.activationCode())) {
+            log.warn("Wrong activation code for user '{}'", user.getUsername());
+            challengeService.recordFailure(challenge.id());
+            loginAttemptService.recordSecondFactorFailure(challenge.username());
+            throw failure(challenge.username(), clientIp, WRONG_ACTIVATION_CODE);
+        }
+
         String secret = activating ? challenge.pendingSecret() : user.getTotpSecret();
         OptionalLong step = totpService.matchingStep(secret, request.code(), user.getTotpLastStep());
         if (step.isEmpty()) {
@@ -123,13 +134,30 @@ public class AuthServiceImpl implements AuthService {
         if (user.getTotpSecret() != null) {
             String challengeId = challengeService.create(user.getId(), user.getUsername(), null);
             return LoginResponse.secondFactor(user.getUsername(), "Escribe el código de tu app autenticadora.",
-                new TwoFactorChallengeResponse(challengeId, false, null, null));
+                new TwoFactorChallengeResponse(challengeId, false, null, null, false));
         }
         // Activation: the secret is kept only in the challenge until the user confirms a code with it
         String secret = totpService.generateSecret();
         String challengeId = challengeService.create(user.getId(), user.getUsername(), secret);
         return LoginResponse.secondFactor(user.getUsername(), "Activa el segundo factor con tu app autenticadora.",
-            new TwoFactorChallengeResponse(challengeId, true, secret, totpService.otpauthUri(secret, user.getUsername())));
+            new TwoFactorChallengeResponse(challengeId, true, secret, totpService.otpauthUri(secret, user.getUsername()),
+                activationCodeRequired(user)));
+    }
+
+    // 098: the users from before the change activate without a code, and so does the first administrator while no
+    // active administrator has the second factor (nobody could hand the code)
+    private boolean activationCodeRequired(User user) {
+        if (!user.isActivationCodeRequired()) {
+            return false;
+        }
+        return !(user.getRole() == Role.ADMINISTRATOR
+            && !userRepository.existsByRoleAndActiveTrueAndDeletedAtIsNullAndTotpSecretIsNotNull(Role.ADMINISTRATOR));
+    }
+
+    private boolean validActivationCode(User user, String code) {
+        return code != null && user.getActivationCodeHash() != null && user.getActivationCodeExpiresAt() != null
+            && Instant.now().isBefore(user.getActivationCodeExpiresAt())
+            && passwordEncoder.matches(code.trim(), user.getActivationCodeHash());
     }
 
     private LoginResponse session(User user) {

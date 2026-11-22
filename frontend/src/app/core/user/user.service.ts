@@ -44,4 +44,9 @@ export class UserService {
   resetSecondFactor(id: string): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/${id}/second-factor/reset`, null);
   }
+
+  // 098: a new one-time code to activate the second factor; the answer carries it once
+  generateActivationCode(id: string): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/${id}/activation-code`, null);
+  }
 }
