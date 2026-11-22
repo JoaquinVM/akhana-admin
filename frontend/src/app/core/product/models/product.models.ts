@@ -86,6 +86,13 @@ export interface Product {
   stock?: number | null;
   averageCost?: number | null;
   cost?: number;
+  // COM-03, INV-07: the supplier's last price per base unit; buyPrice is the last cost with its part of the shipping
+  lastPurchaseCost?: number;
+}
+
+// COM-03: what a purchase line proposes and its cost alert compares: the supplier's last price
+export function purchaseCost(product: Product): number {
+  return product.lastPurchaseCost ?? product.buyPrice;
 }
 
 export type StockStatus = 'CONTROLLED' | 'TO_COUNT' | 'NOT_CONTROLLED';

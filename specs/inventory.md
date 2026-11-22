@@ -227,6 +227,23 @@ es la suma de las filas; `product_stocks` es un atajo que se escribe en la misma
 - **Cuando** cambia el envío o el costo de un pedido ya entregado **entonces** la diferencia de valor va a lo que queda
   del producto o, si no queda nada, al costo de ventas (la fila lo dice: «Al costo de ventas: Bs 5,00»).
 
+#### Último costo y precio sugerido (COM-03 con INV-07, opción A de Joaquín)
+
+| Té verde: el proveedor cobra Bs 10, el pedido lleva envío | Valor |
+| --- | --- |
+| Costo que propone la línea y que compara la alerta | 10,00, el último precio del proveedor |
+| La factura dice Bs 12: salta la alerta; con su parte del envío | 13,20 |
+| Al confirmar: último precio del proveedor / último costo | 12,00 / 13,20 |
+| Precio sugerido (mantiene 50 %: 13,20 × 15 ÷ 10) | 20,00, hacia arriba al boliviano |
+
+- **Cuando** se agrega una línea **entonces** propone el último precio del proveedor por unidad base; un producto sin
+  compras desde la V2 propone su último costo, como en la V1. Un pedido desde texto (COM-22) usa ese mismo precio.
+- **Cuando** el costo de la línea por unidad base difiere de ese precio **entonces** sale la alerta. Con el mismo precio
+  no sale, aunque cambie el envío.
+- **Cuando** se confirma la alerta **entonces** el producto guarda el precio del proveedor y, como último costo, el
+  costo puesto en tienda de esa línea, (subtotal + su parte del envío) ÷ cantidad base; el precio sugerido se calcula
+  con ese costo y se recalcula si cambia el envío antes de guardar.
+
 ### INV-14, INV-15 · Pedidos
 
 - **Cuando** un pedido se registra entregado o pasa a Entregado **entonces** cada línea entra en unidad base (COM-29),
@@ -324,6 +341,8 @@ final, todos juntos y por id.
 ### Núcleo (migración `V39__inventory_core.sql`)
 
 - `products.stock_controlled`: «Controla stock» (falso en los especiales).
+- `products.last_purchase_cost`: el último precio del proveedor por unidad base (COM-03); `buy_price` es el último
+  costo con el envío.
 - `product_stocks`: por producto, cantidad, valor, promedio y `started_at` (nulo: por contar o no controla).
 - `stock_movements`: el kardex; tipo, cantidad, costo unitario, valor, valor al costo de ventas, saldos después de la
   fila, referencia, motivo, comentario, la línea de venta, consumo, pedido o conteo que la generó, quién y cuándo.
@@ -350,7 +369,7 @@ final, todos juntos y por id.
 | `PUT /api/inventory/counts/{id}/lines/{productId}` | INV-05: lo contado de un producto, en empaques y sueltas. |
 | `GET /api/inventory/counts/{id}/review`, `POST …/confirm`, `POST …/discard` | INV-05, INV-18: diferencias, ajuste o carga inicial, descarte. |
 | `POST /api/sales`, `POST /api/consumptions` | INV-10: `allowNegativeStock`; sin él, 409 `Insufficient Stock` con el mensaje. |
-| `GET /api/products` | Cada producto trae `stockControlled`, `stockStatus`, `stock`, `averageCost` y `cost` (lo que cuesta una línea ahora). |
+| `GET /api/products` | Cada producto trae `stockControlled`, `stockStatus`, `stock`, `averageCost`, `cost` (lo que cuesta una línea ahora) y `lastPurchaseCost` (el último precio del proveedor). |
 
 ## Tareas
 

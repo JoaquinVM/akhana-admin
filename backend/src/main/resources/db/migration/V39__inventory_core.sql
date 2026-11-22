@@ -2,6 +2,11 @@
 ALTER TABLE products ADD COLUMN stock_controlled BOOLEAN NOT NULL DEFAULT TRUE;
 UPDATE products SET stock_controlled = FALSE WHERE special_type IS NOT NULL;
 
+-- COM-03 with INV-07 (option A of Joaquín): the supplier's last price per base unit, which the purchase alert compares
+-- and the line proposes; buy_price is the last cost placed in the store, with its part of the shipping, which the
+-- suggested price uses. Null until a purchase updates the cost: until then the alert compares buy_price, as in the V1
+ALTER TABLE products ADD COLUMN last_purchase_cost NUMERIC(12, 2);
+
 -- INV-01, T-04: the stock of a product, a shortcut of its ledger (stock_movements) kept in the same transaction as each
 -- movement. A row with started_at NULL is a product still to be counted (INV-18): it does not move stock yet.
 -- Kept apart from products so that saving a product never writes over its stock

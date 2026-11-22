@@ -83,7 +83,50 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final Clock clock;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
-    private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
+    /**
+     * COM-03 with INV-07: a confirmed cost alert. The product keeps the supplier's price per base unit as its last
+     * purchase price and, as its last cost, that price placed in the store: with the line's part of the shipping. The
+     * suggested price was computed with that cost.
+     */
+    private static final class CostUpdate {
+        private final Product product;
+        private final BigDecimal supplierCost;
+        private final BigDecimal newSellPrice;
+        private PurchaseItem line;
+        private BigDecimal newCost;
+
+        CostUpdate(Product product, BigDecimal supplierCost, BigDecimal newSellPrice) {
+            this.product = product;
+            this.supplierCost = supplierCost;
+            this.newSellPrice = newSellPrice;
+        }
+
+        Product product() {
+            return product;
+        }
+
+        BigDecimal newCost() {
+            return newCost;
+        }
+
+        BigDecimal newSellPrice() {
+            return newSellPrice;
+        }
+    }
+
+    // INV-07: the cost of one base unit of the line placed in the store: its subtotal and its part of the shipping
+    private static void placeInStore(List<CostUpdate> updates, List<PurchaseItem> activeLines, BigDecimal shippingCost) {
+        if (updates.isEmpty()) {
+            return;
+        }
+        Map<PurchaseItem, BigDecimal> shares = InventoryServiceImpl.shippingShares(activeLines, shippingCost);
+        for (CostUpdate update : updates) {
+            PurchaseItem line = update.line;
+            BigDecimal baseQuantity = line.getBaseQuantity() != null ? line.getBaseQuantity() : line.getQuantity();
+            update.newCost = line.getSubtotal().add(shares.getOrDefault(line, BigDecimal.ZERO))
+                .divide(baseQuantity, 2, RoundingMode.HALF_UP);
+        }
+    }
 
     /** Locked cash session (only for Caja) and account that pay a movement. */
     private record Payer(FinancialAccount account, CashSession session) {}
@@ -256,6 +299,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (shippingCost.signum() < 0) {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
+
+        placeInStore(costUpdates, items, shippingCost);
 
         // The shipping is paid by an account (P-24) or by a person (DEU-02), exactly one
         UUID shippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
@@ -451,7 +496,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             }
             Product product = item.getProduct();
             LineValues values = lineValues(product, itemReq, item);
-            if (planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts)) {
+            CostUpdate costUpdate = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
+            if (costUpdate != null) {
+                costUpdate.line = item;
                 item.setCostUpdated(true);
             }
             if (!Objects.equals(values.presentationName(), item.getPresentationName())) {
@@ -476,6 +523,11 @@ public class PurchaseServiceImpl implements PurchaseService {
                 changes.add("Línea quitada: " + item.getProductName());
             }
         }
+        // INV-07: the cost placed in the store uses the shipping of the edit and its active lines
+        List<PurchaseItem> activeAfterEdit = new ArrayList<>(addedLines);
+        activeLines.values().stream().filter(line -> keptLines.contains(line.getId())).forEach(activeAfterEdit::add);
+        placeInStore(costUpdates, activeAfterEdit, request.shippingCost() != null
+            ? request.shippingCost().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         for (CostUpdate update : costUpdates) {
             changes.add("Producto " + update.product().getName() + ": costo " + StoreFormat.money(update.product().getBuyPrice())
                 + " → " + StoreFormat.money(update.newCost()) + ", precio " + StoreFormat.money(update.product().getSellPrice())
@@ -886,16 +938,20 @@ public class PurchaseServiceImpl implements PurchaseService {
         ProductServiceImpl.ensureNotSpecial(product);
 
         LineValues values = lineValues(product, itemReq, null);
-        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
-        boolean costChanges = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
+        // COM-03: the line is compared with the supplier's last price (INV-07: the cost with shipping is apart)
+        BigDecimal currentCost = product.registeredPurchaseCost().setScale(2, RoundingMode.HALF_UP);
+        CostUpdate costUpdate = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
         PurchaseItem item = PurchaseItem.builder()
             .product(product)
             .productName(product.getName())
             .productCode(product.getCode())
             .previousUnitCost(currentCost)
-            .costUpdated(costChanges)
+            .costUpdated(costUpdate != null)
             .build();
         values.applyTo(item);
+        if (costUpdate != null) {
+            costUpdate.line = item;
+        }
         return item;
     }
 
@@ -945,15 +1001,17 @@ public class PurchaseServiceImpl implements PurchaseService {
             presentation, presentationName, presentationBaseQuantity, baseUnitCost);
     }
 
-    // COM-03: only when the user confirmed it and the line cost differs from the product cost
-    private boolean planCostUpdateIfConfirmed(Product product, BigDecimal unitCost, PurchaseItemRequest itemReq,
-                                              List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
-        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+    // COM-03: only when the user confirmed it and the line cost differs from the supplier's last price (INV-07)
+    private CostUpdate planCostUpdateIfConfirmed(Product product, BigDecimal unitCost, PurchaseItemRequest itemReq,
+                                                 List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
+        BigDecimal currentCost = product.registeredPurchaseCost().setScale(2, RoundingMode.HALF_UP);
         boolean costChanges = Boolean.TRUE.equals(itemReq.updateProductCost()) && unitCost.compareTo(currentCost) != 0;
-        if (costChanges) {
-            costUpdates.add(planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts));
+        if (!costChanges) {
+            return null;
         }
-        return costChanges;
+        CostUpdate update = planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts);
+        costUpdates.add(update);
+        return update;
     }
 
     private static void trackChange(List<String> changes, String label, Object before, Object after) {
@@ -1019,6 +1077,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             .build());
 
         BigDecimal fixedProfit = ProductServiceImpl.calculateFixedProfit(update.newCost(), update.newSellPrice());
+        product.setLastPurchaseCost(update.supplierCost);
         product.setBuyPrice(update.newCost());
         product.setSellPrice(update.newSellPrice());
         product.setFixedProfit(fixedProfit);

@@ -388,4 +388,29 @@ class InventoryIntegrationTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("ya tiene movimientos de stock");
     }
+
+    @Test
+    @DisplayName("COM-03, INV-07 (opción A): la alerta compara el precio del proveedor; al confirmarla, el último costo queda con su envío")
+    void lastCostIsPlacedInTheStore() {
+        ProductResponse a = newProduct("LAST", "9.00", "15.00");
+        ProductResponse b = newProduct("LASTB", "5.00", "8.00");
+        // The form asks the suggestion with the cost placed in the store: 10 + 1 of shipping = 11, keeping 66,67 %
+        assertThat(purchaseService.suggestPrice(a.id(), new BigDecimal("11.00")).suggestedSellPrice())
+            .isEqualByComparingTo("19.00");
+        PurchaseItemRequest confirmed = new PurchaseItemRequest(a.id(), new BigDecimal("10"), new BigDecimal("10.00"), true,
+            new BigDecimal("18.00"));
+        purchase(DeliveryStatus.ENTREGADO, "15.00", confirmed, line(b.id(), "10", "5.00"));
+
+        ProductResponse updated = productService.getProductById(a.id());
+        assertThat(updated.lastPurchaseCost()).isEqualByComparingTo("10.00");
+        assertThat(updated.buyPrice()).isEqualByComparingTo("11.00");
+        assertThat(updated.sellPrice()).isEqualByComparingTo("18.00");
+
+        // The same supplier price again: no change, although the shipping differs
+        purchase(DeliveryStatus.ENTREGADO, "40.00", new PurchaseItemRequest(a.id(), new BigDecimal("10"),
+            new BigDecimal("10.00"), true, new BigDecimal("30.00")));
+        ProductResponse again = productService.getProductById(a.id());
+        assertThat(again.buyPrice()).isEqualByComparingTo("11.00");
+        assertThat(again.sellPrice()).isEqualByComparingTo("18.00");
+    }
 }

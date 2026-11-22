@@ -55,7 +55,10 @@ public record ProductResponse(
     // the last cost while it does not control its stock), the one a sale at cost charges (CON-02)
     BigDecimal stock,
     BigDecimal averageCost,
-    BigDecimal cost
+    BigDecimal cost,
+    // COM-03, INV-07: the supplier's last price per base unit, what a purchase line proposes and its alert compares;
+    // buyPrice is the last cost with its part of the shipping
+    BigDecimal lastPurchaseCost
 ) {
     public record TagItemResponse(UUID id, String name, String color) {}
 
@@ -68,7 +71,7 @@ public record ProductResponse(
         this(id, code, name, categoryId, categoryName, categoryColor, supplierId, supplierName, description, tags,
             buyPrice, sellPrice, fixedProfit, percentageProfit, status, saleUnit, createdBy, createdAt, updatedBy,
             updatedAt, deletedBy, deletedAt, List.of(), List.of(), null, null, null, null, List.of(), false, true,
-            null, null, null, buyPrice);
+            null, null, null, buyPrice, buyPrice);
     }
 
     public static ProductResponse fromEntity(Product product, List<String> warnings) {
@@ -80,7 +83,7 @@ public record ProductResponse(
             response.updatedBy, response.updatedAt, response.deletedBy, response.deletedAt, response.presentations,
             List.copyOf(warnings), response.specialType, response.ownerCreditorId, response.ownerCreditorName,
             response.photoId, response.barcodes, response.noBarcode, response.stockControlled, response.stockStatus,
-            response.stock, response.averageCost, response.cost);
+            response.stock, response.averageCost, response.cost, response.lastPurchaseCost);
     }
 
     public static ProductResponse fromEntity(Product product) {
@@ -139,7 +142,8 @@ public record ProductResponse(
             com.akhana.akhana_admin.service.impl.InventoryServiceImpl.statusOf(product),
             product.controlsStockNow() ? product.getStockQuantity() : null,
             product.controlsStockNow() ? product.getStockAverageCost() : null,
-            com.akhana.akhana_admin.service.impl.StockCost.of(product)
+            com.akhana.akhana_admin.service.impl.StockCost.of(product),
+            product.registeredPurchaseCost()
         );
     }
 }

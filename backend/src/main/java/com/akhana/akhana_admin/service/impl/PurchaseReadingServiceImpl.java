@@ -219,7 +219,8 @@ public class PurchaseReadingServiceImpl implements PurchaseReadingService {
         String costNote = null;
         if (source == PurchaseReadingSource.TEXT) {
             // COM-22: a message does not carry costs; the system's cost stands until the real one is registered
-            unitCost = product != null ? product.getBuyPrice().setScale(2, RoundingMode.HALF_UP) : null;
+            // COM-03 with INV-07: the supplier's last price, not the cost with the shipping
+            unitCost = product != null ? product.registeredPurchaseCost().setScale(2, RoundingMode.HALF_UP) : null;
         } else if (line.unitCost() != null && line.unitCost().signum() >= 0) {
             unitCost = line.unitCost().setScale(2, RoundingMode.HALF_UP);
         } else if (line.lineAmount() != null && line.lineAmount().signum() >= 0 && validQuantity) {

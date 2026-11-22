@@ -278,9 +278,14 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public Map<PurchaseItem, BigDecimal> shippingShares(Purchase purchase) {
+        return shippingShares(purchase.getItems().stream().filter(l -> !l.isRemoved()).toList(),
+            purchase.getShippingCost());
+    }
+
+    /** INV-07: the shipping of these active lines, by their subtotal, to the cent; the largest takes the remainder. */
+    public static Map<PurchaseItem, BigDecimal> shippingShares(List<PurchaseItem> active, BigDecimal shippingCost) {
         Map<PurchaseItem, BigDecimal> shares = new IdentityHashMap<>();
-        List<PurchaseItem> active = purchase.getItems().stream().filter(l -> !l.isRemoved()).toList();
-        BigDecimal shipping = purchase.getShippingCost() != null ? purchase.getShippingCost() : ZERO_MONEY;
+        BigDecimal shipping = shippingCost != null ? shippingCost : ZERO_MONEY;
         BigDecimal total = active.stream().map(PurchaseItem::getSubtotal).reduce(ZERO_MONEY, BigDecimal::add);
         if (shipping.signum() <= 0 || total.signum() <= 0) {
             return shares;
