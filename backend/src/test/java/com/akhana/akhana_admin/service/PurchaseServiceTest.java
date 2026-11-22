@@ -88,7 +88,8 @@ class PurchaseServiceTest {
             productPriceChangeRepository, cashSessionRepository, financialAccountRepository, financialCategoryRepository,
             financialTransactionRepository, new ExpectedCashCalculator(financialTransactionRepository), creditorRepository,
             purchaseReadingRepository, purchasePhotoRepository, purchaseShippingChargeRepository, creditorRepaymentItemRepository,
-            presentationService, new TransactionTemplate(mock(PlatformTransactionManager.class)), clock);
+            presentationService, new TransactionTemplate(mock(PlatformTransactionManager.class)),
+            mock(com.akhana.akhana_admin.service.InventoryService.class), clock);
 
         supplier = Supplier.builder().id(UUID.randomUUID()).name("Granel").code("GR").status(SupplierStatus.ACTIVO).build();
         nuts = Product.builder().id(UUID.randomUUID()).code("NUE-1").name("Nueces").saleUnit(SaleUnit.KILOGRAM)

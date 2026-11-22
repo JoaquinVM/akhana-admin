@@ -173,4 +173,13 @@ describe('CartLineComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Desc/u');
     });
   });
+
+  it('INV-11: la línea de un producto que controla stock dice «Quedan N»; la de uno por contar, no', () => {
+    fixture.componentRef.setInput('item', { ...unitLine, product: { ...unitLine.product, stockStatus: 'CONTROLLED', stock: 4 } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Quedan 4');
+    fixture.componentRef.setInput('item', { ...unitLine, product: { ...unitLine.product, stockStatus: 'TO_COUNT', stock: null } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Quedan');
+  });
 });

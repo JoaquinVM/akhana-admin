@@ -23,7 +23,11 @@ export const PERMISSIONS = {
   FINANCES_CATEGORIES: 'FINANCES_CATEGORIES',
   REPORTS: 'REPORTS',
   DASHBOARD: 'DASHBOARD',
-  USERS: 'USERS'
+  USERS: 'USERS',
+  // V2 · Inventario: Existencias, Kardex and Conteo (INV-01 to INV-05, INV-18)
+  INVENTORY_STOCK: 'INVENTORY_STOCK',
+  INVENTORY_KARDEX: 'INVENTORY_KARDEX',
+  INVENTORY_COUNTS: 'INVENTORY_COUNTS'
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -38,7 +42,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'OPERATOR',
     label: 'Operador',
-    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo, proveedores, pedidos con sus pagos, deudas con personas y consumos internos. No entra a finanzas ni usuarios.'
+    description: 'POS (caja, ventas, gastos y sus anulaciones), historiales de ventas y cajas, catálogo, proveedores, pedidos con sus pagos, deudas con personas, consumos internos e inventario (existencias, kardex y conteos). No entra a finanzas ni usuarios.'
   },
   {
     value: 'ADMINISTRATOR',
@@ -139,6 +143,28 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         label: 'Etiquetas',
         route: '/tags',
         permissionKey: PERMISSIONS.TAGS
+      }
+    ]
+  },
+  {
+    id: 'inventory',
+    label: 'Inventario',
+    children: [
+      {
+        label: 'Existencias',
+        route: '/inventory/stock',
+        caption: 'Stock',
+        permissionKey: PERMISSIONS.INVENTORY_STOCK
+      },
+      {
+        label: 'Kardex',
+        route: '/inventory/kardex',
+        permissionKey: PERMISSIONS.INVENTORY_KARDEX
+      },
+      {
+        label: 'Conteo',
+        route: '/inventory/counts',
+        permissionKey: PERMISSIONS.INVENTORY_COUNTS
       }
     ]
   },

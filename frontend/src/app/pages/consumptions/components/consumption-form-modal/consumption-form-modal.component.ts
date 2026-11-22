@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ConsumptionService } from '../../../../core/consumption/consumption.service';
 import { CashService } from '../../../../core/cash/cash.service';
-import { Product, ProductPresentation, soldPresentations } from '../../../../core/product/models/product.models';
+import { Product, ProductPresentation, currentCost, soldPresentations } from '../../../../core/product/models/product.models';
+import { INSUFFICIENT_STOCK, remainingText, stockShortages } from '../../../../core/inventory/models/inventory.models';
 import { Consumption, ConsumptionRequest } from '../../../../core/consumption/models/consumption.models';
 import { round2, todayIso } from '../../../purchases/components/purchase-form-modal/purchase-form-modal.component';
 import { WEIGHT_STEP_KG } from '../../../pos/register-sale/register-sale.component';
@@ -118,13 +119,26 @@ export class ConsumptionFormModalComponent {
   lineSubtotal(line: ConsumptionLineDraft): number {
     const quantity = Number(line.quantity) || 0;
     const kilos = line.presentation ? Math.round(quantity * line.presentation.baseQuantity * 1000) / 1000 : quantity;
-    return round2(kilos * (line.product.buyPrice || 0));
+    // INV-06: at the cost a line takes now (the average for a product that controls its stock)
+    return round2(kilos * (currentCost(line.product) || 0));
   }
 
   // Warning: a product without a registered cost is worth Bs 0,00
   hasNoCost(line: ConsumptionLineDraft): boolean {
-    return !(line.product.buyPrice > 0);
+    return !(currentCost(line.product) > 0);
   }
+
+  cost(product: Product): number {
+    return currentCost(product);
+  }
+
+  // INV-11: «Quedan N» for a product that controls its stock
+  remaining(product: Product): string | null {
+    return remainingText(product);
+  }
+
+  // INV-10: «¿Registrar igual?» before taking more than the recorded stock
+  readonly stockQuestion = signal<string | null>(null);
 
   // CAT-11: a product by kilo with presentations opens the picker; without them it goes in as «Otro peso»
   // Enter never submits the form (only its button does); in the product search it adds the product typed
@@ -195,14 +209,23 @@ export class ConsumptionFormModalComponent {
     };
   }
 
-  submit(): void {
+  submit(allowNegativeStock = false): void {
     if (this.lines().length === 0) {
       this.formError.set('El consumo debe tener al menos una línea.');
       return;
     }
+    this.stockQuestion.set(null);
+    const short = allowNegativeStock ? [] : stockShortages(this.lines().map(line => ({
+      product: line.product,
+      baseQuantity: line.presentation ? Number(line.quantity) * line.presentation.baseQuantity : Number(line.quantity)
+    })));
+    if (short.length > 0) {
+      this.stockQuestion.set(short.join(' '));
+      return;
+    }
     this.isSubmitting.set(true);
     this.formError.set(null);
-    this.consumptionService.registerConsumption(this.buildRequest()).subscribe({
+    this.consumptionService.registerConsumption({ ...this.buildRequest(), allowNegativeStock: allowNegativeStock || undefined }).subscribe({
       next: consumption => {
         this.toast.success(`Consumo ${consumption.consumptionNumber} registrado.`);
         this.isSubmitting.set(false);
@@ -210,6 +233,10 @@ export class ConsumptionFormModalComponent {
       },
       error: err => {
         this.isSubmitting.set(false);
+        if (err.status === 409 && err.error?.error === INSUFFICIENT_STOCK) {
+          this.stockQuestion.set(err.error.message);
+          return;
+        }
         this.formError.set(err.error?.message || 'No se pudo registrar el consumo.');
       }
     });

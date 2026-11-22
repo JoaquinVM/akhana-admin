@@ -349,3 +349,19 @@
   border-radius: 999px;
   padding: 1px 8px;
 }
+
+/* INV-11: «Quedan N»; out of stock in the warning color */
+.res-stock,
+.card-stock {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.card-stock {
+  font-size: 0.75rem;
+}
+
+.res-stock-out {
+  color: var(--color-warning);
+  font-weight: 600;
+}

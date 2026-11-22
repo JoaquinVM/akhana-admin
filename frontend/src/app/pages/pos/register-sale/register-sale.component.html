@@ -141,6 +141,18 @@
     (close)="closeCheckoutModal()"
     (confirmed)="submitSale($event)" />
 
+  <!-- INV-10: more than the recorded stock -->
+  <app-confirm-modal
+    [isOpen]="stockQuestion() !== null"
+    title="No hay stock registrado"
+    [message]="stockQuestion() ?? ''"
+    confirmText="Vender igual"
+    cancelText="Volver"
+    variant="warning"
+    [isLoading]="isSubmitting()"
+    (confirm)="confirmWithoutStock()"
+    (cancel)="cancelWithoutStock()" />
+
   <!-- Quick products settings modal (drag and drop) -->
   <app-quick-products-config-modal
     [isOpen]="isConfigModalVisible()"

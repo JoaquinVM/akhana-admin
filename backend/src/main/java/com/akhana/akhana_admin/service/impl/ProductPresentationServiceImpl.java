@@ -120,7 +120,8 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
 
     /** Always base quantity x product cost: a new cost from a purchase (COM-03) reaches every package. */
     public static BigDecimal costOf(ProductPresentation presentation, Product product) {
-        return presentation.getBaseQuantity().multiply(product.getBuyPrice()).setScale(2, RoundingMode.HALF_UP);
+        // INV-06: base quantity × the cost a line takes now (the average when the product controls its stock)
+        return presentation.getBaseQuantity().multiply(StockCost.of(product)).setScale(2, RoundingMode.HALF_UP);
     }
 
     /** «12 u» or «0,227 kg»: how a base quantity reads in the messages. */

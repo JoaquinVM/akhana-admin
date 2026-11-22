@@ -17,6 +17,7 @@ import com.akhana.akhana_admin.repository.FinancialCategoryRepository;
 import com.akhana.akhana_admin.repository.FinancialTransactionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.repository.SaleRepository;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.SaleService;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,7 @@ public class SaleServiceImpl implements SaleService {
     private final CreditorRepository creditorRepository;
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     private final TransactionTemplate transactionTemplate;
+    private final InventoryService inventoryService;
 
     static final String VOID_REASON_REQUIRED = "El motivo de anulación es obligatorio.";
     static final String SALES_CATEGORY_MISSING = "No existe la categoría Venta; no se puede registrar la venta.";
@@ -146,10 +148,9 @@ public class SaleServiceImpl implements SaleService {
             BigDecimal qty = presentation != null
                 ? normalizePackQuantity(itemReq.quantity(), product.getName(), presentation.getName())
                 : normalizeQuantity(itemReq.quantity(), product.getName(), product.getSaleUnit());
-            // Cost snapshot (POS-05): later cost changes do not alter this sale's profit
-            BigDecimal unitCost = product.getBuyPrice() != null
-                ? product.getBuyPrice().setScale(2, RoundingMode.HALF_UP)
-                : ZERO;
+            // Cost snapshot (POS-05): later cost changes do not alter this sale's profit. INV-06: the average of the
+            // moment for a product that controls its stock, its last cost otherwise (INV-18)
+            BigDecimal unitCost = StockCost.of(product);
             BigDecimal discountPerUnit = itemReq.discountPerUnit() != null 
                 ? itemReq.discountPerUnit().setScale(2, RoundingMode.HALF_UP) 
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -258,6 +259,10 @@ public class SaleServiceImpl implements SaleService {
             }
         }
         CashSession session = openSession.orElseThrow(() -> new IllegalStateException(NO_OPEN_SESSION));
+
+        // INV-10: more than the recorded stock is sold only once the POS asked «¿Vender igual?»
+        boolean negativeStock = inventoryService.checkStock(baseQuantities(saleItems),
+            Boolean.TRUE.equals(request.allowNegativeStock()));
 
         // Credit only on at-cost sales (DEU-05, P-12); the payment method covers the part paid now
         BigDecimal creditAmount = request.creditAmount() != null
@@ -375,6 +380,7 @@ public class SaleServiceImpl implements SaleService {
             .createdAt(Instant.now())
             // CAJ-11: a sale counts for the day of its session, even when recorded after midnight
             .operationDate(session.getOperationDate())
+            .negativeStockConfirmed(negativeStock)
             .build();
 
         for (SaleItem item : saleItems) {
@@ -405,8 +411,22 @@ public class SaleServiceImpl implements SaleService {
         if (qrAccount != null) {
             recordSaleIncome(qrAccount, salesCategory, amountQr, savedSale, "QR", username);
         }
+        // CON-04: its exits, the stock locked last (T-14)
+        inventoryService.recordSale(savedSale, username);
 
         return SaleResponse.fromEntity(savedSale);
+    }
+
+    // INV-10: what each product takes, in base units; free lines move no stock (INV-12)
+    private static Map<Product, BigDecimal> baseQuantities(List<SaleItem> items) {
+        Map<Product, BigDecimal> quantities = new java.util.LinkedHashMap<>();
+        for (SaleItem item : items) {
+            if (item.getFreeLineType() == null) {
+                quantities.merge(item.getProduct(),
+                    item.getBaseQuantity() != null ? item.getBaseQuantity() : item.getQuantity(), BigDecimal::add);
+            }
+        }
+        return quantities;
     }
 
     // POS-18: the same checkout sent again; the total and the number of lines tell it apart from another sale
@@ -531,6 +551,8 @@ public class SaleServiceImpl implements SaleService {
                 financialTransactionRepository.save(tx);
             }
         }
+        // RG-03: what it took goes back to the stock at the cost it left at
+        inventoryService.reverseSale(updatedSale, username);
 
         return SaleResponse.fromEntity(updatedSale);
     }
@@ -587,9 +609,12 @@ public class SaleServiceImpl implements SaleService {
         if (product.getStatus() != ProductStatus.ACTIVO || product.getSaleUnit() != SaleUnit.UNIT) {
             throw new IllegalArgumentException(ASSIGNABLE_PRODUCT_REQUIRED);
         }
-        // The only change of a line's cost (T-07): the real product's current cost; amounts and cash stay as sold
+        // The only change of a line's cost (T-07): the real product's current cost (INV-12: the average of this moment);
+        // amounts and cash stay as sold
+        BigDecimal unitCost = StockCost.of(product);
         saleItemRepository.assign(item.getId(), product, product.getCode(), product.getName(),
-            product.getBuyPrice().setScale(2, RoundingMode.HALF_UP), SaleItemAssignmentStatus.ASIGNADO, username, Instant.now());
+            unitCost, SaleItemAssignmentStatus.ASIGNADO, username, Instant.now());
+        inventoryService.recordAssignedLine(item.getSale(), item, product, unitCost, username);
         return getSaleById(saleId);
     }
 

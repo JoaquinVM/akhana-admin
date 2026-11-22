@@ -24,8 +24,10 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // SALES_HISTORY picks the real product of an unidentified line (POS-12)
-    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES', 'CONSUMPTIONS', 'SALES_HISTORY')")
+    // SALES_HISTORY picks the real product of an unidentified line (POS-12); the inventory screens search and scan
+    // products to count or to see their kardex (INV-03, INV-05)
+    @PreAuthorize("hasAnyAuthority('PRODUCTS', 'POS', 'PURCHASES', 'CONSUMPTIONS', 'SALES_HISTORY', 'INVENTORY_STOCK', "
+        + "'INVENTORY_KARDEX', 'INVENTORY_COUNTS')")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts(
             @RequestParam(required = false) String search,

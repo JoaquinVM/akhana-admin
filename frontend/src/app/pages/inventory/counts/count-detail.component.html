@@ -1,0 +1,169 @@
+<div class="inventory-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Inventario</span>
+        <span>/</span>
+        <span class="breadcrumb-item active">Conteo</span>
+      </nav>
+      @if (count(); as c) {
+        <h1 class="page-title">Conteo #{{ c.number }} · {{ c.categoryName ?? 'Productos sueltos' }}</h1>
+        <p class="page-subtitle">
+          @if (open()) {
+            Escribe lo que hay en cajas y sueltas; el stock no se muestra hasta revisar. {{ counted() }} de {{ products().length }} contados.
+          } @else {
+            {{ c.status === 'CONFIRMADO' ? 'Confirmado' : 'Descartado' }} por {{ c.closedBy }} el {{ c.closedAt | date:'dd/MM/yyyy HH:mm':'-0400' }}.
+          }
+        </p>
+      }
+    </div>
+    @if (open() && !review()) {
+      <div class="header-actions">
+        <button type="button" class="btn btn-secondary" (click)="cameraOpen() ? stopCamera() : startCamera()">
+          {{ cameraOpen() ? 'Cerrar cámara' : 'Leer con la cámara' }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="startReview()" [disabled]="busy() || counted() === 0">Revisar diferencias</button>
+      </div>
+    }
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  @if (cameraOpen()) {
+    <div class="camera-card">
+      <video #cameraVideo class="camera-video" autoplay muted playsinline></video>
+      @if (cameraError()) {
+        <div class="alert alert-danger" role="alert"><span>{{ cameraError() }}</span></div>
+      } @else {
+        <p class="muted">Apunta al código de barras: cada lectura suma una caja o una suelta.</p>
+      }
+    </div>
+  }
+
+  @if (review(); as r) {
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Producto</th>
+              <th scope="col">Contado</th>
+              <th scope="col" class="text-right">Esperado</th>
+              <th scope="col" class="text-right">Diferencia</th>
+              <th scope="col" class="text-right">Bs</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of r.lines; track line.productId) {
+              <tr>
+                <td>{{ line.name }}<div class="muted">{{ line.code }}</div></td>
+                <td>{{ line.breakdown }}<div class="muted">{{ qty(line.countedQuantity, line.saleUnit) }}</div></td>
+                <td class="text-right">{{ line.initialLoad ? 'Carga inicial' : qty(line.expectedQuantity, line.saleUnit) }}</td>
+                <td class="text-right" [class.qty-negative]="line.difference < 0">{{ line.difference > 0 ? '+' : '' }}{{ qty(line.difference, line.saleUnit) }}</td>
+                <td class="text-right" [class.qty-negative]="line.differenceValue < 0">{{ line.differenceValue | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="text-right">Total</td>
+              <td class="text-right"><strong>Bs {{ r.differenceValue | number:'1.2-2' }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    @if (r.notCounted > 0) {
+      <p class="muted">{{ r.notCounted }} {{ r.notCounted === 1 ? 'producto de la categoría quedó' : 'productos de la categoría quedaron' }} sin contar: no cambian.</p>
+    }
+    <p class="muted">Los primeros conteos son la carga inicial al último costo; lo vendido después de escribirlos se descuenta. Lo demás se ajusta por la diferencia, al costo promedio.</p>
+    <div class="review-actions">
+      <button type="button" class="btn btn-ghost" (click)="review.set(null)" [disabled]="busy()">Seguir contando</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDiscard.set(true)" [disabled]="busy()">Descartar</button>
+      <button type="button" class="btn btn-primary" (click)="confirm()" [disabled]="busy()">{{ busy() ? 'Confirmando…' : 'Confirmar y ajustar' }}</button>
+    </div>
+  } @else {
+    @if (open()) {
+      <div class="filters-card filters-stacked">
+        <div class="labeled-filters">
+          <div class="labeled-filter labeled-filter-wide">
+            <label class="labeled-filter-label" for="count-filter">Buscar en el conteo</label>
+            <input id="count-filter" type="text" class="form-control" placeholder="Código o nombre…"
+                   [ngModel]="filter()" (ngModelChange)="filter.set($event)" />
+          </div>
+          <div class="labeled-filter labeled-filter-wide add-picker">
+            <label class="labeled-filter-label" for="count-add">Agregar otro producto</label>
+            <input id="count-add" type="text" class="form-control" placeholder="Código, nombre o código de barras…"
+                   [ngModel]="addSearch()" (ngModelChange)="addSearch.set($event)" />
+            @if (addMatches().length > 0) {
+              <ul class="add-matches">
+                @for (product of addMatches(); track product.id) {
+                  <li><button type="button" (click)="addProduct(product)">{{ product.code }} · {{ product.name }}</button></li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="count-list">
+      @for (product of visible(); track product.productId) {
+        <section class="count-item" [id]="'count-' + product.productId" [class.highlighted]="highlighted() === product.productId">
+          <div class="count-item-head">
+            <div>
+              <strong>{{ product.name }}</strong>
+              <div class="muted">{{ product.code }}{{ product.status === 'TO_COUNT' ? ' · primer conteo: carga inicial' : '' }}</div>
+            </div>
+            @if (product.countedQuantity != null) {
+              <div class="counted">
+                <span>{{ product.breakdown }}</span>
+                <span class="muted">{{ product.countedBy }}, {{ product.countedAt | date:'HH:mm':'-0400' }}</span>
+              </div>
+            }
+          </div>
+          @if (open()) {
+            <div class="count-inputs">
+              @for (pkg of product.packages; track pkg.id) {
+                <label class="count-field">
+                  <span>{{ pkg.name }}</span>
+                  <input type="number" min="0" step="1" inputmode="numeric" class="form-control"
+                         [ngModel]="draft(product).packages[pkg.id]" (ngModelChange)="setPackage(product, pkg.id, $event)" />
+                </label>
+              }
+              <label class="count-field">
+                <span>{{ unitLabel(product) }}</span>
+                <input type="number" min="0" [attr.step]="product.saleUnit === 'KILOGRAM' ? '0.001' : '1'"
+                       [attr.inputmode]="product.saleUnit === 'KILOGRAM' ? 'decimal' : 'numeric'" class="form-control"
+                       [ngModel]="draft(product).loose" (ngModelChange)="setLoose(product, $event)" />
+              </label>
+              <div class="count-save">
+                @if (hasDraft(product)) {
+                  <span class="muted">= {{ draftTotal(product) }}</span>
+                }
+                <button type="button" class="btn btn-primary btn-sm" (click)="save(product)"
+                        [disabled]="!hasDraft(product) || saving() === product.productId">
+                  {{ saving() === product.productId ? 'Guardando…' : 'Guardar' }}
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+      } @empty {
+        <p class="muted">Sin productos en este conteo: léelos con el lector o la cámara, o agrégalos buscándolos.</p>
+      }
+    </div>
+  }
+
+  <app-confirm-modal
+    [isOpen]="confirmDiscard()"
+    title="¿Descartar el conteo?"
+    message="Lo contado no ajusta nada y el conteo queda cerrado."
+    confirmText="Descartar"
+    variant="danger"
+    [isLoading]="busy()"
+    (confirm)="discard()"
+    (cancel)="confirmDiscard.set(false)" />
+</div>

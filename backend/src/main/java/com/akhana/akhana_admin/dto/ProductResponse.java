@@ -47,7 +47,15 @@ public record ProductResponse(
     UUID photoId,
     // CAT-10: the product's own active barcodes (those of its packages come with each package), and «No trae»
     List<String> barcodes,
-    boolean noBarcode
+    boolean noBarcode,
+    // CAT-05: «Controla stock»; stockStatus CONTROLLED, TO_COUNT (INV-18) or NOT_CONTROLLED
+    boolean stockControlled,
+    String stockStatus,
+    // INV-01, INV-06: only when it controls its stock; cost is what a line takes now (the average to the cent, or
+    // the last cost while it does not control its stock), the one a sale at cost charges (CON-02)
+    BigDecimal stock,
+    BigDecimal averageCost,
+    BigDecimal cost
 ) {
     public record TagItemResponse(UUID id, String name, String color) {}
 
@@ -59,7 +67,8 @@ public record ProductResponse(
                            Instant updatedAt, String deletedBy, Instant deletedAt) {
         this(id, code, name, categoryId, categoryName, categoryColor, supplierId, supplierName, description, tags,
             buyPrice, sellPrice, fixedProfit, percentageProfit, status, saleUnit, createdBy, createdAt, updatedBy,
-            updatedAt, deletedBy, deletedAt, List.of(), List.of(), null, null, null, null, List.of(), false);
+            updatedAt, deletedBy, deletedAt, List.of(), List.of(), null, null, null, null, List.of(), false, true,
+            null, null, null, buyPrice);
     }
 
     public static ProductResponse fromEntity(Product product, List<String> warnings) {
@@ -70,7 +79,8 @@ public record ProductResponse(
             response.percentageProfit, response.status, response.saleUnit, response.createdBy, response.createdAt,
             response.updatedBy, response.updatedAt, response.deletedBy, response.deletedAt, response.presentations,
             List.copyOf(warnings), response.specialType, response.ownerCreditorId, response.ownerCreditorName,
-            response.photoId, response.barcodes, response.noBarcode);
+            response.photoId, response.barcodes, response.noBarcode, response.stockControlled, response.stockStatus,
+            response.stock, response.averageCost, response.cost);
     }
 
     public static ProductResponse fromEntity(Product product) {
@@ -124,7 +134,12 @@ public record ProductResponse(
                 ? product.getBarcodes().stream().filter(b -> b.isActive() && b.getPresentationId() == null)
                     .map(ProductBarcode::getBarcode).toList()
                 : List.of(),
-            product.getNoBarcodeMarkedAt() != null
+            product.getNoBarcodeMarkedAt() != null,
+            product.isStockControlled(),
+            com.akhana.akhana_admin.service.impl.InventoryServiceImpl.statusOf(product),
+            product.controlsStockNow() ? product.getStockQuantity() : null,
+            product.controlsStockNow() ? product.getStockAverageCost() : null,
+            com.akhana.akhana_admin.service.impl.StockCost.of(product)
         );
     }
 }

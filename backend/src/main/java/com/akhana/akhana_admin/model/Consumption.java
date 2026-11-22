@@ -73,4 +73,9 @@ public class Consumption {
     public boolean isHistorical() {
         return historicalImportId != null;
     }
+
+    // INV-10: confirmed with more than the recorded stock of some product
+    @Column(name = "negative_stock_confirmed", nullable = false)
+    @Builder.Default
+    private boolean negativeStockConfirmed = false;
 }

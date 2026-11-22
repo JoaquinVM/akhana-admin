@@ -262,4 +262,16 @@ describe('ConsumptionFormModalComponent', () => {
       expect(component.consumptionDate()).toBe('2026-10-28');
     });
   });
+
+  it('INV-10, INV-06: con más de lo que hay pregunta antes de registrar; al costo promedio', () => {
+    const tracked = product({ id: 'p-9', name: 'Té verde', buyPrice: 12, cost: 11, stockStatus: 'CONTROLLED', stock: 1 });
+    component.addProduct(tracked);
+    component.updateQuantity(0, 2);
+    expect(component.lineSubtotal(component.lines()[0])).toBe(22);
+    component.submit();
+    expect(consumptionService.registerConsumption).not.toHaveBeenCalled();
+    expect(component.stockQuestion()).toBe('No hay stock registrado de Té verde (quedan 1). ¿Vender igual?');
+    component.submit(true);
+    expect(consumptionService.registerConsumption).toHaveBeenCalledWith(expect.objectContaining({ allowNegativeStock: true }));
+  });
 });

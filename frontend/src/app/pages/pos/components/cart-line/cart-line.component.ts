@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuantityStepperComponent } from '../../../../shared/components/quantity-stepper/quantity-stepper.component';
 import { CartItem, freeLineLabel, isWeightLine, lineAmount, lineName } from '../../register-sale/cart-item';
+import { remainingText } from '../../../../core/inventory/models/inventory.models';
 
 /**
  * One cart line of the register-sale screen: quantity stepper, unit discount or total, prices and remove. The amounts
@@ -31,6 +32,8 @@ export class CartLineComponent {
   readonly remove = output<void>();
 
   readonly name = computed(() => lineName(this.item()));
+  // INV-11: «Quedan N» on the line of a product that controls its stock
+  readonly remaining = computed(() => this.item().freeName ? null : remainingText(this.item().product));
   readonly freeLabel = computed(() => freeLineLabel(this.item()));
   readonly weightLine = computed(() => isWeightLine(this.item()));
   readonly inGrams = computed(() => this.weightLine() && !!this.item().inGrams);

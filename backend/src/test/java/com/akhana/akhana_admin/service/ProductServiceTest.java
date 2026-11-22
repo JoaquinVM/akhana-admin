@@ -50,6 +50,10 @@ class ProductServiceTest {
     @Mock
     private ProductBarcodeService barcodeService;
 
+    // INV: new products start their stock; mocked here, tested against PostgreSQL in InventoryIntegrationTest
+    @Mock
+    private InventoryService inventoryService;
+
     @InjectMocks
     private ProductServiceImpl productService;
 

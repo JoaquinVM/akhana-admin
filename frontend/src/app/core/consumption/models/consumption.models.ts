@@ -55,6 +55,8 @@ export interface ConsumptionRequest {
   consumedFor: string | null;
   comment: string | null;
   items: ConsumptionItemRequest[];
+  // INV-10: confirmed although some product has less recorded stock
+  allowNegativeStock?: boolean;
 }
 
 export interface ConsumptionFilters {

@@ -786,3 +786,13 @@
 .status-select .form-control {
   flex: 1;
 }
+
+/* CAT-05 */
+.stock-control-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}

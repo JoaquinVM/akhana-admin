@@ -96,6 +96,11 @@
                      [ngModel]="deliveryDate()" (ngModelChange)="deliveryDate.set($event)" />
             </div>
           </div>
+          @if (backToPending()) {
+            <p class="stock-notice" role="alert">Se resta del stock lo que este pedido sumó al entregarse, aunque algún producto quede en negativo.</p>
+          } @else if (nowDelivered()) {
+            <p class="stock-notice" role="status">Al guardar, las líneas del pedido entran al stock.</p>
+          }
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" [disabled]="isSavingDelivery()" (click)="isEditingDelivery.set(false)">Cancelar</button>
             <button type="submit" class="btn btn-primary" [disabled]="isSavingDelivery()">

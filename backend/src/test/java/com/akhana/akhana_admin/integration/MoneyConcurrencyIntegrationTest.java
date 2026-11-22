@@ -89,6 +89,8 @@ class MoneyConcurrencyIntegrationTest {
         jdbc.update("DELETE FROM cash_denomination_cuts WHERE cash_session_id IN " + ownSessions, USER);
         jdbc.update("DELETE FROM cash_session_reopenings WHERE cash_session_id IN " + ownSessions, USER);
         jdbc.update("DELETE FROM financial_transactions WHERE created_by = ?", USER);
+        jdbc.update("DELETE FROM stock_movements WHERE created_by = ?", USER);
+        jdbc.update("DELETE FROM product_stocks WHERE product_id IN (SELECT id FROM products WHERE created_by = ?)", USER);
         jdbc.update("DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE created_by = ?)", USER);
         jdbc.update("DELETE FROM sales WHERE created_by = ?", USER);
         jdbc.update("DELETE FROM cash_sessions WHERE opened_by = ?", USER);
@@ -123,6 +125,29 @@ class MoneyConcurrencyIntegrationTest {
         assertThat(session.totalSalesCash()).isEqualByComparingTo(salesTotal);
         assertThat(session.totalSales()).isEqualByComparingTo(salesTotal);
         assertThat(session.expectedCash()).isEqualByComparingTo(opening.add(salesTotal));
+    }
+
+    @Test
+    @DisplayName("T-14, INV-01: ventas simultáneas del mismo producto: el stock baja una vez por venta y es la suma del kardex")
+    void concurrentSales_keepTheStock() throws Exception {
+        UUID productId = createProduct(new BigDecimal("10.00"));
+        // A product that controls its stock, with 20 units at Bs 4
+        jdbc.update("INSERT INTO product_stocks (product_id, quantity, stock_value, average_cost, started_at) "
+            + "VALUES (?, 20, 80.00, 4, now())", productId);
+        BigDecimal opening = cashSessionService.getOpeningProposal().proposedAmount();
+        cashSessionService.openSession(openingOn(firstFreeDay(), opening), USER);
+
+        List<Outcome<SaleResponse>> outcomes = runConcurrently(THREADS, i -> () -> saleService.registerSale(
+            new SaleDetailRequest(List.of(new SaleItemRequest(productId, new BigDecimal("1"), null)), null, PaymentMethod.QR,
+                null, null, null, null), USER));
+
+        assertThat(outcomes).allSatisfy(o -> assertThat(o.error()).isNull());
+        BigDecimal stock = jdbc.queryForObject("SELECT quantity FROM product_stocks WHERE product_id = ?", BigDecimal.class, productId);
+        assertThat(stock).isEqualByComparingTo(BigDecimal.valueOf(20 - THREADS));
+        assertThat(jdbc.queryForObject("SELECT 20 + SUM(quantity) FROM stock_movements WHERE product_id = ?",
+            BigDecimal.class, productId)).isEqualByComparingTo(stock);
+        assertThat(jdbc.queryForList("SELECT balance_quantity FROM stock_movements WHERE product_id = ?", BigDecimal.class,
+            productId).stream().map(BigDecimal::stripTrailingZeros).distinct()).hasSize(THREADS);
     }
 
     @Test

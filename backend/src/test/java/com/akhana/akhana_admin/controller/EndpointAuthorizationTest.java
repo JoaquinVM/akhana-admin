@@ -60,6 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinancialCategoryController.class,
         FinancialSummaryController.class,
         FinancialTransactionController.class,
+        InventoryController.class,
         ProductBarcodeController.class,
         BoxProductConversionController.class,
         ProductController.class,
@@ -124,6 +125,10 @@ class EndpointAuthorizationTest {
             {"items":[{"productId":"%s","quantity":1}]}""".formatted(ID);
     private static final String VOID_CONSUMPTION = """
             {"voidReason":"Error de carga"}""";
+    private static final String ADJUSTMENT = """
+            {"reason":"ROTURA","quantity":1}""";
+    private static final String COUNT_LINE = """
+            {"packages":[],"loose":3}""";
     private static final String QUICK_GROUP = """
             {"name":"Bebidas"}""";
     private static final String REORDER_GROUPS = """
@@ -180,6 +185,8 @@ class EndpointAuthorizationTest {
     @MockitoBean private SupplierService supplierService;
     @MockitoBean private TagService tagService;
     @MockitoBean private UserService userService;
+    @MockitoBean private InventoryService inventoryService;
+    @MockitoBean private StockCountService stockCountService;
     @MockitoBean private JwtService jwtService;
     @MockitoBean private UserRepository userRepository;
     @MockitoBean private FinancialAccountRepository financialAccountRepository;
@@ -308,6 +315,18 @@ class EndpointAuthorizationTest {
                 both(get, "/api/customers/" + ID + "/history", null),
                 both(post, "/api/customers/" + ID + "/collections", COLLECTION),
                 both(post, "/api/customers/" + ID + "/collections/" + ID + "/void", VOID_DEBT),
+                // V2 · Inventario: Existencias, Kardex y Conteo, del operador y del administrador (tabla 2.2)
+                both(get, "/api/inventory/stock", null),
+                both(get, "/api/inventory/levels", null),
+                both(get, "/api/inventory/products/" + ID + "/kardex", null),
+                both(post, "/api/inventory/products/" + ID + "/adjustments", ADJUSTMENT),
+                both(get, "/api/inventory/counts", null),
+                both(post, "/api/inventory/counts", "{}"),
+                both(get, "/api/inventory/counts/" + ID, null),
+                both(put, "/api/inventory/counts/" + ID + "/lines/" + ID, COUNT_LINE),
+                both(get, "/api/inventory/counts/" + ID + "/review", null),
+                both(post, "/api/inventory/counts/" + ID + "/confirm", null),
+                both(post, "/api/inventory/counts/" + ID + "/discard", null),
                 // Consumos internos: listar, detalle, registrar y anular (CON-01)
                 both(get, "/api/consumptions", null),
                 both(get, "/api/consumptions/" + ID, null),

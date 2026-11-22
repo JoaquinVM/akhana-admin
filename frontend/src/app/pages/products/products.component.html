@@ -500,6 +500,20 @@
           <option value="UNIT">Unidad</option>
           <option value="KILOGRAM">Peso (precio por kilo)</option>
         </select>
+        <span class="text-muted-sm">Es también la unidad en la que se lleva su stock: unidades o kilos.</span>
+      </div>
+
+      <!-- CAT-05: whether it controls its stock -->
+      <div class="form-group">
+        <label class="form-check stock-control-check">
+          <input type="checkbox" formControlName="stockControlled" />
+          <span>Controla stock</span>
+          @if (isFieldModified('stockControlled')) {
+            <span class="field-modified-badge">Modificado</span>
+          }
+        </label>
+        <span class="text-muted-sm">Sin marcar, no lleva existencias, no se cuenta y la caja no avisa cuando no hay.
+          Al volver a marcarlo, empieza con su próximo conteo.</span>
       </div>
 
       }
@@ -510,7 +524,7 @@
         <!-- Buy price -->
         <div class="form-group flex-1">
           <label class="form-label" for="product-buy-price">
-            <span>Precio de compra{{ isKilogramForm() ? ' por kilo' : '' }} <span class="required-mark">*</span></span>
+            <span>Último costo{{ isKilogramForm() ? ' por kilo' : '' }} <span class="required-mark">*</span></span>
             @if (isFieldModified('buyPrice')) {
               <span class="field-modified-badge">Modificado</span>
             }
@@ -529,7 +543,11 @@
             />
           </div>
           @if (productForm.get('buyPrice')?.touched && productForm.get('buyPrice')?.errors) {
-            <span class="field-error">Ingresa un precio de compra válido (0 o más).</span>
+            <span class="field-error">Ingresa un costo válido (0 o más).</span>
+          }
+          <!-- INV-06: the average is the stock's; changing the cost here changes only the last cost -->
+          @if (editingAverage(); as avg) {
+            <span class="text-muted-sm">Costo promedio del stock: Bs {{ avg | number:'1.2-2' }}. Cambiar este costo no lo cambia.</span>
           }
         </div>
 

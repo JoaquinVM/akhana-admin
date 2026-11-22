@@ -53,6 +53,10 @@ class ProductImportServiceTest {
     @Mock private ProductPresentationService presentationService;
     @Mock private ProductPriceChangeRepository priceChangeRepository;
 
+    // INV: new products start their stock; mocked here, tested against PostgreSQL in InventoryIntegrationTest
+    @Mock
+    private InventoryService inventoryService;
+
     @InjectMocks
     private ProductImportServiceImpl importService;
 

@@ -120,6 +120,12 @@ export class ProductsComponent implements OnInit {
   isImportModalOpen = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   selectedProductId = signal<string | null>(null);
+  // INV-06: the stock's average of the product being edited, shown next to its last cost
+  editingAverage = computed<number | null>(() => {
+    const id = this.selectedProductId();
+    if (!this.isEditing() || !id) return null;
+    return this.products().find(p => p.id === id)?.averageCost ?? null;
+  });
   formError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
   originalFormValues = signal<Record<string, any> | null>(null);
@@ -166,6 +172,8 @@ export class ProductsComponent implements OnInit {
     sellPrice: [null, [Validators.required, Validators.min(0.01)]],
     status: ['ACTIVO'],
     saleUnit: ['UNIT'],
+    // CAT-05: «Controla stock»
+    stockControlled: [true],
     // POS-11: '' is a normal product; type and owner are only chosen on create
     specialType: [''],
     ownerCreditorId: ['']
@@ -329,6 +337,7 @@ export class ProductsComponent implements OnInit {
            this.isFieldModified('sellPrice') ||
            this.isFieldModified('status') ||
            this.isFieldModified('saleUnit') ||
+           this.isFieldModified('stockControlled') ||
            this.presentationsModified() ||
            this.barcodesModified();
   });
@@ -608,6 +617,7 @@ export class ProductsComponent implements OnInit {
       sellPrice: null,
       status: 'ACTIVO',
       saleUnit: 'UNIT',
+      stockControlled: true,
       specialType: '',
       ownerCreditorId: ''
     });
@@ -639,6 +649,7 @@ export class ProductsComponent implements OnInit {
       sellPrice: product.sellPrice,
       status: product.status,
       saleUnit: product.saleUnit ?? 'UNIT',
+      stockControlled: product.stockControlled ?? true,
       specialType: product.specialType ?? '',
       ownerCreditorId: product.ownerCreditorId ?? ''
     };
@@ -748,7 +759,8 @@ export class ProductsComponent implements OnInit {
       presentations: !val.specialType ? this.presentationRequests() : undefined,
       specialType: val.specialType || null,
       ownerCreditorId: val.specialType === 'THIRD_PARTY' ? val.ownerCreditorId : null,
-      barcodes: this.barcodesModified() ? this.barcodes() : undefined
+      barcodes: this.barcodesModified() ? this.barcodes() : undefined,
+      stockControlled: val.specialType ? undefined : !!val.stockControlled
     };
     this.saveWarnings.set([]);
 

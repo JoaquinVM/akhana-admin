@@ -104,6 +104,24 @@ public class Product {
     @Builder.Default
     private List<ProductBarcode> barcodes = new ArrayList<>();
 
+    // CAT-05: the product controls its stock; never the special ones (POS-11, POS-13)
+    @Column(name = "stock_controlled", nullable = false)
+    @Builder.Default
+    private boolean stockControlled = true;
+
+    // INV-01: read-only copy of the stock shortcut (product_stocks), read with the product so the catalog is one query
+    @Formula("(SELECT s.quantity FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockQuantity;
+
+    @Formula("(SELECT s.stock_value FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockValue;
+
+    @Formula("(SELECT s.average_cost FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockAverageCost;
+
+    @Formula("(SELECT s.started_at FROM product_stocks s WHERE s.product_id = id)")
+    private Instant stockStartedAt;
+
     // CAT-10: «No trae», checked and without a factory barcode
     @Column(name = "no_barcode_marked_by", length = 100)
     private String noBarcodeMarkedBy;
@@ -132,5 +150,10 @@ public class Product {
 
     public boolean isSpecial() {
         return specialType != null;
+    }
+
+    /** CAT-05, INV-18: it moves stock now: it controls it, is not special and was counted or created in the V2. */
+    public boolean controlsStockNow() {
+        return stockControlled && !isSpecial() && stockStartedAt != null;
     }
 }

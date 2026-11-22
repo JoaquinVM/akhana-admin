@@ -50,4 +50,11 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
            "AND p.historicalImportId IS NULL " +
            "ORDER BY p.purchaseDate DESC, p.createdAt DESC")
     List<Purchase> findPendingDelivery(@Param("supplierId") UUID supplierId);
+
+    // INV-14: [product id, base quantity] still to arrive: active lines of pending purchases that are not voided
+    @Query("SELECT i.product.id, SUM(COALESCE(i.baseQuantity, i.quantity)) FROM PurchaseItem i JOIN i.purchase p "
+         + "WHERE p.status <> :voided AND p.deliveryStatus = :pending AND p.historicalImportId IS NULL "
+         + "AND i.removedAt IS NULL GROUP BY i.product.id")
+    List<Object[]> sumIncoming(@Param("voided") com.akhana.akhana_admin.model.PurchaseStatus voided,
+                               @Param("pending") com.akhana.akhana_admin.model.DeliveryStatus pending);
 }

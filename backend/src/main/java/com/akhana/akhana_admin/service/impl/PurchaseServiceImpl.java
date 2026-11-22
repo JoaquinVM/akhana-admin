@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +78,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     private final ProductPresentationService presentationService;
     private final TransactionTemplate transactionTemplate;
+    private final InventoryService inventoryService;
     // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
     private final Clock clock;
 
@@ -343,6 +345,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             applyPayment(saved, initialPayment, username);
             saved = purchaseRepository.save(saved);
         }
+        // INV-14: registered as delivered, it enters the stock now, locked last (T-14)
+        inventoryService.syncPurchase(saved, false, List.of(), null, username);
 
         return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account() : null, shippingCreditor, null);
     }
@@ -373,6 +377,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (purchase.isHistorical()) {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
+        boolean wasDelivered = purchase.getDeliveryStatus() == DeliveryStatus.ENTREGADO;
         PurchaseReading reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
         if (reading != null && reading.getSource() != PurchaseReadingSource.PHOTO) {
             throw new IllegalArgumentException(ARRIVAL_READING_NOT_PHOTO);
@@ -604,6 +609,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         for (CostUpdate update : costUpdates) {
             applyCostUpdate(update, purchaseId, username, now);
         }
+        // INV-14: delivered, an edit moves only the difference; back to pending, out what it put
+        purchaseRepository.flush();
+        inventoryService.syncPurchase(purchase, wasDelivered, addedLines, reason, username);
         return getPurchaseById(purchaseId);
     }
 
@@ -676,12 +684,15 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
         Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
             purchase.getPurchaseDate(), StoreFormat.today(clock));
+        boolean wasDelivered = purchase.getDeliveryStatus() == DeliveryStatus.ENTREGADO;
         purchase.setDeliveryType(delivery.type());
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setUpdatedBy(username);
         purchase.setUpdatedAt(Instant.now(clock));
         purchaseRepository.save(purchase);
+        // INV-14: Entregado adds; back to Pendiente takes out what it put, even if the stock goes below 0
+        inventoryService.syncPurchase(purchase, wasDelivered, List.of(), null, username);
         return getPurchaseById(purchaseId);
     }
 
@@ -786,6 +797,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setUpdatedBy(username);
         purchase.setUpdatedAt(now);
         purchaseRepository.save(purchase);
+        // INV-14: a voided purchase takes out of the stock what it put
+        inventoryService.syncPurchase(purchase, true, List.of(), voidReason, username);
 
         return getPurchaseById(purchaseId);
     }

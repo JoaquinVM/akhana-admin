@@ -102,8 +102,11 @@ export class PurchaseDetailModalComponent {
   voidMessage = computed(() => {
     const target = this.voidTarget();
     if (target === 'PURCHASE') {
+      const delivered = this.purchase()?.deliveryStatus === 'ENTREGADO';
       return 'Se anulan todos los pagos y el envío del pedido y cada cuenta recupera su monto. '
-        + 'El costo y precio de los productos no cambian.';
+        + 'El costo y precio de los productos no cambian.'
+        // INV-14: what it put in the stock goes out, even if the stock goes below 0
+        + (delivered ? ' Lo que el pedido sumó al stock se resta, aunque alguno quede en negativo.' : '');
     }
     if (target) {
       if (target.creditorName) {
@@ -230,6 +233,11 @@ export class PurchaseDetailModalComponent {
     this.deliveryError.set(null);
     this.isEditingDelivery.set(true);
   }
+
+  // INV-14: going back to Pendiente takes out of the stock what the delivery put, even below 0
+  backToPending = computed(() => this.purchase()?.deliveryStatus === 'ENTREGADO' && this.deliveryStatus() === 'PENDIENTE');
+  // INV-14: marking it Entregado adds its lines to the stock
+  nowDelivered = computed(() => this.purchase()?.deliveryStatus === 'PENDIENTE' && this.deliveryStatus() === 'ENTREGADO');
 
   saveDelivery(): void {
     const purchase = this.purchase();

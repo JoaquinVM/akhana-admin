@@ -18,5 +18,13 @@ public record ConsumptionRequest(
     String comment,
 
     @NotEmpty(message = "El consumo debe tener al menos una línea.")
-    List<@Valid ConsumptionItemRequest> items
-) {}
+    List<@Valid ConsumptionItemRequest> items,
+
+    // INV-10: confirmed although some product has less recorded stock
+    Boolean allowNegativeStock
+) {
+    public ConsumptionRequest(LocalDate consumptionDate, String consumedFor, String comment,
+                              List<ConsumptionItemRequest> items) {
+        this(consumptionDate, consumedFor, comment, items, null);
+    }
+}

@@ -1,0 +1,149 @@
+<div class="inventory-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Inventario</span>
+        <span>/</span>
+        <span class="breadcrumb-item active">Kardex</span>
+      </nav>
+      <h1 class="page-title">Kardex</h1>
+      <p class="page-subtitle">Cada entrada y salida de un producto con su costo, y el saldo y el costo promedio después de cada una.</p>
+    </div>
+    @if (kardex()?.status === 'CONTROLLED') {
+      <div class="header-actions">
+        <button type="button" class="btn btn-secondary" (click)="openAdjust()">Registrar ajuste</button>
+      </div>
+    }
+  </header>
+
+  <div class="filters-card filters-stacked">
+    <div class="labeled-filters">
+      <div class="labeled-filter labeled-filter-wide product-picker">
+        <label class="labeled-filter-label" for="kardex-product">Producto</label>
+        <input id="kardex-product" type="text" class="form-control" placeholder="Código, nombre o código de barras…"
+               [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)" (keydown.enter)="chooseFromSearch()" />
+        @if (matches().length > 0) {
+          <ul class="product-matches">
+            @for (product of matches(); track product.id) {
+              <li><button type="button" (click)="choose(product)">{{ product.code }} · {{ product.name }}</button></li>
+            }
+          </ul>
+        }
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="kardex-from">Desde</label>
+        <input id="kardex-from" type="date" class="form-control" [ngModel]="from()" (ngModelChange)="from.set($event); load()" />
+      </div>
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="kardex-to">Hasta</label>
+        <input id="kardex-to" type="date" class="form-control" [ngModel]="to()" (ngModelChange)="to.set($event); load()" />
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  @if (adjusting()) {
+    <form class="adjust-card" (ngSubmit)="saveAdjustment()">
+      <h3>Ajuste de {{ kardex()?.name }}</h3>
+      <div class="labeled-filters">
+        <div class="labeled-filter">
+          <label class="labeled-filter-label" for="adjust-reason">Motivo</label>
+          <select id="adjust-reason" class="form-control" name="reason" [ngModel]="reason()" (ngModelChange)="reason.set($event)">
+            @for (r of reasons; track r.value) {
+              <option [value]="r.value">{{ r.label }} ({{ r.adds ? 'entra' : 'sale' }})</option>
+            }
+          </select>
+        </div>
+        <div class="labeled-filter">
+          <label class="labeled-filter-label" for="adjust-quantity">Cantidad ({{ kardex()?.saleUnit === 'KILOGRAM' ? 'kg' : 'u' }})</label>
+          <input id="adjust-quantity" type="number" min="0" class="form-control" name="quantity"
+                 [ngModel]="adjustQuantity()" (ngModelChange)="adjustQuantity.set($event)" />
+        </div>
+        <div class="labeled-filter labeled-filter-wide">
+          <label class="labeled-filter-label" for="adjust-comment">Comentario</label>
+          <input id="adjust-comment" type="text" class="form-control" name="comment" maxlength="255"
+                 [ngModel]="adjustComment()" (ngModelChange)="adjustComment.set($event)" />
+        </div>
+      </div>
+      <p class="muted">La rotura que alguien paga es una venta al costo, no un ajuste.</p>
+      @if (adjustError()) {
+        <div class="alert alert-danger" role="alert"><span>{{ adjustError() }}</span></div>
+      }
+      <div class="adjust-actions">
+        <button type="button" class="btn btn-ghost" (click)="adjusting.set(false)">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">{{ isSaving() ? 'Guardando…' : 'Registrar ajuste' }}</button>
+      </div>
+    </form>
+  }
+
+  @if (kardex(); as k) {
+    <div class="summary-row">
+      <div class="summary-tile"><span>{{ k.code }}</span><strong>{{ k.name }}</strong></div>
+      <div class="summary-tile">
+        <span>Stock</span>
+        <strong [class.qty-negative]="k.quantity < 0">{{ qty(k.quantity) }}</strong>
+        @if (equivalence(); as eq) { <div class="muted">{{ eq }}</div> }
+      </div>
+      <div class="summary-tile"><span>Costo promedio</span><strong>{{ k.averageCost == null ? '—' : 'Bs ' + (k.averageCost | number:'1.2-2') }}</strong></div>
+      <div class="summary-tile"><span>Valor</span><strong>Bs {{ k.value | number:'1.2-2' }}</strong></div>
+    </div>
+    @if (k.status === 'TO_COUNT') {
+      <div class="alert" role="status"><span>Por contar: empieza a llevar stock con su primer conteo, que es su carga inicial.</span></div>
+    } @else if (k.status === 'NOT_CONTROLLED') {
+      <div class="alert" role="status"><span>Este producto no controla stock.</span></div>
+    }
+
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="table kardex-table">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Movimiento</th>
+              <th scope="col" class="text-right">Cantidad</th>
+              <th scope="col" class="text-right">Costo unit.</th>
+              <th scope="col" class="text-right">Valor</th>
+              <th scope="col" class="text-right">Saldo</th>
+              <th scope="col" class="text-right">Promedio</th>
+              <th scope="col" class="text-right">Valor del saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="opening-row">
+              <td colspan="5">Saldo al empezar el {{ k.from | storeDay }}</td>
+              <td class="text-right">{{ qty(k.openingQuantity) }}</td>
+              <td class="text-right">{{ k.openingAverageCost == null ? '—' : (k.openingAverageCost | number:'1.2-2') }}</td>
+              <td class="text-right">{{ k.openingValue | number:'1.2-2' }}</td>
+            </tr>
+            @if (isLoading()) {
+              <tr><td colspan="8" class="text-center">Cargando…</td></tr>
+            }
+            @for (row of k.rows; track row.id) {
+              <tr>
+                <td>{{ row.createdAt | date:'dd/MM/yyyy HH:mm':'-0400' }}<div class="muted">{{ row.createdBy }}</div></td>
+                <td>
+                  <strong>{{ row.typeLabel }}</strong>{{ row.reference ? ' · ' + row.reference : '' }}
+                  @if (rowDetail(row)) { <div class="muted">{{ rowDetail(row) }}</div> }
+                  @if (row.expensedValue !== 0) { <div class="muted">Al costo de ventas: Bs {{ row.expensedValue | number:'1.2-2' }}</div> }
+                </td>
+                <td class="text-right" [class.qty-negative]="row.quantity < 0">{{ row.quantity > 0 ? '+' : '' }}{{ qty(row.quantity) }}</td>
+                <td class="text-right">{{ row.unitCost == null ? '' : (row.unitCost | number:'1.2-2') }}</td>
+                <td class="text-right">{{ row.value | number:'1.2-2' }}</td>
+                <td class="text-right" [class.qty-negative]="row.balanceQuantity < 0">{{ qty(row.balanceQuantity) }}</td>
+                <td class="text-right">{{ row.balanceAverageCost == null ? '—' : (row.balanceAverageCost | number:'1.2-2') }}</td>
+                <td class="text-right">{{ row.balanceValue | number:'1.2-2' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="text-center muted">Sin movimientos en estas fechas.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else if (!isLoading()) {
+    <p class="muted">Busca un producto para ver su kardex.</p>
+  }
+</div>

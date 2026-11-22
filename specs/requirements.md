@@ -10,6 +10,10 @@ Stack: Spring Boot 4.1 (Java 21), Angular 21, PostgreSQL 17.
 
 Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del módulo (una línea) en el mismo commit.
 
+Producción sigue en la V1 (`v1.14.0`). La V2 se publica entera, una sola vez, cuando estén el inventario (sus cuatro
+trabajos) y la contabilidad (§3.13); no hay bandera para apagarla, así que todo lo que se mergea desde la V1 sale junto
+con ella. Entre un trabajo y otro no se publica nada.
+
 | Módulo | IDs | Estado V1 | Falta para la V1 | Spec |
 | --- | --- | --- | --- | --- |
 | Base técnica | T-00 a T-19, RG-01 a RG-05 | ✅ Completo | — | §4 |
@@ -26,7 +30,7 @@ Avance de la V1 al 29-10-2026. Al cerrar cada sesión se actualiza la fila del m
 | Migración | CAT-06, FIN-11 | ✅ Completo | FIN-11 hecha y retirada (quedan los datos); falta el pago de `PED-H00487`; corrección de la caja #142 sin desplegar | `migration.md` |
 | App instalable | MOV-01 a MOV-04 | ✅ Completo | Probar en teléfonos reales la instalación, la zona segura del iPhone y sin conexión; reinstalarla desde el dominio al salir a internet | `mobile.md` |
 | Producción | NF-01, NF-02, NF-05, NF-06, NF-07, NF-08, NF-09, NF-10 | ✅ Completo | Salida a internet por Cloudflare Tunnel (NF-02) sin publicar: falta el dominio, el túnel y pasar la caja y los teléfonos a la dirección nueva | `deploy.md` |
-| Inventario | INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04 | V2 | Trabajo 1 de 4 (empaques: CAT-15, COM-10, COM-29) construido, sin publicar. Faltan el núcleo con el conteo y el arranque, bonificaciones y devoluciones, y reposición y análisis | `inventory.md` |
+| Inventario | INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04 | V2 | Trabajos 1 (empaques: CAT-15, COM-10, COM-29) y 2 (núcleo: kardex, promedio, conteo y arranque: CAT-05, CAT-14, INV-01 a INV-03, INV-05 a INV-12, INV-14, INV-15, INV-18, CON-04, T-04) construidos, sin publicar hasta la V2. Faltan bonificaciones y devoluciones, y reposición y análisis | `inventory.md` |
 | Contabilidad | CTB-01 a CTB-12, FIN-05 | V2 | Definido; sin construir. Arranca al terminar el conteo del inventario | — |
 
 ### 1.1 Las planillas que se reemplazan
@@ -116,8 +120,8 @@ Cada requerimiento indica su versión; los **V1** son los necesarios para dejar 
 - **CAT-11** · V1 — Presentaciones de productos por peso: hasta 6 por producto, con nombre, peso fijo y precio fijo opcional (sin él, peso × precio por kilo). El costo siempre es peso × costo por kilo. El POS y Consumos ofrecen las presentaciones y «Otro peso»; los reportes suman kilos. Detalle en `product-presentations.md`.
 - **CAT-12** · V1 — Cada producto admite una foto, que quien tiene acceso a Productos sube, cambia o quita. Se guarda reducida y sin metadatos; cambiarla o quitarla conserva el archivo anterior (RG-01). El listado filtra los productos sin foto. Detalle en `product-photos.md`.
 - **CAT-10** · V1 — Un producto por unidad puede tener hasta 5 códigos de barras de fábrica (EAN-8, UPC-A o EAN-13), únicos entre productos. Se cargan desde Productos, con una lista de los que faltan, de más a menos vendidos. Quien tiene acceso a Productos los agrega o los quita, y queda quién y cuándo. Detalle en `barcodes.md`.
-- **CAT-05** · V2 — Cada producto indica si controla stock. No lo controlan los productos de terceros (POS-13) ni los que se marquen así. Los que ya existían lo controlan desde su primer conteo (INV-18); los nuevos, desde que se crean, con stock 0.
-- **CAT-14** · V2 — Cada producto tiene una unidad base, en la que se lleva su stock: unidad o kilo (CAT-08).
+- **CAT-05** · V2 — Cada producto indica si controla stock. No lo controlan los productos de terceros (POS-13) ni los que se marquen así. Los que ya existían lo controlan desde su primer conteo (INV-18); los nuevos, desde que se crean, con stock 0. Uno que se desmarca deja de mover stock; vuelto a marcar, empieza con su próximo conteo.
+- **CAT-14** · V2 — Cada producto tiene una unidad base, en la que se lleva su stock: unidad o kilo (CAT-08). Una vez que el producto movió stock, su unidad no cambia.
 - **CAT-15** · V2 — Empaques: cada producto puede tener empaques con su equivalencia en la unidad base (Caja ×12, Display ×24, Saco 25 kg, Bolsa 250 g) y código de barras opcional, único entre productos y empaques. Las presentaciones (CAT-11) pasan a ser empaques. Un empaque marcado «se vende» tiene precio propio: escanearlo lo vende entero y descuenta sus unidades, al costo promedio. Existencias y kardex muestran la equivalencia («40 = 3 cajas + 4»).
 - **CAT-09** · Después de la V2 — Productos con variantes (ej. sabor, tamaño) agrupados bajo un producto base; cada variante con su código, costo y precio (P-33). Hasta entonces cada variante es un producto aparte, con su propio stock.
 
@@ -324,7 +328,7 @@ Salieron de la revisión del código (T-00, 25-10-2026). Los V1 están hechos; e
 | T-10 | Las cuentas Bisa y Efectivo no se siembran con saldo en el esquema; el saldo al corte se carga desde la app (FIN-01). | V1 | `finance.md` |
 | T-11 | Cantidades decimales (3 decimales) en ventas, compras y consumos. | V1 | `sales.md` |
 | T-13 | Cada endpoint exige el permiso de su pantalla, con prueba que recorre todos los endpoints. | V1 | `users.md` |
-| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (bloqueo de apertura, solo al abrir o reabrir caja → movimiento o documento → caja → persona o cliente → cuentas por id), con prueba concurrente. | V1 | `cash.md` |
+| T-14 | Toda operación de dinero bloquea la caja y las cuentas que toca, en orden fijo (bloqueo de apertura, solo al abrir o reabrir caja → movimiento o documento → caja → persona o cliente → cuentas por id → desde la V2, stock de los productos por id), con prueba concurrente. | V1 | `cash.md` |
 | T-15 | Un único cálculo de efectivo esperado (CAJ-03) usado por todos los servicios. | V1 | `cash.md` |
 | T-16 | Los movimientos de la cuenta Caja exigen caja abierta y se vinculan a ella; los de una caja cerrada no se editan ni anulan. | V1 | `cash.md` |
 | T-17 | La venta falla si falta su cuenta o su categoría (RG-05). | V1 | `sales.md` |
@@ -441,7 +445,9 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 2. 🟡 **Fase 1 · V1** — Compras, deudas, consumos, venta por peso, caja, historial, reportes, importación y migración. Construida.
    - Compuerta: productos, saldos y todo el historial de las dos planillas migrados en producción.
 3. ❌ **Fase 2 · Dos semanas en paralelo con las planillas** — Cancelada por decisión de Joaquín: la tienda usa solo el sistema (P-53).
-4. **Fase 3 · V2: inventario** — INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04.
+4. **Fase 3 · V2: inventario** — INV-01 a INV-22, CAT-05, CAT-14, CAT-15, CON-04, COM-10, COM-28, COM-29, T-04. En
+   cuatro trabajos, uno detrás de otro: empaques, núcleo, bonificaciones y devoluciones, y reposición y análisis.
+   - Publicación: la V2 sale entera, una sola vez, con la Fase 4; entre trabajos no se publica nada.
    - Compuerta: todos los productos contados (INV-18) y un conteo físico completo cuadra con el sistema.
 5. **Fase 4 · V2: contabilidad** — CTB-01 a CTB-12 y las categorías nuevas de FIN-05. Arranca el mes siguiente al conteo completo (CTB-05).
    - Compuerta: un mes cerrado cuadra con Finanzas y con el kardex (CTB-07).
@@ -451,7 +457,7 @@ Las planillas ya se dejaron: la tienda registra todo solo en el sistema, sin per
 
 Solo los pasos abiertos; al terminar uno se borra de aquí (queda en git).
 
-- [ ] COM-10: publicado el trabajo de empaques, revisar «Cajas a empaques» en Productos y confirmar o descartar cada caja antes de empezar el conteo (INV-18).
+- [ ] COM-10: publicada la V2 y antes de empezar el conteo (INV-18), revisar «Cajas a empaques» en Productos con el catálogo de producción y confirmar o descartar cada caja.
 - [ ] COM-20: para encenderlo, dejar `OPENAI_API_KEY` en el `.env` del VPS y reiniciar; a los 30 días, mirar la métrica de `purchases.md`, incluido el tiempo.
 - [ ] Salir a internet (NF-02, `deploy.md` «Paso a internet»): publicada la versión, cada administrador activa su 2FA y todos cambian la contraseña por la dirección de Tailscale; Joaquín compra el dominio, crea el túnel y pone el token; la caja y los teléfonos pasan a `admin.<dominio>`; Joaquín apaga `tailscale serve` y saca de Tailscale los equipos de la tienda.
 - [ ] Al publicar el 2FA para todos (USR-08): antes de su turno, cada operador instala una app autenticadora y activa el 2FA con el QR en su primer ingreso.

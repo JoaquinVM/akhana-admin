@@ -836,4 +836,40 @@ describe('RegisterSaleComponent', () => {
       expect(component.catalogProducts()).toEqual(before);
     });
   });
+
+  describe('INV-10: más de lo que hay', () => {
+    const payment = { paymentMethod: 'QR' as const, amountCash: 0, amountQr: 40, amountReceived: 0, customerId: null, creditAmount: 0, comment: '' };
+    const tracked: Product = { ...mockProduct1, stockStatus: 'CONTROLLED', stock: 1 };
+
+    it('pregunta «¿Vender igual?» antes de cobrar y, confirmado, manda la venta con el permiso', () => {
+      component.addToCart(tracked);
+      component.addToCart(tracked);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(mockSaleService.registerSale).not.toHaveBeenCalled();
+      expect(component.stockQuestion()).toBe('No hay stock registrado de Té Verde Matcha (quedan 1). ¿Vender igual?');
+
+      component.confirmWithoutStock();
+      expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({ allowNegativeStock: true }));
+      expect(component.stockQuestion()).toBeNull();
+    });
+
+    it('si el servidor ve menos stock que la pantalla, hace la misma pregunta', () => {
+      mockSaleService.registerSale.mockReturnValueOnce(throwError(() => ({ status: 409,
+        error: { error: 'Insufficient Stock', message: 'No hay stock registrado de Té Verde Matcha (quedan 0). ¿Vender igual?' } })));
+      component.addToCart({ ...tracked, stock: 5 });
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(component.stockQuestion()).toContain('(quedan 0)');
+      expect(component.errorMessage()).toBeNull();
+    });
+
+    it('INV-18: un producto por contar no pregunta', () => {
+      component.addToCart({ ...mockProduct1, stockStatus: 'TO_COUNT', stock: null });
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(component.stockQuestion()).toBeNull();
+      expect(mockSaleService.registerSale).toHaveBeenCalled();
+    });
+  });
 });

@@ -98,7 +98,7 @@ class SaleServiceTest {
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
                 org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
-            new TransactionTemplate(mock(PlatformTransactionManager.class)));
+            new TransactionTemplate(mock(PlatformTransactionManager.class)), org.mockito.Mockito.mock(com.akhana.akhana_admin.service.InventoryService.class));
         activeSession = CashSession.builder()
             .id(UUID.randomUUID())
             .sessionNumber(1L)
