@@ -315,6 +315,12 @@ textarea.form-control {
   margin-top: 0.25rem;
 }
 
+/* H15: the small muted note of the product form (it was used without being defined) */
+.text-muted-sm {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 .form-hint {
   font-family: var(--font-body);
   font-size: 0.75rem;
@@ -812,4 +818,81 @@ div.filters-card.filters-stacked > .filter-pill-group {
 
 .text-center {
   text-align: center !important;
+}
+
+/* H18: on the phone a table reads as cards: what identifies the row and its amount on top, the details under them,
+   the state as a tag and the actions at the end. Each cell says its part with a card-cell-* class */
+@media (max-width: 640px) {
+  .table.card-table thead {
+    display: none;
+  }
+
+  .table.card-table,
+  .table.card-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table.card-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-auto-flow: dense;
+    gap: 0.25rem 0.75rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .table.card-table tbody td {
+    display: block;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    text-align: left !important;
+  }
+
+  .table.card-table .card-cell-title {
+    grid-column: 1;
+    font-weight: 600;
+    order: -2;
+  }
+
+  .table.card-table .card-cell-amount {
+    order: -1;
+    grid-column: 2;
+    justify-self: end;
+    text-align: right !important;
+    font-weight: 700;
+  }
+
+  .table.card-table .card-cell-meta {
+    grid-column: 1;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .table.card-table .card-cell-tag {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .table.card-table .card-cell-actions {
+    grid-column: 2;
+    justify-self: end;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .table.card-table .card-cell-actions > * {
+    justify-content: flex-end;
+  }
+
+  .table.card-table .card-cell-hide {
+    display: none;
+  }
+
+  /* A row that only says there is nothing (empty state) spans the card */
+  .table.card-table tbody td[colspan] {
+    grid-column: 1 / -1;
+  }
 }

@@ -40,6 +40,12 @@
     <app-pos-feedback-banner [message]="{ type: 'error', text: err }" (dismiss)="errorMessage.set(null)" />
   }
 
+  <!-- H3: the sale just registered, with a link to its detail -->
+  @if (lastSale(); as last) {
+    <app-sale-done-notice [saleNumber]="last.saleNumber" (view)="lastSaleDetailOpen.set(true)" (dismiss)="lastSale.set(null)" />
+    <app-sale-detail-modal [isOpen]="lastSaleDetailOpen()" [saleId]="last.id" (close)="lastSaleDetailOpen.set(false)" />
+  }
+
   <!-- Sale and checkout two-column layout -->
   <app-barcode-scanner
     [products]="catalogProducts()"

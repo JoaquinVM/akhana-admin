@@ -136,7 +136,7 @@
   <!-- Products table -->
   <div class="table-container">
     <div class="table-responsive">
-      <table class="table">
+      <table class="table card-table">
         <thead>
           <tr>
             <th scope="col" style="width: 72px">Foto</th>
@@ -180,13 +180,13 @@
           } @else {
             @for (product of visibleProducts(); track product.id) {
               <tr [attr.data-id]="product.id">
-                <td>
+                <td class="card-cell-hide">
                   <app-product-photo-thumb [productId]="product.id" [photoId]="product.photoId" />
                 </td>
-                <td>
+                <td class="card-cell-meta">
                   <span class="product-code">{{ product.code }}</span>
                 </td>
-                <td>
+                <td class="card-cell-title">
                   <div class="product-info">
                     <span class="product-name">{{ product.name }}</span>
                     @if (product.specialType) {
@@ -206,7 +206,7 @@
                     }
                   </div>
                 </td>
-                <td>
+                <td class="card-cell-hide">
                   <div class="classification-cell">
                     <span class="category-color-pill">
                       <span class="color-dot" [style.backgroundColor]="product.categoryColor"></span>
@@ -215,9 +215,9 @@
                     <span class="supplier-text">{{ product.supplierName }}</span>
                   </div>
                 </td>
-                <td style="text-align: right">
+                <td class="card-cell-amount" style="text-align: right">
                   @if (product.specialType) {
-                    <span class="text-muted-sm">Precio al vender</span>
+                    <span class="form-hint">Precio al vender</span>
                   } @else {
                   <div class="price-stack">
                     <div class="price-stack-row">
@@ -231,7 +231,7 @@
                   </div>
                   }
                 </td>
-                <td style="text-align: right">
+                <td class="card-cell-hide" style="text-align: right">
                   <div class="profit-cell">
                     <span class="profit-fixed">Bs {{ product.fixedProfit | number:'1.2-2' }}</span>
                     <span
@@ -242,7 +242,7 @@
                     </span>
                   </div>
                 </td>
-                <td style="text-align: center">
+                <td class="card-cell-tag" style="text-align: center">
                   @if (product.status === 'ACTIVO') {
                     <span class="status-badge badge-active">Activo</span>
                   } @else if (product.status === 'INACTIVO') {
@@ -251,7 +251,7 @@
                     <span class="status-badge badge-deleted">Eliminado</span>
                   }
                 </td>
-                <td class="col-actions" style="text-align: right">
+                <td class="col-actions card-cell-actions" style="text-align: right">
                   <div class="table-actions" style="justify-content: flex-end">
                     <!-- Audit option for every status -->
                     <button
@@ -444,40 +444,6 @@
         }
       </div>
 
-      <!-- Tag multiselect -->
-      <div class="form-group">
-        <label class="form-label" for="product-tag-picker">
-          <span>Etiquetas (opcional)</span>
-          @if (isFieldModified('tagIds')) {
-            <span class="field-modified-badge">Modificado</span>
-          }
-        </label>
-        <div class="tags-multiselect-container" [class.is-modified]="isFieldModified('tagIds')">
-          <div class="selected-tags-chips">
-            @for (t of selectedTagsObjects(); track t.id) {
-              <span class="tag-chip" [style.borderColor]="t.color" [style.color]="t.color">
-                <span class="color-dot-mini" [style.backgroundColor]="t.color"></span>
-                <span>{{ t.name }}</span>
-                <button type="button" class="btn-remove-tag" (click)="removeTag(t.id)" [attr.aria-label]="'Quitar etiqueta ' + t.name">
-                  &times;
-                </button>
-              </span>
-            }
-            @if (availableTagsObjects().length > 0) {
-              <!-- Choosing one adds it as a chip; the picker goes back to empty for the next one -->
-              <app-search-select
-                class="tag-add-select"
-                inputId="product-tag-picker"
-                placeholder="+ Añadir etiqueta"
-                [formControl]="tagPicker"
-                [options]="tagOptions()" />
-            } @else if (tags().length === 0) {
-              <span class="text-muted-sm">No hay etiquetas disponibles.</span>
-            }
-          </div>
-        </div>
-      </div>
-
       <!-- Product type (POS-11): only on create; a special one is sold with a typed name and price -->
       <div class="form-row">
         <div class="form-group flex-1">
@@ -491,7 +457,7 @@
             <option value="THIRD_PARTY">Especial: de tercero</option>
           </select>
           @if (isSpecialForm()) {
-            <span class="text-muted-sm">En el POS pide nombre y precio al vender. El tipo no cambia después de crearlo.</span>
+            <span class="form-hint">En el POS pide nombre y precio al vender. El tipo no cambia después de crearlo.</span>
           }
         </div>
         @if (isThirdPartyForm()) {
@@ -516,6 +482,7 @@
         }
       </div>
 
+      <!-- H15: identity first, then how it is sold and its prices, then the packages built on them, then extras -->
       @if (!isSpecialForm()) {
       <!-- Sale unit (CAT-08) -->
       <div class="form-group">
@@ -537,11 +504,85 @@
 
       }
 
-      <!-- Photo of the product (CAT-12); it saves on its own, without the form's button -->
-      <app-product-photo-section
-        [productId]="isFormModalOpen() && isEditing() ? selectedProductId() : null"
-        [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
-        (photoChange)="onPhotoChange($event)" />
+      <!-- Prices and computed profit row -->
+      @if (!isSpecialForm()) {
+      <div class="form-row prices-row">
+        <!-- Buy price -->
+        <div class="form-group flex-1">
+          <label class="form-label" for="product-buy-price">
+            <span>Precio de compra{{ isKilogramForm() ? ' por kilo' : '' }} <span class="required-mark">*</span></span>
+            @if (isFieldModified('buyPrice')) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <div class="input-currency-group">
+            <span class="currency-prefix">Bs</span>
+            <input
+              id="product-buy-price"
+              type="number"
+              step="0.01"
+              min="0"
+              class="form-control input-currency"
+              [class.is-modified]="isFieldModified('buyPrice')"
+              formControlName="buyPrice"
+              placeholder="0.00"
+            />
+          </div>
+          @if (productForm.get('buyPrice')?.touched && productForm.get('buyPrice')?.errors) {
+            <span class="field-error">Ingresa un precio de compra válido (0 o más).</span>
+          }
+        </div>
+
+        <!-- Sell price -->
+        <div class="form-group flex-1">
+          <label class="form-label" for="product-sell-price">
+            <span>Precio de venta{{ isKilogramForm() ? ' por kilo' : '' }} <span class="required-mark">*</span></span>
+            @if (isFieldModified('sellPrice')) {
+              <span class="field-modified-badge">Modificado</span>
+            }
+          </label>
+          <div class="input-currency-group">
+            <span class="currency-prefix">Bs</span>
+            <input
+              id="product-sell-price"
+              type="number"
+              step="0.01"
+              min="0.01"
+              class="form-control input-currency"
+              [class.is-modified]="isFieldModified('sellPrice')"
+              formControlName="sellPrice"
+              placeholder="0.00"
+            />
+          </div>
+          @if (productForm.get('sellPrice')?.touched && productForm.get('sellPrice')?.errors) {
+            <span class="field-error">Ingresa un precio de venta válido mayor a 0.</span>
+          }
+        </div>
+
+        <!-- Fixed profit (computed, read-only) -->
+        <div class="form-group flex-1">
+          <label class="form-label">
+            <span>Utilidad fija (Automático)</span>
+          </label>
+          <div class="profit-readonly-box">
+            <span>Bs {{ computedFixedProfit() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Percentage profit (computed, read-only) -->
+        <div class="form-group flex-1">
+          <label class="form-label">
+            <span>Utilidad % (Automático)</span>
+          </label>
+          <div
+            class="profit-readonly-box percent-box"
+            [class.positive]="computedPercentageProfit() >= 0"
+            [class.negative]="computedPercentageProfit() < 0">
+            <span>{{ computedPercentageProfit() >= 0 ? '+' : '' }}{{ computedPercentageProfit() | number:'1.1-2' }}%</span>
+          </div>
+        </div>
+      </div>
+      }
 
       <!-- Packages of the product, by unit or by kilo (CAT-15; the presentations of CAT-11 are the ones sold) -->
       @if (!isSpecialForm()) {
@@ -552,7 +593,7 @@
               <span class="field-modified-badge">Modificado</span>
             }
           </label>
-          <span class="text-muted-sm">
+          <span class="form-hint">
             @if (isKilogramForm()) {
               Equivalencia en kilos (1/2 libra = 0.227). Sin precio propio, el precio es peso × precio por kilo; el costo
               siempre es peso × costo por kilo.
@@ -627,7 +668,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="8" class="text-muted-sm">
+                  <td colspan="8" class="form-hint">
                     {{ isKilogramForm() ? 'Sin empaques: en el POS se vende escribiendo los kilos.' : 'Sin empaques: se vende y se compra por unidad.' }}
                   </td>
                 </tr>
@@ -640,84 +681,54 @@
         </div>
       }
 
-      <!-- Prices and computed profit row -->
-      @if (!isSpecialForm()) {
-      <div class="form-row prices-row">
-        <!-- Buy price -->
-        <div class="form-group flex-1">
-          <label class="form-label" for="product-buy-price">
-            <span>Precio de compra <span class="required-mark">*</span></span>
-            @if (isFieldModified('buyPrice')) {
-              <span class="field-modified-badge">Modificado</span>
-            }
-          </label>
-          <div class="input-currency-group">
-            <span class="currency-prefix">Bs</span>
-            <input
-              id="product-buy-price"
-              type="number"
-              step="0.01"
-              min="0"
-              class="form-control input-currency"
-              [class.is-modified]="isFieldModified('buyPrice')"
-              formControlName="buyPrice"
-              placeholder="0.00"
-            />
-          </div>
-          @if (productForm.get('buyPrice')?.touched && productForm.get('buyPrice')?.errors) {
-            <span class="field-error">Ingresa un precio de compra válido (0 o más).</span>
+      <!-- Tag multiselect -->
+      <div class="form-group">
+        <label class="form-label" for="product-tag-picker">
+          <span>Etiquetas (opcional)</span>
+          @if (isFieldModified('tagIds')) {
+            <span class="field-modified-badge">Modificado</span>
           }
-        </div>
-
-        <!-- Sell price -->
-        <div class="form-group flex-1">
-          <label class="form-label" for="product-sell-price">
-            <span>Precio de venta <span class="required-mark">*</span></span>
-            @if (isFieldModified('sellPrice')) {
-              <span class="field-modified-badge">Modificado</span>
+        </label>
+        <div class="tags-multiselect-container" [class.is-modified]="isFieldModified('tagIds')">
+          <div class="selected-tags-chips">
+            @for (t of selectedTagsObjects(); track t.id) {
+              <span class="tag-chip" [style.borderColor]="t.color" [style.color]="t.color">
+                <span class="color-dot-mini" [style.backgroundColor]="t.color"></span>
+                <span>{{ t.name }}</span>
+                <button type="button" class="btn-remove-tag" (click)="removeTag(t.id)" [attr.aria-label]="'Quitar etiqueta ' + t.name">
+                  &times;
+                </button>
+              </span>
             }
-          </label>
-          <div class="input-currency-group">
-            <span class="currency-prefix">Bs</span>
-            <input
-              id="product-sell-price"
-              type="number"
-              step="0.01"
-              min="0.01"
-              class="form-control input-currency"
-              [class.is-modified]="isFieldModified('sellPrice')"
-              formControlName="sellPrice"
-              placeholder="0.00"
-            />
-          </div>
-          @if (productForm.get('sellPrice')?.touched && productForm.get('sellPrice')?.errors) {
-            <span class="field-error">Ingresa un precio de venta válido mayor a 0.</span>
-          }
-        </div>
-
-        <!-- Fixed profit (computed, read-only) -->
-        <div class="form-group flex-1">
-          <label class="form-label">
-            <span>Utilidad fija (Automático)</span>
-          </label>
-          <div class="profit-readonly-box">
-            <span>Bs {{ computedFixedProfit() | number:'1.2-2' }}</span>
-          </div>
-        </div>
-
-        <!-- Percentage profit (computed, read-only) -->
-        <div class="form-group flex-1">
-          <label class="form-label">
-            <span>Utilidad % (Automático)</span>
-          </label>
-          <div
-            class="profit-readonly-box percent-box"
-            [class.positive]="computedPercentageProfit() >= 0"
-            [class.negative]="computedPercentageProfit() < 0">
-            <span>{{ computedPercentageProfit() >= 0 ? '+' : '' }}{{ computedPercentageProfit() | number:'1.1-2' }}%</span>
+            @if (availableTagsObjects().length > 0) {
+              <!-- Choosing one adds it as a chip; the picker goes back to empty for the next one -->
+              <app-search-select
+                class="tag-add-select"
+                inputId="product-tag-picker"
+                placeholder="+ Añadir etiqueta"
+                [formControl]="tagPicker"
+                [options]="tagOptions()" />
+            } @else if (tags().length === 0) {
+              <span class="form-hint">No hay etiquetas disponibles.</span>
+            }
           </div>
         </div>
       </div>
+
+      <!-- Photo of the product (CAT-12); it saves on its own, without the form's button -->
+      <app-product-photo-section
+        [productId]="isFormModalOpen() && isEditing() ? selectedProductId() : null"
+        [photoId]="isFormModalOpen() && isEditing() ? selectedProductPhotoId() : null"
+        (photoChange)="onPhotoChange($event)" />
+
+      <!-- Barcodes of the product (CAT-10) -->
+      @if (showBarcodes()) {
+        <app-product-barcodes-section
+          [barcodes]="barcodes()"
+          [modified]="barcodesModified()"
+          [noBarcode]="formNoBarcode()"
+          (barcodesChange)="barcodes.set($event)"
+          (clearMark)="clearNoBarcodeMark()" />
       }
 
       <!-- Description -->
@@ -737,16 +748,6 @@
           placeholder="Características, presentación o notas del producto...">
         </textarea>
       </div>
-
-      <!-- Barcodes of the product (CAT-10) -->
-      @if (showBarcodes()) {
-        <app-product-barcodes-section
-          [barcodes]="barcodes()"
-          [modified]="barcodesModified()"
-          [noBarcode]="formNoBarcode()"
-          (barcodesChange)="barcodes.set($event)"
-          (clearMark)="clearNoBarcodeMark()" />
-      }
 
       <div modal-footer class="form-actions">
         <button type="button" class="btn btn-outline" (click)="attemptCloseForm()" [disabled]="isSubmitting()">

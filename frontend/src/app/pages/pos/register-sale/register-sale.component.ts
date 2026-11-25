@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { CashService, isConnectionFailure } from '../../../core/cash/cash.service';
 import { ProductService } from '../../../core/product/product.service';
@@ -47,6 +47,8 @@ export const SALE_RETRY_MESSAGE = 'No llegó la respuesta del servidor: la venta
 
 import { CashDayMarkComponent } from '../../../shared/components/cash-day-mark/cash-day-mark.component';
 import { BarcodeScannerComponent, ScannedProduct } from '../components/barcode-scanner/barcode-scanner.component';
+import { SaleDoneNoticeComponent } from '../components/sale-done-notice/sale-done-notice.component';
+import { SaleDetailModalComponent } from '../../../shared/components/sale-detail-modal/sale-detail-modal.component';
 
 @Component({
   selector: 'app-register-sale',
@@ -62,7 +64,9 @@ import { BarcodeScannerComponent, ScannedProduct } from '../components/barcode-s
     FreeLineFormComponent,
     PosFeedbackBannerComponent,
     CashDayMarkComponent,
-    BarcodeScannerComponent
+    BarcodeScannerComponent,
+    SaleDoneNoticeComponent,
+    SaleDetailModalComponent
   ],
   templateUrl: './register-sale.component.html',
   styleUrls: ['./register-sale.component.css']
@@ -100,6 +104,12 @@ export class RegisterSaleComponent implements OnInit {
 
   // Checkout modal (the payment lives in CheckoutModalComponent)
   isCheckoutModalOpen = signal<boolean>(false);
+
+  // H3: the last sale registered, kept while the next one starts here
+  lastSale = signal<{ id: string; saleNumber: string } | null>(null);
+  lastSaleDetailOpen = signal<boolean>(false);
+  private readonly catalog = viewChild(SaleCatalogComponent);
+  private readonly injector = inject(Injector);
 
   // Submit state
   isSubmitting = signal<boolean>(false);
@@ -560,12 +570,12 @@ export class RegisterSaleComponent implements OnInit {
       next: (sale) => {
         this.isSubmitting.set(false);
         this.isCheckoutModalOpen.set(false);
-        // SaleService.registerSale refreshes the cash session itself
-        this.router.navigate(['/pos'], {
-          state: {
-            saleSuccessMessage: `Venta #${sale.saleNumber} registrada exitosamente.`
-          }
-        });
+        // SaleService.registerSale refreshes the cash session itself.
+        // H3: the next sale starts here: empty cart, normal sale and the focus in the search
+        this.clearCart();
+        this.setAtCost(false);
+        this.lastSale.set({ id: sale.id, saleNumber: sale.saleNumber });
+        afterNextRender(() => this.catalog()?.focusSearch(), { injector: this.injector });
       },
       error: (err) => {
         this.isSubmitting.set(false);
