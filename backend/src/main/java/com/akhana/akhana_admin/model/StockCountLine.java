@@ -2,9 +2,13 @@ package com.akhana.akhana_admin.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -37,6 +41,16 @@ public class StockCountLine {
 
     @Column(nullable = false, length = 300)
     private String breakdown;
+
+    // INV-05: the whole packs of each package and the loose base units as saved, so counting again adds to them
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "counted_packages", nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<UUID, BigDecimal> countedPackages = new HashMap<>();
+
+    @Column(name = "counted_loose", nullable = false, precision = 14, scale = 3)
+    @Builder.Default
+    private BigDecimal countedLoose = BigDecimal.ZERO;
 
     @Column(name = "expected_quantity", nullable = false, precision = 14, scale = 3)
     private BigDecimal expectedQuantity;

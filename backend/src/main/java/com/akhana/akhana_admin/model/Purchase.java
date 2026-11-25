@@ -145,4 +145,8 @@ public class Purchase {
     public boolean isHistorical() {
         return historicalImportId != null;
     }
+
+    // INV-18: when it was marked delivered; null while pending and for the ones delivered before the V2
+    @Column(name = "delivered_at")
+    private Instant deliveredAt;
 }

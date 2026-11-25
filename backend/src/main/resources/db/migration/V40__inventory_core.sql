@@ -42,6 +42,9 @@ CREATE TABLE stock_count_lines (
     breakdown VARCHAR(300) NOT NULL,
     expected_quantity NUMERIC(14, 3) NOT NULL,
     initial_load BOOLEAN NOT NULL,
+    -- The packages ({package id: whole packs}) and loose base units as saved, so counting again adds to them
+    counted_packages JSONB NOT NULL DEFAULT '{}',
+    counted_loose NUMERIC(14, 3) NOT NULL DEFAULT 0,
     counted_by VARCHAR(100) NOT NULL,
     counted_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT uq_stock_count_lines_product UNIQUE (stock_count_id, product_id)
@@ -78,6 +81,10 @@ CREATE INDEX idx_stock_movements_product ON stock_movements(product_id, seq);
 CREATE INDEX idx_stock_movements_sale_item ON stock_movements(sale_item_id) WHERE sale_item_id IS NOT NULL;
 CREATE INDEX idx_stock_movements_consumption_item ON stock_movements(consumption_item_id) WHERE consumption_item_id IS NOT NULL;
 CREATE INDEX idx_stock_movements_purchase_item ON stock_movements(purchase_item_id) WHERE purchase_item_id IS NOT NULL;
+
+-- INV-18: when the purchase was marked delivered (null while pending, and for the ones delivered before this
+-- migration). A purchase delivered after a product's first count was written enters with that initial load
+ALTER TABLE purchases ADD COLUMN delivered_at TIMESTAMP WITH TIME ZONE;
 
 -- INV-10: a sale or consumption confirmed with more than the recorded stock
 ALTER TABLE sales ADD COLUMN negative_stock_confirmed BOOLEAN NOT NULL DEFAULT FALSE;

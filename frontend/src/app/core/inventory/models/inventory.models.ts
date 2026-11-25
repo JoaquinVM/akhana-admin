@@ -105,6 +105,9 @@ export interface CountProduct {
   packages: CountPackage[];
   countedQuantity: number | null;
   breakdown: string | null;
+  // INV-05: what was saved, by package id and loose units; counting again adds to it
+  countedPackages: Record<string, number>;
+  countedLoose: number | null;
   countedBy: string | null;
   countedAt: string | null;
 }

@@ -6,6 +6,7 @@ import com.akhana.akhana_admin.model.StockCountStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -36,6 +37,9 @@ public record StockCountResponse(
         List<CountPackage> packages,
         BigDecimal countedQuantity,
         String breakdown,
+        // INV-05: what was saved, by package id and loose units, so counting again adds to it
+        Map<UUID, BigDecimal> countedPackages,
+        BigDecimal countedLoose,
         String countedBy,
         Instant countedAt
     ) {

@@ -277,6 +277,39 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<PurchaseItem, BigDecimal> deliveredSince(UUID productId, Instant since) {
+        Map<PurchaseItem, BigDecimal> lines = new LinkedHashMap<>();
+        List<PurchaseItem> found = purchaseRepository.findLinesDeliveredSince(productId, since, PurchaseStatus.ANULADO,
+            DeliveryStatus.ENTREGADO);
+        if (found.isEmpty()) {
+            return lines;
+        }
+        Set<UUID> recorded = new HashSet<>();
+        stockMovementRepository.findByPurchaseItemIdInOrderBySeqAsc(found.stream().map(PurchaseItem::getId).toList())
+            .forEach(m -> recorded.add(m.getPurchaseItemId()));
+        for (PurchaseItem line : found) {
+            if (recorded.contains(line.getId())) {
+                continue;
+            }
+            BigDecimal share = shippingShares(line.getPurchase()).getOrDefault(line, ZERO_MONEY);
+            lines.put(line, line.getSubtotal().add(share));
+        }
+        return lines;
+    }
+
+    @Override
+    public void enterDeliveredSince(ProductStock stock, Instant since, String username) {
+        for (Map.Entry<PurchaseItem, BigDecimal> entry : deliveredSince(stock.getProductId(), since).entrySet()) {
+            PurchaseItem line = entry.getKey();
+            ledger.entry(stock, StockMovementType.PURCHASE,
+                baseQuantityOf(line.getBaseQuantity(), line.getQuantity()), entry.getValue(),
+                InventoryLedger.Source.builder().reference(line.getPurchase().getPurchaseNumber())
+                    .purchaseItemId(line.getId()).comment("Entregado durante su primer conteo").username(username).build());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<PurchaseItem, BigDecimal> shippingShares(Purchase purchase) {
         return shippingShares(purchase.getItems().stream().filter(l -> !l.isRemoved()).toList(),
             purchase.getShippingCost());

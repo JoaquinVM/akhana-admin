@@ -114,6 +114,15 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
     }
 
+    // INV-18: the instant it becomes delivered, kept while it stays so and cleared when it goes back to pending
+    private static void markDelivered(Purchase purchase, boolean wasDelivered, DeliveryStatus status, Instant now) {
+        if (status != DeliveryStatus.ENTREGADO) {
+            purchase.setDeliveredAt(null);
+        } else if (!wasDelivered) {
+            purchase.setDeliveredAt(now);
+        }
+    }
+
     // INV-07: the cost of one base unit of the line placed in the store: its subtotal and its part of the shipping
     private static void placeInStore(List<CostUpdate> updates, List<PurchaseItem> activeLines, BigDecimal shippingCost) {
         if (updates.isEmpty()) {
@@ -357,6 +366,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             .deliveryType(delivery.type())
             .deliveryStatus(delivery.status())
             .deliveryDate(delivery.date())
+            // INV-18: when it was marked delivered
+            .deliveredAt(delivery.status() == DeliveryStatus.ENTREGADO ? now : null)
             .createdBy(username)
             .createdAt(now)
             .build();
@@ -633,6 +644,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setSupplier(supplier);
         purchase.setPurchaseDate(purchaseDate);
         purchase.setDeliveryType(delivery.type());
+        markDelivered(purchase, wasDelivered, delivery.status(), now);
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setConsignment(consignment);
@@ -738,6 +750,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             purchase.getPurchaseDate(), StoreFormat.today(clock));
         boolean wasDelivered = purchase.getDeliveryStatus() == DeliveryStatus.ENTREGADO;
         purchase.setDeliveryType(delivery.type());
+        markDelivered(purchase, wasDelivered, delivery.status(), Instant.now(clock));
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setUpdatedBy(username);

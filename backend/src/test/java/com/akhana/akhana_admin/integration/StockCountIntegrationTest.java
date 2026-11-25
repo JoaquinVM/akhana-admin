@@ -111,6 +111,9 @@ class StockCountIntegrationTest {
             .findFirst().orElseThrow();
         assertThat(line.countedQuantity()).isEqualByComparingTo("40");
         assertThat(line.breakdown()).isEqualTo("3 Caja ×12 + 4");
+        // What was saved comes back by package, so counting again adds to it
+        assertThat(line.countedPackages().get(box)).isEqualByComparingTo("3");
+        assertThat(line.countedLoose()).isEqualByComparingTo("4");
 
         // Sold after the count was written: it leaves the stock and the shelf, and does not change the difference
         sell(bar.id(), "2");
@@ -162,5 +165,39 @@ class StockCountIntegrationTest {
         assertThat(productService.getProductById(oil).stockStatus()).isEqualTo("CONTROLLED");
         assertThat(jdbc.queryForObject("SELECT type FROM stock_movements WHERE product_id = ?", String.class, oil))
             .isEqualTo("INITIAL_LOAD");
+    }
+
+    @Test
+    @DisplayName("INV-18: lo entregado con el primer conteo abierto entra con la carga inicial y después se mueve como cualquier pedido")
+    void deliveredDuringTheFirstCount() {
+        UUID chia = existingProduct("CHIA", "2.00");
+        StockCountResponse count = countService.create(new StockCountRequest(null), USER);
+        countService.saveLine(count.id(), chia, new StockCountLineRequest(List.of(), new BigDecimal("27")), USER);
+        next();
+
+        // The box arrives while the count is open: the product is still to count, so it does not move yet
+        PurchaseResponse box = purchaseService.registerPurchase(new PurchaseRequest(supplier, null, List.of(
+            new PurchaseItemRequest(chia, new BigDecimal("12"), new BigDecimal("2.10"), false, null)), BigDecimal.ZERO,
+            null, false, null, DeliveryType.EN_TIENDA, DeliveryStatus.PENDIENTE, null, null), USER);
+        purchaseService.updateDelivery(box.id(), new PurchaseDeliveryRequest(DeliveryType.EN_TIENDA,
+            DeliveryStatus.ENTREGADO, null), USER);
+        next();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM stock_movements WHERE product_id = ?", Integer.class, chia)).isZero();
+
+        StockCountReviewResponse.Line load = countService.review(count.id()).lines().get(0);
+        assertThat(load.difference()).isEqualByComparingTo("39");
+        assertThat(load.differenceValue()).isEqualByComparingTo("79.20");
+
+        countService.confirm(count.id(), USER);
+        next();
+        assertThat(stock(chia)).isEqualByComparingTo("39");
+        assertThat(jdbc.queryForList("SELECT type FROM stock_movements WHERE product_id = ? ORDER BY seq", String.class, chia))
+            .containsExactly("INITIAL_LOAD", "PURCHASE");
+
+        // Linked to its line, it goes out if the purchase goes back to pending
+        purchaseService.updateDelivery(box.id(), new PurchaseDeliveryRequest(DeliveryType.EN_TIENDA,
+            DeliveryStatus.PENDIENTE, null), USER);
+        next();
+        assertThat(stock(chia)).isEqualByComparingTo("27");
     }
 }

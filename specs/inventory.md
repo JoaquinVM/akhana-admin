@@ -305,6 +305,9 @@ Ejemplo: Barra Chia, 37 u en stock, Caja ×12.
   enteros y sueltas; el lector o la cámara suman una caja con el código del empaque y una suelta con el del producto.
 - **Cuando** se guarda la cantidad de un producto **entonces** queda lo esperado en ese momento, con quién y cuándo; se
   puede volver a escribir mientras el conteo esté abierto.
+- **Cuando** un producto ya tiene lo contado guardado y se sigue contando **entonces** la pantalla parte de lo guardado:
+  otra caja leída con el lector deja «4 Caja ×12 + 4» en vez de empezar de cero (decisión de Joaquín: sirve para contar
+  en dos pasadas, estante y depósito). Lo escrito a mano reemplaza el número de ese campo.
 - **Cuando** un producto ya está en otro conteo abierto **entonces** «'<producto>' ya está en el Conteo #N, que sigue
   abierto.»
 - **Cuando** se revisa **entonces** se ve por producto lo contado, lo esperado y la diferencia en unidades y Bs, y
@@ -312,8 +315,10 @@ Ejemplo: Barra Chia, 37 u en stock, Caja ×12.
 - **Cuando** se confirma **entonces** cada diferencia es un «Ajuste por conteo» al promedio, con quién y cuándo, y el
   conteo queda cerrado. «Descartar» lo cierra sin mover nada.
 - **Cuando** el producto estaba «Por contar» **entonces** su línea es la carga inicial: lo contado al último costo de ese
-  día, que pasa a ser su promedio, menos lo vendido o consumido entre que se escribió y la confirmación. Desde ahí
-  controla stock (INV-18). El arranque es por categorías: se cuentan una a una.
+  día, que pasa a ser su promedio, menos lo vendido o consumido entre que se escribió y la confirmación. Lo que llegó en
+  ese tiempo (un pedido marcado Entregado después de escribir la cantidad) entra enseguida, a su costo y ligado a su
+  línea, así que volver ese pedido a Pendiente después lo resta. Desde ahí controla stock (INV-18). El arranque es por
+  categorías: se cuentan una a una.
 
 ### Permisos (P-33)
 
@@ -338,7 +343,7 @@ final, todos juntos y por id.
 - `box_product_reviews`: la caja revisada (única), su producto base, el empaque creado, la decisión (`CONVERTED` o
   `DISCARDED`) y quién y cuándo.
 
-### Núcleo (migración `V39__inventory_core.sql`)
+### Núcleo (migración `V40__inventory_core.sql`)
 
 - `products.stock_controlled`: «Controla stock» (falso en los especiales).
 - `products.last_purchase_cost`: el último precio del proveedor por unidad base (COM-03); `buy_price` es el último
@@ -349,6 +354,8 @@ final, todos juntos y por id.
 - `stock_counts` y `stock_count_lines`: el conteo, y por producto lo contado, cómo se escribió, lo esperado al
   escribirlo, si es carga inicial y quién y cuándo.
 - `sales.negative_stock_confirmed` y `consumptions.negative_stock_confirmed`: INV-10.
+- `purchases.delivered_at`: cuándo se marcó Entregado (INV-18); nulo mientras está pendiente.
+- `stock_count_lines.counted_packages` y `counted_loose`: lo guardado por empaque y en sueltas.
 
 ## API
 
@@ -391,7 +398,7 @@ final, todos juntos y por id.
 
 ### 2. Núcleo
 
-- [x] Migración `V39__inventory_core.sql`.
+- [x] Migración `V40__inventory_core.sql`.
 - [x] Kardex valorado y promedio (`InventoryLedger`), movimientos desde ventas, consumos y pedidos
   (`InventoryServiceImpl`), conteo y carga inicial (`StockCountServiceImpl`), Existencias, Kardex y ajustes
   (`InventoryController`).

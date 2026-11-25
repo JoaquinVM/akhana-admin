@@ -7,6 +7,7 @@ import com.akhana.akhana_admin.dto.StockCountReviewResponse;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.StockCountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class StockCountServiceImpl implements StockCountService {
     private final SaleItemRepository saleItemRepository;
     private final ConsumptionRepository consumptionRepository;
     private final InventoryLedger ledger;
+    private final InventoryService inventoryService;
     private final Clock clock;
 
     @Override
@@ -110,6 +112,8 @@ public class StockCountServiceImpl implements StockCountService {
             });
         line.setCountedQuantity(counted.quantity());
         line.setBreakdown(counted.breakdown());
+        line.setCountedPackages(new HashMap<>(counted.packages()));
+        line.setCountedLoose(counted.loose());
         line.setExpectedQuantity(expected);
         line.setInitialLoad(initialLoad);
         line.setCountedBy(username);
@@ -160,9 +164,11 @@ public class StockCountServiceImpl implements StockCountService {
             InventoryLedger.Source source = InventoryLedger.Source.builder().reference(reference)
                 .stockCountLineId(line.getId()).comment(line.getBreakdown()).username(username).build();
             if (line.isInitialLoad()) {
-                // INV-18: what was counted at that day's cost, less what left after it was written
+                // INV-18: what was counted at that day's cost, less what left after it was written; what was delivered
+                // after it was written enters next, at its own cost and linked to its purchase line
                 BigDecimal load = line.getCountedQuantity().subtract(soldSince(product.getId(), line.getCountedAt()));
                 ledger.initialLoad(stock, load, lastCost(product), source);
+                inventoryService.enterDeliveredSince(stock, line.getCountedAt(), username);
                 continue;
             }
             BigDecimal difference = line.getCountedQuantity().subtract(line.getExpectedQuantity());
@@ -195,7 +201,7 @@ public class StockCountServiceImpl implements StockCountService {
 
     // ---------------------------------------------------------------------------------------------------------------
 
-    private record Counted(BigDecimal quantity, String breakdown) {
+    private record Counted(BigDecimal quantity, String breakdown, Map<UUID, BigDecimal> packages, BigDecimal loose) {
     }
 
     private record Plan(BigDecimal expected, BigDecimal difference, BigDecimal unitCost, BigDecimal value) {
@@ -206,7 +212,14 @@ public class StockCountServiceImpl implements StockCountService {
         if (line.isInitialLoad()) {
             BigDecimal cost = lastCost(product);
             BigDecimal load = line.getCountedQuantity().subtract(soldSince(product.getId(), line.getCountedAt()));
-            return new Plan(ZERO_QTY, load, cost, load.multiply(cost).setScale(2, RoundingMode.HALF_UP));
+            BigDecimal value = load.multiply(cost).setScale(2, RoundingMode.HALF_UP);
+            for (Map.Entry<PurchaseItem, BigDecimal> delivered
+                    : inventoryService.deliveredSince(product.getId(), line.getCountedAt()).entrySet()) {
+                PurchaseItem item = delivered.getKey();
+                load = load.add(item.getBaseQuantity() != null ? item.getBaseQuantity() : item.getQuantity());
+                value = value.add(delivered.getValue());
+            }
+            return new Plan(ZERO_QTY, load, cost, value);
         }
         ProductStock stock = productStockRepository.findById(product.getId()).orElseThrow();
         BigDecimal cost = InventoryServiceImpl.averageCostOf(stock, product);
@@ -231,6 +244,7 @@ public class StockCountServiceImpl implements StockCountService {
     private Counted counted(Product product, StockCountLineRequest request) {
         BigDecimal total = ZERO_QTY;
         List<String> parts = new ArrayList<>();
+        Map<UUID, BigDecimal> packages = new LinkedHashMap<>();
         if (request != null && request.packages() != null) {
             for (StockCountLineRequest.PackageCount pc : request.packages()) {
                 if (pc == null || pc.quantity() == null || pc.quantity().signum() == 0) {
@@ -245,6 +259,7 @@ public class StockCountServiceImpl implements StockCountService {
                         product.getName() + " · " + presentation.getName()));
                 }
                 total = total.add(pc.quantity().multiply(presentation.getBaseQuantity()));
+                packages.merge(presentation.getId(), pc.quantity().setScale(0, RoundingMode.HALF_UP), BigDecimal::add);
                 parts.add(pc.quantity().setScale(0, RoundingMode.HALF_UP).toPlainString() + " " + presentation.getName());
             }
         }
@@ -257,7 +272,8 @@ public class StockCountServiceImpl implements StockCountService {
             total = total.add(loose);
             parts.add(InventoryServiceImpl.quantityText(loose, product.getSaleUnit()));
         }
-        return new Counted(total.setScale(3, RoundingMode.HALF_UP), parts.isEmpty() ? "0" : String.join(" + ", parts));
+        return new Counted(total.setScale(3, RoundingMode.HALF_UP), parts.isEmpty() ? "0" : String.join(" + ", parts),
+            packages, loose.signum() > 0 ? loose : ZERO_QTY);
     }
 
     private StockCount find(UUID countId) {
@@ -312,6 +328,7 @@ public class StockCountServiceImpl implements StockCountService {
                 p.getStockStartedAt() != null ? InventoryServiceImpl.CONTROLLED : InventoryServiceImpl.TO_COUNT_STATUS,
                 barcodes, packages,
                 line != null ? line.getCountedQuantity() : null, line != null ? line.getBreakdown() : null,
+                line != null ? Map.copyOf(line.getCountedPackages()) : Map.of(), line != null ? line.getCountedLoose() : null,
                 line != null ? line.getCountedBy() : null, line != null ? line.getCountedAt() : null);
         }).toList();
         return new StockCountResponse(count.getId(), count.getCountNumber(),

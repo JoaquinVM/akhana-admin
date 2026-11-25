@@ -52,6 +52,16 @@ public interface InventoryService {
     void syncPurchase(Purchase purchase, boolean wasDelivered, Collection<PurchaseItem> addedLines, String comment,
                       String username);
 
+    /**
+     * INV-18: the lines of a product in purchases marked delivered after its first count was written, with the value
+     * each one enters at (its subtotal and its part of the shipping). They arrived after the count, so they enter with
+     * the initial load.
+     */
+    Map<PurchaseItem, BigDecimal> deliveredSince(UUID productId, java.time.Instant since);
+
+    /** INV-18: those lines enter the stock (already locked, right after the initial load), linked to their line. */
+    void enterDeliveredSince(com.akhana.akhana_admin.model.ProductStock stock, java.time.Instant since, String username);
+
     /** INV-07: the shipping of each active line, by its value, to the cent (the largest line takes the remainder). */
     Map<PurchaseItem, BigDecimal> shippingShares(Purchase purchase);
 

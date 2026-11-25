@@ -11,7 +11,7 @@ describe('CountDetailComponent', () => {
   const bar: CountProduct = {
     productId: 'bar', code: 'NSE-BAR-CHI', name: 'Barra Chia', saleUnit: 'UNIT', status: 'CONTROLLED',
     barcodes: ['7791000000017'], packages: [{ id: 'box', name: 'Caja ×12', baseQuantity: 12, barcode: '7792000000016' }],
-    countedQuantity: null, breakdown: null, countedBy: null, countedAt: null
+    countedQuantity: null, breakdown: null, countedPackages: {}, countedLoose: null, countedBy: null, countedAt: null
   };
   const count: StockCount = {
     id: 'c1', number: 3, categoryId: 'cat', categoryName: 'Snacks', status: 'ABIERTO', createdBy: 'ana',
@@ -79,5 +79,17 @@ describe('CountDetailComponent', () => {
     expect(text).toContain('6.00');
     component.confirm();
     expect(inventory.confirmCount).toHaveBeenCalledWith('c1');
+  });
+
+  it('INV-05: con lo ya guardado, leer otra caja suma a lo guardado (3 Caja ×12 + 4 pasa a 4 Caja ×12 + 4)', () => {
+    component.count.set({ ...count, products: [{ ...bar, countedQuantity: 40, breakdown: '3 Caja ×12 + 4',
+      countedPackages: { box: 3 }, countedLoose: 4 }] });
+    const saved = component.products()[0];
+    expect(component.draft(saved)).toEqual({ packages: { box: 3 }, loose: 4 });
+    component.onCode('7792000000016');
+    expect(draftQuantity(saved, component.draft(saved))).toBe(52);
+    component.save(saved);
+    expect(inventory.saveCountLine).toHaveBeenLastCalledWith('c1', 'bar',
+      { packages: [{ presentationId: 'box', quantity: 4 }], loose: 4 });
   });
 });

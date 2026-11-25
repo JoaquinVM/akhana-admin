@@ -44,7 +44,7 @@ export function countProductOf(product: Product): CountProduct {
     productId: product.id, code: product.code, name: product.name, saleUnit: product.saleUnit,
     status: product.stockStatus ?? 'TO_COUNT', barcodes: product.barcodes ?? [],
     packages: activePresentations(product).map(p => ({ id: p.id, name: p.name, baseQuantity: p.baseQuantity, barcode: p.barcode ?? null })),
-    countedQuantity: null, breakdown: null, countedBy: null, countedAt: null
+    countedQuantity: null, breakdown: null, countedPackages: {}, countedLoose: null, countedBy: null, countedAt: null
   };
 }
 
@@ -124,8 +124,12 @@ export class CountDetailComponent implements OnInit {
     });
   }
 
+  // INV-05: what is being written starts from what was saved, so a box read later adds to it (decision of Joaquín)
   draft(product: CountProduct): CountDraft {
-    return this.drafts()[product.productId] ?? { packages: {}, loose: null };
+    const written = this.drafts()[product.productId];
+    if (written) return written;
+    if (product.countedQuantity == null) return { packages: {}, loose: null };
+    return { packages: { ...(product.countedPackages ?? {}) }, loose: product.countedLoose || null };
   }
 
   setPackage(product: CountProduct, packageId: string, value: number | null): void {
