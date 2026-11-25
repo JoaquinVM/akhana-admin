@@ -33,7 +33,8 @@ CREATE TABLE stock_counts (
 );
 
 -- What was counted of one product, in base units, with the packages and loose units as written («3 Caja x12 + 4»).
--- expected_quantity is the stock when the quantity was written, never shown while counting (blind)
+-- expected_quantity is the stock when the quantity was first written (counted_at), kept when counting again adds to it,
+-- and never shown while counting (blind)
 CREATE TABLE stock_count_lines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     stock_count_id UUID NOT NULL REFERENCES stock_counts(id),
@@ -47,6 +48,8 @@ CREATE TABLE stock_count_lines (
     counted_loose NUMERIC(14, 3) NOT NULL DEFAULT 0,
     counted_by VARCHAR(100) NOT NULL,
     counted_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_by VARCHAR(100),
+    updated_at TIMESTAMP WITH TIME ZONE,
     CONSTRAINT uq_stock_count_lines_product UNIQUE (stock_count_id, product_id)
 );
 

@@ -200,4 +200,50 @@ class StockCountIntegrationTest {
         next();
         assertThat(stock(chia)).isEqualByComparingTo("27");
     }
+
+    @Test
+    @DisplayName("INV-05: contar en dos pasadas con ventas en medio queda en lo real (45 contados, 5 vendidos, otra caja: 52)")
+    void twoPassesWithSalesInBetween() {
+        ProductResponse bar = barChia();
+        purchaseService.registerPurchase(new PurchaseRequest(supplier, null, List.of(new PurchaseItemRequest(bar.id(),
+            new BigDecimal("45"), new BigDecimal("2.00"), false, null)), BigDecimal.ZERO, null, false, null,
+            DeliveryType.EN_TIENDA, DeliveryStatus.ENTREGADO, null, null), USER);
+        next();
+        UUID box = bar.presentations().get(0).id();
+        StockCountResponse count = countService.create(new StockCountRequest(null), USER);
+        countService.saveLine(count.id(), bar.id(), new StockCountLineRequest(
+            List.of(new StockCountLineRequest.PackageCount(box, new BigDecimal("3"))), new BigDecimal("9")), USER);
+        next();
+
+        sell(bar.id(), "5");
+        // The second pass adds a box found in the storeroom to what was saved
+        countService.saveLine(count.id(), bar.id(), new StockCountLineRequest(
+            List.of(new StockCountLineRequest.PackageCount(box, new BigDecimal("4"))), new BigDecimal("9")), "otro");
+        next();
+        StockCountReviewResponse.Line reviewed = countService.review(count.id()).lines().get(0);
+        assertThat(reviewed.expectedQuantity()).isEqualByComparingTo("45");
+        assertThat(reviewed.difference()).isEqualByComparingTo("12");
+
+        countService.confirm(count.id(), USER);
+        next();
+        assertThat(stock(bar.id())).isEqualByComparingTo("52");
+        assertThat(jdbc.queryForObject("SELECT updated_by FROM stock_count_lines WHERE stock_count_id = ?", String.class,
+            count.id())).isEqualTo("otro");
+    }
+
+    @Test
+    @DisplayName("INV-18: el primer conteo en dos pasadas descuenta lo vendido desde la primera (29, vendidos 4, otra caja: 37)")
+    void firstCountInTwoPasses() {
+        UUID papaya = existingProduct("PAP", "2.00");
+        StockCountResponse count = countService.create(new StockCountRequest(null), USER);
+        countService.saveLine(count.id(), papaya, new StockCountLineRequest(List.of(), new BigDecimal("29")), USER);
+        next();
+        sell(papaya, "4");
+        countService.saveLine(count.id(), papaya, new StockCountLineRequest(List.of(), new BigDecimal("41")), USER);
+        next();
+
+        countService.confirm(count.id(), USER);
+        next();
+        assertThat(stock(papaya)).isEqualByComparingTo("37");
+    }
 }

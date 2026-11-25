@@ -308,6 +308,9 @@ Ejemplo: Barra Chia, 37 u en stock, Caja ×12.
 - **Cuando** un producto ya tiene lo contado guardado y se sigue contando **entonces** la pantalla parte de lo guardado:
   otra caja leída con el lector deja «4 Caja ×12 + 4» en vez de empezar de cero (decisión de Joaquín: sirve para contar
   en dos pasadas, estante y depósito). Lo escrito a mano reemplaza el número de ese campo.
+- **Cuando** se guarda de nuevo un producto ya guardado **entonces** el conteo sigue siendo el de su primera pasada: lo
+  esperado y el momento desde el que cuentan las ventas y entregas son los de entonces, y queda quién y cuándo lo volvió
+  a guardar. Contados 45 con 45 esperados, vendidos 5 y hallada otra caja de 12: el ajuste es +12 y el stock, 52.
 - **Cuando** un producto ya está en otro conteo abierto **entonces** «'<producto>' ya está en el Conteo #N, que sigue
   abierto.»
 - **Cuando** se revisa **entonces** se ve por producto lo contado, lo esperado y la diferencia en unidades y Bs, y

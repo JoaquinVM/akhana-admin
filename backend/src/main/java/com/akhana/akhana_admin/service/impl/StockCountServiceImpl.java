@@ -98,26 +98,32 @@ public class StockCountServiceImpl implements StockCountService {
             }
         }
         Counted counted = counted(product, request);
-        // INV-05: what is expected is the stock right now, when the quantity is written; a product still to count
-        // (INV-18) expects nothing: this count is its initial load
-        ProductStock stock = productStockRepository.findById(productId).orElse(null);
-        boolean initialLoad = stock == null || !stock.isStarted();
-        BigDecimal expected = initialLoad ? ZERO_QTY : stock.getQuantity();
         Instant now = Instant.now(clock);
-        StockCountLine line = stockCountLineRepository.findByStockCountIdAndProductId(countId, productId)
-            .orElseGet(() -> {
-                StockCountLine created = StockCountLine.builder().stockCount(count).product(product).build();
-                count.getLines().add(created);
-                return created;
-            });
+        Optional<StockCountLine> saved = stockCountLineRepository.findByStockCountIdAndProductId(countId, productId);
+        StockCountLine line;
+        if (saved.isPresent()) {
+            // INV-05: counting again adds to what was saved (decision of Joaquín), so the count stays the one of its
+            // first pass: what was expected then, and the sales and deliveries since then (reviewer, round 2)
+            line = saved.get();
+            line.setUpdatedBy(username);
+            line.setUpdatedAt(now);
+        } else {
+            // INV-05: what is expected is the stock right now, when the quantity is first written; a product still to
+            // count (INV-18) expects nothing: this count is its initial load
+            ProductStock stock = productStockRepository.findById(productId).orElse(null);
+            boolean initialLoad = stock == null || !stock.isStarted();
+            line = StockCountLine.builder().stockCount(count).product(product)
+                .expectedQuantity(initialLoad ? ZERO_QTY : stock.getQuantity())
+                .initialLoad(initialLoad)
+                .countedBy(username)
+                .countedAt(now)
+                .build();
+            count.getLines().add(line);
+        }
         line.setCountedQuantity(counted.quantity());
         line.setBreakdown(counted.breakdown());
         line.setCountedPackages(new HashMap<>(counted.packages()));
         line.setCountedLoose(counted.loose());
-        line.setExpectedQuantity(expected);
-        line.setInitialLoad(initialLoad);
-        line.setCountedBy(username);
-        line.setCountedAt(now);
         stockCountLineRepository.save(line);
         return response(count);
     }

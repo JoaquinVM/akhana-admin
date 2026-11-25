@@ -52,16 +52,24 @@ public class StockCountLine {
     @Builder.Default
     private BigDecimal countedLoose = BigDecimal.ZERO;
 
-    @Column(name = "expected_quantity", nullable = false, precision = 14, scale = 3)
+    @Column(name = "expected_quantity", nullable = false, precision = 14, scale = 3, updatable = false)
     private BigDecimal expectedQuantity;
 
     // INV-18: the product was still to be counted when this was written: the count is its initial load
-    @Column(name = "initial_load", nullable = false)
+    @Column(name = "initial_load", nullable = false, updatable = false)
     private boolean initialLoad;
 
-    @Column(name = "counted_by", nullable = false, length = 100)
+    @Column(name = "counted_by", nullable = false, length = 100, updatable = false)
     private String countedBy;
 
-    @Column(name = "counted_at", nullable = false)
+    // The first pass: what is expected and the sales and deliveries to account for are from this moment
+    @Column(name = "counted_at", nullable = false, updatable = false)
     private Instant countedAt;
+
+    // INV-05: who saved it again, adding to it, and when
+    @Column(name = "updated_by", length = 100)
+    private String updatedBy;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }
