@@ -24,6 +24,13 @@
            [class.menu-open]="openGroupId() === group.id"
            (mouseenter)="openGroup(group.id)"
            (mouseleave)="closeGroup(group.id)">
+        @if (group.link; as link) {
+          <!-- H17: Inicio is a direct link -->
+          <a class="nav-group-btn nav-group-link" [routerLink]="link.route" (click)="closeAllMenus()" [attr.aria-label]="link.label">
+            <span class="group-active-indicator" aria-hidden="true"></span>
+            <span class="group-label">{{ group.label }}</span>
+          </a>
+        } @else {
         <button type="button" class="nav-group-btn" [attr.aria-label]="'Menú de ' + group.label"
                 [attr.aria-expanded]="openGroupId() === group.id" (click)="toggleGroup(group.id)">
           <span class="group-active-indicator" aria-hidden="true"></span>
@@ -60,6 +67,7 @@
               }
             </div>
           </div>
+        }
         }
       </div>
     }

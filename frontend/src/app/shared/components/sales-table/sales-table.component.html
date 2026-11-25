@@ -1,5 +1,5 @@
 <div class="table-responsive">
-  <table class="table">
+  <table class="table card-table">
     <thead>
       <tr>
         <th style="width: 140px"># Venta</th>
@@ -18,13 +18,13 @@
     <tbody>
       @for (s of sales(); track s.id) {
         <tr [class.row-voided]="s.status === 'ANULADA'">
-          <td>
+          <td class="card-cell-title">
             <span class="sale-number-pill">{{ s.saleNumber }}</span>
             @if (s.saleType === 'AL_COSTO') {
               <span class="type-badge">Al costo</span>
             }
           </td>
-          <td>
+          <td class="card-cell-meta">
             @if (dayMark(s); as mark) {
               <span class="day-mark" title="Cuenta para el día de su caja">{{ mark }}</span>
             } @else {
@@ -32,17 +32,17 @@
             }
           </td>
           @if (showSession()) {
-            <td>{{ s.sessionNumber != null ? 'Caja #' + s.sessionNumber : (s.historical ? 'Histórico' : '—') }}</td>
+            <td class="card-cell-hide">{{ s.sessionNumber != null ? 'Caja #' + s.sessionNumber : (s.historical ? 'Histórico' : '—') }}</td>
           }
-          <td>{{ s.createdBy }}</td>
-          <td>
+          <td class="card-cell-hide">{{ s.createdBy }}</td>
+          <td class="card-cell-tag">
             @if (s.status === 'ANULADA') {
               <span class="status-badge-sale badge-voided"><span class="state-dot" aria-hidden="true"></span>Anulada</span>
             } @else {
               <span class="status-badge-sale badge-completed"><span class="state-dot" aria-hidden="true"></span>Completada</span>
             }
           </td>
-          <td>
+          <td class="card-cell-meta">
             <span
               class="method-badge"
               [class.cash]="s.paymentMethod === 'EFECTIVO'"
@@ -86,7 +86,7 @@
               </span>
             }
           </td>
-          <td>
+          <td class="card-cell-hide">
             <div class="sale-detail-cell">
               <span>{{ s.description || 'Venta POS' }}</span>
               @if (s.customerName) {
@@ -94,12 +94,12 @@
               }
             </div>
           </td>
-          <td style="text-align: right">
+          <td class="card-cell-amount" style="text-align: right">
             <strong class="sale-amount-val" [class.line-through]="s.status === 'ANULADA'">
               <app-money [value]="s.totalAmount" />
             </strong>
           </td>
-          <td style="text-align: right">
+          <td class="card-cell-actions" style="text-align: right">
             <div class="table-actions" style="justify-content: flex-end">
               <!-- 1. View detail -->
               <button

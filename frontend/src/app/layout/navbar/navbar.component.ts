@@ -26,7 +26,7 @@ export class NavbarComponent implements OnInit {
         ...group,
         children: authorizedChildren
       };
-    }).filter(group => group.children.length > 0);
+    }).filter(group => group.link ? this.hasItemPermission(group.link) : group.children.length > 0);
   });
 
   // Only one dropdown open at a time
@@ -68,7 +68,7 @@ export class NavbarComponent implements OnInit {
 
   isGroupActive(group: NavGroup): boolean {
     const currentUrl = this.router.url.split('?')[0];
-    return group.children.some(child =>
+    return [...group.children, ...(group.link ? [group.link] : [])].some(child =>
       currentUrl === child.route || currentUrl.startsWith(child.route + '/')
     );
   }

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Product, ProductPresentation, soldPresentations } from '../../../../core/product/models/product.models';
@@ -69,6 +69,13 @@ export class SaleCatalogComponent {
   readonly retryQuickGroups = output<void>();
 
   readonly productSearchTerm = signal<string>('');
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  // H3: after a sale, the next one starts by typing in the search
+  focusSearch(): void {
+    this.searchInput()?.nativeElement.focus();
+  }
   readonly activeGroupId = signal<string | null>(null);
 
   readonly activeGroup = computed<QuickProductGroup | null>(() => {

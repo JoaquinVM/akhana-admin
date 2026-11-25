@@ -83,7 +83,7 @@
   } @else {
   <div class="table-container">
     <div class="table-responsive">
-      <table class="table" [class.is-reloading]="isLoading()">
+      <table class="table card-table" [class.is-reloading]="isLoading()">
         <thead>
           <tr>
             <th scope="col">N.º</th>
@@ -105,30 +105,30 @@
           } @else {
             @for (purchase of visiblePurchases(); track purchase.id) {
               <tr [class.voided-row]="purchase.status === 'ANULADO'">
-                <td><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
-                <td>{{ purchase.purchaseDate | storeDay }}</td>
-                <td>{{ purchase.supplierName }}</td>
-                <td class="text-right">
+                <td class="card-cell-title"><span class="purchase-number">{{ purchase.purchaseNumber }}</span></td>
+                <td class="card-cell-meta">{{ purchase.purchaseDate | storeDay }}</td>
+                <td class="card-cell-meta">{{ purchase.supplierName }}</td>
+                <td class="text-right card-cell-amount">
                   Bs {{ purchase.itemsTotal | number:'1.2-2' }}
                   @if (purchase.costToConfirm && purchase.status !== 'ANULADO') {
                     <span class="status-badge cost-to-confirm-badge">Estimado · costo por confirmar</span>
                   }
                 </td>
-                <td class="text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
-                <td class="text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
-                <td class="text-right">Bs {{ purchase.balance | number:'1.2-2' }}</td>
-                <td>
+                <td class="card-cell-hide text-right">Bs {{ purchase.shippingCost | number:'1.2-2' }}</td>
+                <td class="card-cell-hide text-right">Bs {{ purchase.paidAmount | number:'1.2-2' }}</td>
+                <td class="card-cell-hide text-right">Bs {{ purchase.balance | number:'1.2-2' }}</td>
+                <td class="card-cell-tag">
                   @if (purchase.status === 'ANULADO') {
                     <span class="status-badge pay-ANULADO">Anulado</span>
                   } @else {
                     <span class="status-badge" [ngClass]="'pay-' + purchase.paymentStatus">{{ statusLabel(purchase.paymentStatus) }}</span>
                   }
                 </td>
-                <td>
+                <td class="card-cell-tag">
                   <span class="delivery-cell">{{ deliveryTypeLabel(purchase.deliveryType) }}</span>
                   <span class="status-badge" [ngClass]="'delivery-' + purchase.deliveryStatus">{{ deliveryStatusLabel(purchase.deliveryStatus) }}</span>
                 </td>
-                <td class="text-right">
+                <td class="text-right card-cell-actions">
                   <div class="table-actions" style="justify-content: flex-end">
                     <button type="button" class="btn-icon" (click)="openDetail(purchase)"
                             title="Ver detalle y pagos" aria-label="Ver detalle y pagos">

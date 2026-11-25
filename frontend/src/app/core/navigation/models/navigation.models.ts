@@ -14,4 +14,6 @@ export interface NavGroup {
   label: string;
   icon?: string;
   children: NavItem[];
+  // H17: a group that is a single link, without a dropdown (Inicio)
+  link?: NavItem;
 }

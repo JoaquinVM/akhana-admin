@@ -541,7 +541,23 @@ describe('RegisterSaleComponent', () => {
     expect(component.totalAmount()).toBe(20);
   });
 
-  it('debe completar la venta exitosamente, cerrar el modal de cobro y redirigir a /pos', () => {
+  it('H3: tras cobrar se queda en Registrar venta, con el carrito vacío, el aviso de la venta y el foco en el buscador', async () => {
+    component.addToCart(mockProduct1);
+    component.setAtCost(true);
+    component.openCheckoutModal();
+    component.submitSale({ paymentMethod: 'EFECTIVO', amountCash: 20, amountQr: 0, amountReceived: 20, customerId: null, creditAmount: 0, comment: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(router.navigate).not.toHaveBeenCalledWith(['/pos'], expect.anything());
+    expect(component.cartItems()).toEqual([]);
+    expect(component.atCost()).toBe(false);
+    expect(component.lastSale()?.saleNumber).toBe('VTA-0001-001');
+    expect(fixture.nativeElement.textContent).toContain('Venta VTA-0001-001 registrada');
+    expect((document.activeElement as HTMLElement)?.classList.contains('form-control-search')).toBe(true);
+  });
+
+  it('debe completar la venta exitosamente y cerrar el modal de cobro', () => {
     component.addToCart(mockProduct1);
     component.openCheckoutModal();
     expect(component.isCheckoutModalOpen()).toBe(true);
@@ -557,11 +573,7 @@ describe('RegisterSaleComponent', () => {
     expect(component.isCheckoutModalOpen()).toBe(false);
     // The refresh of the cash lives in SaleService.registerSale: the screen does not ask again
     expect(mockCashService.getCurrentSession).not.toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
-      state: expect.objectContaining({
-        saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.'
-      })
-    }));
+    expect(component.lastSale()?.saleNumber).toBe('VTA-0001-001');
   });
 
   describe('POS-18: reintento sin duplicar la venta', () => {
@@ -588,9 +600,7 @@ describe('RegisterSaleComponent', () => {
       expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
       expect(new Set(ids).size).toBe(1);
       // The answer is the sale already recorded: it is shown as registered
-      expect(router.navigate).toHaveBeenCalledWith(['/pos'], expect.objectContaining({
-        state: expect.objectContaining({ saleSuccessMessage: 'Venta #VTA-0001-001 registrada exitosamente.' })
-      }));
+      expect(component.lastSale()?.saleNumber).toBe('VTA-0001-001');
     });
 
     it('un error de negocio muestra el mensaje del servidor', () => {

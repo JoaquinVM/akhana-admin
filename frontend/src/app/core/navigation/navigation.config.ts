@@ -52,6 +52,13 @@ export function roleLabel(role: Role | null | undefined): string {
 }
 
 export const NAVIGATION_CONFIG: NavGroup[] = [
+  // H17: the administrator's home is the first item, out of Finanzas
+  {
+    id: 'home',
+    label: 'Inicio',
+    link: { label: 'Tablero', route: '/dashboard', permissionKey: PERMISSIONS.DASHBOARD },
+    children: []
+  },
   {
     id: 'sales',
     label: 'Ventas',
@@ -87,12 +94,6 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
     label: 'Finanzas',
     children: [
       {
-        label: 'Tablero',
-        route: '/dashboard',
-        caption: 'Inicio',
-        permissionKey: PERMISSIONS.DASHBOARD
-      },
-      {
         label: 'Resumen',
         route: '/finances/summary',
         permissionKey: PERMISSIONS.FINANCES_SUMMARY
@@ -108,7 +109,8 @@ export const NAVIGATION_CONFIG: NavGroup[] = [
         permissionKey: PERMISSIONS.FINANCES_ACCOUNTS
       },
       {
-        label: 'Categorías',
+        // H17: told apart from the product categories of Catálogo
+        label: 'Categorías de movimientos',
         route: '/finances/categories',
         permissionKey: PERMISSIONS.FINANCES_CATEGORIES
       },

@@ -461,3 +461,8 @@
     margin: 0 0 6px;
   }
 }
+
+/* H17: a direct link in the bar, styled like the group buttons */
+.nav-group-link {
+  text-decoration: none;
+}
