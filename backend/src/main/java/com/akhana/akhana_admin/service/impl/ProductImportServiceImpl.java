@@ -67,6 +67,7 @@ public class ProductImportServiceImpl implements ProductImportService {
     private final TagRepository tagRepository;
     private final ProductPresentationService presentationService;
     private final ProductPriceChangeRepository priceChangeRepository;
+    private final com.akhana.akhana_admin.service.InventoryService inventoryService;
 
     enum Column {
         GROUP("Grupo", true, "el grupo"),
@@ -659,6 +660,9 @@ public class ProductImportServiceImpl implements ProductImportService {
                 .createdBy(username)
                 .createdAt(now)
                 .build());
+            // CAT-05: an imported product is new: it controls its stock from now, with 0
+            productRepository.flush();
+            inventoryService.startNewProduct(product);
             // CAT-07: the initial price enters the history, as when the product is created from the form
             priceChangeRepository.save(ProductServiceImpl.catalogPriceChange(product, null, null, username, now));
             if (draft.saleUnit == SaleUnit.KILOGRAM) {

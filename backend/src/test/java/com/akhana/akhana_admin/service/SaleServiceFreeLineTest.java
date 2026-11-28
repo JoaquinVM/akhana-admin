@@ -66,7 +66,7 @@ class SaleServiceFreeLineTest {
             customerRepository, new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
                 org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
             saleItemRepository, creditorRepository, creditorRepaymentItemRepository,
-            new TransactionTemplate(mock(PlatformTransactionManager.class)));
+            new TransactionTemplate(mock(PlatformTransactionManager.class)), org.mockito.Mockito.mock(com.akhana.akhana_admin.service.InventoryService.class));
         session = CashSession.builder().id(UUID.randomUUID()).sessionNumber(1L).status(CashSessionStatus.ABIERTA)
             .openingAmount(new BigDecimal("100.00")).expectedCash(new BigDecimal("100.00"))
             .totalSalesCash(BigDecimal.ZERO).totalSalesQr(BigDecimal.ZERO).totalSales(BigDecimal.ZERO).build();

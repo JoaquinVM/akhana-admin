@@ -47,6 +47,9 @@
                 @if (entry.supplierName) {
                   <span class="res-supplier"> · {{ entry.supplierName }}</span>
                 }
+                @if (remaining(entry.product); as left) {
+                  <span class="res-stock" [class.res-stock-out]="(entry.product.stock ?? 0) <= 0"> · {{ left }}</span>
+                }
               </span>
               <strong class="res-name">{{ entry.name }}</strong>
             </div>
@@ -108,8 +111,11 @@
                 <span class="card-code">{{ prod.code }}</span>
               </span>
               <span class="card-title">{{ prod.name }}</span>
+              @if (remaining(prod); as left) {
+                <span class="card-stock" [class.res-stock-out]="(prod.stock ?? 0) <= 0">{{ left }}</span>
+              }
               <span class="card-footer">
-                <span class="card-price">Bs {{ (atCost() ? prod.buyPrice : prod.sellPrice) | number:'1.2-2' }}</span>
+                <span class="card-price">Bs {{ quickPrice(prod) | number:'1.2-2' }}</span>
                 <span class="card-add-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-svg">
                     <line x1="12" y1="5" x2="12" y2="19" />

@@ -1,0 +1,14 @@
+.new-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.new-count .labeled-filter {
+  flex: 1 1 18rem;
+}
+
+.count-ABIERTO::before { background: var(--color-warning); }
+.count-CONFIRMADO::before { background: var(--color-success); }
+.count-DESCARTADO::before { background: var(--text-muted); }

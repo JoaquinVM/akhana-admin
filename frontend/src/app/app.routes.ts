@@ -52,6 +52,31 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { permission: PERMISSIONS.POS }
       },
+      // V2 · Inventario, lazy loaded like the other screens added after the initial bundle reached its budget
+      {
+        path: 'inventory/stock',
+        loadComponent: () => import('./pages/inventory/stock/stock.component').then(m => m.StockComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.INVENTORY_STOCK }
+      },
+      {
+        path: 'inventory/kardex',
+        loadComponent: () => import('./pages/inventory/kardex/kardex.component').then(m => m.KardexComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.INVENTORY_KARDEX }
+      },
+      {
+        path: 'inventory/counts',
+        loadComponent: () => import('./pages/inventory/counts/counts.component').then(m => m.CountsComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.INVENTORY_COUNTS }
+      },
+      {
+        path: 'inventory/counts/:id',
+        loadComponent: () => import('./pages/inventory/counts/count-detail.component').then(m => m.CountDetailComponent),
+        canActivate: [permissionGuard],
+        data: { permission: PERMISSIONS.INVENTORY_COUNTS }
+      },
       {
         path: 'cash/history',
         component: CashHistoryComponent,

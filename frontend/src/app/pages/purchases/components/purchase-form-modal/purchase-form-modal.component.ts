@@ -6,7 +6,7 @@ import { storeToday } from '../../../../shared/utils/store-date';
 import { PurchaseService } from '../../../../core/purchase/purchase.service';
 import { ProductService } from '../../../../core/product/product.service';
 import { CategoryService } from '../../../../core/category/category.service';
-import { Product, SaleUnit, isSpecialProduct } from '../../../../core/product/models/product.models';
+import { Product, SaleUnit, isSpecialProduct, purchaseCost } from '../../../../core/product/models/product.models';
 import { Category } from '../../../../core/category/models/category.models';
 import { Supplier } from '../../../../core/supplier/models/supplier.models';
 import { Creditor } from '../../../../core/debt/models/debt.models';
@@ -413,7 +413,7 @@ export class PurchaseFormModalComponent {
   }
 
   private placeReadLine(line: PurchaseDraftLine, product: Product): void {
-    const unitCost = line.unitCost ?? (this.draft()?.source === 'TEXT' ? product.buyPrice : null);
+    const unitCost = line.unitCost ?? (this.draft()?.source === 'TEXT' ? purchaseCost(product) : null);
     const read = {
       quantity: line.quantity,
       unitCost: unitCost ?? 0,
@@ -583,9 +583,45 @@ export class PurchaseFormModalComponent {
     }
   }
 
-  // COM-03: alert when the cost of one base unit differs from the registered cost (COM-29)
+  // COM-03: alert when the cost of one base unit differs from the supplier's last price (COM-29, INV-07)
   costDiffers(line: PurchaseLineDraft): boolean {
-    return !line.costMissing && round2(this.baseUnitCost(line)) !== round2(line.product.buyPrice);
+    return !line.costMissing && round2(this.baseUnitCost(line)) !== round2(purchaseCost(line.product));
+  }
+
+  registeredCost(line: PurchaseLineDraft): number {
+    return purchaseCost(line.product);
+  }
+
+  // INV-07: each line's part of the shipping by its subtotal, to the cent; the largest line takes the rounding, as
+  // the server does
+  shippingShares = computed<number[]>(() => {
+    const lines = this.lines();
+    const shipping = Math.round((Number(this.shippingCost()) || 0) * 100);
+    const subtotals = lines.map(line => Math.round(this.lineSubtotal(line) * 100));
+    const total = subtotals.reduce((sum, cents) => sum + cents, 0);
+    if (shipping <= 0 || total <= 0) return lines.map(() => 0);
+    const shares = subtotals.map(cents => Math.floor((2 * shipping * cents + total) / (2 * total)));
+    let largest = 0;
+    subtotals.forEach((cents, i) => { if (cents > subtotals[largest]) largest = i; });
+    shares[largest] += shipping - shares.reduce((sum, cents) => sum + cents, 0);
+    return shares.map(cents => cents / 100);
+  });
+
+  // INV-07: the cost of one base unit placed in the store, with its part of the shipping: the product's new last cost
+  landedUnitCost(line: PurchaseLineDraft): number {
+    const index = this.lines().indexOf(line);
+    const share = index >= 0 ? this.shippingShares()[index] ?? 0 : 0;
+    const units = Number(this.baseQuantity(line)) || 0;
+    if (units <= 0) return this.baseUnitCost(line);
+    return Math.round((this.lineSubtotal(line) + share) * 100 / units) / 100;
+  }
+
+  // COM-03 with INV-07: new last cost × current price ÷ current cost, rounded up to the boliviano, like the server
+  suggestedSellPrice(line: PurchaseLineDraft): number | null {
+    const suggestion = line.suggestion;
+    if (!suggestion || !(suggestion.currentCost > 0)) return null;
+    const value = this.landedUnitCost(line) * suggestion.currentSellPrice / suggestion.currentCost;
+    return Math.ceil(Math.round(value * 1e6) / 1e6);
   }
 
   // Enter never submits the form (only its button does); in the product search it adds the product typed
@@ -610,7 +646,8 @@ export class PurchaseFormModalComponent {
       this.lines.update(lines => [...lines, {
         product,
         quantity: 1,
-        unitCost: product.buyPrice,
+        // COM-03, INV-07: the supplier's last price, not the cost with the shipping
+        unitCost: purchaseCost(product),
         updateCost: false,
         priceChoice: 'SUGGESTED',
         customPrice: null,
@@ -683,7 +720,7 @@ export class PurchaseFormModalComponent {
 
   private loadSuggestion(index: number): void {
     const line = this.lines()[index];
-    this.purchaseService.getPriceSuggestion(line.product.id, round2(this.baseUnitCost(line))).subscribe({
+    this.purchaseService.getPriceSuggestion(line.product.id, this.landedUnitCost(line)).subscribe({
       next: suggestion => {
         const current = this.lines()[index];
         if (!current || current.product.id !== suggestion.productId) {
@@ -701,7 +738,7 @@ export class PurchaseFormModalComponent {
   // Sell price sent: null keeps the current one
   chosenSellPrice(line: PurchaseLineDraft): number | null {
     if (line.priceChoice === 'SUGGESTED') {
-      return line.suggestion?.suggestedSellPrice ?? null;
+      return this.suggestedSellPrice(line);
     }
     if (line.priceChoice === 'CUSTOM') {
       return line.customPrice !== null ? round2(Number(line.customPrice)) : null;

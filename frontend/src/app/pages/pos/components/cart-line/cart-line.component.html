@@ -3,6 +3,9 @@
   <div class="item-identity">
     <span class="item-code">{{ item().product.code }}</span>
     <strong class="item-name" [title]="name()">{{ name() }}</strong>
+    @if (remaining(); as left) {
+      <span class="item-stock" [class.item-stock-out]="(item().product.stock ?? 0) <= 0">{{ left }}</span>
+    }
     <!-- CAT-11, CAT-15: the package was chosen when adding; «Otro peso» goes in kilos -->
     @if (item().freeName) {
       <span class="free-line-badge">{{ freeLabel() }}</span>

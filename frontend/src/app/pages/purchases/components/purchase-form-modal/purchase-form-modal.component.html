@@ -242,24 +242,24 @@
                 <td colspan="6">
                   <div class="cost-alert" role="alert">
                     <p>
-                      El costo registrado de <strong>{{ line.product.name }}</strong> es
-                      <strong>Bs {{ line.product.buyPrice | number:'1.2-2' }}</strong> y en esta línea es
+                      El último precio del proveedor para <strong>{{ line.product.name }}</strong> es
+                      <strong>Bs {{ registeredCost(line) | number:'1.2-2' }}</strong> y en esta línea es
                       <strong>Bs {{ baseUnitCost(line) | number:'1.2-2' }}</strong>{{ line.presentation ? ' por ' + (isWeighted(line.product) ? 'kilo' : 'unidad') : '' }}.
                     </p>
                     <label class="checkbox-label">
                       <input type="checkbox" [name]="'update-' + i"
                              [ngModel]="line.updateCost" (ngModelChange)="onUpdateCostToggle(i, $event)" />
-                      <span>Actualizar el costo del producto a Bs {{ baseUnitCost(line) | number:'1.2-2' }}</span>
+                      <span>Actualizar el costo del producto a Bs {{ landedUnitCost(line) | number:'1.2-2' }}{{ landedUnitCost(line) !== baseUnitCost(line) ? ', con su parte del envío' : '' }}</span>
                     </label>
                     @if (line.updateCost) {
                       <div class="price-options">
                         <span class="price-title">Precio de venta (actual Bs {{ line.product.sellPrice | number:'1.2-2' }})</span>
-                        @if (line.suggestion?.suggestedSellPrice !== null && line.suggestion) {
+                        @if (suggestedSellPrice(line) !== null) {
                           <label class="radio-label">
                             <input type="radio" [name]="'price-' + i" value="SUGGESTED"
                                    [ngModel]="line.priceChoice" (ngModelChange)="updateLine(i, { priceChoice: $event })" />
-                            <span>Sugerido Bs {{ line.suggestion.suggestedSellPrice | number:'1.2-2' }}
-                              (mantiene {{ line.suggestion.currentPercentageProfit | number:'1.0-2' }} % de utilidad)</span>
+                            <span>Sugerido Bs {{ suggestedSellPrice(line) | number:'1.2-2' }}
+                              (mantiene {{ line.suggestion?.currentPercentageProfit | number:'1.0-2' }} % de utilidad)</span>
                           </label>
                         } @else if (line.suggestion) {
                           <span class="form-hint">El costo actual es 0: no hay utilidad porcentual que mantener.</span>

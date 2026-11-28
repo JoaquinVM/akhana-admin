@@ -1,0 +1,98 @@
+<div class="inventory-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Inventario</span>
+        <span>/</span>
+        <span class="breadcrumb-item active">Existencias</span>
+      </nav>
+      <h1 class="page-title">Existencias</h1>
+      <p class="page-subtitle">El stock de cada producto sale de su kardex: lo mueven las ventas, los pedidos entregados, los conteos y los ajustes.</p>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  <div class="summary-row">
+    <div class="summary-tile"><span>Valor al costo</span><strong>Bs {{ totalValue() | number:'1.2-2' }}</strong></div>
+    <div class="summary-tile"><span>Por contar</span><strong>{{ toCount() }}</strong></div>
+    <div class="summary-tile"><span>Stock negativo</span><strong>{{ negatives() }}</strong></div>
+  </div>
+
+  <div class="filters-card filters-stacked">
+    <div class="filter-pill-group" role="tablist" aria-label="Filtrar existencias">
+      @for (f of filters; track f.value) {
+        <button type="button" role="tab" class="filter-pill" [class.active]="filter() === f.value"
+                [attr.aria-selected]="filter() === f.value" (click)="filter.set(f.value)">{{ f.label }}</button>
+      }
+    </div>
+    <div class="labeled-filters">
+      <div class="labeled-filter">
+        <label class="labeled-filter-label" for="stock-category">Categoría</label>
+        <select id="stock-category" class="form-control" [ngModel]="categoryId()" (ngModelChange)="onCategory($event)">
+          <option value="">Todas</option>
+          @for (category of categories(); track category.id) {
+            <option [value]="category.id">{{ category.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="labeled-filter labeled-filter-wide">
+        <label class="labeled-filter-label" for="stock-search">Buscar</label>
+        <input id="stock-search" type="text" class="form-control" placeholder="Código, nombre o proveedor…"
+               [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Producto</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">Stock</th>
+            <th scope="col" class="text-right">Costo promedio</th>
+            <th scope="col" class="text-right">Valor</th>
+            <th scope="col">Por llegar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr><td colspan="6" class="text-center">Cargando existencias…</td></tr>
+          } @else {
+            @for (item of visible(); track item.productId) {
+              <tr>
+                <td>
+                  <button type="button" class="link-button" (click)="openKardex(item)">{{ item.name }}</button>
+                  <div class="muted">{{ item.code }}{{ item.supplierName ? ' · ' + item.supplierName : '' }}</div>
+                </td>
+                <td><span class="status-badge" [ngClass]="'status-' + item.status">{{ statusLabel(item) }}</span></td>
+                <td class="text-right">
+                  <span [class.qty-negative]="item.negative">{{ quantity(item) }}</span>
+                  @if (equivalence(item); as eq) {
+                    <div class="muted">{{ eq }}</div>
+                  }
+                </td>
+                <td class="text-right">{{ item.averageCost == null ? '—' : ('Bs ' + (item.averageCost | number:'1.2-2')) }}</td>
+                <td class="text-right">{{ item.value == null ? '—' : ('Bs ' + (item.value | number:'1.2-2')) }}</td>
+                <td>{{ incoming(item) ?? '' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">
+                  <div class="table-empty">
+                    <div class="table-empty-icon"><app-icon name="empty" /></div>
+                    <h4 class="table-empty-title">No hay productos con este filtro</h4>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

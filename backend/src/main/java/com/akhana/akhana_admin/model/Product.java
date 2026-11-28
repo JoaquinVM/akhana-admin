@@ -104,6 +104,34 @@ public class Product {
     @Builder.Default
     private List<ProductBarcode> barcodes = new ArrayList<>();
 
+    // CAT-05: the product controls its stock; never the special ones (POS-11, POS-13)
+    @Column(name = "stock_controlled", nullable = false)
+    @Builder.Default
+    private boolean stockControlled = true;
+
+    // COM-03, INV-07: the supplier's last price per base unit, what the purchase alert compares and the line proposes;
+    // buyPrice is the last cost placed in the store (with its part of the shipping), the one the suggested price uses
+    @Column(name = "last_purchase_cost", precision = 12, scale = 2)
+    private BigDecimal lastPurchaseCost;
+
+    /** COM-03: the cost a purchase line is compared with: the supplier's last price, or the last cost before any. */
+    public BigDecimal registeredPurchaseCost() {
+        return lastPurchaseCost != null ? lastPurchaseCost : buyPrice;
+    }
+
+    // INV-01: read-only copy of the stock shortcut (product_stocks), read with the product so the catalog is one query
+    @Formula("(SELECT s.quantity FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockQuantity;
+
+    @Formula("(SELECT s.stock_value FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockValue;
+
+    @Formula("(SELECT s.average_cost FROM product_stocks s WHERE s.product_id = id)")
+    private BigDecimal stockAverageCost;
+
+    @Formula("(SELECT s.started_at FROM product_stocks s WHERE s.product_id = id)")
+    private Instant stockStartedAt;
+
     // CAT-10: «No trae», checked and without a factory barcode
     @Column(name = "no_barcode_marked_by", length = 100)
     private String noBarcodeMarkedBy;
@@ -132,5 +160,10 @@ public class Product {
 
     public boolean isSpecial() {
         return specialType != null;
+    }
+
+    /** CAT-05, INV-18: it moves stock now: it controls it, is not special and was counted or created in the V2. */
+    public boolean controlsStockNow() {
+        return stockControlled && !isSpecial() && stockStartedAt != null;
     }
 }

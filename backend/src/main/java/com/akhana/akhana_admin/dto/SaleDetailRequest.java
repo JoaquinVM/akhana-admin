@@ -46,8 +46,18 @@ public record SaleDetailRequest(
     BigDecimal creditAmount,
 
     // POS-18: id of this checkout, made by the screen and kept on its retries; null for old clients
-    UUID clientRequestId
+    UUID clientRequestId,
+
+    // INV-10: «¿Vender igual?» answered yes: sell although some product has less recorded stock
+    Boolean allowNegativeStock
 ) {
+    public SaleDetailRequest(List<SaleItemRequest> items, BigDecimal globalDiscountAmount, PaymentMethod paymentMethod,
+                             BigDecimal amountCash, BigDecimal amountQr, BigDecimal amountReceived, String description,
+                             SaleType saleType, UUID customerId, BigDecimal creditAmount, UUID clientRequestId) {
+        this(items, globalDiscountAmount, paymentMethod, amountCash, amountQr, amountReceived, description, saleType,
+            customerId, creditAmount, clientRequestId, null);
+    }
+
     public SaleDetailRequest(List<SaleItemRequest> items, BigDecimal globalDiscountAmount, PaymentMethod paymentMethod,
                              BigDecimal amountCash, BigDecimal amountQr, BigDecimal amountReceived, String description,
                              SaleType saleType, UUID customerId, BigDecimal creditAmount) {

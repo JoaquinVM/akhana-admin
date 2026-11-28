@@ -7,6 +7,9 @@ public record ErrorResponse(
     String message,
     Instant timestamp
 ) {
+    // INV-10: a sale or consumption with more than the recorded stock, not yet confirmed
+    public static final String INSUFFICIENT_STOCK = "Insufficient Stock";
+
     public static ErrorResponse unauthorized(String message) {
         return new ErrorResponse("Unauthorized", message, Instant.now());
     }

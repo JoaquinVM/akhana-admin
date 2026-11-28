@@ -77,4 +77,10 @@ public interface ConsumptionRepository extends JpaRepository<Consumption, UUID> 
                    "GROUP BY month, sup.id, sup.name",
            nativeQuery = true)
     List<Object[]> sumBySupplierAndMonth(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    // INV-18: what a product still to count consumed (not voided) after its count was written, in base units
+    @Query("SELECT COALESCE(SUM(COALESCE(i.baseQuantity, i.quantity)), 0) FROM ConsumptionItem i JOIN i.consumption c "
+         + "WHERE i.product.id = :productId AND c.createdAt > :since "
+         + "AND c.status <> com.akhana.akhana_admin.model.ConsumptionStatus.ANULADO")
+    java.math.BigDecimal sumConsumedSince(@Param("productId") UUID productId, @Param("since") java.time.Instant since);
 }

@@ -10,6 +10,7 @@ import {
   Product,
   ProductPresentation,
   isSpecialProduct,
+  currentCost,
   presentationPrice,
   soldPresentations
 } from '../../../core/product/models/product.models';
@@ -30,6 +31,9 @@ import { FreeLine, FreeLineFormComponent } from '../components/free-line-form/fr
 import { formatBs } from '../../../shared/utils/money';
 import { isRetryableError, newClientRequestId } from '../../../shared/utils/client-request-id';
 import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
+import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
+import { INSUFFICIENT_STOCK, stockShortages } from '../../../core/inventory/models/inventory.models';
+import { InventoryService } from '../../../core/inventory/inventory.service';
 
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
 export { WEIGHT_STEP_KG };
@@ -54,6 +58,7 @@ import { SaleDetailModalComponent } from '../../../shared/components/sale-detail
   selector: 'app-register-sale',
   standalone: true,
   imports: [
+    ConfirmModalComponent,
     QuickProductsConfigModalComponent,
     SaleCatalogComponent,
     SaleCartComponent,
@@ -77,6 +82,7 @@ export class RegisterSaleComponent implements OnInit {
   private readonly productService = inject(ProductService);
   readonly quickProductService = inject(QuickProductService);
   private readonly saleService = inject(SaleService);
+  private readonly inventoryService = inject(InventoryService);
   private readonly customerService = inject(CustomerService);
 
   // Catalog and search state
@@ -189,6 +195,20 @@ export class RegisterSaleComponent implements OnInit {
 
     this.loadCatalogProducts();
     this.loadQuickGroups();
+  }
+
+  // INV-11: the stock of what controls it, after a sale, without reading the whole catalog again
+  refreshStock(): void {
+    this.inventoryService.getLevels().subscribe({
+      next: (levels) => {
+        const byProduct = new Map(levels.map((level) => [level.productId, level.quantity]));
+        this.catalogProducts.update((products) => products.map((p) =>
+          byProduct.has(p.id) ? { ...p, stock: byProduct.get(p.id)! } : p));
+      },
+      // Without an answer the numbers stay as they were; the server still asks when there is not enough (INV-10)
+      error: () => undefined
+    });
+    this.quickProductService.loadGroups().subscribe({ error: () => undefined });
   }
 
   loadCatalogProducts(): void {
@@ -501,11 +521,12 @@ export class RegisterSaleComponent implements OnInit {
 
   private priceFor(product: Product, presentation: ProductPresentation | null): number {
     if (presentation) return presentationPrice(presentation, this.atCost());
-    return this.atCost() ? product.buyPrice : product.sellPrice;
+    // CON-02, INV-06: at cost the line charges the average of the moment
+    return this.atCost() ? currentCost(product) : product.sellPrice;
   }
 
   private hasCost(product: Product): boolean {
-    return (product.buyPrice ?? 0) > 0;
+    return (currentCost(product) ?? 0) > 0;
   }
 
   private zeroCostMessage(product: Product): string {
@@ -541,8 +562,37 @@ export class RegisterSaleComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 
-  submitSale(payment: CheckoutPayment): void {
+  // INV-10: what the cart takes of each product, in base units (packages × their units, «Otro peso» in kilos)
+  private stockShort(): string[] {
+    return stockShortages(this.cartItems()
+      .filter((it) => !it.freeName)
+      .map((it) => ({ product: it.product, baseQuantity: it.presentation ? it.quantity * it.presentation.baseQuantity : it.quantity })));
+  }
+
+  // INV-10: «¿Vender igual?» before charging more than the recorded stock
+  stockQuestion = signal<string | null>(null);
+  private pendingPayment: CheckoutPayment | null = null;
+
+  confirmWithoutStock(): void {
+    const payment = this.pendingPayment;
+    this.stockQuestion.set(null);
+    this.pendingPayment = null;
+    if (payment) this.submitSale(payment, true);
+  }
+
+  cancelWithoutStock(): void {
+    this.stockQuestion.set(null);
+    this.pendingPayment = null;
+  }
+
+  submitSale(payment: CheckoutPayment, allowNegativeStock = false): void {
     if (this.isSubmitting() || this.cartItems().length === 0 || this.totalAmount() <= 0) {
+      return;
+    }
+    const short = allowNegativeStock ? [] : this.stockShort();
+    if (short.length > 0) {
+      this.pendingPayment = payment;
+      this.stockQuestion.set(short.join(' '));
       return;
     }
 
@@ -563,7 +613,8 @@ export class RegisterSaleComponent implements OnInit {
       saleType: this.atCost() ? 'AL_COSTO' : 'NORMAL',
       customerId: this.atCost() ? payment.customerId : null,
       creditAmount: this.atCost() ? payment.creditAmount : 0,
-      clientRequestId: this.clientRequestId ??= newClientRequestId()
+      clientRequestId: this.clientRequestId ??= newClientRequestId(),
+      allowNegativeStock: allowNegativeStock || undefined
     };
 
     this.saleService.registerSale(payload).subscribe({
@@ -575,10 +626,18 @@ export class RegisterSaleComponent implements OnInit {
         this.clearCart();
         this.setAtCost(false);
         this.lastSale.set({ id: sale.id, saleNumber: sale.saleNumber });
+        // INV-11: the screen stays for the next sale, so «Quedan N» is read again
+        this.refreshStock();
         afterNextRender(() => this.catalog()?.focusSearch(), { injector: this.injector });
       },
       error: (err) => {
         this.isSubmitting.set(false);
+        // INV-10: the stock changed since the catalog was read: the server asks the same question
+        if (err.status === 409 && err.error?.error === INSUFFICIENT_STOCK) {
+          this.pendingPayment = payment;
+          this.stockQuestion.set(err.error.message);
+          return;
+        }
         // POS-18: without an answer the sale may exist; the same id makes the retry safe
         const msg = isRetryableError(err)
           ? SALE_RETRY_MESSAGE

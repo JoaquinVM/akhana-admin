@@ -1,0 +1,79 @@
+<div class="inventory-page">
+  <header class="page-header">
+    <div class="header-content">
+      <nav class="breadcrumb">
+        <span class="breadcrumb-item">Inventario</span>
+        <span>/</span>
+        <span class="breadcrumb-item active">Conteo</span>
+      </nav>
+      <h1 class="page-title">Conteo</h1>
+      <p class="page-subtitle">Se cuenta a ciegas, en cajas y sueltas. Al confirmar se ve la diferencia y se ajusta el stock; el primer conteo de un producto es su carga inicial.</p>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert"><span>{{ errorMessage() }}</span></div>
+  }
+
+  <div class="filters-card new-count">
+    <div class="labeled-filter labeled-filter-wide">
+      <label class="labeled-filter-label" for="count-category">Contar</label>
+      <select id="count-category" class="form-control" [ngModel]="categoryId()" (ngModelChange)="categoryId.set($event)">
+        <option value="">Productos sueltos (con el lector o buscándolos)</option>
+        @for (category of categories(); track category.id) {
+          <option [value]="category.id">Categoría {{ category.name }}</option>
+        }
+      </select>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="create()" [disabled]="isCreating()">
+      {{ isCreating() ? 'Empezando…' : 'Empezar conteo' }}
+    </button>
+  </div>
+
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Conteo</th>
+            <th scope="col">Qué se cuenta</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">Contados</th>
+            <th scope="col">Empezó</th>
+            <th scope="col">Cerró</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr><td colspan="6" class="text-center">Cargando conteos…</td></tr>
+          } @else {
+            @for (count of counts(); track count.id) {
+              <tr>
+                <td><button type="button" class="link-button" (click)="open(count)">Conteo #{{ count.number }}</button></td>
+                <td>{{ count.categoryName ?? 'Productos sueltos' }}</td>
+                <td><span class="status-badge" [ngClass]="'count-' + count.status">{{ statusLabel(count) }}</span></td>
+                <td class="text-right">{{ count.countedProducts }}</td>
+                <td>{{ count.createdAt | date:'dd/MM/yyyy HH:mm':'-0400' }}<div class="muted">{{ count.createdBy }}</div></td>
+                <td>
+                  @if (count.closedAt) {
+                    {{ count.closedAt | date:'dd/MM/yyyy HH:mm':'-0400' }}<div class="muted">{{ count.closedBy }}</div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">
+                  <div class="table-empty">
+                    <div class="table-empty-icon"><app-icon name="empty" /></div>
+                    <h4 class="table-empty-title">Todavía no hay conteos</h4>
+                    <p class="table-empty-desc">Elige una categoría y pulsa «Empezar conteo».</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

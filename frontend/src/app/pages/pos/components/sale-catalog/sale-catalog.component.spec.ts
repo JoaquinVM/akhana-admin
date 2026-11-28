@@ -260,4 +260,17 @@ describe('SaleCatalogComponent', () => {
       expect(add).toHaveBeenLastCalledWith({ product: bar, presentation: null });
     });
   });
+
+  it('INV-11: el buscador muestra «Quedan N» de lo que controla stock; al costo, el costo promedio', () => {
+    const tea: any = { id: 'p9', code: 'TEA-VER', name: 'Té verde', sellPrice: 15, buyPrice: 12, cost: 11,
+      stockStatus: 'CONTROLLED', stock: 2 };
+    fixture.componentRef.setInput('products', [tea, tab100]);
+    component.productSearchTerm.set('té verde');
+    fixture.detectChanges();
+    const row = fixture.debugElement.queryAll(By.css('.search-result-item'))[0].nativeElement.textContent;
+    expect(row).toContain('Quedan 2');
+    fixture.componentRef.setInput('atCost', true);
+    fixture.detectChanges();
+    expect(component.entryPrice(component.filteredSearchResults()[0])).toBe(11);
+  });
 });

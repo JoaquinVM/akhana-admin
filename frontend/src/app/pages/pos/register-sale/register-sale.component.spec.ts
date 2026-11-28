@@ -6,6 +6,7 @@ import { ProductService } from '../../../core/product/product.service';
 import { QuickProductService } from '../../../core/quick-product/quick-product.service';
 import { SaleService } from '../../../core/sale/sale.service';
 import { CustomerService } from '../../../core/debt/customer.service';
+import { InventoryService } from '../../../core/inventory/inventory.service';
 import { CashSessionSummary, Sale } from '../../../core/cash/models/cash.models';
 import { Product } from '../../../core/product/models/product.models';
 import { QuickProductGroup } from '../../../core/quick-product/models/quick-product.models';
@@ -22,6 +23,7 @@ describe('RegisterSaleComponent', () => {
   let mockQuickProductService: any;
   let mockSaleService: any;
   let mockCustomerService: any;
+  let mockInventoryService: any;
 
   const mockProduct1: Product = {
     id: 'prod-1',
@@ -115,6 +117,8 @@ describe('RegisterSaleComponent', () => {
       loadGroups: vi.fn().mockReturnValue(of([mockGroup]))
     };
 
+    mockInventoryService = { getLevels: vi.fn().mockReturnValue(of([])) };
+
     mockSaleService = {
       registerSale: vi.fn().mockReturnValue(of(mockCreatedSale))
     };
@@ -131,7 +135,8 @@ describe('RegisterSaleComponent', () => {
         { provide: ProductService, useValue: mockProductService },
         { provide: QuickProductService, useValue: mockQuickProductService },
         { provide: SaleService, useValue: mockSaleService },
-        { provide: CustomerService, useValue: mockCustomerService }
+        { provide: CustomerService, useValue: mockCustomerService },
+        { provide: InventoryService, useValue: mockInventoryService }
       ]
     }).compileComponents();
 
@@ -834,6 +839,53 @@ describe('RegisterSaleComponent', () => {
       const before = component.catalogProducts();
       component.loadCatalogProducts();
       expect(component.catalogProducts()).toEqual(before);
+    });
+  });
+
+  describe('INV-10: más de lo que hay', () => {
+    const payment = { paymentMethod: 'QR' as const, amountCash: 0, amountQr: 40, amountReceived: 0, customerId: null, creditAmount: 0, comment: '' };
+    const tracked: Product = { ...mockProduct1, stockStatus: 'CONTROLLED', stock: 1 };
+
+    it('pregunta «¿Vender igual?» antes de cobrar y, confirmado, manda la venta con el permiso', () => {
+      component.addToCart(tracked);
+      component.addToCart(tracked);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(mockSaleService.registerSale).not.toHaveBeenCalled();
+      expect(component.stockQuestion()).toBe('No hay stock registrado de Té Verde Matcha (quedan 1). ¿Vender igual?');
+
+      component.confirmWithoutStock();
+      expect(mockSaleService.registerSale).toHaveBeenCalledWith(expect.objectContaining({ allowNegativeStock: true }));
+      expect(component.stockQuestion()).toBeNull();
+    });
+
+    it('si el servidor ve menos stock que la pantalla, hace la misma pregunta', () => {
+      mockSaleService.registerSale.mockReturnValueOnce(throwError(() => ({ status: 409,
+        error: { error: 'Insufficient Stock', message: 'No hay stock registrado de Té Verde Matcha (quedan 0). ¿Vender igual?' } })));
+      component.addToCart({ ...tracked, stock: 5 });
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(component.stockQuestion()).toContain('(quedan 0)');
+      expect(component.errorMessage()).toBeNull();
+    });
+
+    it('INV-11: después de cobrar, la pantalla sigue en la venta con «Quedan N» leído de nuevo', () => {
+      component.catalogProducts.set([{ ...mockProduct1, stockStatus: 'CONTROLLED', stock: 5 }, mockProduct2]);
+      mockInventoryService.getLevels.mockReturnValue(of([{ productId: 'prod-1', quantity: 4 }]));
+      component.addToCart(component.catalogProducts()[0]);
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(mockInventoryService.getLevels).toHaveBeenCalled();
+      expect(component.catalogProducts()[0].stock).toBe(4);
+      expect(component.catalogProducts()[1].stock).toBeUndefined();
+    });
+
+    it('INV-18: un producto por contar no pregunta', () => {
+      component.addToCart({ ...mockProduct1, stockStatus: 'TO_COUNT', stock: null });
+      component.openCheckoutModal();
+      component.submitSale(payment);
+      expect(component.stockQuestion()).toBeNull();
+      expect(mockSaleService.registerSale).toHaveBeenCalled();
     });
   });
 });

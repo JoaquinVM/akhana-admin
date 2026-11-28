@@ -79,6 +79,14 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.conflict(ex.getMessage()));
     }
 
+    // INV-10: the screen recognizes it by its error and asks «¿Vender igual?»
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(InsufficientStockException ex) {
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(new ErrorResponse(ErrorResponse.INSUFFICIENT_STOCK, ex.getMessage(), java.time.Instant.now()));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         return ResponseEntity

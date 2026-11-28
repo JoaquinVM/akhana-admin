@@ -39,5 +39,11 @@ public enum Permission {
     /** Dashboard with the period's indicators, charts and current balances (DSH-01 to DSH-04). */
     DASHBOARD,
     /** Users and their roles. */
-    USERS
+    USERS,
+    /** V2 · Existencias: the stock of each product, what is to arrive and the products still to count (INV-01, INV-14). */
+    INVENTORY_STOCK,
+    /** V2 · Kardex: the valued ledger of a product and its adjustments by hand (INV-02, INV-03). */
+    INVENTORY_KARDEX,
+    /** V2 · Conteo: counts by category or product and their confirmation (INV-05, INV-18). */
+    INVENTORY_COUNTS
 }

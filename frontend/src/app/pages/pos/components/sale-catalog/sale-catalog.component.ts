@@ -1,7 +1,8 @@
 import { Component, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Product, ProductPresentation, soldPresentations } from '../../../../core/product/models/product.models';
+import { Product, ProductPresentation, currentCost, soldPresentations } from '../../../../core/product/models/product.models';
+import { remainingText } from '../../../../core/inventory/models/inventory.models';
 import { QuickProductGroup } from '../../../../core/quick-product/models/quick-product.models';
 import { QuickProductService } from '../../../../core/quick-product/quick-product.service';
 import { SearchableProduct, productForEnter, searchProducts } from '../../../../shared/utils/product-search';
@@ -103,7 +104,17 @@ export class SaleCatalogComponent {
   // CON-02 (096): at cost a row shows what it charges: the product's cost, or the package's (base quantity x cost)
   entryPrice(entry: CatalogEntry): number | null {
     if (!this.atCost()) return entry.price;
-    return entry.presentation ? entry.presentation.cost : entry.product.buyPrice;
+    return entry.presentation ? entry.presentation.cost : currentCost(entry.product);
+  }
+
+  // CON-02, INV-06: what a quick product charges at cost
+  quickPrice(product: Product): number {
+    return this.atCost() ? currentCost(product) : product.sellPrice;
+  }
+
+  // INV-11: «Quedan N» next to each product that controls its stock, its packages included
+  remaining(product: Product): string | null {
+    return remainingText(product);
   }
 
   chooseEntry(entry: CatalogEntry): void {

@@ -1,0 +1,62 @@
+.product-picker {
+  position: relative;
+}
+
+.product-matches {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  max-height: 18rem;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.product-matches button {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.product-matches button:hover {
+  background: var(--bg-subtle);
+}
+
+.adjust-card {
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.adjust-card h3 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-heading);
+}
+
+.adjust-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.opening-row td {
+  background: var(--bg-subtle);
+  font-weight: 600;
+}
+
+.kardex-table td {
+  vertical-align: top;
+}

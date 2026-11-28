@@ -46,7 +46,7 @@
                 <button type="button" class="match-item" (click)="addProduct(product)">
                   <span class="match-info">
                     <span class="match-name">{{ product.name }}{{ product.status === 'INACTIVO' ? ' (inactivo)' : '' }}</span>
-                    <span class="match-meta">{{ product.code }}{{ product.supplierName ? ' · ' + product.supplierName : '' }} · costo Bs {{ product.buyPrice | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}</span>
+                    <span class="match-meta">{{ product.code }}{{ product.supplierName ? ' · ' + product.supplierName : '' }} · costo Bs {{ cost(product) | number:'1.2-2' }}{{ isWeighted(product) ? '/kg' : '' }}{{ remaining(product) ? ' · ' + remaining(product) : '' }}</span>
                   </span>
                   <span class="match-sell-price">
                     <span class="match-sell-label">Venta</span>
@@ -101,7 +101,7 @@
                   }
                 </span>
               </td>
-              <td class="text-right">Bs {{ line.product.buyPrice | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}</td>
+              <td class="text-right">Bs {{ cost(line.product) | number:'1.2-2' }}{{ isWeighted(line.product) ? '/kg' : '' }}</td>
               <td class="text-right">Bs {{ lineSubtotal(line) | number:'1.2-2' }}</td>
               <td class="text-right line-sell-price">Bs {{ (line.presentation ? line.presentation.price : line.product.sellPrice) | number:'1.2-2' }}{{ line.presentation ? ' c/u' : isWeighted(line.product) ? '/kg' : '' }}</td>
               <td class="text-right">
@@ -120,6 +120,16 @@
     <div class="totals">
       <div class="grand-total"><span>Total al costo</span><strong>Bs {{ total() | number:'1.2-2' }}</strong></div>
     </div>
+
+    @if (stockQuestion(); as question) {
+      <div class="stock-question" role="alert">
+        <p>{{ question }}</p>
+        <div class="stock-question-actions">
+          <button type="button" class="btn btn-ghost" (click)="stockQuestion.set(null)">Volver</button>
+          <button type="button" class="btn btn-primary" (click)="submit(true)" [disabled]="isSubmitting()">Registrar igual</button>
+        </div>
+      </div>
+    }
 
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" (click)="onClose()" [disabled]="isSubmitting()">Cancelar</button>

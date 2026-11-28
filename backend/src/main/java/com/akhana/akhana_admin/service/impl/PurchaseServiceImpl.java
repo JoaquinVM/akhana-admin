@@ -5,6 +5,7 @@ import com.akhana.akhana_admin.exception.DuplicateResourceException;
 import com.akhana.akhana_admin.exception.ResourceNotFoundException;
 import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.*;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import com.akhana.akhana_admin.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
@@ -77,11 +78,64 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final CreditorRepaymentItemRepository creditorRepaymentItemRepository;
     private final ProductPresentationService presentationService;
     private final TransactionTemplate transactionTemplate;
+    private final InventoryService inventoryService;
     // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
     private final Clock clock;
 
     /** Product cost and price change confirmed on a purchase line (COM-03), applied after the purchase is saved. */
-    private record CostUpdate(Product product, BigDecimal newCost, BigDecimal newSellPrice) {}
+    /**
+     * COM-03 with INV-07: a confirmed cost alert. The product keeps the supplier's price per base unit as its last
+     * purchase price and, as its last cost, that price placed in the store: with the line's part of the shipping. The
+     * suggested price was computed with that cost.
+     */
+    private static final class CostUpdate {
+        private final Product product;
+        private final BigDecimal supplierCost;
+        private final BigDecimal newSellPrice;
+        private PurchaseItem line;
+        private BigDecimal newCost;
+
+        CostUpdate(Product product, BigDecimal supplierCost, BigDecimal newSellPrice) {
+            this.product = product;
+            this.supplierCost = supplierCost;
+            this.newSellPrice = newSellPrice;
+        }
+
+        Product product() {
+            return product;
+        }
+
+        BigDecimal newCost() {
+            return newCost;
+        }
+
+        BigDecimal newSellPrice() {
+            return newSellPrice;
+        }
+    }
+
+    // INV-18: the instant it becomes delivered, kept while it stays so and cleared when it goes back to pending
+    private static void markDelivered(Purchase purchase, boolean wasDelivered, DeliveryStatus status, Instant now) {
+        if (status != DeliveryStatus.ENTREGADO) {
+            purchase.setDeliveredAt(null);
+        } else if (!wasDelivered) {
+            purchase.setDeliveredAt(now);
+        }
+    }
+
+    // INV-07: the cost of one base unit of the line placed in the store: its subtotal and its part of the shipping
+    private static void placeInStore(List<CostUpdate> updates, List<PurchaseItem> activeLines, BigDecimal shippingCost) {
+        if (updates.isEmpty()) {
+            return;
+        }
+        Map<PurchaseItem, BigDecimal> shares = InventoryServiceImpl.shippingShares(activeLines, shippingCost);
+        for (CostUpdate update : updates) {
+            PurchaseItem line = update.line;
+            BigDecimal baseQuantity = line.getBaseQuantity() != null ? line.getBaseQuantity() : line.getQuantity();
+            update.newCost = line.getSubtotal().add(shares.getOrDefault(line, BigDecimal.ZERO))
+                .divide(baseQuantity, 2, RoundingMode.HALF_UP);
+        }
+    }
 
     /** Locked cash session (only for Caja) and account that pay a movement. */
     private record Payer(FinancialAccount account, CashSession session) {}
@@ -255,6 +309,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             throw new IllegalArgumentException("El costo de envío no puede ser negativo.");
         }
 
+        placeInStore(costUpdates, items, shippingCost);
+
         // The shipping is paid by an account (P-24) or by a person (DEU-02), exactly one
         UUID shippingAccountId = shippingCost.signum() > 0 ? request.shippingAccountId() : null;
         UUID shippingCreditorId = shippingCost.signum() > 0 ? request.shippingCreditorId() : null;
@@ -310,6 +366,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             .deliveryType(delivery.type())
             .deliveryStatus(delivery.status())
             .deliveryDate(delivery.date())
+            // INV-18: when it was marked delivered
+            .deliveredAt(delivery.status() == DeliveryStatus.ENTREGADO ? now : null)
             .createdBy(username)
             .createdAt(now)
             .build();
@@ -343,6 +401,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             applyPayment(saved, initialPayment, username);
             saved = purchaseRepository.save(saved);
         }
+        // INV-14: registered as delivered, it enters the stock now, locked last (T-14)
+        inventoryService.syncPurchase(saved, false, List.of(), null, username);
 
         return PurchaseResponse.detail(saved, shippingPayer != null ? shippingPayer.account() : null, shippingCreditor, null);
     }
@@ -373,6 +433,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (purchase.isHistorical()) {
             throw new IllegalStateException(HISTORICAL_PURCHASE);
         }
+        boolean wasDelivered = purchase.getDeliveryStatus() == DeliveryStatus.ENTREGADO;
         PurchaseReading reading = request.readingId() != null ? lockUnusedReading(request.readingId()) : null;
         if (reading != null && reading.getSource() != PurchaseReadingSource.PHOTO) {
             throw new IllegalArgumentException(ARRIVAL_READING_NOT_PHOTO);
@@ -446,7 +507,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             }
             Product product = item.getProduct();
             LineValues values = lineValues(product, itemReq, item);
-            if (planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts)) {
+            CostUpdate costUpdate = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
+            if (costUpdate != null) {
+                costUpdate.line = item;
                 item.setCostUpdated(true);
             }
             if (!Objects.equals(values.presentationName(), item.getPresentationName())) {
@@ -471,6 +534,11 @@ public class PurchaseServiceImpl implements PurchaseService {
                 changes.add("Línea quitada: " + item.getProductName());
             }
         }
+        // INV-07: the cost placed in the store uses the shipping of the edit and its active lines
+        List<PurchaseItem> activeAfterEdit = new ArrayList<>(addedLines);
+        activeLines.values().stream().filter(line -> keptLines.contains(line.getId())).forEach(activeAfterEdit::add);
+        placeInStore(costUpdates, activeAfterEdit, request.shippingCost() != null
+            ? request.shippingCost().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         for (CostUpdate update : costUpdates) {
             changes.add("Producto " + update.product().getName() + ": costo " + StoreFormat.money(update.product().getBuyPrice())
                 + " → " + StoreFormat.money(update.newCost()) + ", precio " + StoreFormat.money(update.product().getSellPrice())
@@ -576,6 +644,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setSupplier(supplier);
         purchase.setPurchaseDate(purchaseDate);
         purchase.setDeliveryType(delivery.type());
+        markDelivered(purchase, wasDelivered, delivery.status(), now);
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setConsignment(consignment);
@@ -604,6 +673,9 @@ public class PurchaseServiceImpl implements PurchaseService {
         for (CostUpdate update : costUpdates) {
             applyCostUpdate(update, purchaseId, username, now);
         }
+        // INV-14: delivered, an edit moves only the difference; back to pending, out what it put
+        purchaseRepository.flush();
+        inventoryService.syncPurchase(purchase, wasDelivered, addedLines, reason, username);
         return getPurchaseById(purchaseId);
     }
 
@@ -676,12 +748,16 @@ public class PurchaseServiceImpl implements PurchaseService {
         }
         Delivery delivery = resolveDelivery(request.deliveryType(), request.deliveryStatus(), request.deliveryDate(),
             purchase.getPurchaseDate(), StoreFormat.today(clock));
+        boolean wasDelivered = purchase.getDeliveryStatus() == DeliveryStatus.ENTREGADO;
         purchase.setDeliveryType(delivery.type());
+        markDelivered(purchase, wasDelivered, delivery.status(), Instant.now(clock));
         purchase.setDeliveryStatus(delivery.status());
         purchase.setDeliveryDate(delivery.date());
         purchase.setUpdatedBy(username);
         purchase.setUpdatedAt(Instant.now(clock));
         purchaseRepository.save(purchase);
+        // INV-14: Entregado adds; back to Pendiente takes out what it put, even if the stock goes below 0
+        inventoryService.syncPurchase(purchase, wasDelivered, List.of(), null, username);
         return getPurchaseById(purchaseId);
     }
 
@@ -786,6 +862,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setUpdatedBy(username);
         purchase.setUpdatedAt(now);
         purchaseRepository.save(purchase);
+        // INV-14: a voided purchase takes out of the stock what it put
+        inventoryService.syncPurchase(purchase, true, List.of(), voidReason, username);
 
         return getPurchaseById(purchaseId);
     }
@@ -873,16 +951,20 @@ public class PurchaseServiceImpl implements PurchaseService {
         ProductServiceImpl.ensureNotSpecial(product);
 
         LineValues values = lineValues(product, itemReq, null);
-        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
-        boolean costChanges = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
+        // COM-03: the line is compared with the supplier's last price (INV-07: the cost with shipping is apart)
+        BigDecimal currentCost = product.registeredPurchaseCost().setScale(2, RoundingMode.HALF_UP);
+        CostUpdate costUpdate = planCostUpdateIfConfirmed(product, values.baseUnitCost(), itemReq, costUpdates, updatedProducts);
         PurchaseItem item = PurchaseItem.builder()
             .product(product)
             .productName(product.getName())
             .productCode(product.getCode())
             .previousUnitCost(currentCost)
-            .costUpdated(costChanges)
+            .costUpdated(costUpdate != null)
             .build();
         values.applyTo(item);
+        if (costUpdate != null) {
+            costUpdate.line = item;
+        }
         return item;
     }
 
@@ -932,15 +1014,17 @@ public class PurchaseServiceImpl implements PurchaseService {
             presentation, presentationName, presentationBaseQuantity, baseUnitCost);
     }
 
-    // COM-03: only when the user confirmed it and the line cost differs from the product cost
-    private boolean planCostUpdateIfConfirmed(Product product, BigDecimal unitCost, PurchaseItemRequest itemReq,
-                                              List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
-        BigDecimal currentCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+    // COM-03: only when the user confirmed it and the line cost differs from the supplier's last price (INV-07)
+    private CostUpdate planCostUpdateIfConfirmed(Product product, BigDecimal unitCost, PurchaseItemRequest itemReq,
+                                                 List<CostUpdate> costUpdates, Set<UUID> updatedProducts) {
+        BigDecimal currentCost = product.registeredPurchaseCost().setScale(2, RoundingMode.HALF_UP);
         boolean costChanges = Boolean.TRUE.equals(itemReq.updateProductCost()) && unitCost.compareTo(currentCost) != 0;
-        if (costChanges) {
-            costUpdates.add(planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts));
+        if (!costChanges) {
+            return null;
         }
-        return costChanges;
+        CostUpdate update = planCostUpdate(product, unitCost, itemReq.newSellPrice(), updatedProducts);
+        costUpdates.add(update);
+        return update;
     }
 
     private static void trackChange(List<String> changes, String label, Object before, Object after) {
@@ -1006,6 +1090,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             .build());
 
         BigDecimal fixedProfit = ProductServiceImpl.calculateFixedProfit(update.newCost(), update.newSellPrice());
+        product.setLastPurchaseCost(update.supplierCost);
         product.setBuyPrice(update.newCost());
         product.setSellPrice(update.newSellPrice());
         product.setFixedProfit(fixedProfit);

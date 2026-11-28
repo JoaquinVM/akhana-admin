@@ -58,7 +58,7 @@ class ConsumptionServiceTest {
         // Only these two repositories: a consumption cannot reach a cash session, an account or a movement
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
             new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
-                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)), clock);
+                org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)), org.mockito.Mockito.mock(com.akhana.akhana_admin.service.InventoryService.class), clock);
 
         roquin = product("Roquin", "ROQ-1", SaleUnit.UNIT, "2.73", "4.00");
         bombitas = product("Bombitas Proteína", "BOM-1", SaleUnit.UNIT, "10.00", "15.00");
@@ -280,7 +280,7 @@ class ConsumptionServiceTest {
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
             new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
                 org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
-            StoreClocks.at(StoreClocks.LAST_SECOND_OF_NOVEMBER));
+            org.mockito.Mockito.mock(com.akhana.akhana_admin.service.InventoryService.class), StoreClocks.at(StoreClocks.LAST_SECOND_OF_NOVEMBER));
         assertThatThrownBy(() -> consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("La fecha del consumo no puede ser futura.");
@@ -290,7 +290,7 @@ class ConsumptionServiceTest {
         consumptionService = new ConsumptionServiceImpl(consumptionRepository, productRepository,
             new ProductPresentationServiceImpl(presentationRepository, priceChangeRepository,
                 org.mockito.Mockito.mock(com.akhana.akhana_admin.service.ProductBarcodeService.class)),
-            StoreClocks.at(StoreClocks.FIRST_SECOND_OF_DECEMBER));
+            org.mockito.Mockito.mock(com.akhana.akhana_admin.service.InventoryService.class), StoreClocks.at(StoreClocks.FIRST_SECOND_OF_DECEMBER));
         assertThat(consumptionService.registerConsumption(request(december1, line(roquin, "1")), "operator").consumptionDate())
             .isEqualTo(december1);
         assertThat(consumptionService.registerConsumption(request(null, line(roquin, "1")), "operator").consumptionDate())

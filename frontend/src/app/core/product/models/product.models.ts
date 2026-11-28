@@ -79,6 +79,27 @@ export interface Product {
   // CAT-10: the product's own active barcodes (those of its packages come with each package), and «No trae»
   barcodes?: string[];
   noBarcode?: boolean;
+  // CAT-05: «Controla stock»; CONTROLLED, TO_COUNT (still to count, INV-18) or NOT_CONTROLLED
+  stockControlled?: boolean;
+  stockStatus?: StockStatus;
+  // INV-01, INV-06: only when it controls its stock; cost is what a line takes now (CON-02 charges it at cost)
+  stock?: number | null;
+  averageCost?: number | null;
+  cost?: number;
+  // COM-03, INV-07: the supplier's last price per base unit; buyPrice is the last cost with its part of the shipping
+  lastPurchaseCost?: number;
+}
+
+// COM-03: what a purchase line proposes and its cost alert compares: the supplier's last price
+export function purchaseCost(product: Product): number {
+  return product.lastPurchaseCost ?? product.buyPrice;
+}
+
+export type StockStatus = 'CONTROLLED' | 'TO_COUNT' | 'NOT_CONTROLLED';
+
+// INV-06: what a line takes now: the average to the cent, or the last cost while it does not control its stock
+export function currentCost(product: Product): number {
+  return product.cost ?? product.buyPrice;
 }
 
 // COM-10: a product that looks like a box of another one, with the package it would become
@@ -134,6 +155,8 @@ export interface ProductRequest {
   ownerCreditorId?: string | null;
   // CAT-10: the full list; without it the server keeps the barcodes
   barcodes?: string[];
+  // CAT-05: «Controla stock»; without it the server keeps it (new products: yes)
+  stockControlled?: boolean;
 }
 
 // CAT-11: marking a product by kilo proposes these, without fixed price

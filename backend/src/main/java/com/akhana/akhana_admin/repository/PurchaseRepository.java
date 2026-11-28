@@ -50,4 +50,19 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
            "AND p.historicalImportId IS NULL " +
            "ORDER BY p.purchaseDate DESC, p.createdAt DESC")
     List<Purchase> findPendingDelivery(@Param("supplierId") UUID supplierId);
+
+    // INV-14: [product id, base quantity] still to arrive: active lines of pending purchases that are not voided
+    @Query("SELECT i.product.id, SUM(COALESCE(i.baseQuantity, i.quantity)) FROM PurchaseItem i JOIN i.purchase p "
+         + "WHERE p.status <> :voided AND p.deliveryStatus = :pending AND p.historicalImportId IS NULL "
+         + "AND i.removedAt IS NULL GROUP BY i.product.id")
+    List<Object[]> sumIncoming(@Param("voided") com.akhana.akhana_admin.model.PurchaseStatus voided,
+                               @Param("pending") com.akhana.akhana_admin.model.DeliveryStatus pending);
+
+    // INV-18: the active lines of a product in purchases marked delivered after an instant (and still delivered)
+    @Query("SELECT i FROM PurchaseItem i JOIN FETCH i.purchase p WHERE i.product.id = :productId AND i.removedAt IS NULL "
+         + "AND p.status <> :voided AND p.deliveryStatus = :delivered AND p.historicalImportId IS NULL "
+         + "AND p.deliveredAt > :since ORDER BY p.deliveredAt")
+    List<com.akhana.akhana_admin.model.PurchaseItem> findLinesDeliveredSince(@Param("productId") UUID productId,
+        @Param("since") java.time.Instant since, @Param("voided") com.akhana.akhana_admin.model.PurchaseStatus voided,
+        @Param("delivered") com.akhana.akhana_admin.model.DeliveryStatus delivered);
 }

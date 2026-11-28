@@ -13,6 +13,7 @@ import com.akhana.akhana_admin.repository.SupplierRepository;
 import com.akhana.akhana_admin.repository.TagRepository;
 import com.akhana.akhana_admin.service.ProductBarcodeService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,14 @@ import java.util.*;
 @Transactional
 public class ProductServiceImpl implements ProductService {
 
+    static final String BASE_UNIT_LOCKED = "La unidad de '%s' no se puede cambiar: ya tiene movimientos de stock, que van en esa unidad.";
+
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
     private final TagRepository tagRepository;
     private final ProductPresentationService presentationService;
+    private final InventoryService inventoryService;
     private final ProductPriceChangeRepository priceChangeRepository;
     private final CreditorRepository creditorRepository;
     private final ProductBarcodeService barcodeService;
@@ -162,11 +166,16 @@ public class ProductServiceImpl implements ProductService {
                 .saleUnit(specialType == null && request.saleUnit() != null ? request.saleUnit() : SaleUnit.UNIT)
                 .specialType(specialType)
                 .ownerCreditor(owner)
+                // CAT-05: special products never control stock
+                .stockControlled(specialType == null && !Boolean.FALSE.equals(request.stockControlled()))
                 .createdBy(currentUsername != null ? currentUsername : "SYSTEM")
                 .createdAt(Instant.now())
                 .build();
 
         Product saved = productRepository.save(product);
+        productRepository.flush();
+        // CAT-05: a new product controls its stock from now, with 0
+        inventoryService.startNewProduct(saved);
         recordPriceChange(saved, null, null, product.getCreatedBy(), product.getCreatedAt());
         barcodeService.applyBarcodes(saved, request.barcodes(), currentUsername);
         // Packages need the saved product (CAT-15)
@@ -249,7 +258,16 @@ public class ProductServiceImpl implements ProductService {
             product.setStatus(request.status());
         }
         if (request.saleUnit() != null && !special) {
+            // CAT-14: the stock is kept in the base unit, so it does not change once the stock moved
+            if (request.saleUnit() != previousSaleUnit && inventoryService.hasMovements(product.getId())) {
+                throw new IllegalArgumentException(String.format(BASE_UNIT_LOCKED, product.getName()));
+            }
             product.setSaleUnit(request.saleUnit());
+        }
+        // CAT-05: «Controla stock»; stopping keeps the kardex, starting again waits for the next count (INV-18)
+        if (!special && request.stockControlled() != null && request.stockControlled() != product.isStockControlled()) {
+            product.setStockControlled(request.stockControlled());
+            inventoryService.stockControlChanged(product, request.stockControlled());
         }
 
         product.setUpdatedBy(currentUsername != null ? currentUsername : "SYSTEM");

@@ -56,8 +56,19 @@ public record ProductRequest(
     UUID ownerCreditorId,
 
     // CAT-10: the whole list; null keeps the current barcodes
-    List<String> barcodes
+    List<String> barcodes,
+
+    // CAT-05: «Controla stock»; null keeps the current one (on create: yes, except special products)
+    Boolean stockControlled
 ) {
+    public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
+                          List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
+                          SaleUnit saleUnit, List<ProductPresentationRequest> presentations,
+                          ProductSpecialType specialType, UUID ownerCreditorId, List<String> barcodes) {
+        this(code, name, categoryId, supplierId, description, tagIds, buyPrice, sellPrice, status, saleUnit,
+            presentations, specialType, ownerCreditorId, barcodes, null);
+    }
+
     public ProductRequest(String code, String name, UUID categoryId, UUID supplierId, String description,
                           List<UUID> tagIds, BigDecimal buyPrice, BigDecimal sellPrice, ProductStatus status,
                           SaleUnit saleUnit) {

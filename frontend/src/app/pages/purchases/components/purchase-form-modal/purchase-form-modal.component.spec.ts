@@ -1622,4 +1622,37 @@ describe('PurchaseFormModalComponent', () => {
       expect(component.buildRequest().items[0]).toEqual(expect.objectContaining({ itemId: 'item-1', presentationId: 'pres-old' }));
     });
   });
+
+  describe('COM-03, INV-07 (opción A): precio del proveedor en la línea, envío en el último costo', () => {
+    // Last bought at Bs 10 from the supplier; with its shipping it cost Bs 11 placed in the store
+    const landed = product({ id: 'p-1', buyPrice: 11, lastPurchaseCost: 10, sellPrice: 15 });
+
+    it('la línea propone el precio del proveedor y la alerta solo salta si ese precio cambia', () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(landed);
+      expect(component.lines()[0].unitCost).toBe(10);
+      expect(component.costDiffers(component.lines()[0])).toBe(false);
+      component.onCostChange(0, 12);
+      expect(component.costDiffers(component.lines()[0])).toBe(true);
+    });
+
+    it('al confirmar, el costo nuevo y el sugerido llevan la parte del envío de la línea', () => {
+      component.supplierId.set('sup-1');
+      component.addProduct(landed);
+      component.addProduct(nuts);
+      component.updateLine(0, { quantity: 10 });
+      component.onCostChange(0, 12);
+      component.updateLine(1, { quantity: 1, unitCost: 30 });
+      // Shipping 15 over subtotals 120 and 30: 12 and 3
+      component.shippingCost.set(15);
+      expect(component.landedUnitCost(component.lines()[0])).toBe(13.2);
+
+      component.onUpdateCostToggle(0, true);
+      expect(purchaseService.getPriceSuggestion).toHaveBeenLastCalledWith('p-1', 13.2);
+      // 13,20 × 15 ÷ 10 = 19,80, rounded up to the boliviano
+      expect(component.suggestedSellPrice(component.lines()[0])).toBe(20);
+      expect(component.buildRequest().items[0]).toEqual(expect.objectContaining({ unitCost: 12, updateProductCost: true,
+        newSellPrice: 20 }));
+    });
+  });
 });

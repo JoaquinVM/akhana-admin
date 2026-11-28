@@ -21,7 +21,10 @@ public enum Role {
         Permission.SUPPLIERS,
         Permission.PURCHASES,
         Permission.DEBTS,
-        Permission.CONSUMPTIONS
+        Permission.CONSUMPTIONS,
+        Permission.INVENTORY_STOCK,
+        Permission.INVENTORY_KARDEX,
+        Permission.INVENTORY_COUNTS
     )),
     ADMINISTRATOR(EnumSet.allOf(Permission.class));
 

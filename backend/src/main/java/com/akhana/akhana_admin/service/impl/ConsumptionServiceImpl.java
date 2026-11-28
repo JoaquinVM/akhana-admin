@@ -9,6 +9,7 @@ import com.akhana.akhana_admin.model.*;
 import com.akhana.akhana_admin.repository.ConsumptionRepository;
 import com.akhana.akhana_admin.repository.ProductRepository;
 import com.akhana.akhana_admin.service.ConsumptionService;
+import com.akhana.akhana_admin.service.InventoryService;
 import com.akhana.akhana_admin.service.ProductPresentationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class ConsumptionServiceImpl implements ConsumptionService {
     private final ConsumptionRepository consumptionRepository;
     private final ProductRepository productRepository;
     private final ProductPresentationService presentationService;
+    private final InventoryService inventoryService;
     // The store's clock (America/La_Paz): decides today, the month and the day a movement counts for
     private final Clock clock;
 
@@ -108,8 +110,9 @@ public class ConsumptionServiceImpl implements ConsumptionService {
                 ? presentations.get(entry.getKey().presentationId())
                 : null;
             BigDecimal quantity = entry.getValue().setScale(3, RoundingMode.HALF_UP);
-            // Cost snapshot: later cost changes (COM-03 or catalog) do not alter this consumption
-            BigDecimal unitCost = product.getBuyPrice().setScale(2, RoundingMode.HALF_UP);
+            // Cost snapshot: later cost changes (COM-03 or catalog) do not alter this consumption. INV-06: the average
+            // of the moment for a product that controls its stock, its last cost otherwise (INV-18)
+            BigDecimal unitCost = StockCost.of(product);
             // By presentation the cost per kilo applies to the kilos of the packs (CAT-11)
             BigDecimal baseQuantity = presentation != null ? SaleServiceImpl.packBaseQuantity(quantity, presentation) : null;
             BigDecimal subtotal = unitCost.multiply(baseQuantity != null ? baseQuantity : quantity).setScale(2, RoundingMode.HALF_UP);
@@ -130,7 +133,20 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         }
         consumption.setTotalAmount(total);
 
-        return ConsumptionResponse.detail(consumptionRepository.save(consumption));
+        // INV-10: more than the recorded stock only once the screen asked and it was confirmed
+        Map<Product, BigDecimal> baseQuantities = new LinkedHashMap<>();
+        for (ConsumptionItem item : consumption.getItems()) {
+            baseQuantities.merge(item.getProduct(),
+                item.getBaseQuantity() != null ? item.getBaseQuantity() : item.getQuantity(), BigDecimal::add);
+        }
+        consumption.setNegativeStockConfirmed(inventoryService.checkStock(baseQuantities,
+            Boolean.TRUE.equals(request.allowNegativeStock())));
+
+        Consumption saved = consumptionRepository.save(consumption);
+        consumptionRepository.flush();
+        // CON-04: its exits, at the cost of each line
+        inventoryService.recordConsumption(saved, username);
+        return ConsumptionResponse.detail(saved);
     }
 
     @Override
@@ -149,7 +165,10 @@ public class ConsumptionServiceImpl implements ConsumptionService {
         consumption.setVoidedBy(username);
         consumption.setVoidedAt(Instant.now(clock));
         consumption.setVoidReason(voidReason);
-        return ConsumptionResponse.detail(consumptionRepository.save(consumption));
+        Consumption saved = consumptionRepository.save(consumption);
+        // RG-03: what it took goes back to the stock at the cost it left at
+        inventoryService.reverseConsumption(saved, username);
+        return ConsumptionResponse.detail(saved);
     }
 
     private record LineKey(UUID productId, UUID presentationId) {}

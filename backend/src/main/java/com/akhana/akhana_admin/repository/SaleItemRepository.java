@@ -46,4 +46,10 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, UUID> {
     // POS-13: third-party lines of a person, voided sales included, for the debt history
     @Query("SELECT i FROM SaleItem i JOIN FETCH i.sale s WHERE i.creditor.id = :creditorId ORDER BY s.operationDate, s.createdAt")
     List<SaleItem> findThirdPartyLinesByCreditorId(@Param("creditorId") UUID creditorId);
+
+    // INV-18: what a product still to count sold (not voided) after its count was written, in base units
+    @Query("SELECT COALESCE(SUM(COALESCE(i.baseQuantity, i.quantity)), 0) FROM SaleItem i JOIN i.sale s "
+         + "WHERE i.product.id = :productId AND i.freeLineType IS NULL AND s.createdAt > :since "
+         + "AND s.status <> com.akhana.akhana_admin.model.SaleStatus.ANULADA")
+    java.math.BigDecimal sumSoldSince(@Param("productId") UUID productId, @Param("since") java.time.Instant since);
 }

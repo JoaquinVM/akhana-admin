@@ -54,6 +54,8 @@ export interface SaleDetailRequest {
   creditAmount?: number;
   // POS-18: id of this checkout, kept on its retries so the sale is recorded once
   clientRequestId?: string;
+  // INV-10: «¿Vender igual?» answered yes
+  allowNegativeStock?: boolean;
 }
 
 export interface VoidSaleRequest {
