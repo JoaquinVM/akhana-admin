@@ -33,6 +33,7 @@ import { isRetryableError, newClientRequestId } from '../../../shared/utils/clie
 import { PosFeedbackBannerComponent } from '../components/pos-feedback-banner/pos-feedback-banner.component';
 import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { INSUFFICIENT_STOCK, stockShortages } from '../../../core/inventory/models/inventory.models';
+import { InventoryService } from '../../../core/inventory/inventory.service';
 
 // POS-10 / CAT-08: products by weight are priced per kilo («Otro peso»)
 export { WEIGHT_STEP_KG };
@@ -81,6 +82,7 @@ export class RegisterSaleComponent implements OnInit {
   private readonly productService = inject(ProductService);
   readonly quickProductService = inject(QuickProductService);
   private readonly saleService = inject(SaleService);
+  private readonly inventoryService = inject(InventoryService);
   private readonly customerService = inject(CustomerService);
 
   // Catalog and search state
@@ -193,6 +195,20 @@ export class RegisterSaleComponent implements OnInit {
 
     this.loadCatalogProducts();
     this.loadQuickGroups();
+  }
+
+  // INV-11: the stock of what controls it, after a sale, without reading the whole catalog again
+  refreshStock(): void {
+    this.inventoryService.getLevels().subscribe({
+      next: (levels) => {
+        const byProduct = new Map(levels.map((level) => [level.productId, level.quantity]));
+        this.catalogProducts.update((products) => products.map((p) =>
+          byProduct.has(p.id) ? { ...p, stock: byProduct.get(p.id)! } : p));
+      },
+      // Without an answer the numbers stay as they were; the server still asks when there is not enough (INV-10)
+      error: () => undefined
+    });
+    this.quickProductService.loadGroups().subscribe({ error: () => undefined });
   }
 
   loadCatalogProducts(): void {
@@ -610,6 +626,8 @@ export class RegisterSaleComponent implements OnInit {
         this.clearCart();
         this.setAtCost(false);
         this.lastSale.set({ id: sale.id, saleNumber: sale.saleNumber });
+        // INV-11: the screen stays for the next sale, so «Quedan N» is read again
+        this.refreshStock();
         afterNextRender(() => this.catalog()?.focusSearch(), { injector: this.injector });
       },
       error: (err) => {

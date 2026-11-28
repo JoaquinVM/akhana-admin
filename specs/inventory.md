@@ -276,7 +276,8 @@ es la suma de las filas; `product_stocks` es un atajo que se escribe en la misma
 ### INV-11 · «Quedan N» en el POS
 
 - **Cuando** se busca un producto que controla stock, o está en una línea de la venta, o en los productos rápidos
-  **entonces** se ve «Quedan N» (kilos con 3 decimales), con el stock al abrir la venta.
+  **entonces** se ve «Quedan N» (kilos con 3 decimales), con el stock al abrir la venta, que se vuelve a leer después
+  de cada cobro porque la pantalla sigue en la venta.
 
 ### INV-02 · Ajustes a mano
 
